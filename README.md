@@ -49,12 +49,10 @@ The more your team uses DocBrain, the better your documentation gets. That feedb
 
 ## Quickstart
 
-### Run Locally with Ollama (no API keys, no data leaves your machine)
-
 ```bash
-ollama pull llama3.1 && ollama pull nomic-embed-text
 git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
 cp .env.example .env
+# Edit .env — pick your LLM provider (see options below)
 docker compose up -d
 ```
 
@@ -71,26 +69,66 @@ docker compose exec -e DOCBRAIN_API_KEY=<key> server docbrain-cli ask "How do I 
 
 Open the Web UI at **http://localhost:3001**.
 
-<details>
-<summary><strong>Use Anthropic, OpenAI, or AWS Bedrock instead</strong></summary>
+### Choose Your LLM Provider
 
-Edit `.env` and set your provider:
+<details open>
+<summary><strong>AWS Bedrock (recommended for teams already on AWS)</strong></summary>
+
+Uses your existing AWS credentials. No separate API keys needed.
 
 ```env
-LLM_PROVIDER=anthropic          # or openai, bedrock
-LLM_MODEL_ID=claude-sonnet-4-5-20250929
-ANTHROPIC_API_KEY=sk-ant-...
+LLM_PROVIDER=bedrock
+LLM_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
+EMBED_PROVIDER=bedrock
+EMBED_MODEL_ID=cohere.embed-v4:0
+AWS_REGION=us-east-1
+```
 
+Ensure the models are enabled in your [Bedrock Model Access](https://console.aws.amazon.com/bedrock/home#/modelaccess) console. Credentials are picked up from environment variables, `~/.aws/credentials`, or instance profiles.
+
+</details>
+
+<details>
+<summary><strong>Anthropic + OpenAI (best quality)</strong></summary>
+
+```env
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+LLM_MODEL_ID=claude-sonnet-4-5-20250929
+EMBED_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+EMBED_MODEL_ID=text-embedding-3-small
+```
+
+</details>
+
+<details>
+<summary><strong>OpenAI only (single API key)</strong></summary>
+
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+LLM_MODEL_ID=gpt-4o
 EMBED_PROVIDER=openai
 EMBED_MODEL_ID=text-embedding-3-small
-OPENAI_API_KEY=sk-...
 ```
+
+</details>
+
+<details>
+<summary><strong>Ollama (100% local, no data leaves your machine)</strong></summary>
 
 ```bash
-docker compose up -d
+ollama pull llama3.1 && ollama pull nomic-embed-text
 ```
 
-See [Provider Setup](docs/providers.md) for full details including AWS Bedrock configuration.
+```env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+LLM_MODEL_ID=llama3.1
+EMBED_PROVIDER=ollama
+EMBED_MODEL_ID=nomic-embed-text
+```
 
 </details>
 
@@ -105,6 +143,8 @@ git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
 Walks you through provider selection, API key configuration, and document source setup.
 
 </details>
+
+See [Provider Setup](docs/providers.md) for full configuration details.
 
 ---
 
