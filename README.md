@@ -235,6 +235,101 @@ When connected to Confluence with multiple spaces (or multiple doc sources), Doc
 
 Sources flagged as `stale` or `outdated` are visually marked so users know to verify the information.
 
+### Team-Scoped API Keys
+
+For organizations with multiple teams sharing one DocBrain instance, API keys can be scoped to specific spaces. This provides hard data isolation without deploying separate instances.
+
+```bash
+# Create a key that only sees PLATFORM and SRE docs
+curl -X POST http://localhost:3000/api/v1/admin/keys \
+  -H "Authorization: Bearer $ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Platform Team Key", "role": "editor", "allowed_spaces": ["PLATFORM", "SRE"]}'
+```
+
+**How it works:**
+- `allowed_spaces` on an API key = hard filter. Queries using this key can only see results from those spaces.
+- The `"space"` parameter in `/api/v1/ask` = soft boost (ranks matching space higher, but doesn't hide other results).
+- Both can be combined: a Platform team key scoped to `["PLATFORM", "SRE"]` with a request-level `"space": "PLATFORM"` gives strongest preference to Platform docs while still allowing SRE cross-references.
+- Keys without `allowed_spaces` see everything (default behavior, backward compatible).
+
+### Knowledge Base Health Dashboard
+
+A single endpoint that tells you the health of your entire documentation corpus:
+
+```bash
+curl http://localhost:3000/api/v1/health/report \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Returns:
+```json
+{
+  "total_documents": 342,
+  "total_spaces": 8,
+  "overall_health_score": 67.3,
+  "freshness_distribution": { "fresh": 120, "review": 89, "stale": 72, "outdated": 41, "archive": 20 },
+  "spaces": [
+    { "space": "PLATFORM", "doc_count": 86, "avg_freshness": 71.2, "stale_count": 12, "queries_last_7d": 234 },
+    { "space": "SRE", "doc_count": 54, "avg_freshness": 58.1, "stale_count": 18, "queries_last_7d": 187 }
+  ],
+  "top_stale_cited_docs": [
+    { "title": "Deploy Guide", "freshness_score": 23, "citations_last_7d": 47, "contradiction_score": 45 }
+  ],
+  "coverage_gaps": 15
+}
+```
+
+The `top_stale_cited_docs` list surfaces the documents that are simultaneously stale AND frequently served to users -- the highest-impact docs to fix first.
+
+### Onboarding Endpoint
+
+New team member joining? Give them a curated reading list ranked by what their team actually asks about:
+
+```bash
+curl http://localhost:3000/api/v1/onboard/PLATFORM \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Returns a reading list ordered by `(popularity * 10 + freshness)` -- frequently-referenced, well-maintained docs surface first. Each entry includes a reason ("Most referenced doc -- cited 47 times recently") so new hires know what matters most.
+
+### Contradiction Detection
+
+DocBrain's freshness scorer runs a 4th pass that compares each document against others in the same space, detecting conflicting instructions, inconsistent config values, and contradictory ownership claims.
+
+When contradictions are detected (score < 70), they surface in API responses:
+
+```json
+{
+  "sources": [{
+    "title": "Deploy Guide v2",
+    "space": "PLATFORM",
+    "freshness_score": 45,
+    "freshness_status": "stale",
+    "contradiction_score": 32
+  }]
+}
+```
+
+A `contradiction_score` of 32 means this doc significantly contradicts other docs in the same space. Combined with the health dashboard, you can prioritize which docs need reconciliation.
+
+### Owner-Aware Stale Notifications
+
+DocBrain sends targeted Slack DMs to document owners when their docs go stale:
+
+> :warning: **Stale Documentation Alert**
+>
+> 1. [Deploy Guide](https://...) -- freshness 23/100 . **cited 47 times this week**
+> 2. [API Rate Limits](https://...) -- freshness 31/100 . **cited 12 times this week**
+
+The citation count makes the notification actionable -- "this doc is stale AND your team is actively relying on it." High-impact stale docs trigger a `:rotating_light: High Impact` urgency marker.
+
+Configure via:
+```env
+NOTIFICATION_INTERVAL_HOURS=24
+NOTIFICATION_SPACE_FILTER=PLATFORM,SRE  # optional: limit to specific spaces
+```
+
 ---
 
 ## Documentation Autopilot
