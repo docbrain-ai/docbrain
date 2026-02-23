@@ -210,6 +210,31 @@ DocBrain classifies each query and adapts the response format:
 | Comparative | Structured comparison table |
 | Incident | Runbooks and playbooks surfaced first |
 
+### Multi-Team / Space-Aware Search
+
+When connected to Confluence with multiple spaces (or multiple doc sources), DocBrain tracks which space each chunk belongs to. This matters when different teams have their own runbooks, deployment guides, or incident procedures.
+
+**How it works:**
+- Every indexed chunk carries its Confluence space key (or source type for local/GitHub docs)
+- Pass `"space": "PLATFORM"` in your `/api/v1/ask` request to boost results from that team's docs
+- Results from other spaces still appear — they just rank lower (soft boost, not hard filter)
+- The LLM sees `[Chunk 1] "Deploy Guide" | Space: PLATFORM` in its context, so it can distinguish between team-specific answers
+- Procedural rules can define `boost_spaces` to automatically prefer certain spaces for certain query patterns
+
+**In the response**, each source includes:
+```json
+{
+  "title": "Production Deployment Guide",
+  "source_url": "https://confluence.example.com/...",
+  "space": "PLATFORM",
+  "freshness_score": 82.0,
+  "freshness_status": "fresh",
+  "score": 14.2
+}
+```
+
+Sources flagged as `stale` or `outdated` are visually marked so users know to verify the information.
+
 ---
 
 ## Documentation Autopilot
