@@ -1,0 +1,81 @@
+{{- if .Values.opensearch.internal }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "docbrain.fullname" . }}-opensearch
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: opensearch
+spec:
+  serviceName: {{ include "docbrain.fullname" . }}-opensearch
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "docbrain.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: opensearch
+  template:
+    metadata:
+      labels:
+        {{- include "docbrain.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: opensearch
+    spec:
+      initContainers:
+        - name: sysctl
+          image: busybox
+          command: ["sh", "-c", "sysctl -w vm.max_map_count=262144 || true"]
+          securityContext:
+            privileged: true
+      containers:
+        - name: opensearch
+          image: {{ .Values.opensearch.image }}
+          ports:
+            - containerPort: 9200
+            - containerPort: 9600
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/opensearch/data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9200
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.opensearch.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "docbrain.fullname" . }}-opensearch
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: opensearch
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9200
+      targetPort: 9200
+  selector:
+    {{- include "docbrain.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: opensearch
+{{- end }}

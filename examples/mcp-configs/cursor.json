@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "docbrain": {
+      "command": "npx",
+      "args": ["-y", "docbrain-mcp@latest"],
+      "env": {
+        "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
+        "DOCBRAIN_SERVER_URL": "http://localhost:3000"
+      }
+    }
+  }
+}

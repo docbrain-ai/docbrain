@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "docbrain.fullname" . }}-ingest
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingest
+spec:
+  schedule: {{ .Values.ingest.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "docbrain.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: ingest
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: ingest
+              image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+              imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+              command: ["docbrain-ingest"]
+              envFrom:
+                - configMapRef:
+                    name: {{ include "docbrain.fullname" . }}-config
+                - secretRef:
+                    name: {{ include "docbrain.secretName" . }}
+              env:
+                - name: DATABASE_URL
+                  value: {{ include "docbrain.databaseUrl" . | quote }}
+              {{- if and (eq .Values.ingest.source "local") .Values.ingest.localDocsPath }}
+              volumeMounts:
+                - name: docs
+                  mountPath: {{ .Values.ingest.localDocsPath }}
+                  readOnly: true
+              {{- end }}
+          {{- if and (eq .Values.ingest.source "local") .Values.ingest.localDocsPath }}
+          volumes:
+            - name: docs
+              persistentVolumeClaim:
+                claimName: {{ include "docbrain.fullname" . }}-docs
+          {{- end }}

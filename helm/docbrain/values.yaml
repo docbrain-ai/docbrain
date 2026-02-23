@@ -1,0 +1,100 @@
+# DocBrain Helm Chart Values
+
+# -- LLM provider: bedrock | anthropic | openai | ollama
+llm:
+  provider: anthropic
+  modelId: claude-sonnet-4-5-20250929
+  # anthropicApiKey: ""   # set via --set or secret
+  # openaiApiKey: ""
+  # ollamaBaseUrl: "http://ollama:11434"
+
+# -- Embedding provider: bedrock | openai | ollama
+embedding:
+  provider: openai
+  modelId: text-embedding-3-small
+  # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
+
+# -- Ingestion source: confluence | local | github
+ingest:
+  source: local
+  schedule: "0 */6 * * *"   # every 6 hours
+  localDocsPath: /data/docs
+  # confluence:
+  #   baseUrl: ""
+  #   email: ""
+  #   apiToken: ""
+  #   spaceKeys: ""
+  # github:
+  #   repoUrl: ""
+  #   token: ""
+  #   branch: main
+
+# -- DocBrain API Server
+server:
+  image:
+    repository: ghcr.io/docbrain/docbrain
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  env: {}
+
+# -- DocBrain Web UI
+web:
+  enabled: true
+  image:
+    repository: ghcr.io/docbrain/docbrain-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 1
+  port: 3001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# -- PostgreSQL
+postgresql:
+  internal: true
+  image: postgres:17-alpine
+  storage: 10Gi
+  # externalUrl: ""    # if internal=false
+
+# -- OpenSearch
+opensearch:
+  internal: true
+  image: opensearchproject/opensearch:2.19.0
+  storage: 20Gi
+  # externalUrl: ""
+
+# -- Redis
+redis:
+  internal: true
+  image: redis:7-alpine
+  storage: 1Gi
+  # externalUrl: ""
+
+# -- Documentation Autopilot (AI-driven gap analysis + draft generation)
+autopilot:
+  enabled: false
+
+# -- Ingress
+ingress:
+  enabled: false
+  className: nginx
+  host: docbrain.local
+  tls: false
+  # tlsSecretName: docbrain-tls
+
+# -- Secret (created from values, or use existing)
+existingSecret: ""

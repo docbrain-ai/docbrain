@@ -1,0 +1,46 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "docbrain.fullname" . }}
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tlsSecretName | default (printf "%s-tls" (include "docbrain.fullname" .)) }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "docbrain.fullname" . }}-server
+                port:
+                  number: {{ .Values.server.port }}
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "docbrain.fullname" . }}-server
+                port:
+                  number: {{ .Values.server.port }}
+          {{- if .Values.web.enabled }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "docbrain.fullname" . }}-web
+                port:
+                  number: {{ .Values.web.port }}
+          {{- end }}
+{{- end }}

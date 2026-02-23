@@ -1,0 +1,82 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# DocBrain — Full Stack
+# Usage: docker compose up -d
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-docbrain}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      POSTGRES_DB: ${POSTGRES_DB:-docbrain}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docbrain}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.0
+    environment:
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  server:
+    image: ghcr.io/docbrain-ai/docbrain:latest
+    platform: linux/amd64
+    ports:
+      - "${SERVER_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-docbrain}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-docbrain}
+      OPENSEARCH_URL: http://opensearch:9200
+      REDIS_URL: redis://redis:6379
+      SERVER_BIND: 0.0.0.0
+    volumes:
+      - ./examples/sample-docs:/data/docs:ro
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/docbrain-ai/docbrain-web:latest
+    platform: linux/amd64
+    ports:
+      - "${WEB_PORT:-3001}:3001"
+    depends_on:
+      - server
+    environment:
+      NEXT_PUBLIC_DOCBRAIN_API_URL: http://localhost:${SERVER_PORT:-3000}
+      PORT: 3001
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  opensearch_data:
+  redis_data:

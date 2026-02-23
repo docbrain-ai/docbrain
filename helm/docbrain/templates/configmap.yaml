@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "docbrain.fullname" . }}-config
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+data:
+  LLM_PROVIDER: {{ .Values.llm.provider | quote }}
+  LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}
+  EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
+  EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
+  SOURCE_TYPE: {{ .Values.ingest.source | quote }}
+  LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
+  OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
+  REDIS_URL: {{ include "docbrain.redisUrl" . | quote }}
+  SERVER_BIND: "0.0.0.0"
+  SERVER_PORT: {{ .Values.server.port | quote }}
+  {{- if eq .Values.llm.provider "ollama" }}
+  OLLAMA_BASE_URL: {{ .Values.llm.ollamaBaseUrl | default "http://ollama:11434" | quote }}
+  {{- end }}
+  {{- if .Values.ingest.confluence }}
+  CONFLUENCE_BASE_URL: {{ .Values.ingest.confluence.baseUrl | default "" | quote }}
+  CONFLUENCE_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
+  CONFLUENCE_SPACE_KEYS: {{ .Values.ingest.confluence.spaceKeys | default "" | quote }}
+  {{- end }}
+  {{- if .Values.ingest.github }}
+  GITHUB_REPO_URL: {{ .Values.ingest.github.repoUrl | default "" | quote }}
+  GITHUB_BRANCH: {{ .Values.ingest.github.branch | default "main" | quote }}
+  {{- end }}
+  {{- if .Values.autopilot.enabled }}
+  AUTOPILOT_ENABLED: "true"
+  {{- end }}
+  {{- range $key, $val := .Values.server.env }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: docbrain
+description: AI-powered documentation intelligence platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - documentation
+  - ai
+  - rag
+  - knowledge-base
+home: https://github.com/docbrain/docbrain
