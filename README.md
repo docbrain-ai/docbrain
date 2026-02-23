@@ -59,8 +59,11 @@ docker compose up -d
 ```
 
 ```bash
-# Get your admin API key and store it
-export DOCBRAIN_API_KEY=$(docker compose exec server cat /app/admin-bootstrap-key.txt)
+# Get your admin API key
+docker compose exec server cat /app/admin-bootstrap-key.txt
+
+# Set it (paste the key from above)
+export DOCBRAIN_API_KEY="your-key-here"
 
 # Ingest the included sample docs
 docker compose exec server docbrain-ingest
