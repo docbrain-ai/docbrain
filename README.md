@@ -66,7 +66,7 @@ export DOCBRAIN_API_KEY=$(docker compose exec server cat /app/admin-bootstrap-ke
 docker compose exec server docbrain-ingest
 
 # Ask a question
-docker compose exec server docbrain-cli --api-key $DOCBRAIN_API_KEY ask "How do I deploy to production?"
+docker compose exec server docbrain-cli ask --api-key $DOCBRAIN_API_KEY "How do I deploy to production?"
 ```
 
 Open the Web UI at **http://localhost:3001**.
