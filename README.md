@@ -59,14 +59,14 @@ docker compose up -d
 ```
 
 ```bash
-# Get your admin API key
-docker compose exec server cat /app/admin-bootstrap-key.txt
+# Get your admin API key and store it
+export DOCBRAIN_API_KEY=$(docker compose exec server cat /app/admin-bootstrap-key.txt)
 
 # Ingest the included sample docs
 docker compose exec server docbrain-ingest
 
 # Ask a question
-docker compose exec server docbrain-cli ask "How do I deploy to production?"
+docker compose exec server docbrain-cli --api-key $DOCBRAIN_API_KEY ask "How do I deploy to production?"
 ```
 
 Open the Web UI at **http://localhost:3001**.
