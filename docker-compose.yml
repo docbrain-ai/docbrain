@@ -6,6 +6,7 @@
 services:
   postgres:
     image: postgres:17-alpine
+    pull_policy: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-docbrain}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
@@ -20,6 +21,7 @@ services:
 
   opensearch:
     image: opensearchproject/opensearch:2.19.0
+    pull_policy: always
     environment:
       - discovery.type=single-node
       - DISABLE_SECURITY_PLUGIN=true
@@ -34,6 +36,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    pull_policy: always
     volumes:
       - redis_data:/data
     healthcheck:
@@ -44,6 +47,7 @@ services:
 
   server:
     image: ghcr.io/docbrain-ai/docbrain:latest
+    pull_policy: always
     platform: linux/amd64
     ports:
       - "${SERVER_PORT:-3000}:3000"
@@ -66,6 +70,7 @@ services:
 
   web:
     image: ghcr.io/docbrain-ai/docbrain-web:latest
+    pull_policy: always
     platform: linux/amd64
     ports:
       - "${WEB_PORT:-3001}:3001"
