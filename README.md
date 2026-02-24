@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Open-source documentation intelligence engine.</strong><br/>
+  <strong>Source-available documentation intelligence engine.</strong><br/>
   Answers questions. Learns from usage. Identifies gaps. Drafts what's missing.
 </p>
 
