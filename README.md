@@ -3,9 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Documentation should not be passive.<br/>
-  Knowledge should not decay silently.<br/>
-  Your team should not discover missing docs when production is already on fire.</strong>
+  <strong>The real cost isn't wrong documentation.<br/>
+  It's that you don't know it's wrong until it hurts you.<br/></strong>
 </p>
 
 <p align="center">
@@ -203,19 +202,6 @@ See [Provider Setup](docs/providers.md) for full configuration details.
 
 ---
 
-## Real-World Impact
-
-Teams using DocBrain report measurable shifts in how knowledge flows through their organization:
-
-- **Unanswered internal questions drop significantly** — the Q&A feedback loop surfaces the most critical documentation gaps within the first 30 days
-- **Onboarding time compresses** — new engineers receive an AI-curated reading list for their first week, not a wall of Confluence pages to navigate blind
-- **Incident duration decreases** — on-call engineers find the right runbook on the first search, not the third
-- **Stale documentation gets fixed proactively** — owners receive targeted Slack alerts for docs that are simultaneously outdated *and* actively being cited
-- **Documentation debt becomes visible and measurable** — engineering leaders can see corpus health the same way they see system health
-
-The compounding effect matters most. A documentation tool that only answers questions gets more useful as more questions are asked. DocBrain gets more useful *and* makes your documentation better.
-
----
 
 ## Documentation Autopilot
 
@@ -687,7 +673,10 @@ If DocBrain helps your team, please consider starring the project — it genuine
 
 We welcome bug reports, feature requests, and documentation improvements via [GitHub Issues](https://github.com/docbrain-ai/docbrain/issues).
 
+
 Source code releases at **5,000 GitHub stars** or **January 1, 2028**, whichever comes first.
+
+⭐ Help us open-source this faster — source code releases at 5,000 GitHub stars. Every star moves the date forward.
 
 ## License
 
