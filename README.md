@@ -677,7 +677,3 @@ We welcome bug reports, feature requests, and documentation improvements via [Gi
 Source code releases at **5,000 GitHub stars** or **January 1, 2028**, whichever comes first.
 
 ⭐ Help us open-source this faster — source code releases at 5,000 GitHub stars. Every star moves the date forward.
-
-## License
-
-[Business Source License 1.1](LICENSE) — free to use, deploy, and modify. Cannot be offered as a competing hosted service. Converts to Apache 2.0 on the date above.
