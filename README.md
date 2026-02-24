@@ -472,6 +472,42 @@ Full ingestion guide: [docs/ingestion.md](docs/ingestion.md)
 
 ---
 
+## Image Intelligence
+
+Most documentation tools throw away images during ingestion. DocBrain reads them.
+
+Architecture diagrams, config screenshots, flowcharts, decision tables, UI walkthroughs — during ingestion, DocBrain downloads each image from Confluence, sends it to a vision-capable LLM for description, and injects the description into the document content. The descriptions get chunked, embedded, and indexed like normal text — zero changes to the search pipeline.
+
+**This means you can ask questions about content that only exists in images.**
+
+```
+Q: "What are the three steps to onboard a service to EKS?"
+A: Based on the onboarding infographic:
+   1. Update/Create your Terraform module...
+   2. Create your base Helm chart...
+   3. Configure ArgoCD application...
+   Source: [Helm Chart Deployment Guide] — extracted from diagram
+```
+
+Image extraction is **enabled by default**. To disable:
+
+```env
+IMAGE_EXTRACTION_ENABLED=false
+```
+
+| Provider | Vision Support |
+|----------|---------------|
+| **AWS Bedrock** | Yes — uses Claude's native vision |
+| **Anthropic** | Yes — uses Claude's native vision |
+| **OpenAI** | Yes — uses GPT-4o vision |
+| **Ollama** | Yes, with vision models (`llava`, `llama3.2-vision`, `moondream`). Text-only models auto-detect and skip gracefully. |
+
+**Guardrails**: max 20 images/page, skips icons under 5KB and files over 10MB, 30s timeout per image, only processes `png`/`jpeg`/`gif`/`webp`.
+
+See [Ingestion Guide](docs/ingestion.md) for details.
+
+---
+
 ## Integrations
 
 ### MCP (Model Context Protocol)

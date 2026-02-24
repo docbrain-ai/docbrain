@@ -45,6 +45,15 @@ All configuration is via environment variables, set in `.env` for Docker Compose
 | `GITHUB_TOKEN` | — | GitHub personal access token (optional for public repos) |
 | `GITHUB_BRANCH` | `main` | Branch to ingest from |
 
+## Image Extraction
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IMAGE_EXTRACTION_ENABLED` | `true` | Extract and describe images from Confluence pages using vision LLM. Set to `false` to disable. |
+| `HAIKU_MODEL_ID` | — | Model used for image descriptions (cheaper/faster). Falls back to `LLM_MODEL_ID` if not set. |
+
+Image extraction requires a vision-capable LLM. Supported providers: **Bedrock**, **Anthropic**, **OpenAI**, and **Ollama** (with vision models like `llava`, `llama3.2-vision`, `moondream`). Text-only models (e.g. `llama3.1`) are auto-detected and images are skipped gracefully — no failures, no errors.
+
 ## Web UI / CORS
 
 | Variable | Default | Description |

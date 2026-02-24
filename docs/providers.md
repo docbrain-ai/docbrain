@@ -46,6 +46,8 @@ ollama serve
 
 **Models**: `llama3.1` (recommended, 8B), `llama3.1:70b` (better quality, needs 48GB+ RAM)
 
+**Vision models** (for image extraction): `llava`, `llama3.2-vision`, `moondream`, `bakllava`. If your `LLM_MODEL_ID` is a text-only model, image extraction is automatically skipped — no errors, no configuration needed.
+
 ### AWS Bedrock
 
 For AWS-native deployments. Uses IAM for authentication.

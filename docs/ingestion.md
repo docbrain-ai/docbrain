@@ -196,6 +196,52 @@ If your docs are in a subdirectory of a larger repo, DocBrain still ingests the 
 
 ---
 
+## Image Extraction (Confluence)
+
+When ingesting from Confluence, DocBrain automatically downloads images (diagrams, screenshots, flowcharts) from each page and uses a vision-capable LLM to generate detailed descriptions. These descriptions are injected into the document content and indexed alongside the text — making image content searchable and available for Q&A.
+
+**This is enabled by default.** No extra configuration needed if your LLM provider supports vision.
+
+### How It Works
+
+1. During page processing, DocBrain extracts image references from the HTML
+2. Downloads each image attachment from the Confluence API
+3. Sends the image to the configured LLM's vision endpoint
+4. Injects the description into the Markdown before chunking
+
+### Which Providers Support Vision?
+
+| Provider | Vision Support | Notes |
+|----------|---------------|-------|
+| AWS Bedrock | Yes | Uses Claude's native vision via Messages API |
+| Anthropic | Yes | Uses Claude's native vision via Messages API |
+| OpenAI | Yes | Uses GPT-4o vision via Chat Completions API |
+| Ollama | Depends on model | Vision models (`llava`, `llama3.2-vision`, `moondream`) work. Text-only models (`llama3.1`) are auto-detected on first call — images are skipped with a warning, no failures. |
+
+### Guardrails
+
+| Guardrail | Value | Reason |
+|-----------|-------|--------|
+| Max images per page | 20 | Prevent runaway LLM costs on image-heavy pages |
+| Min image size | 5KB | Skip icons, avatars, decorative images |
+| Max image size | 10MB | Skip huge files |
+| Allowed types | `png`, `jpeg`, `gif`, `webp` | Skip PDFs, ZIPs, videos |
+| Timeout per image | 30s | Don't block the pipeline |
+
+### Disabling Image Extraction
+
+```env
+IMAGE_EXTRACTION_ENABLED=false
+```
+
+When disabled, images get a `[Image: filename.png]` placeholder in the text (the pre-existing behavior). You can re-enable later and re-ingest to pick up image descriptions.
+
+### Cost
+
+Image descriptions use the `HAIKU_MODEL_ID` model if set (recommended for cost efficiency), otherwise falls back to `LLM_MODEL_ID`. With Claude Haiku, expect ~$0.001 per image. A full ingestion of 1000 pages with ~3 images each costs roughly $3.
+
+---
+
 ## Re-Ingestion and Updates
 
 ### Updating Documents
