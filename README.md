@@ -282,16 +282,45 @@ Returns:
 
 The `top_stale_cited_docs` list surfaces the documents that are simultaneously stale AND frequently served to users -- the highest-impact docs to fix first.
 
-### Onboarding Endpoint
+### AI-Curated Onboarding
 
-New team member joining? Give them a curated reading list ranked by what their team actually asks about:
+New team member joining? Get an AI-curated reading list tailored to their first week:
 
 ```bash
-curl http://localhost:3000/api/v1/onboard/PLATFORM \
+curl http://localhost:3000/api/v1/onboard/ENG \
   -H "Authorization: Bearer $API_KEY"
 ```
 
-Returns a reading list ordered by `(popularity * 10 + freshness)` -- frequently-referenced, well-maintained docs surface first. Each entry includes a reason ("Most referenced doc -- cited 47 times recently") so new hires know what matters most.
+```json
+{
+  "space": "ENG",
+  "total_docs": 694,
+  "reading_list": [
+    {
+      "title": "SaaS UI Engineer Onboarding Guide",
+      "freshness_score": 85,
+      "freshness_status": "fresh",
+      "popularity": 12,
+      "reason": "Direct onboarding guide covering role-specific processes and expectations."
+    },
+    {
+      "title": "Team Overview & What We Own",
+      "freshness_score": 92,
+      "freshness_status": "fresh",
+      "popularity": 8,
+      "reason": "Gives new hires context on team mission and responsibilities in week 1."
+    }
+  ]
+}
+```
+
+This is **not** a simple SQL sort. Under the hood:
+
+1. **Semantic search** -- 5 onboarding-intent queries ("new hire getting started", "team overview what we own", "how to set up dev environment", etc.) find docs that match what a week-1 person actually needs
+2. **LLM curation** -- an LLM selects the best 8-12 docs from candidates, explicitly filtering out meeting notes, sprint pages, deep technical specs (HLDs/LLDs), and infrastructure runbooks
+3. **Week-1 persona** -- the LLM asks "would a new hire read this in their first 5 days?" and excludes anything that belongs in month 2+
+
+The result: onboarding guides, team overviews, dev setup docs, and process norms -- not autoscaling configs and auth protocol designs.
 
 ### Contradiction Detection
 
