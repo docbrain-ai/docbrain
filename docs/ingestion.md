@@ -146,17 +146,22 @@ DocBrain also supports self-hosted Confluence Data Center 7.x+ instances. Set on
 ```env
 CONFLUENCE_API_VERSION=v1
 CONFLUENCE_BASE_URL=https://confluence.yourcompany.com
-CONFLUENCE_USER_EMAIL=your-username
-CONFLUENCE_API_TOKEN=your-password
+CONFLUENCE_API_TOKEN=your-personal-access-token
 CONFLUENCE_SPACE_KEYS=ENG,DOCS
 ```
+
+**Creating a Personal Access Token (Data Center):**
+
+1. Log in to your Confluence Data Center instance
+2. Go to your profile (top-right) > **Settings** > **Personal Access Tokens**
+3. Click **Create token**, give it a name (e.g. "DocBrain"), and copy the token
 
 | | Cloud | Self-Hosted (Data Center) |
 |---|---|---|
 | `CONFLUENCE_API_VERSION` | `v2` (default) | `v1` |
 | `CONFLUENCE_BASE_URL` | `https://yourco.atlassian.net/wiki` | `https://confluence.yourco.com` |
-| `CONFLUENCE_USER_EMAIL` | Atlassian account email | Confluence username |
-| `CONFLUENCE_API_TOKEN` | API token from Atlassian | User password |
+| `CONFLUENCE_USER_EMAIL` | Atlassian account email | Not required |
+| `CONFLUENCE_API_TOKEN` | API token from Atlassian | Personal Access Token (Bearer auth) |
 
 Everything else works identically — same space keys, same page limit, same webhook sync, same image extraction.
 

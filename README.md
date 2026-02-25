@@ -478,12 +478,11 @@ CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
 SOURCE_TYPE=confluence
 CONFLUENCE_API_VERSION=v1
 CONFLUENCE_BASE_URL=https://confluence.yourcompany.com
-CONFLUENCE_USER_EMAIL=your-username
-CONFLUENCE_API_TOKEN=your-password
+CONFLUENCE_API_TOKEN=your-personal-access-token
 CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
 ```
 
-Set `CONFLUENCE_API_VERSION=v1` for self-hosted Confluence Data Center 7.x+. Everything else works identically to Cloud.
+Set `CONFLUENCE_API_VERSION=v1` for self-hosted Confluence Data Center 7.x+. Uses Bearer auth with a Personal Access Token. `CONFLUENCE_USER_EMAIL` is not required for v1.
 
 </details>
 
