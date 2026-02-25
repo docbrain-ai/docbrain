@@ -139,6 +139,27 @@ docker compose exec server docbrain-cli ask "What are our deployment procedures?
 
 The answer should cite your Confluence pages with links back to the originals.
 
+### Self-Hosted Confluence (Data Center)
+
+DocBrain also supports self-hosted Confluence Data Center 7.x+ instances. Set one extra variable:
+
+```env
+CONFLUENCE_API_VERSION=v1
+CONFLUENCE_BASE_URL=https://confluence.yourcompany.com
+CONFLUENCE_USER_EMAIL=your-username
+CONFLUENCE_API_TOKEN=your-password
+CONFLUENCE_SPACE_KEYS=ENG,DOCS
+```
+
+| | Cloud | Self-Hosted (Data Center) |
+|---|---|---|
+| `CONFLUENCE_API_VERSION` | `v2` (default) | `v1` |
+| `CONFLUENCE_BASE_URL` | `https://yourco.atlassian.net/wiki` | `https://confluence.yourco.com` |
+| `CONFLUENCE_USER_EMAIL` | Atlassian account email | Confluence username |
+| `CONFLUENCE_API_TOKEN` | API token from Atlassian | User password |
+
+Everything else works identically — same space keys, same page limit, same webhook sync, same image extraction.
+
 ### Permissions
 
 The API token inherits the Confluence permissions of the user account. DocBrain can only access pages that user can read. For broad access, use a service account with read permissions across your target spaces.

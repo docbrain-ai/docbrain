@@ -45,6 +45,7 @@ All configuration is via environment variables, set in `.env` for Docker Compose
 | `CONFLUENCE_USER_EMAIL` | — | Confluence authentication email |
 | `CONFLUENCE_API_TOKEN` | — | Confluence API token |
 | `CONFLUENCE_SPACE_KEYS` | — | Comma-separated space keys to ingest |
+| `CONFLUENCE_API_VERSION` | `v2` | API version: `v2` for Cloud, `v1` for self-hosted Data Center 7.x+ |
 | `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |
 | `GITHUB_TOKEN` | — | GitHub personal access token (optional for public repos) |
 | `GITHUB_BRANCH` | `main` | Branch to ingest from |

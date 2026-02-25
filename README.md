@@ -459,7 +459,7 @@ NOTIFICATION_SPACE_FILTER=PLATFORM,SRE
 DocBrain ingests from three source types. Documents are chunked with heading-aware splitting, embedded, and indexed in OpenSearch. Ingestion runs on a configurable cron schedule for continuous sync.
 
 <details>
-<summary><strong>Confluence</strong></summary>
+<summary><strong>Confluence (Cloud)</strong></summary>
 
 ```env
 SOURCE_TYPE=confluence
@@ -468,6 +468,22 @@ CONFLUENCE_USER_EMAIL=you@yourcompany.com
 CONFLUENCE_API_TOKEN=your-token
 CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
 ```
+
+</details>
+
+<details>
+<summary><strong>Confluence (Self-Hosted / Data Center)</strong></summary>
+
+```env
+SOURCE_TYPE=confluence
+CONFLUENCE_API_VERSION=v1
+CONFLUENCE_BASE_URL=https://confluence.yourcompany.com
+CONFLUENCE_USER_EMAIL=your-username
+CONFLUENCE_API_TOKEN=your-password
+CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
+```
+
+Set `CONFLUENCE_API_VERSION=v1` for self-hosted Confluence Data Center 7.x+. Everything else works identically to Cloud.
 
 </details>
 

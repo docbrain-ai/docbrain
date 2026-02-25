@@ -24,6 +24,7 @@ ingest:
   #   email: ""
   #   apiToken: ""
   #   spaceKeys: ""
+  #   apiVersion: v2          # v2 for Cloud (default), v1 for self-hosted Data Center
   # github:
   #   repoUrl: ""
   #   token: ""
