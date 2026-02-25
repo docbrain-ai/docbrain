@@ -101,6 +101,12 @@ The difference is orientation. Other tools treat documentation as a static artif
 
 ## 🎬 Demo
 
+### ⚡ MCP Preview (30-Second Overview)
+
+[![Watch Quick Preview](https://img.youtube.com/vi/9mZLoQnGLl8/maxresdefault.jpg)](https://youtu.be/9mZLoQnGLl8)
+
+A fast visual walkthrough of DocBrain MCP plugin in action.
+
 ### ⚡ Quick Preview (30-Second Overview)
 
 [![Watch Quick Preview](https://img.youtube.com/vi/IXGaJioq6Og/maxresdefault.jpg)](https://youtu.be/IXGaJioq6Og)
