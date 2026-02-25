@@ -11,6 +11,10 @@ All configuration is via environment variables, set in `.env` for Docker Compose
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
 | `SERVER_PORT` | `3000` | API server listen port |
 | `SERVER_BIND` | `0.0.0.0` | API server bind address |
+| `DB_MAX_CONNECTIONS` | `10` | Maximum PostgreSQL connection pool size |
+| `DB_CONNECT_TIMEOUT_SECS` | `10` | Timeout (seconds) for initial PostgreSQL connection |
+| `DB_ACQUIRE_TIMEOUT_SECS` | `10` | Timeout (seconds) to acquire a connection from the pool |
+| `DB_IDLE_TIMEOUT_SECS` | `300` | Idle connection lifetime (seconds) before cleanup |
 
 ## LLM Provider
 
