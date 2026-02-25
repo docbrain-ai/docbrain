@@ -45,6 +45,7 @@ All configuration is via environment variables, set in `.env` for Docker Compose
 | `CONFLUENCE_USER_EMAIL` | — | Confluence authentication email (not required for v1 Data Center) |
 | `CONFLUENCE_API_TOKEN` | — | API token (Cloud) or Personal Access Token (Data Center) |
 | `CONFLUENCE_SPACE_KEYS` | — | Comma-separated space keys to ingest |
+| `CONFLUENCE_PAGE_LIMIT` | `0` (unlimited) | Max pages to ingest per space. Set to a positive number to cap results (e.g. `100`). `0` = ingest all pages. |
 | `CONFLUENCE_API_VERSION` | `v2` | API version: `v2` for Cloud, `v1` for self-hosted Data Center 7.x+ |
 | `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` to skip TLS certificate verification (for self-signed or internal CA certs) |
 | `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |

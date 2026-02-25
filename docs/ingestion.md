@@ -109,6 +109,14 @@ CONFLUENCE_SPACE_KEYS=ENG,DOCS
 
 **Multiple spaces**: Separate with commas, no spaces: `ENG,DOCS,OPS`
 
+**Limiting pages**: By default, DocBrain ingests all pages in each space. To cap the number of pages per space (useful for testing), set:
+
+```env
+CONFLUENCE_PAGE_LIMIT=100
+```
+
+Set to `0` (default) for unlimited.
+
 ### Step 4: Run Ingestion
 
 ```bash
