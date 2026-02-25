@@ -99,15 +99,29 @@ The difference is orientation. Other tools treat documentation as a static artif
 
 ---
 
-## Demo
+## 🎬 Demo
 
-### Quick preview
-👉 [Watch quick preview (MP4)](https://github.com/docbrain-ai/docbrain/blob/main/assets/docbrain-social-cut.mp4)
+### ⚡ Quick Preview (30-Second Overview)
 
-### Full proof demo (downvote -> gap -> draft)
-👉 [Watch full proof demo (MP4)](https://github.com/docbrain-ai/docbrain/blob/main/assets/docbrain-gap-proof-demo.mp4)
+[![Watch Quick Preview](https://img.youtube.com/vi/IXGaJioq6Og/maxresdefault.jpg)](https://youtu.be/IXGaJioq6Og)
 
-In this proof flow: we ask related questions, downvote responses, run Autopilot analysis, confirm a detected gap, and generate a draft.
+A fast visual walkthrough of DocBrain in action.
+
+---
+
+### 🔎 Full Proof Demo (Downvote → Gap → Draft)
+
+[![Watch Full Proof Demo](https://img.youtube.com/vi/yqj5BCVOLHw/maxresdefault.jpg)](https://youtu.be/yqj5BCVOLHw)
+
+In this complete proof flow, we:
+
+1. Ask related questions  
+2. Downvote weak responses  
+3. Run Autopilot analysis  
+4. Confirm a detected documentation gap  
+5. Generate a structured draft automatically  
+
+This demonstrates how DocBrain moves beyond Q&A and becomes a documentation intelligence engine.
 
 ---
 
