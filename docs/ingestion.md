@@ -163,6 +163,12 @@ CONFLUENCE_SPACE_KEYS=ENG,DOCS
 | `CONFLUENCE_USER_EMAIL` | Atlassian account email | Not required |
 | `CONFLUENCE_API_TOKEN` | API token from Atlassian | Personal Access Token (Bearer auth) |
 
+If your instance uses a self-signed certificate or an internal CA that Docker doesn't trust, disable TLS verification:
+
+```env
+CONFLUENCE_TLS_VERIFY=false
+```
+
 Everything else works identically — same space keys, same page limit, same webhook sync, same image extraction.
 
 ### Permissions

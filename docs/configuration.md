@@ -42,10 +42,11 @@ All configuration is via environment variables, set in `.env` for Docker Compose
 | `SOURCE_TYPE` | `confluence` | Source: `local`, `confluence`, `github` |
 | `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion |
 | `CONFLUENCE_BASE_URL` | — | Atlassian instance URL (must include `/wiki`, e.g. `https://yourco.atlassian.net/wiki`) |
-| `CONFLUENCE_USER_EMAIL` | — | Confluence authentication email |
-| `CONFLUENCE_API_TOKEN` | — | Confluence API token |
+| `CONFLUENCE_USER_EMAIL` | — | Confluence authentication email (not required for v1 Data Center) |
+| `CONFLUENCE_API_TOKEN` | — | API token (Cloud) or Personal Access Token (Data Center) |
 | `CONFLUENCE_SPACE_KEYS` | — | Comma-separated space keys to ingest |
 | `CONFLUENCE_API_VERSION` | `v2` | API version: `v2` for Cloud, `v1` for self-hosted Data Center 7.x+ |
+| `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` to skip TLS certificate verification (for self-signed or internal CA certs) |
 | `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |
 | `GITHUB_TOKEN` | — | GitHub personal access token (optional for public repos) |
 | `GITHUB_BRANCH` | `main` | Branch to ingest from |
