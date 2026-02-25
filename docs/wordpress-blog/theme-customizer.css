@@ -1,0 +1,82 @@
+/* abhipsnl.wordpress.com polish layer for Twenty Twenty-Four */
+
+:root {
+  --abhip-primary: #2563eb;
+  --abhip-primary-dark: #1d4ed8;
+  --abhip-ink: #0f172a;
+  --abhip-muted: #475569;
+  --abhip-surface: #f8fafc;
+}
+
+/* Reading experience */
+.wp-site-blocks,
+.is-root-container {
+  color: var(--abhip-ink);
+}
+
+.wp-block-post-content p {
+  line-height: 1.8;
+  color: #1e293b;
+}
+
+.wp-block-post-content h2,
+.wp-block-post-content h3 {
+  margin-top: 2.2rem;
+  margin-bottom: 0.8rem;
+  letter-spacing: -0.01em;
+}
+
+.wp-block-post-content h2 {
+  font-size: clamp(1.45rem, 1.1rem + 1vw, 2rem);
+}
+
+.wp-block-post-content blockquote {
+  border-left: 4px solid var(--abhip-primary);
+  background: var(--abhip-surface);
+  padding: 1rem 1.25rem;
+  border-radius: 0.4rem;
+}
+
+/* CTA buttons */
+.wp-block-button .wp-block-button__link {
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.wp-block-button.is-style-fill .wp-block-button__link {
+  background: var(--abhip-primary);
+}
+
+.wp-block-button.is-style-fill .wp-block-button__link:hover {
+  background: var(--abhip-primary-dark);
+}
+
+/* Code and pre blocks */
+pre,
+code,
+.wp-block-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+pre.wp-block-code {
+  background: #0b1020;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem 1.2rem;
+}
+
+/* Hero heading feel */
+.wp-block-post-title,
+.wp-block-query-title {
+  letter-spacing: -0.025em;
+}
+
+/* Links */
+a {
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}

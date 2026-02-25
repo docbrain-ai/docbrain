@@ -1,0 +1,668 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0"
+  xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:wp="http://wordpress.org/export/1.2/">
+  <channel>
+    <title>Abhips NL - Documentation That Stays True</title>
+    <link>https://abhipsnl.wordpress.com</link>
+    <description>Engineering stories and practical systems for documentation reliability.</description>
+    <pubDate>Wed, 25 Feb 2026 12:00:00 +0000</pubDate>
+    <language>en-US</language>
+    <wp:wxr_version>1.2</wp:wxr_version>
+    <wp:base_site_url>https://abhipsnl.wordpress.com</wp:base_site_url>
+    <wp:base_blog_url>https://abhipsnl.wordpress.com</wp:base_blog_url>
+
+    <wp:author>
+      <wp:author_id>1</wp:author_id>
+      <wp:author_login><![CDATA[abhip]]></wp:author_login>
+      <wp:author_email><![CDATA[abhip@example.com]]></wp:author_email>
+      <wp:author_display_name><![CDATA[Abhip]]></wp:author_display_name>
+      <wp:author_first_name><![CDATA[Abhip]]></wp:author_first_name>
+      <wp:author_last_name><![CDATA[]]></wp:author_last_name>
+    </wp:author>
+
+    <wp:category>
+      <wp:term_id>1</wp:term_id>
+      <wp:category_nicename><![CDATA[documentation-strategy]]></wp:category_nicename>
+      <wp:category_parent><![CDATA[]]></wp:category_parent>
+      <wp:cat_name><![CDATA[Documentation Strategy]]></wp:cat_name>
+    </wp:category>
+    <wp:category>
+      <wp:term_id>2</wp:term_id>
+      <wp:category_nicename><![CDATA[devops]]></wp:category_nicename>
+      <wp:category_parent><![CDATA[]]></wp:category_parent>
+      <wp:cat_name><![CDATA[DevOps]]></wp:cat_name>
+    </wp:category>
+    <wp:category>
+      <wp:term_id>3</wp:term_id>
+      <wp:category_nicename><![CDATA[sre]]></wp:category_nicename>
+      <wp:category_parent><![CDATA[]]></wp:category_parent>
+      <wp:cat_name><![CDATA[SRE]]></wp:cat_name>
+    </wp:category>
+    <wp:category>
+      <wp:term_id>4</wp:term_id>
+      <wp:category_nicename><![CDATA[engineering-leadership]]></wp:category_nicename>
+      <wp:category_parent><![CDATA[]]></wp:category_parent>
+      <wp:cat_name><![CDATA[Engineering Leadership]]></wp:cat_name>
+    </wp:category>
+    <wp:category>
+      <wp:term_id>5</wp:term_id>
+      <wp:category_nicename><![CDATA[ai-workflow]]></wp:category_nicename>
+      <wp:category_parent><![CDATA[]]></wp:category_parent>
+      <wp:cat_name><![CDATA[AI Workflow]]></wp:cat_name>
+    </wp:category>
+
+    <wp:tag>
+      <wp:term_id>11</wp:term_id>
+      <wp:tag_slug><![CDATA[documentation]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[documentation]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+      <wp:term_id>12</wp:term_id>
+      <wp:tag_slug><![CDATA[runbooks]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[runbooks]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+      <wp:term_id>13</wp:term_id>
+      <wp:tag_slug><![CDATA[onboarding]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[onboarding]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+      <wp:term_id>14</wp:term_id>
+      <wp:tag_slug><![CDATA[incident-response]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[incident response]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+      <wp:term_id>15</wp:term_id>
+      <wp:tag_slug><![CDATA[knowledge-management]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[knowledge management]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+      <wp:term_id>16</wp:term_id>
+      <wp:tag_slug><![CDATA[autopilot]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[autopilot]]></wp:tag_name>
+    </wp:tag>
+    <wp:tag>
+      <wp:term_id>17</wp:term_id>
+      <wp:tag_slug><![CDATA[engineering-productivity]]></wp:tag_slug>
+      <wp:tag_name><![CDATA[engineering productivity]]></wp:tag_name>
+    </wp:tag>
+
+    <item>
+      <title>Home</title>
+      <link>https://abhipsnl.wordpress.com/home/</link>
+      <pubDate>Wed, 25 Feb 2026 12:05:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?page_id=1001</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<h1>Your docs are not broken. They are silently expiring.</h1>
+<p><strong>The real cost is not wrong documentation. It is not knowing it is wrong until it hurts you.</strong></p>
+<p>This blog is for engineering teams that are tired of losing time to stale runbooks, confusing onboarding docs, and "tribal knowledge" bottlenecks. You will find practical systems, templates, and hard-earned lessons to make documentation reliable under real delivery pressure.</p>
+<p><a href="/your-documentation-is-not-broken-it-is-quietly-expiring/">Read the flagship post -></a></p>
+<h2>What you will learn here</h2>
+<ul>
+  <li>How to detect documentation decay before incidents expose it</li>
+  <li>How to build documentation habits that survive fast-moving teams</li>
+  <li>How to use AI responsibly to maintain docs without losing trust</li>
+  <li>What engineering leaders should track beyond "docs published"</li>
+</ul>
+<h2>Start here</h2>
+<p>New reader? Begin with <a href="/start-here/">Start Here</a> and then read the latest posts.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+      <wp:post_id>1001</wp:post_id>
+      <wp:post_date>2026-02-25 12:05:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-25 12:05:00</wp:post_date_gmt>
+      <wp:comment_status>closed</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>home</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>page</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <wp:postmeta>
+        <wp:meta_key><![CDATA[_wp_page_template]]></wp:meta_key>
+        <wp:meta_value><![CDATA[default]]></wp:meta_value>
+      </wp:postmeta>
+    </item>
+
+    <item>
+      <title>Start Here</title>
+      <link>https://abhipsnl.wordpress.com/start-here/</link>
+      <pubDate>Wed, 25 Feb 2026 12:06:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?page_id=1002</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<h1>Start Here</h1>
+<p>If you are new to this blog, start with these in order:</p>
+<ol>
+  <li><a href="/your-documentation-is-not-broken-it-is-quietly-expiring/">Your Documentation Is Not Broken. It Is Quietly Expiring.</a></li>
+  <li><a href="/the-runbook-drift-problem-nobody-tracks/">The Runbook Drift Problem Nobody Tracks</a></li>
+  <li><a href="/a-7-day-documentation-health-audit-for-engineering-teams/">A 7-Day Documentation Health Audit for Engineering Teams</a></li>
+</ol>
+<h2>What this blog stands for</h2>
+<ul>
+  <li>Honest engineering writing over hype</li>
+  <li>Operationally tested frameworks over vague inspiration</li>
+  <li>Systems thinking over one-off hacks</li>
+</ul>
+<p>If that is your style too, subscribe and share posts with your team.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+      <wp:post_id>1002</wp:post_id>
+      <wp:post_date>2026-02-25 12:06:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-25 12:06:00</wp:post_date_gmt>
+      <wp:comment_status>closed</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>start-here</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>page</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <wp:postmeta>
+        <wp:meta_key><![CDATA[_wp_page_template]]></wp:meta_key>
+        <wp:meta_value><![CDATA[default]]></wp:meta_value>
+      </wp:postmeta>
+    </item>
+
+    <item>
+      <title>About</title>
+      <link>https://abhipsnl.wordpress.com/about/</link>
+      <pubDate>Wed, 25 Feb 2026 12:07:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?page_id=1003</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<h1>About</h1>
+<p>I write about one hard truth in engineering teams: documentation fails quietly before it fails loudly.</p>
+<p>This blog exists to help builders, SREs, and engineering leaders create documentation systems that stay accurate under real-world change.</p>
+<p>You will find:</p>
+<ul>
+  <li>Practical playbooks for documentation reliability</li>
+  <li>Lessons from incidents, onboarding failures, and runbook drift</li>
+  <li>Ways to use AI as leverage without losing trust or quality</li>
+</ul>
+<p>If you care about reducing avoidable operational pain, you are in the right place.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+      <wp:post_id>1003</wp:post_id>
+      <wp:post_date>2026-02-25 12:07:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-25 12:07:00</wp:post_date_gmt>
+      <wp:comment_status>closed</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>about</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>page</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <wp:postmeta>
+        <wp:meta_key><![CDATA[_wp_page_template]]></wp:meta_key>
+        <wp:meta_value><![CDATA[default]]></wp:meta_value>
+      </wp:postmeta>
+    </item>
+
+    <item>
+      <title>Contact</title>
+      <link>https://abhipsnl.wordpress.com/contact/</link>
+      <pubDate>Wed, 25 Feb 2026 12:08:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?page_id=1004</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<h1>Contact</h1>
+<p>Want to collaborate, share a documentation failure story, or discuss engineering content strategy?</p>
+<p>Reach out via your preferred channel and include:</p>
+<ul>
+  <li>Your role and team size</li>
+  <li>What documentation challenge hurts most right now</li>
+  <li>What outcome you want in the next 90 days</li>
+</ul>
+<p>I read every serious message.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+      <wp:post_id>1004</wp:post_id>
+      <wp:post_date>2026-02-25 12:08:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-25 12:08:00</wp:post_date_gmt>
+      <wp:comment_status>closed</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>contact</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>page</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <wp:postmeta>
+        <wp:meta_key><![CDATA[_wp_page_template]]></wp:meta_key>
+        <wp:meta_value><![CDATA[default]]></wp:meta_value>
+      </wp:postmeta>
+    </item>
+
+    <item>
+      <title>Blog</title>
+      <link>https://abhipsnl.wordpress.com/blog/</link>
+      <pubDate>Wed, 25 Feb 2026 12:09:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?page_id=1005</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<h1>Blog</h1>
+<p>Latest posts on documentation reliability, runbook quality, and practical AI workflows for engineering teams.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+      <wp:post_id>1005</wp:post_id>
+      <wp:post_date>2026-02-25 12:09:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-25 12:09:00</wp:post_date_gmt>
+      <wp:comment_status>closed</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>blog</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>page</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <wp:postmeta>
+        <wp:meta_key><![CDATA[_wp_page_template]]></wp:meta_key>
+        <wp:meta_value><![CDATA[default]]></wp:meta_value>
+      </wp:postmeta>
+    </item>
+
+    <item>
+      <title>Your Documentation Is Not Broken. It Is Quietly Expiring.</title>
+      <link>https://abhipsnl.wordpress.com/your-documentation-is-not-broken-it-is-quietly-expiring/</link>
+      <pubDate>Thu, 26 Feb 2026 09:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?p=2001</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<p><em>The real cost is not wrong documentation. It is not knowing it is wrong until it hurts you.</em></p>
+
+<p>Most teams do not have a documentation problem. They have a <strong>time problem disguised as a documentation problem</strong>.</p>
+
+<p>On Monday, your deployment guide is accurate.  
+On Friday, one service is renamed, one environment variable changes, and one "temporary workaround" becomes permanent.  
+Two weeks later, a new engineer follows the old guide exactly and loses half a day.  
+Three weeks later, an incident drags because the runbook still points to a dead dashboard.  
+Nobody lied. Nobody intended harm. The system just moved faster than the docs.</p>
+
+<p>That is the trap: documentation decay is usually invisible until the failure is expensive.</p>
+
+<h2>Why this hurts more than we admit</h2>
+
+<p>Engineers are good at spotting broken systems. Red dashboards. Failing tests. Alert storms.  
+But documentation rarely fails in a dramatic way. It fails quietly:</p>
+<ul>
+  <li>slightly outdated command examples,</li>
+  <li>renamed services in old diagrams,</li>
+  <li>ownership sections that still mention teammates who left,</li>
+  <li>onboarding pages that assume tooling no longer exists.</li>
+</ul>
+
+<p>Each issue feels small in isolation. Combined, they create the operational tax every team pays:</p>
+<ul>
+  <li>slow onboarding,</li>
+  <li>repeated Slack interruptions,</li>
+  <li>incident delays,</li>
+  <li>senior engineers becoming human search engines.</li>
+</ul>
+
+<p>Documentation debt compounds like production debt, except it is easier to ignore because there is no pager for stale knowledge.</p>
+
+<h2>The silent failure loop</h2>
+
+<p>Most teams accidentally run this loop:</p>
+<ol>
+  <li>Write docs during a project push.</li>
+  <li>Ship fast and move on.</li>
+  <li>Change systems without changing docs.</li>
+  <li>New people trust old docs.</li>
+  <li>Work slows or incidents worsen.</li>
+  <li>Patch the pain manually in chat.</li>
+  <li>Repeat.</li>
+</ol>
+
+<p>The key insight: teams are not failing because they do not care.  
+They are failing because maintenance is event-driven while documentation decay is continuous.</p>
+
+<h2>What high-performing teams do differently</h2>
+
+<p>The strongest teams do not treat docs as static pages.  
+They treat docs as a living system with health signals and feedback loops.</p>
+
+<p>In practice, this means:</p>
+<ul>
+  <li><strong>Every important doc has an owner.</strong> Not "engineering" - a person or rotating role.</li>
+  <li><strong>Every doc has freshness expectations.</strong> Quarterly checks are better than yearly regret.</li>
+  <li><strong>Usage informs priority.</strong> A stale, high-traffic runbook is more dangerous than an old low-traffic note.</li>
+  <li><strong>Question patterns are tracked.</strong> Repeated unanswered questions reveal missing documentation faster than ticket queues.</li>
+  <li><strong>Feedback is captured at the point of use.</strong> "This answer helped" or "this answer failed" is not vanity data; it is maintenance fuel.</li>
+</ul>
+
+<h2>An honest way to use AI here</h2>
+
+<p>AI is not magic documentation automation.  
+If you use it as a text generator, you get polished wrongness faster.</p>
+
+<p>AI becomes useful when it is used as a <strong>maintenance amplifier</strong>:</p>
+<ul>
+  <li>detecting repeated knowledge gaps,</li>
+  <li>highlighting stale-but-frequently-used docs,</li>
+  <li>drafting updates for human review,</li>
+  <li>surfacing contradictions across related pages.</li>
+</ul>
+
+<p>Human judgment stays central.  
+AI should reduce blank-page effort and increase signal, not replace accountability.</p>
+
+<h2>A practical 30-minute reset for your team</h2>
+
+<p>If you only do one thing this week, do this:</p>
+
+<ol>
+  <li>List your top 10 most-used docs (runbooks, onboarding, deployment guides).</li>
+  <li>Mark each with owner + last meaningful update date.</li>
+  <li>Ask your team one question: "Which doc do you no longer trust?"</li>
+  <li>Pick the top 3 high-pain docs and refresh them this sprint.</li>
+  <li>Add a lightweight feedback mechanism to every critical doc.</li>
+</ol>
+
+<p>You do not need a giant documentation initiative.  
+You need a reliability habit.</p>
+
+<h2>The leadership angle nobody budgets for</h2>
+
+<p>Engineering leaders measure uptime, deployment frequency, and incident MTTR.  
+Few measure documentation reliability, even though it directly affects all three.</p>
+
+<p>When docs fail silently:</p>
+<ul>
+  <li>new hires take longer to become effective,</li>
+  <li>incidents take longer to resolve,</li>
+  <li>senior talent is consumed by repetitive clarification work.</li>
+</ul>
+
+<p>If you care about velocity and resilience, documentation quality is not a writing concern.  
+It is a systems concern.</p>
+
+<h2>Final thought</h2>
+
+<p>Your documentation is probably not "bad."  
+It is likely <strong>unmanaged over time</strong>.</p>
+
+<p>That is fixable.</p>
+
+<p>Start by treating documentation like production infrastructure: observable, owned, reviewed, and continuously improved.  
+Once you do, the same team that was stuck answering the same questions every week starts moving with clarity again.</p>
+
+<p>If this resonated, share it with the person on your team who always ends up answering "where is that documented?"</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[Your docs are not failing because your team is lazy. They are failing because systems change faster than static pages. Here is how to break the silent decay loop and restore trust.]]></excerpt:encoded>
+      <wp:post_id>2001</wp:post_id>
+      <wp:post_date>2026-02-26 09:00:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-26 09:00:00</wp:post_date_gmt>
+      <wp:comment_status>open</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>your-documentation-is-not-broken-it-is-quietly-expiring</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>post</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>1</wp:is_sticky>
+      <category domain="category" nicename="documentation-strategy"><![CDATA[Documentation Strategy]]></category>
+      <category domain="category" nicename="engineering-leadership"><![CDATA[Engineering Leadership]]></category>
+      <category domain="post_tag" nicename="documentation"><![CDATA[documentation]]></category>
+      <category domain="post_tag" nicename="knowledge-management"><![CDATA[knowledge management]]></category>
+      <category domain="post_tag" nicename="engineering-productivity"><![CDATA[engineering productivity]]></category>
+    </item>
+
+    <item>
+      <title>How to Stop Repeating the Same Answers in Slack</title>
+      <link>https://abhipsnl.wordpress.com/how-to-stop-repeating-the-same-answers-in-slack/</link>
+      <pubDate>Fri, 27 Feb 2026 09:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?p=2002</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<p>Every engineering lead has seen this: the same "quick question" shows up in Slack every week.</p>
+<p>At first it feels harmless. Then it becomes a pattern:</p>
+<ul>
+  <li>senior engineers lose focus,</li>
+  <li>new engineers hesitate to ask,</li>
+  <li>knowledge spreads in fragments instead of systems.</li>
+</ul>
+
+<h2>The root problem is not Slack</h2>
+<p>Slack is just where missing trust in documentation becomes visible.</p>
+<p>When people ask in chat, they are saying one of three things:</p>
+<ol>
+  <li>"I cannot find the answer."</li>
+  <li>"I found something, but I do not trust it."</li>
+  <li>"I need context that static docs do not capture."</li>
+</ol>
+
+<h2>A simple pattern that works</h2>
+<ol>
+  <li>Create a "frequently interrupted questions" board from your last 30 days of Slack threads.</li>
+  <li>Cluster repeated questions by topic: deploys, access, incidents, architecture.</li>
+  <li>For each cluster, publish one canonical answer page with:
+    <ul>
+      <li>clear owner,</li>
+      <li>last updated date,</li>
+      <li>step-by-step answer,</li>
+      <li>known edge cases.</li>
+    </ul>
+  </li>
+  <li>When answering in Slack, link only the canonical page. Avoid fresh one-off explanations unless the page is outdated, then update it.</li>
+  <li>Track which pages still trigger follow-up confusion and improve those first.</li>
+</ol>
+
+<h2>The mindset shift</h2>
+<p>Stop treating each repeated question as communication overhead.  
+Treat it as telemetry that points to documentation gaps.</p>
+
+<p>Once your team does this consistently, Slack gets quieter in the best possible way: fewer repetitive questions, more meaningful collaboration.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[Repeated Slack questions are not a communication problem. They are documentation telemetry. Use them to build trusted canonical answers and protect engineer focus.]]></excerpt:encoded>
+      <wp:post_id>2002</wp:post_id>
+      <wp:post_date>2026-02-27 09:00:00</wp:post_date>
+      <wp:post_date_gmt>2026-02-27 09:00:00</wp:post_date_gmt>
+      <wp:comment_status>open</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>how-to-stop-repeating-the-same-answers-in-slack</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>post</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <category domain="category" nicename="engineering-leadership"><![CDATA[Engineering Leadership]]></category>
+      <category domain="category" nicename="documentation-strategy"><![CDATA[Documentation Strategy]]></category>
+      <category domain="post_tag" nicename="documentation"><![CDATA[documentation]]></category>
+      <category domain="post_tag" nicename="engineering-productivity"><![CDATA[engineering productivity]]></category>
+      <category domain="post_tag" nicename="onboarding"><![CDATA[onboarding]]></category>
+    </item>
+
+    <item>
+      <title>The Runbook Drift Problem Nobody Tracks</title>
+      <link>https://abhipsnl.wordpress.com/the-runbook-drift-problem-nobody-tracks/</link>
+      <pubDate>Mon, 02 Mar 2026 09:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?p=2003</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<p>Runbooks are supposed to reduce incident stress.  
+Outdated runbooks do the opposite: they create false confidence.</p>
+
+<h2>What runbook drift looks like</h2>
+<ul>
+  <li>The command still works, but against the wrong environment.</li>
+  <li>The escalation path points to a team that no longer owns the service.</li>
+  <li>The dashboard URL exists, but critical panels were renamed months ago.</li>
+  <li>The rollback sequence assumes infrastructure that has already changed.</li>
+</ul>
+
+<p>These are not obvious failures until an incident is live. That is why runbook drift is dangerous.</p>
+
+<h2>How to make drift visible</h2>
+<p>For every high-priority runbook, track these four signals:</p>
+<ol>
+  <li><strong>Age:</strong> days since last meaningful update.</li>
+  <li><strong>Usage:</strong> number of incident references in the last 30 days.</li>
+  <li><strong>Friction:</strong> "this did not work" feedback count.</li>
+  <li><strong>Ownership confidence:</strong> does a current on-call owner exist?</li>
+</ol>
+
+<p>Any runbook with high usage + high age should be treated as an operational risk.</p>
+
+<h2>A lightweight runbook review ritual</h2>
+<ul>
+  <li>Weekly: review top 5 most-used runbooks.</li>
+  <li>Monthly: run one tabletop where someone follows runbook steps exactly.</li>
+  <li>Post-incident: update runbook before closing the incident ticket.</li>
+</ul>
+
+<p>Reliability is not just keeping services up.  
+It is keeping instructions truthful when services change.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[Runbooks fail silently before they fail publicly. Track age, usage, friction, and ownership to prevent runbook drift from increasing incident impact.]]></excerpt:encoded>
+      <wp:post_id>2003</wp:post_id>
+      <wp:post_date>2026-03-02 09:00:00</wp:post_date>
+      <wp:post_date_gmt>2026-03-02 09:00:00</wp:post_date_gmt>
+      <wp:comment_status>open</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>the-runbook-drift-problem-nobody-tracks</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>post</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <category domain="category" nicename="sre"><![CDATA[SRE]]></category>
+      <category domain="category" nicename="devops"><![CDATA[DevOps]]></category>
+      <category domain="post_tag" nicename="runbooks"><![CDATA[runbooks]]></category>
+      <category domain="post_tag" nicename="incident-response"><![CDATA[incident response]]></category>
+      <category domain="post_tag" nicename="documentation"><![CDATA[documentation]]></category>
+    </item>
+
+    <item>
+      <title>A 7-Day Documentation Health Audit for Engineering Teams</title>
+      <link>https://abhipsnl.wordpress.com/a-7-day-documentation-health-audit-for-engineering-teams/</link>
+      <pubDate>Thu, 05 Mar 2026 09:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?p=2004</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<p>If your team says "our docs are messy" but cannot explain where to start, run this 7-day audit.</p>
+
+<h2>Day 1 - Inventory critical docs</h2>
+<p>List onboarding, deploy, incident, and architecture docs that affect delivery speed.</p>
+
+<h2>Day 2 - Assign ownership</h2>
+<p>Every critical doc gets one accountable owner (person or rotation).</p>
+
+<h2>Day 3 - Measure trust</h2>
+<p>Ask: "Which 3 docs do you not trust right now?" Collect answers anonymously.</p>
+
+<h2>Day 4 - Check freshness risk</h2>
+<p>Mark docs older than 90 days that are still high-traffic.</p>
+
+<h2>Day 5 - Validate runbooks</h2>
+<p>Choose one runbook and execute it as-written in a tabletop exercise.</p>
+
+<h2>Day 6 - Capture gap telemetry</h2>
+<p>Review repeated Slack/support questions from the last 30 days and group by topic.</p>
+
+<h2>Day 7 - Prioritize next sprint fixes</h2>
+<p>Pick top 5 high-impact updates using this score:</p>
+<p><strong>Priority = Usage x Pain x Risk</strong></p>
+<ul>
+  <li>Usage: how often the doc is used</li>
+  <li>Pain: confusion/interruptions caused when wrong</li>
+  <li>Risk: operational impact if followed during failure</li>
+</ul>
+
+<p>In one week, you will move from vague frustration to a practical backlog.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[Use this 7-day framework to turn documentation chaos into an actionable reliability backlog your team can execute next sprint.]]></excerpt:encoded>
+      <wp:post_id>2004</wp:post_id>
+      <wp:post_date>2026-03-05 09:00:00</wp:post_date>
+      <wp:post_date_gmt>2026-03-05 09:00:00</wp:post_date_gmt>
+      <wp:comment_status>open</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>a-7-day-documentation-health-audit-for-engineering-teams</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>post</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <category domain="category" nicename="documentation-strategy"><![CDATA[Documentation Strategy]]></category>
+      <category domain="category" nicename="engineering-leadership"><![CDATA[Engineering Leadership]]></category>
+      <category domain="post_tag" nicename="documentation"><![CDATA[documentation]]></category>
+      <category domain="post_tag" nicename="knowledge-management"><![CDATA[knowledge management]]></category>
+      <category domain="post_tag" nicename="engineering-productivity"><![CDATA[engineering productivity]]></category>
+    </item>
+
+    <item>
+      <title>From Search Tool to Knowledge System: What Changes</title>
+      <link>https://abhipsnl.wordpress.com/from-search-tool-to-knowledge-system-what-changes/</link>
+      <pubDate>Mon, 09 Mar 2026 09:00:00 +0000</pubDate>
+      <dc:creator><![CDATA[abhip]]></dc:creator>
+      <guid isPermaLink="false">https://abhipsnl.wordpress.com/?p=2005</guid>
+      <description></description>
+      <content:encoded><![CDATA[
+<p>Many teams adopt an AI search layer and call the documentation problem solved.  
+Then they discover the same old issue: stale content still gets retrieved confidently.</p>
+
+<h2>Search helps access. Systems preserve trust.</h2>
+<p>A search tool answers "can I find something?"  
+A knowledge system answers "can I trust what I find?"</p>
+
+<h2>What changes when you move beyond search</h2>
+<ul>
+  <li><strong>Memory:</strong> the system learns from past questions and feedback.</li>
+  <li><strong>Freshness signals:</strong> answers are ranked by recency and reliability, not just semantic similarity.</li>
+  <li><strong>Gap detection:</strong> repeated low-confidence questions are clustered into actionable content gaps.</li>
+  <li><strong>Draft workflows:</strong> missing docs get drafted for human review instead of waiting for random discovery.</li>
+</ul>
+
+<h2>The practical outcome</h2>
+<p>You stop waiting for someone to complain that docs are broken.  
+Your system starts warning you where documentation quality is degrading.</p>
+
+<p>That is the difference between documentation as static content and documentation as operational infrastructure.</p>
+      ]]></content:encoded>
+      <excerpt:encoded><![CDATA[Search alone cannot solve documentation decay. Add memory, freshness, and gap detection to turn your docs into a reliable knowledge system.]]></excerpt:encoded>
+      <wp:post_id>2005</wp:post_id>
+      <wp:post_date>2026-03-09 09:00:00</wp:post_date>
+      <wp:post_date_gmt>2026-03-09 09:00:00</wp:post_date_gmt>
+      <wp:comment_status>open</wp:comment_status>
+      <wp:ping_status>closed</wp:ping_status>
+      <wp:post_name>from-search-tool-to-knowledge-system-what-changes</wp:post_name>
+      <wp:status>publish</wp:status>
+      <wp:post_parent>0</wp:post_parent>
+      <wp:menu_order>0</wp:menu_order>
+      <wp:post_type>post</wp:post_type>
+      <wp:post_password></wp:post_password>
+      <wp:is_sticky>0</wp:is_sticky>
+      <category domain="category" nicename="ai-workflow"><![CDATA[AI Workflow]]></category>
+      <category domain="category" nicename="documentation-strategy"><![CDATA[Documentation Strategy]]></category>
+      <category domain="post_tag" nicename="autopilot"><![CDATA[autopilot]]></category>
+      <category domain="post_tag" nicename="knowledge-management"><![CDATA[knowledge management]]></category>
+      <category domain="post_tag" nicename="documentation"><![CDATA[documentation]]></category>
+    </item>
+  </channel>
+</rss>
