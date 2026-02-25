@@ -102,16 +102,10 @@ The difference is orientation. Other tools treat documentation as a static artif
 ## Demo
 
 ### Quick preview
-
-<video controls muted playsinline width="100%" src="https://raw.githubusercontent.com/docbrain-ai/docbrain/main/assets/docbrain-social-cut.mp4">
-  Your browser does not support video playback.
-</video>
+👉 [Watch quick preview (MP4)](https://github.com/docbrain-ai/docbrain/blob/main/assets/docbrain-social-cut.mp4)
 
 ### Full proof demo (downvote -> gap -> draft)
-
-<video controls playsinline width="100%" src="https://raw.githubusercontent.com/docbrain-ai/docbrain/main/assets/docbrain-gap-proof-demo.mp4">
-  Your browser does not support video playback.
-</video>
+👉 [Watch full proof demo (MP4)](https://github.com/docbrain-ai/docbrain/blob/main/assets/docbrain-gap-proof-demo.mp4)
 
 In this proof flow: we ask related questions, downvote responses, run Autopilot analysis, confirm a detected gap, and generate a draft.
 
