@@ -98,14 +98,22 @@ A chatbot answers questions. DocBrain answers questions *and* watches which ques
 The difference is orientation. Other tools treat documentation as a static artifact. DocBrain treats it as a living system — one that can monitor its own health and signal when it needs attention.
 
 ---
+
 ## Demo
- 
-Watch the full Autopilot proof flow: **downvote -> gap detection -> draft generation**.
- 
-- **Social cut (36s):** [assets/docbrain-social-cut.mp4](assets/docbrain-social-cut.mp4)
-- **Full proof demo (62s):** [assets/docbrain-gap-proof-demo.mp4](assets/docbrain-gap-proof-demo.mp4)
- 
-> In this demo: 3 related questions are asked, each answer is downvoted, Autopilot analysis is run, a gap appears, and a draft is generated and verified in the UI/API.
+
+### Quick preview
+
+<video controls muted playsinline width="100%" src="https://raw.githubusercontent.com/docbrain-ai/docbrain/main/assets/docbrain-social-cut.mp4">
+  Your browser does not support video playback.
+</video>
+
+### Full proof demo (downvote -> gap -> draft)
+
+<video controls playsinline width="100%" src="https://raw.githubusercontent.com/docbrain-ai/docbrain/main/assets/docbrain-gap-proof-demo.mp4">
+  Your browser does not support video playback.
+</video>
+
+In this proof flow: we ask related questions, downvote responses, run Autopilot analysis, confirm a detected gap, and generate a draft.
 
 ---
 
