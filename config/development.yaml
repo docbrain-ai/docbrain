@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# DocBrain — Development Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+# Loaded when APP_ENV=development (default).
+# Overrides config/default.yaml for local development.
+# These values are safe to commit — no secrets.
+# ═══════════════════════════════════════════════════════════════════════════
+
+server:
+  host: "127.0.0.1"
+  cors_allowed_origins: "http://localhost:3001,http://localhost:3000"
+
+rag:
+  cache_ttl_hours: 1   # Short cache in dev for easier testing
+
+autopilot:
+  enabled: false       # Enable locally with AUTOPILOT_ENABLED=true

@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# DocBrain — Production Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+# Loaded when APP_ENV=production.
+# Use ${ENV_VAR} syntax to reference environment variables.
+# Sensitive values (DATABASE_URL, API keys) must come from env vars.
+#
+# To activate: set APP_ENV=production in your environment.
+# Docker: add ENV APP_ENV=production in Dockerfile, or set in docker-compose.
+# ═══════════════════════════════════════════════════════════════════════════
+
+server:
+  host: "0.0.0.0"   # Bind all interfaces in Docker/Kubernetes
+  cors_allowed_origins: "${CORS_ALLOWED_ORIGINS:-http://localhost:3001}"
+
+database:
+  url: "${DATABASE_URL}"
+  max_connections: 20   # Higher pool for production
+  connect_timeout_secs: 30
+  acquire_timeout_secs: 30
+  idle_timeout_secs: 600
+
+opensearch:
+  url: "${OPENSEARCH_URL:-http://localhost:9200}"
+
+redis:
+  url: "${REDIS_URL:-redis://127.0.0.1:6379}"
+
+llm:
+  provider: "${LLM_PROVIDER:-bedrock}"
+  model_id: "${LLM_MODEL_ID:-}"
+  haiku_model_id: "${HAIKU_MODEL_ID:-}"
+  anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
+  openai_api_key: "${OPENAI_API_KEY:-}"
+
+embeddings:
+  provider: "${EMBED_PROVIDER:-}"
+  model_id: "${EMBED_MODEL_ID:-}"
+
+rag:
+  cache_threshold: 0.95
+  cache_ttl_hours: 24
+
+autopilot:
+  enabled: false   # Override with AUTOPILOT_ENABLED=true in environment
+
+freshness:
+  scheduler_interval_hours: 24
+
+memory:
+  consolidation_interval_hours: 6
+
+auth:
+  session_ttl_hours: "${LOGIN_SESSION_TTL_HOURS:-720}"

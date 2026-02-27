@@ -1,0 +1,89 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# DocBrain — Default Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+# This file contains safe defaults for all settings.
+# Override in config/development.yaml, config/production.yaml, or via
+# environment variables (env vars always win).
+#
+# ${ENV_VAR} and ${ENV_VAR:-default} syntax is supported in all values.
+# Sensitive values (API keys, passwords) should ALWAYS come from env vars.
+# ═══════════════════════════════════════════════════════════════════════════
+
+server:
+  host: "127.0.0.1"   # Use 0.0.0.0 in Docker/production
+  port: 3000
+  cors_allowed_origins: "http://localhost:3001"
+  max_query_length: 4000
+
+database:
+  # url: set DATABASE_URL env var (required — no default)
+  max_connections: 10
+  connect_timeout_secs: 10
+  acquire_timeout_secs: 10
+  idle_timeout_secs: 300
+
+opensearch:
+  url: "http://localhost:9200"
+  # index: "docbrain-chunks"          # default applied in code
+  # episode_index: "docbrain-episodes" # default applied in code
+
+redis:
+  url: "redis://127.0.0.1:6379"
+
+llm:
+  provider: "bedrock"   # bedrock | anthropic | openai | ollama
+  # model_id: ~          # defaults to provider-appropriate model
+  # haiku_model_id: ~    # optional fast/cheap model for side-calls
+  # thinking_budget: ~   # extended thinking tokens, 0 = disabled
+  ollama_base_url: "http://localhost:11434"
+  # anthropic_api_key: ~  # set ANTHROPIC_API_KEY env var
+  # openai_api_key: ~     # set OPENAI_API_KEY env var
+  # openai_base_url: ~    # optional OpenAI-compatible base URL
+
+embeddings:
+  # provider: ~   # defaults to llm.provider
+  # model_id: ~   # defaults to provider-appropriate model
+
+rag:
+  cache_threshold: 0.95   # Min cosine similarity for cache hit
+  cache_ttl_hours: 24     # Cache max age in hours
+  # search_min_score: ~   # Min relevance for search results (default: 0.0)
+
+autopilot:
+  enabled: false          # Opt-in. Set AUTOPILOT_ENABLED=true to enable.
+  cluster_threshold: 0.82
+  min_cluster_size: 3
+  min_unique_users: 2
+  min_negative_ratio: 0.15
+  lookback_days: 30
+  max_clusters_per_run: 50
+  max_episodes_per_run: 500
+  gap_analysis_interval_hours: 6
+
+freshness:
+  scheduler_interval_hours: 24
+
+memory:
+  consolidation_interval_hours: 6
+
+auth:
+  session_ttl_hours: 720   # 30 days. Set to 0 for non-expiring sessions.
+
+confluence:
+  # base_url: ~         # set CONFLUENCE_BASE_URL env var
+  # user_email: ~       # set CONFLUENCE_USER_EMAIL env var
+  # api_token: ~        # set CONFLUENCE_API_TOKEN env var
+  # space_keys: ~       # set CONFLUENCE_SPACE_KEYS env var
+  # api_version: "v2"   # "v2" (Cloud) or "v1" (Data Center)
+  # webhook_secret: ~   # set CONFLUENCE_WEBHOOK_SECRET env var
+  # tls_verify: true    # set CONFLUENCE_TLS_VERIFY=false for self-signed certs
+
+slack:
+  # bot_token: ~                   # set SLACK_BOT_TOKEN env var
+  # signing_secret: ~              # set SLACK_SIGNING_SECRET env var
+  notification_interval_hours: 24
+  # notification_space_filter: ~   # optional space filter for notifications
+
+ingest:
+  self_ingest: true
+  image_extraction_enabled: true
