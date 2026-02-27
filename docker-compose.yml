@@ -1,6 +1,20 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # DocBrain — Full Stack
-# Usage: docker compose up -d
+#
+# Usage:
+#   cp .env.example .env        # add your LLM keys, Confluence token, etc.
+#   docker compose up -d        # starts all services
+#
+# Configuration:
+#   YAML defaults are baked into the Docker image (config/default.yaml +
+#   config/production.yaml). You configure via .env for secrets and
+#   deployment-specific values. Environment variables always win over YAML.
+#
+#   To use a custom config directory (e.g. Kubernetes ConfigMap):
+#     environment:
+#       DOCBRAIN_CONFIG_DIR: /etc/docbrain
+#     volumes:
+#       - /path/to/your/config:/etc/docbrain:ro
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
@@ -58,12 +72,27 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false     # create from .env.example first
     environment:
+      # Config profile — matches config/production.yaml baked into the image
+      APP_ENV: production
+      # Infrastructure URLs — override .env values so containers talk to each other
       DATABASE_URL: postgresql://${POSTGRES_USER:-docbrain}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-docbrain}
       OPENSEARCH_URL: http://opensearch:9200
       REDIS_URL: redis://redis:6379
       SERVER_BIND: 0.0.0.0
+      # CORS — set to your web UI domain in production
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3001}
+      # Auth session lifetime (30 days default)
+      LOGIN_SESSION_TTL_HOURS: ${LOGIN_SESSION_TTL_HOURS:-720}
+      # Scheduler intervals (can be overridden in .env)
+      AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: ${AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS:-6}
+      FRESHNESS_SCHEDULER_INTERVAL_HOURS: ${FRESHNESS_SCHEDULER_INTERVAL_HOURS:-24}
+      CONSOLIDATION_INTERVAL_HOURS: ${CONSOLIDATION_INTERVAL_HOURS:-6}
+      # Optional: uncomment to use a custom config directory
+      # DOCBRAIN_CONFIG_DIR: /etc/docbrain
     volumes:
       - ./examples/sample-docs:/data/docs:ro
     restart: unless-stopped

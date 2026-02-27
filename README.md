@@ -138,22 +138,53 @@ You can run DocBrain locally in under 5 minutes.
 ```bash
 git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
 cp .env.example .env
-# Edit .env — pick your LLM provider (see options below)
+# Edit .env — set LLM_PROVIDER, API keys, and document source
 docker compose up -d
 ```
 
 ```bash
-# Get your admin API key
+# Get your admin API key (generated on first boot)
 docker compose exec server cat /app/admin-bootstrap-key.txt
 
 # Ingest the included sample docs
 docker compose exec server docbrain-ingest
 
 # Ask a question (replace <key> with the key from above)
-docker compose exec -e DOCBRAIN_API_KEY=<key> server docbrain-cli ask "How do I deploy to production?"
+docker compose exec -e DOCBRAIN_API_KEY=<key> server \
+  docbrain-cli ask "How do I deploy to production?"
 ```
 
 Open the Web UI at **http://localhost:3001**.
+
+### Configuration
+
+All configuration is done through `.env`. DocBrain uses a layered config system internally, but you never need to touch the YAML files — the defaults are baked into the Docker image.
+
+**The rule**: put everything in `.env`. Environment variables always win.
+
+```env
+# .env — the only file you need to edit
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+LLM_MODEL_ID=claude-sonnet-4-5-20250929
+
+# Document source
+SOURCE_TYPE=confluence
+CONFLUENCE_BASE_URL=https://yourco.atlassian.net/wiki
+CONFLUENCE_USER_EMAIL=you@yourco.com
+CONFLUENCE_API_TOKEN=your-token
+CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
+
+# Optional: enable Autopilot (gap detection + draft generation)
+AUTOPILOT_ENABLED=true
+
+# Optional: Slack integration
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_SIGNING_SECRET=...
+SLACK_GAP_NOTIFICATION_CHANNEL=#docs-alerts
+```
+
+For advanced tuning (cluster thresholds, cache TTLs, scheduler intervals), all settings are available as env vars. See [Configuration Reference](docs/configuration.md).
 
 ### Choose Your LLM Provider
 
@@ -368,9 +399,35 @@ When connected to Confluence with multiple spaces (or multiple doc sources), Doc
 
 Sources flagged as `stale` or `outdated` are visually marked so users know when to treat information with caution.
 
-### Team-Scoped API Keys
+### Space Access Control
 
-For organizations with multiple teams sharing one DocBrain instance, API keys can be scoped to specific spaces — hard data isolation without deploying separate instances.
+DocBrain gives you three levels of space control for multi-team deployments. Understanding the distinction is important:
+
+#### 1. Soft Boost — prefer results from a space, but don't exclude others
+
+```json
+POST /api/v1/ask
+{
+  "question": "How do I deploy to production?",
+  "space": "PLATFORM"
+}
+```
+
+Results from `PLATFORM` get a 1.5× score multiplier — they rank higher but docs from other spaces can still appear. Use this for cross-team collaboration where you want your team's docs to surface first.
+
+#### 2. Per-Request Hard Filter — restrict a single query to specific spaces
+
+```json
+POST /api/v1/ask
+{
+  "question": "How do I deploy to production?",
+  "spaces": ["PLATFORM", "SRE"]
+}
+```
+
+Only chunks from `PLATFORM` and `SRE` are fetched from OpenSearch. Docs from `ENG`, `OPS`, or any other space are completely excluded for this request. No API key change required — useful for cross-space queries where you want to scope the search dynamically.
+
+#### 3. API Key Hard Restriction — enforce space isolation at the key level
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/admin/keys \
@@ -379,7 +436,24 @@ curl -X POST http://localhost:3000/api/v1/admin/keys \
   -d '{"name": "Platform Team Key", "role": "editor", "allowed_spaces": ["PLATFORM", "SRE"]}'
 ```
 
-`allowed_spaces` on an API key is a hard filter. The `"space"` parameter in `/api/v1/ask` is a soft boost. Both can be combined.
+Every request made with this key is restricted to `PLATFORM` and `SRE` — regardless of what the caller passes in the request body. Use this when a team or service should never see data from other spaces, regardless of who makes the request.
+
+#### How they combine
+
+If both an API key restriction and a per-request `spaces` filter are set, DocBrain computes the **intersection**:
+
+```
+API key:          ["PLATFORM", "OPS"]
+Request spaces:   ["PLATFORM", "ENG"]
+Effective filter: ["PLATFORM"]          ← most restrictive wins
+```
+
+| Scenario | Recommended approach |
+|---|---|
+| You want answers from your team's space first, but will accept others | `space: "PLATFORM"` (soft boost) |
+| You want answers from exactly two spaces for this query | `spaces: ["PLATFORM", "SRE"]` (per-request hard filter) |
+| Your team's API key should never see other teams' data | `allowed_spaces` on the key (permanent hard restriction) |
+| Full cross-team collaboration | No restriction (omit both) |
 
 ### Knowledge Base Health Dashboard
 
@@ -444,12 +518,12 @@ A `contradiction_score` of 32 means this doc significantly contradicts other doc
 
 ### Owner-Aware Stale Notifications
 
-DocBrain sends targeted Slack DMs to document owners when their docs go stale — not a bulk notification that gets ignored, but a personal alert with citation counts that make the urgency real:
+DocBrain sends targeted Slack DMs to document owners when their docs go stale — not a bulk notification that gets ignored, but a personal alert with citation counts and last-edit age that make the urgency real:
 
 > ⚠️ **Stale Documentation Alert**
 >
-> 1. [Deploy Guide](https://...) — freshness 23/100 · **cited 47 times this week**
-> 2. [API Rate Limits](https://...) — freshness 31/100 · **cited 12 times this week**
+> 1. [Deploy Guide](https://...) — freshness 23/100 · **cited 47 times this week** · last updated ~8mo ago
+> 2. [API Rate Limits](https://...) — freshness 31/100 · **cited 12 times this week** · last updated ~3mo ago
 >
 > 🚨 High Impact — your team is actively relying on outdated information.
 
@@ -457,6 +531,8 @@ DocBrain sends targeted Slack DMs to document owners when their docs go stale �
 NOTIFICATION_INTERVAL_HOURS=24
 NOTIFICATION_SPACE_FILTER=PLATFORM,SRE
 ```
+
+When Autopilot detects a critical gap, it also DMs the authors of the most closely related documents — surfacing the content most likely to need updating, before anyone files a ticket.
 
 ---
 
