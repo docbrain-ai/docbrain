@@ -27,6 +27,7 @@
   <a href="#how-it-works">How It Works</a> &bull;
   <a href="docs/architecture.md">Architecture</a> &bull;
   <a href="docs/api-reference.md">API Reference</a> &bull;
+  <a href="docs/slack.md">Slack</a> &bull;
   <a href="docs/kubernetes.md">Deploy</a>
 </p>
 
@@ -197,6 +198,69 @@ DocBrain tracks freshness automatically:
 - Authors get a Slack DM: *"Your doc 'Redis Configuration Guide' was retrieved 47 times this month and hasn't been updated in 14 months. It may need a review."*
 
 When a doc is updated and re-ingested, its freshness score resets, and any gap clusters that depended on it are re-evaluated. The knowledge base improves itself — not because someone runs a quarterly audit, but because every question is a signal.
+
+---
+
+### 6. Slack-Native Knowledge — Answers Where Your Team Already Works
+
+Your on-call engineer shouldn't have to leave Slack to find the runbook. Your new hire shouldn't need to bookmark a separate tool. DocBrain lives in your workspace as a `/docbrain` slash command.
+
+**Incident triage in-channel:**
+
+```
+/docbrain incident redis connection timeouts in auth-service
+```
+
+```
+🚨 Incident Search: redis connection timeouts in auth-service
+
+Runbook: Redis Connection Pool Exhaustion
+Source: "Redis On-Call Runbook" (Confluence: SRE) · ✓ Updated 5 days ago
+
+1. Check connection pool saturation:
+   redis-cli -h redis-prod info clients | grep connected_clients
+2. If connected_clients > maxclients (default 10000):
+   kubectl rollout restart deployment/auth-service -n platform
+3. Verify pool recovery:
+   watch -n2 'redis-cli info clients | grep connected'
+
+Confidence: 87% — runbook covers this scenario.
+
+[👍 Helpful]  [👎 Not helpful]
+```
+
+The answer is posted to the channel so the whole on-call team can see it. Feedback buttons feed back into DocBrain's learning loop — a thumbs-down here contributes to gap detection the same way it does in the web UI.
+
+**Quick questions without context-switching:**
+
+```
+/docbrain ask what's the SLA for the payments API?
+```
+
+Your engineer gets a sourced answer with freshness indicators in 3-5 seconds, right in the Slack thread. No tab-switching, no login, no separate tool to remember.
+
+**Onboarding a new teammate:**
+
+```
+/docbrain onboard PLATFORM
+```
+
+Generates an AI-curated reading list of the most important docs in the PLATFORM space — freshness-sorted, with "commonly asked by new team members" context. The new hire gets their week-1 guide in Slack, not a 47-page wiki nobody reads.
+
+**Proactive stale-doc nudges — no command needed:**
+
+DocBrain's background scheduler runs daily and DMs doc owners automatically:
+
+> ⚠️ **Your documentation needs attention**
+>
+> • [Deploy Guide](https://...) — freshness 23/100 · cited 47 times this week · last updated 8 months ago
+> • [API Rate Limits](https://...) — freshness 31/100 · cited 12 times this week · last updated 3 months ago
+>
+> These docs are actively being served to your team. A quick review would help.
+
+No command needed. No ticket filed. The system watches and nudges the right person at the right time.
+
+Full setup guide (10 minutes): **[docs/slack.md](docs/slack.md)**
 
 ---
 
@@ -805,7 +869,18 @@ claude mcp add docbrain \
 
 ### Slack
 
-DocBrain can serve as a Slack bot for team-wide Q&A and receive weekly Autopilot digests. Set `SLACK_BOT_TOKEN` and `SLACK_SIGNING_SECRET` — see [Configuration](docs/configuration.md).
+Use `/docbrain` as a slash command in Slack — your team can query docs, triage incidents, and get proactive stale-doc notifications without leaving their workspace.
+
+```
+/docbrain ask how do we deploy to production?
+/docbrain incident payments service 502 after deploy
+/docbrain freshness PLATFORM
+/docbrain onboard ENG
+```
+
+Answers include source links, freshness indicators, and feedback buttons that feed into DocBrain's learning loop. A background scheduler DMs doc owners when their content goes stale.
+
+Setup takes 10 minutes: create a Slack app, add two URLs, set two env vars. Full guide: **[docs/slack.md](docs/slack.md)**
 
 ### CLI
 
@@ -915,6 +990,7 @@ Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 | [Provider Setup](docs/providers.md) | LLM and embedding provider configuration |
 | [Architecture](docs/architecture.md) | System design, data flow, memory, freshness, and Autopilot |
 | [API Reference](docs/api-reference.md) | REST API with Autopilot endpoints |
+| [Slack Integration](docs/slack.md) | Slash commands, feedback buttons, and proactive notifications |
 | [Kubernetes](docs/kubernetes.md) | Helm chart deployment and scaling |
 
 ---
