@@ -116,6 +116,18 @@ All configuration is also available via environment variables, set in `.env` for
 | `GITHUB_TOKEN` | — | GitHub personal access token (optional for public repos) |
 | `GITHUB_BRANCH` | `main` | Branch to ingest from |
 
+## Confluence Webhooks (Real-Time Sync)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CONFLUENCE_WEBHOOK_SECRET` | — | HMAC secret shared with Confluence. When set, DocBrain mounts `POST /confluence/events` and auto-ingests page changes in real time. |
+
+When configured, DocBrain receives `page_created`, `page_updated`, `page_restored`, `page_removed`, and `page_trashed` events from Confluence and syncs changes automatically — no scheduled re-ingest needed.
+
+Requires `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` to also be set (DocBrain needs API access to fetch the page content when a webhook fires).
+
+See the [Ingestion Guide](ingestion.md#real-time-sync-confluence-webhooks) for setup instructions.
+
 ## Image Extraction
 
 | Variable | Default | Description |

@@ -282,6 +282,115 @@ Image descriptions use the `HAIKU_MODEL_ID` model if set (recommended for cost e
 
 ---
 
+## Real-Time Sync: Confluence Webhooks
+
+By default, DocBrain ingests documents when you run `docbrain-ingest` manually or on a cron schedule. But if you want pages to sync **automatically** the moment they're created, updated, or deleted in Confluence, enable webhook integration.
+
+### What It Does
+
+| Confluence Event | DocBrain Action |
+|-----------------|-----------------|
+| `page_created` | Fetches the new page, chunks it, embeds it, indexes it |
+| `page_updated` | Deletes old chunks, re-fetches, re-chunks, re-indexes |
+| `page_restored` | Same as created |
+| `page_removed` / `page_trashed` | Deletes the page's chunks from OpenSearch and marks it deleted in PostgreSQL |
+
+All processing happens asynchronously — DocBrain returns `200 OK` to Confluence immediately and syncs in the background.
+
+### Step 1: Generate a Webhook Secret
+
+Pick a strong random string. This secret is shared between Confluence and DocBrain for HMAC-SHA256 signature verification.
+
+```bash
+# Generate a random secret
+openssl rand -hex 32
+```
+
+### Step 2: Configure DocBrain
+
+Add to your `.env`:
+
+```env
+# Required — gates the entire webhook feature
+CONFLUENCE_WEBHOOK_SECRET=your-generated-secret-here
+
+# These must also be set (DocBrain needs API access to fetch page content)
+CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
+CONFLUENCE_API_TOKEN=your-api-token
+CONFLUENCE_USER_EMAIL=you@yourcompany.com
+```
+
+Restart the server. You should see:
+
+```
+[startup] Confluence webhook integration enabled
+```
+
+If you see `CONFLUENCE_WEBHOOK_SECRET set but missing CONFLUENCE_BASE_URL/API_TOKEN — webhook sync disabled`, check that both `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` are set.
+
+### Step 3: Configure the Webhook in Confluence
+
+#### Confluence Cloud
+
+1. Go to your Confluence instance → **Settings** (gear icon) → **Webhooks** (under "Atlassian Admin" → find your site)
+2. Or use the Atlassian admin: `https://admin.atlassian.com` → your site → **Settings** → **Webhooks**
+3. Click **Create webhook**
+4. Configure:
+
+| Field | Value |
+|-------|-------|
+| **URL** | `https://<your-docbrain-domain>/confluence/events` |
+| **Secret** | The same secret you set in `CONFLUENCE_WEBHOOK_SECRET` |
+| **Events** | Select: `page_created`, `page_updated`, `page_removed`, `page_trashed`, `page_restored` |
+
+5. Save and activate the webhook.
+
+> **Important:** The URL must be HTTPS and publicly reachable from Atlassian's servers. If DocBrain runs behind a firewall, you'll need an ingress or tunnel (e.g., ngrok for testing, or a proper reverse proxy in production).
+
+#### Confluence Data Center (Self-Hosted)
+
+1. Go to **Administration** → **Further Configuration** → **Webhooks** (or install the Webhook plugin if not available)
+2. Create a webhook with the same URL and secret as above
+3. Select the page events you want to track
+
+### Step 4: Verify
+
+Create or edit a page in Confluence. Within a few seconds, check the DocBrain server logs:
+
+```
+[confluence] Processing page_updated for page 'My Test Page' (id=12345)
+[confluence] Updated page 'My Test Page' — 8 chunks re-indexed
+```
+
+Then ask a question about the content you just changed:
+
+```bash
+docbrain-cli ask "What did I just write about?"
+```
+
+The answer should reflect the latest content.
+
+### Security
+
+- Every incoming webhook is verified using **HMAC-SHA256** with the shared secret
+- The signature is checked via the `X-Hub-Signature: sha256=<hex>` header
+- Constant-time comparison prevents timing attacks
+- Request body is limited to 1MB
+- If verification fails, DocBrain returns `401 Unauthorized` and ignores the event
+
+### Webhooks vs. Scheduled Ingest
+
+| | Webhooks | Scheduled Ingest (`docbrain-ingest`) |
+|---|---|---|
+| **Latency** | Seconds after page edit | Hours (depends on cron interval) |
+| **Scope** | Single page per event | All pages in configured spaces |
+| **Use case** | Real-time sync for active teams | Bulk initial load, catch-up, re-indexing |
+| **Requirements** | Public HTTPS URL, Confluence webhook config | Just a cron schedule |
+
+**Recommendation:** Use both. Run scheduled ingest as a daily safety net (catches anything webhooks might miss — network blips, downtime), and use webhooks for real-time updates.
+
+---
+
 ## Re-Ingestion and Updates
 
 ### Updating Documents
