@@ -201,40 +201,94 @@ docker compose up -d
 
 fi  # end SKIP_SETUP
 
-# ── Wait for server to be ready ──────────────────────────────────────────
+# ── Wait for services to be ready ────────────────────────────────────────
 
 echo ""
-echo -n "Waiting for server to be ready"
+echo -n "Waiting for PostgreSQL"
 for i in $(seq 1 30); do
-    if curl -sf http://localhost:3000/api/v1/config > /dev/null 2>&1; then
-        echo " ready!"
+    if docker compose exec -T postgres pg_isready -U docbrain > /dev/null 2>&1; then
+        echo -e " ${GREEN}ready${NC}"
         break
     fi
     echo -n "."
     sleep 2
 done
 
+echo -n "Waiting for OpenSearch"
+for i in $(seq 1 45); do
+    if curl -sf http://localhost:9200/_cluster/health > /dev/null 2>&1; then
+        echo -e " ${GREEN}ready${NC}"
+        break
+    fi
+    echo -n "."
+    sleep 2
+done
+
+echo -n "Waiting for server"
+for i in $(seq 1 45); do
+    if curl -sf http://localhost:3000/api/v1/health > /dev/null 2>&1; then
+        echo -e " ${GREEN}ready${NC}"
+        break
+    fi
+    echo -n "."
+    sleep 2
+done
+
+# ── Auto-ingest sample docs on first run ─────────────────────────────────
+
+INDEX_COUNT=$(curl -sf "http://localhost:9200/docbrain-chunks/_count" 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
+
+if [[ "${INDEX_COUNT:-0}" -eq 0 ]]; then
+    echo ""
+    echo -e "${BOLD}Ingesting sample docs so you can try it immediately...${NC}"
+    docker compose exec -T server docbrain-ingest 2>&1 | tail -5
+    NEW_COUNT=$(curl -sf "http://localhost:9200/docbrain-chunks/_count" 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
+    if [[ "${NEW_COUNT:-0}" -gt 0 ]]; then
+        echo -e "${GREEN}Ingested sample docs (${NEW_COUNT} chunks). You can ask questions now!${NC}"
+    fi
+fi
+
+# ── Bootstrap admin key ──────────────────────────────────────────────────
+
+BOOTSTRAP_KEY=""
+if docker compose exec -T server test -f /app/admin-bootstrap-key.txt 2>/dev/null; then
+    BOOTSTRAP_KEY=$(docker compose exec -T server cat /app/admin-bootstrap-key.txt 2>/dev/null | grep "^Key:" | cut -d' ' -f2 || true)
+fi
+
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║          DocBrain is running!                ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════╝${NC}"
 echo ""
-echo "  API Server   http://localhost:3000"
-echo "  Web UI       http://localhost:3001"
+echo -e "  Web UI       ${BLUE}http://localhost:3001${NC}"
+echo -e "  API Server   ${BLUE}http://localhost:3000${NC}"
+echo -e "  Health       ${BLUE}http://localhost:3000/api/v1/health${NC}"
 echo ""
-echo "  Your admin API key was generated on first boot."
-echo "  Retrieve it:"
+
+if [[ -n "$BOOTSTRAP_KEY" ]]; then
+    echo -e "  ${BOLD}Admin API key:${NC} ${GREEN}${BOOTSTRAP_KEY}${NC}"
+    echo ""
+    echo "  This key expires in 120 minutes. Create a permanent admin account:"
+    echo ""
+    echo "    curl -X POST http://localhost:3000/api/v1/admin/users \\"
+    echo "      -H 'X-API-Key: ${BOOTSTRAP_KEY}' \\"
+    echo "      -H 'Content-Type: application/json' \\"
+    echo "      -d '{\"email\":\"admin@example.com\",\"password\":\"yourpassword\",\"display_name\":\"Admin\",\"role\":\"admin\"}'"
+    echo ""
+else
+    echo "  Retrieve your admin API key:"
+    echo "    docker compose exec server cat /app/admin-bootstrap-key.txt"
+    echo ""
+fi
+
+echo -e "  ${BOLD}Next steps:${NC}"
+echo "    1. Create an admin account (use the key above)"
+echo "    2. Open http://localhost:3001 and sign in"
+echo "    3. Ask a question to verify everything works"
 echo ""
-echo "    docker compose exec server cat /app/admin-bootstrap-key.txt"
+echo "  To ingest your own docs:"
+echo "    docker compose exec server docbrain-ingest"
 echo ""
-echo "  Quick start:"
-echo "    1. Run the command above to get your API key"
-echo "    2. Open http://localhost:3001 -> Settings"
-echo "    3. Paste the API key and save"
-echo "    4. Run ingestion: docker compose exec server docbrain-ingest"
-echo "    5. Start asking questions!"
-echo ""
-echo "  CLI usage:"
-echo "    docker compose exec server docbrain-cli ask 'How do I deploy?'"
-echo "    docker compose exec server docbrain-cli ingest"
+echo "  To stop:  docker compose down"
+echo "  To logs:  docker compose logs -f"
 echo ""

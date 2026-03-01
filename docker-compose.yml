@@ -95,6 +95,7 @@ services:
       # DOCBRAIN_CONFIG_DIR: /etc/docbrain
     volumes:
       - ./examples/sample-docs:/data/docs:ro
+      - ./docs:/app/docs:ro
     restart: unless-stopped
 
   web:

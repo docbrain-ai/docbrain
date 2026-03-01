@@ -20,6 +20,7 @@
 
 <p align="center">
   <a href="#quickstart">Quickstart</a> &bull;
+  <a href="#real-world-use-cases">Use Cases</a> &bull;
   <a href="#who-is-this-for">Who Is This For</a> &bull;
   <a href="#why-docbrain-is-different">Why Different</a> &bull;
   <a href="#documentation-autopilot">Autopilot</a> &bull;
@@ -96,6 +97,106 @@ A chatbot answers questions. DocBrain answers questions *and* watches which ques
 | Search returns results | Search returns results ranked by freshness + confidence |
 
 The difference is orientation. Other tools treat documentation as a static artifact. DocBrain treats it as a living system — one that can monitor its own health and signal when it needs attention.
+
+---
+
+## Real-World Use Cases
+
+### 1. Incident Response — Find the Runbook, Not the Channel
+
+It's 2am. The payments service is returning 502s after a deploy.
+
+```bash
+docbrain ask "payments service 502 after deploy"
+```
+
+```
+Runbook: Payments Service Rollback Procedure
+Source: "Payments On-Call Guide" (Confluence: OPS)
+Freshness: ✓ Updated 3 days ago
+
+1. Check the deploy diff: git log --oneline production..main
+2. If the issue is in the payment-processor service, roll back with:
+   kubectl rollout undo deployment/payment-processor -n payments
+3. Verify recovery: curl -sf https://api.example.com/health/payments
+...
+
+Confidence: 91% — documentation fully covers this scenario.
+```
+
+No channel-surfing. No asking who wrote the runbook. One command, the exact procedure, with a freshness stamp so you know it's reliable.
+
+Low confidence (< 50%) means DocBrain warns you explicitly: *"Documentation may not fully cover this topic. Verify before acting."* You know when to trust it and when to call someone.
+
+---
+
+### 2. IaC in the IDE — Org Standards Inline via MCP
+
+Your engineer is writing a Terraform module for a new RDS instance. They add DocBrain as an MCP server in Claude Code or Cursor. Now when Claude generates code, it retrieves your org's actual infrastructure standards — not generic AWS docs.
+
+```
+User: "Add RDS to this module"
+
+Claude (via DocBrain MCP): [fetches "RDS Provisioning Standards" from Confluence]
+  → Multi-AZ required in production (Source: Infra Standards v2.3)
+  → Use db.r7g.xlarge minimum for production workloads
+  → ⚠ Doc flagged as STALE — last updated 14 months ago. Verify instance types with #platform-eng
+```
+
+When the engineer ignores a recommendation ("this answer wasn't useful"), DocBrain records it. After enough similar signals, Autopilot surfaces it: *"5 engineers asked about RDS instance types this month and marked the answers as outdated — the doc needs updating."* The author gets notified automatically.
+
+---
+
+### 3. Onboarding — Day 1, Not Week 3
+
+New hire joins the platform team. Instead of a 47-page "new hire wiki" nobody reads:
+
+```bash
+docbrain ask "how do I get access to production as a new platform engineer?"
+```
+
+```
+Access Request Flow (Platform Engineering)
+Source: "Onboarding: Platform Team" (Confluence: ENG, freshness: ✓)
+
+1. Submit a Jira ticket to #access-requests with your manager CC'd
+2. Attach the completed "Production Access Checklist" (link: ...)
+3. You'll receive a Vault token within 24h — store it in 1Password under "prod-vault"
+...
+```
+
+And when they ask something nobody documented — *"How do I trigger the integration test suite without a PR?"* — DocBrain can't answer. That signal joins a cluster with the 7 other engineers who asked the same thing in the last month. Autopilot drafts a doc. The team lead reviews and publishes it. Next new hire gets the answer on day 1.
+
+---
+
+### 4. Doc Authorship Intelligence — Write Once, Get It Right
+
+Before a senior engineer spends two hours writing a new Redis runbook, they check:
+
+```bash
+docbrain ask "Redis OOM error troubleshooting"
+```
+
+DocBrain's Autopilot gap dashboard shows:
+- **12 engineers asked** about Redis OOM errors in the last 30 days
+- **3 existing docs** partially cover it: "Redis Configuration", "Memory Limits", "On-Call Runbook v1"
+- **What's missing**: none of the docs cover the specific `maxmemory-policy` settings for your use case, or the cache eviction monitoring dashboards
+- **User feedback**: *"The existing runbook doesn't cover what to do after the OOM — only how to detect it"*
+
+The engineer writes the runbook once, covering exactly what's missing. The gap cluster auto-resolves when the doc is ingested. The 12 engineers who would've asked again get the answer immediately.
+
+---
+
+### 5. The Living Knowledge Base — Docs That Don't Rot
+
+Your Confluence has 800 pages. 340 haven't been touched in over a year. Nobody knows which ones are accurate.
+
+DocBrain tracks freshness automatically:
+- Pages that haven't been updated but are being frequently retrieved → flagged as `stale`
+- Answers citing stale docs include a warning badge in the UI and CLI
+- Authors get a Slack DM: *"Your doc 'Redis Configuration Guide' was retrieved 47 times this month and hasn't been updated in 14 months. It may need a review."*
+
+When a doc is updated and re-ingested, its freshness score resets, and any gap clusters that depended on it are re-evaluated. The knowledge base improves itself — not because someone runs a quarterly audit, but because every question is a signal.
 
 ---
 
