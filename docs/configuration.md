@@ -200,12 +200,24 @@ When enabled, Autopilot runs on the configured schedule, exposes management endp
 |----------|---------|-------------|
 | `CONSOLIDATION_INTERVAL_HOURS` | `6` | How often the memory consolidation job runs (merges episodic patterns into semantic/procedural memory) |
 
-## RAG Cache
+## RAG Pipeline
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `RAG_TOP_K` | `10` | Chunks retrieved per query. Higher = more context passed to the LLM, at the cost of more tokens per call. Raise to `15`–`20` if answers are missing obvious information; lower to `5` to reduce cost on simple corpora. |
+| `RAG_BM25_BOOST` | `1.0` | Weight of keyword (BM25) search relative to vector search in hybrid retrieval. Raise to `2.0`–`3.0` for corpora heavy with exact-match queries — error codes, CLI commands, ticket IDs, specific tool names. Leave at `1.0` for general prose documentation. |
+| `SEARCH_MIN_SCORE` | `0.0` | Drop retrieved chunks below this relevance score before sending context to the LLM. `0.0` keeps everything. Set to `0.3`–`0.4` if you notice irrelevant chunks contaminating answers; leave at `0.0` for small corpora where recall matters more than precision. |
 | `RAG_CACHE_TTL_HOURS` | `24` | How long to cache semantically identical answers |
 | `RAG_CACHE_THRESHOLD` | `0.95` | Cosine similarity threshold for a query to count as a cache hit |
+
+## Chunking
+
+Controls how documents are split before embedding. See [Ingestion Guide](ingestion.md) for re-ingest instructions.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHUNK_SIZE` | `1500` | Target chunk size in characters. Dense API refs: `800`–`1200`. General docs: `1500`. Long-form prose: `2000`–`2500`. |
+| `CHUNK_OVERLAP` | `200` | Overlap between adjacent paragraph-split chunks in characters. |
 
 ## OpenSearch Index Names
 
