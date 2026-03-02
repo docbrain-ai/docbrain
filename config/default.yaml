@@ -33,7 +33,8 @@ redis:
 llm:
   provider: "bedrock"   # bedrock | anthropic | openai | ollama
   # model_id: ~          # defaults to provider-appropriate model
-  # haiku_model_id: ~    # optional fast/cheap model for side-calls
+  # ingest_model_id: ~   # optional separate model for ingestion/summarization tasks
+  # haiku_model_id: ~    # optional fast/cheap model for side-calls (image descriptions, etc.)
   # thinking_budget: ~   # extended thinking tokens, 0 = disabled
   ollama_base_url: "http://localhost:11434"
   # anthropic_api_key: ~  # set ANTHROPIC_API_KEY env var
@@ -70,20 +71,54 @@ auth:
   session_ttl_hours: 720   # 30 days. Set to 0 for non-expiring sessions.
 
 confluence:
-  # base_url: ~         # set CONFLUENCE_BASE_URL env var
-  # user_email: ~       # set CONFLUENCE_USER_EMAIL env var
-  # api_token: ~        # set CONFLUENCE_API_TOKEN env var
-  # space_keys: ~       # set CONFLUENCE_SPACE_KEYS env var
+  # base_url: ~         # secret — set in config/local.yaml
+  # user_email: ~       # secret — set in config/local.yaml
+  # api_token: ~        # secret — set in config/local.yaml
+  # space_keys: ~       # set in config/local.yaml
   # api_version: "v2"   # "v2" (Cloud) or "v1" (Data Center)
-  # webhook_secret: ~   # set CONFLUENCE_WEBHOOK_SECRET env var
-  # tls_verify: true    # set CONFLUENCE_TLS_VERIFY=false for self-signed certs
+  # webhook_secret: ~   # secret — set CONFLUENCE_WEBHOOK_SECRET env var
+  # tls_verify: true    # set to false for self-signed certs
 
 slack:
-  # bot_token: ~                   # set SLACK_BOT_TOKEN env var
-  # signing_secret: ~              # set SLACK_SIGNING_SECRET env var
+  # bot_token: ~                   # secret — set SLACK_BOT_TOKEN env var
+  # signing_secret: ~              # secret — set SLACK_SIGNING_SECRET env var
   notification_interval_hours: 24
   # notification_space_filter: ~   # optional space filter for notifications
 
 ingest:
   self_ingest: true
   image_extraction_enabled: true
+  # ingest_sources: local  # comma-separated: local, confluence, github, github_pr, gitlab_mr, slack_thread, jira
+
+github_pr:
+  # token: ~           # secret — set in config/local.yaml
+  # repo: ~            # owner/repo e.g. acme/platform — set in config/local.yaml
+  lookback_days: 365
+  min_comments: 1
+  # labels: ~          # comma-separated label filter (optional)
+  # api_url: ~         # override for GitHub Enterprise (optional)
+
+gitlab_mr:
+  # token: ~           # secret — set in config/local.yaml
+  base_url: "https://gitlab.com"
+  # project_ids: ~     # comma-separated namespace/repo paths — set in config/local.yaml
+  lookback_days: 365
+  min_notes: 1
+  # labels: ~          # comma-separated label filter (optional)
+  tls_verify: true
+
+slack_ingest:
+  # token: ~           # secret — set in config/local.yaml
+  # channels: ~        # comma-separated channel IDs — set in config/local.yaml
+  min_replies: 3
+  reactions: "white_check_mark,bookmark"
+  lookback_days: 90
+
+jira_ingest:
+  # base_url: ~        # set in config/local.yaml
+  # user_email: ~      # set in config/local.yaml
+  # api_token: ~       # secret — set in config/local.yaml
+  # projects: ~        # comma-separated project keys — set in config/local.yaml
+  # jql_filter: ~      # optional additional JQL filter
+  lookback_days: 365
+  issue_types: "Bug,Story,Task,Epic"

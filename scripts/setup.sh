@@ -48,6 +48,32 @@ if [ -f .env ]; then
     fi
 fi
 
+# Ensure config/local.yaml exists (gitignored — safe for secrets and overrides)
+if [ ! -f config/local.yaml ]; then
+    mkdir -p config
+    cat > config/local.yaml << 'LOCALYAML'
+# config/local.yaml — never committed (gitignored)
+# Use this file for ingest source credentials and personal overrides.
+# Infrastructure secrets (DATABASE_URL, ANTHROPIC_API_KEY, etc.) stay in .env.
+#
+# Example:
+#
+# ingest:
+#   ingest_sources: confluence,github_pr
+#
+# confluence:
+#   base_url: https://acme.atlassian.net/wiki
+#   user_email: you@acme.com
+#   api_token: ATATT3x...
+#   space_keys: DOCS,ENG
+#
+# github_pr:
+#   token: ghp_...
+#   repo: acme/platform
+#   lookback_days: 180
+LOCALYAML
+fi
+
 if [ "$SKIP_SETUP" = false ]; then
 
 cp .env.example .env
@@ -164,27 +190,49 @@ case $source_choice in
         sed -i.bak "s|^LOCAL_DOCS_PATH=.*|LOCAL_DOCS_PATH=${docs_path}|" .env
         ;;
     3)
-        sed -i.bak 's/^SOURCE_TYPE=.*/SOURCE_TYPE=confluence/' .env
         echo ""
-        read -rp "  Confluence URL (e.g. https://yourco.atlassian.net): " conf_url
+        read -rp "  Confluence URL (e.g. https://yourco.atlassian.net/wiki): " conf_url
         read -rp "  Email: " conf_email
         read -rp "  API token: " conf_token
         read -rp "  Space keys (comma-separated): " conf_spaces
-        sed -i.bak "s|^# CONFLUENCE_BASE_URL=.*|CONFLUENCE_BASE_URL=${conf_url}|" .env
-        sed -i.bak "s/^# CONFLUENCE_USER_EMAIL=.*/CONFLUENCE_USER_EMAIL=${conf_email}/" .env
-        sed -i.bak "s/^# CONFLUENCE_API_TOKEN=.*/CONFLUENCE_API_TOKEN=${conf_token}/" .env
-        sed -i.bak "s/^# CONFLUENCE_SPACE_KEYS=.*/CONFLUENCE_SPACE_KEYS=${conf_spaces}/" .env
+        # Write source credentials to config/local.yaml (gitignored), not .env
+        cat >> config/local.yaml << CONFYAML
+
+ingest:
+  ingest_sources: confluence
+
+confluence:
+  base_url: ${conf_url}
+  user_email: ${conf_email}
+  api_token: ${conf_token}
+  space_keys: ${conf_spaces}
+CONFYAML
+        echo ""
+        echo -e "  ${GREEN}Confluence settings written to config/local.yaml (gitignored).${NC}"
         ;;
     4)
-        sed -i.bak 's/^SOURCE_TYPE=.*/SOURCE_TYPE=github/' .env
         echo ""
         read -rp "  Repository URL: " gh_url
         read -rp "  Token (optional, enter to skip): " gh_token
         read -rp "  Branch [main]: " gh_branch
         gh_branch=${gh_branch:-main}
-        sed -i.bak "s|^# GITHUB_REPO_URL=.*|GITHUB_REPO_URL=${gh_url}|" .env
-        [[ -n "$gh_token" ]] && sed -i.bak "s/^# GITHUB_TOKEN=.*/GITHUB_TOKEN=${gh_token}/" .env
-        sed -i.bak "s/^# GITHUB_BRANCH=.*/GITHUB_BRANCH=${gh_branch}/" .env
+        # Write source credentials to config/local.yaml (gitignored), not .env
+        cat >> config/local.yaml << GHYAML
+
+ingest:
+  ingest_sources: github
+
+github:
+  repo_url: ${gh_url}
+  branch: ${gh_branch}
+GHYAML
+        if [[ -n "$gh_token" ]]; then
+            cat >> config/local.yaml << GHTOKENYAML
+  token: ${gh_token}
+GHTOKENYAML
+        fi
+        echo ""
+        echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
         ;;
 esac
 
@@ -285,6 +333,10 @@ echo -e "  ${BOLD}Next steps:${NC}"
 echo "    1. Create an admin account (use the key above)"
 echo "    2. Open http://localhost:3001 and sign in"
 echo "    3. Ask a question to verify everything works"
+echo ""
+echo "  To connect a document source, edit config/local.yaml (gitignored):"
+echo "    — put source credentials (Confluence token, GitHub token, etc.) there"
+echo "    — put infrastructure secrets (DATABASE_URL, API keys) in .env"
 echo ""
 echo "  To ingest your own docs:"
 echo "    docker compose exec server docbrain-ingest"

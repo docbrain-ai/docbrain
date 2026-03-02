@@ -323,24 +323,42 @@ Open the Web UI at **http://localhost:3001**.
 
 ### Configuration
 
-All configuration is done through `.env`. DocBrain uses a layered config system internally, but you never need to touch the YAML files — the defaults are baked into the Docker image.
+DocBrain uses a **config-first architecture** with three layers:
 
-**The rule**: put everything in `.env`. Environment variables always win.
+| File | Purpose |
+|---|---|
+| `config/default.yaml` | All non-secret defaults — committed, safe to inspect |
+| `config/local.yaml` | Your secrets and local overrides — **gitignored, never committed** |
+| `.env` | Infrastructure secrets only: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `REDIS_URL`, `OPENSEARCH_URL` |
+
+Environment variables always override config files (highest priority).
+
+**The rule**: ingest source credentials go in `config/local.yaml`. Infrastructure secrets go in `.env`.
+
+```yaml
+# config/local.yaml — create this file, it's gitignored
+ingest:
+  ingest_sources: confluence,github_pr
+
+confluence:
+  base_url: https://yourco.atlassian.net/wiki
+  user_email: you@yourco.com
+  api_token: your-token
+  space_keys: ENG,DOCS,OPS
+
+github_pr:
+  token: ghp_...
+  repo: yourco/platform
+  lookback_days: 180
+```
 
 ```env
-# .env — the only file you need to edit
+# .env — infrastructure secrets only
 LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 LLM_MODEL_ID=claude-sonnet-4-5-20250929
 
-# Document source
-SOURCE_TYPE=confluence
-CONFLUENCE_BASE_URL=https://yourco.atlassian.net/wiki
-CONFLUENCE_USER_EMAIL=you@yourco.com
-CONFLUENCE_API_TOKEN=your-token
-CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
-
-# Optional: enable Autopilot (gap detection + draft generation)
+# Optional: enable Autopilot
 AUTOPILOT_ENABLED=true
 
 # Optional: Slack integration
@@ -349,7 +367,7 @@ SLACK_SIGNING_SECRET=...
 SLACK_GAP_NOTIFICATION_CHANNEL=#docs-alerts
 ```
 
-For advanced tuning (cluster thresholds, cache TTLs, scheduler intervals), all settings are available as env vars. See [Configuration Reference](docs/configuration.md).
+For the full configuration reference: [docs/configuration.md](docs/configuration.md).
 
 ### Choose Your LLM Provider
 
@@ -703,17 +721,23 @@ When Autopilot detects a critical gap, it also DMs the authors of the most close
 
 ## Connect Your Documents
 
-DocBrain ingests from three source types. Documents are chunked with heading-aware splitting, embedded, and indexed in OpenSearch. Ingestion runs on a configurable cron schedule for continuous sync.
+DocBrain ingests from multiple source types. Documents are chunked with heading-aware splitting, embedded, and indexed in OpenSearch. Ingestion runs on a configurable cron schedule for continuous sync.
+
+Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
 
 <details>
 <summary><strong>Confluence (Cloud)</strong></summary>
 
-```env
-SOURCE_TYPE=confluence
-CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
-CONFLUENCE_USER_EMAIL=you@yourcompany.com
-CONFLUENCE_API_TOKEN=your-token
-CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: confluence
+
+confluence:
+  base_url: https://yourcompany.atlassian.net/wiki
+  user_email: you@yourcompany.com
+  api_token: your-token
+  space_keys: ENG,DOCS,OPS
 ```
 
 </details>
@@ -721,26 +745,101 @@ CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
 <details>
 <summary><strong>Confluence (Self-Hosted / Data Center)</strong></summary>
 
-```env
-SOURCE_TYPE=confluence
-CONFLUENCE_API_VERSION=v1
-CONFLUENCE_BASE_URL=https://confluence.yourcompany.com
-CONFLUENCE_API_TOKEN=your-personal-access-token
-CONFLUENCE_SPACE_KEYS=ENG,DOCS,OPS
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: confluence
+
+confluence:
+  base_url: https://confluence.yourcompany.com
+  api_token: your-personal-access-token
+  space_keys: ENG,DOCS,OPS
+  api_version: v1    # v1 for Data Center 7.x+
 ```
 
-Set `CONFLUENCE_API_VERSION=v1` for self-hosted Confluence Data Center 7.x+. Uses Bearer auth with a Personal Access Token. `CONFLUENCE_USER_EMAIL` is not required for v1.
+Uses Bearer auth with a Personal Access Token. `user_email` is not required for v1.
 
 </details>
 
 <details>
 <summary><strong>GitHub Repository</strong></summary>
 
-```env
-SOURCE_TYPE=github
-GITHUB_REPO_URL=https://github.com/your-org/your-docs
-GITHUB_TOKEN=ghp_...
-GITHUB_BRANCH=main
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: github
+
+github:
+  repo_url: https://github.com/your-org/your-docs
+  token: ghp_...    # only for private repos
+  branch: main
+```
+
+</details>
+
+<details>
+<summary><strong>GitHub Pull Requests</strong></summary>
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: github_pr
+
+github_pr:
+  token: ghp_...
+  repo: your-org/your-repo
+  lookback_days: 365
+  min_comments: 1
+```
+
+</details>
+
+<details>
+<summary><strong>GitLab Merge Requests</strong></summary>
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: gitlab_mr
+
+gitlab_mr:
+  token: glpat-...
+  project_ids: your-org/your-repo
+  lookback_days: 365
+```
+
+</details>
+
+<details>
+<summary><strong>Slack Threads</strong></summary>
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: slack_thread
+
+slack_ingest:
+  token: xoxb-...
+  channels: C01234567,C09876543
+  min_replies: 3
+  lookback_days: 90
+```
+
+</details>
+
+<details>
+<summary><strong>Jira</strong></summary>
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: jira
+
+jira_ingest:
+  base_url: https://yourcompany.atlassian.net
+  user_email: you@yourcompany.com
+  api_token: your-token
+  projects: ENG,OPS
 ```
 
 </details>
@@ -749,8 +848,14 @@ GITHUB_BRANCH=main
 <summary><strong>Local Markdown Files</strong></summary>
 
 ```env
-SOURCE_TYPE=local
+# .env
 LOCAL_DOCS_PATH=/data/docs
+```
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: local
 ```
 
 </details>

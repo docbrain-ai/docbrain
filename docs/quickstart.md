@@ -44,11 +44,13 @@ cd docbrain
 cp .env.example .env
 ```
 
-Edit `.env` — uncomment your preferred provider section (see comments in the file) and add your API keys. Then:
+Edit `.env` — add your LLM API key (infrastructure secret). Then:
 
 ```bash
 docker compose up -d
 ```
+
+For document sources (Confluence, GitHub, Slack, Jira), create `config/local.yaml` (gitignored) with your source credentials. See [Configuration Reference](./configuration.md) for the config-first architecture.
 
 ## Verify Installation
 
@@ -78,28 +80,55 @@ This takes ~30 seconds. Once done, you can ask questions about the sample docume
 
 ### Connect your real docs
 
-Edit `.env` to point at your actual documentation:
+Create `config/local.yaml` (gitignored) and add your source credentials. This file is never committed — it's the right place for tokens and source settings.
 
 **Confluence:**
-```env
-SOURCE_TYPE=confluence
-CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
-CONFLUENCE_USER_EMAIL=you@yourcompany.com
-CONFLUENCE_API_TOKEN=your-api-token
-CONFLUENCE_SPACE_KEYS=ENG,DOCS
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: confluence
+
+confluence:
+  base_url: https://yourcompany.atlassian.net/wiki
+  user_email: you@yourcompany.com
+  api_token: your-api-token
+  space_keys: ENG,DOCS
 ```
 
-**GitHub:**
-```env
-SOURCE_TYPE=github
-GITHUB_REPO_URL=https://github.com/your-org/your-docs
-GITHUB_TOKEN=ghp_...    # only for private repos
+**GitHub repository:**
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: github
+
+github:
+  repo_url: https://github.com/your-org/your-docs
+  token: ghp_...    # only for private repos
 ```
 
-**Local files:**
+**GitHub Pull Requests:**
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: github_pr
+
+github_pr:
+  token: ghp_...
+  repo: your-org/your-repo
+  lookback_days: 365
+```
+
+**Local files** (no secrets needed — just set in `.env`):
 ```env
-SOURCE_TYPE=local
+# .env
 LOCAL_DOCS_PATH=/data/docs
+```
+
+Multiple sources can be combined:
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: confluence,github_pr,jira
 ```
 
 Then restart and re-ingest:

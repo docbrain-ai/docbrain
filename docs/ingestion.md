@@ -16,11 +16,17 @@ After ingestion, you can immediately start asking questions. DocBrain cites sour
 
 ## Quick Reference
 
-| Source | Set `SOURCE_TYPE` to | What You Need |
-|--------|---------------------|---------------|
+Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
+
+| Source | `ingest_sources` value | What You Need |
+|--------|------------------------|---------------|
 | Local files | `local` | A directory of `.md` or `.txt` files |
 | Confluence | `confluence` | Atlassian URL, email, API token, space keys |
 | GitHub | `github` | Repository URL, optional token for private repos |
+| GitHub PRs | `github_pr` | GitHub token, owner/repo |
+| GitLab MRs | `gitlab_mr` | GitLab token, project path |
+| Slack threads | `slack_thread` | Slack bot token, channel IDs |
+| Jira | `jira` | Jira URL, email, API token, project keys |
 
 ---
 
@@ -30,10 +36,17 @@ The simplest option. Point DocBrain at a folder of Markdown or text files.
 
 ### Setup
 
-Your `.env` should have:
+Add to `config/local.yaml`:
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: local
+```
+
+And set the path in `.env` (it's a filesystem path, not a secret, but it's deployment-specific):
 
 ```env
-SOURCE_TYPE=local
 LOCAL_DOCS_PATH=/data/docs
 ```
 
@@ -97,25 +110,28 @@ https://yourcompany.atlassian.net/wiki/spaces/ENG/pages/...
 
 Common examples: `ENG`, `DOCS`, `OPS`, `PLATFORM`
 
-### Step 3: Configure `.env`
+### Step 3: Configure `config/local.yaml`
 
-```env
-SOURCE_TYPE=confluence
-CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
-CONFLUENCE_USER_EMAIL=you@yourcompany.com
-CONFLUENCE_API_TOKEN=your-api-token-here
-CONFLUENCE_SPACE_KEYS=ENG,DOCS
+```yaml
+# config/local.yaml — never committed (gitignored)
+ingest:
+  ingest_sources: confluence
+
+confluence:
+  base_url: https://yourcompany.atlassian.net/wiki
+  user_email: you@yourcompany.com
+  api_token: your-api-token-here
+  space_keys: ENG,DOCS
 ```
 
-**Multiple spaces**: Separate with commas, no spaces: `ENG,DOCS,OPS`
+**Multiple spaces**: Separate with commas: `ENG,DOCS,OPS`
 
-**Limiting pages**: By default, DocBrain ingests all pages in each space. To cap the number of pages per space (useful for testing), set:
+**Limiting pages**: By default, DocBrain ingests all pages in each space. To cap the number of pages per space (useful for testing), add:
 
-```env
-CONFLUENCE_PAGE_LIMIT=100
+```yaml
+confluence:
+  page_limit: 100   # 0 = unlimited (default)
 ```
-
-Set to `0` (default) for unlimited.
 
 ### Step 4: Run Ingestion
 
@@ -149,13 +165,15 @@ The answer should cite your Confluence pages with links back to the originals.
 
 ### Self-Hosted Confluence (Data Center)
 
-DocBrain also supports self-hosted Confluence Data Center 7.x+ instances. Set one extra variable:
+DocBrain also supports self-hosted Confluence Data Center 7.x+ instances:
 
-```env
-CONFLUENCE_API_VERSION=v1
-CONFLUENCE_BASE_URL=https://confluence.yourcompany.com
-CONFLUENCE_API_TOKEN=your-personal-access-token
-CONFLUENCE_SPACE_KEYS=ENG,DOCS
+```yaml
+# config/local.yaml
+confluence:
+  api_version: v1
+  base_url: https://confluence.yourcompany.com
+  api_token: your-personal-access-token
+  space_keys: ENG,DOCS
 ```
 
 **Creating a Personal Access Token (Data Center):**
@@ -173,8 +191,10 @@ CONFLUENCE_SPACE_KEYS=ENG,DOCS
 
 If your instance uses a self-signed certificate or an internal CA that Docker doesn't trust, disable TLS verification:
 
-```env
-CONFLUENCE_TLS_VERIFY=false
+```yaml
+# config/local.yaml
+confluence:
+  tls_verify: false
 ```
 
 Everything else works identically — same space keys, same page limit, same webhook sync, same image extraction.
@@ -200,16 +220,21 @@ Ingest documentation from a GitHub repository. DocBrain clones the repo, finds M
 
 ### Setup
 
-```env
-SOURCE_TYPE=github
-GITHUB_REPO_URL=https://github.com/your-org/your-docs-repo
-GITHUB_BRANCH=main
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: github
+
+github:
+  repo_url: https://github.com/your-org/your-docs-repo
+  branch: main
 ```
 
 **For private repositories**, add a personal access token:
 
-```env
-GITHUB_TOKEN=ghp_your_token_here
+```yaml
+github:
+  token: ghp_your_token_here
 ```
 
 ### Creating a GitHub Token (for private repos)
@@ -308,16 +333,21 @@ openssl rand -hex 32
 
 ### Step 2: Configure DocBrain
 
-Add to your `.env`:
+Set the webhook secret as an environment variable (it's a runtime secret injected by the environment):
 
 ```env
-# Required — gates the entire webhook feature
+# .env — webhook secret only
 CONFLUENCE_WEBHOOK_SECRET=your-generated-secret-here
+```
 
-# These must also be set (DocBrain needs API access to fetch page content)
-CONFLUENCE_BASE_URL=https://yourcompany.atlassian.net/wiki
-CONFLUENCE_API_TOKEN=your-api-token
-CONFLUENCE_USER_EMAIL=you@yourcompany.com
+Confluence credentials must also be set in `config/local.yaml` (DocBrain needs API access to fetch page content when a webhook fires):
+
+```yaml
+# config/local.yaml
+confluence:
+  base_url: https://yourcompany.atlassian.net/wiki
+  api_token: your-api-token
+  user_email: you@yourcompany.com
 ```
 
 Restart the server. You should see:
@@ -429,14 +459,34 @@ docker compose exec server docbrain-ingest
 
 ## Multiple Sources
 
-Currently, DocBrain supports one source type at a time (set via `SOURCE_TYPE`). To ingest from multiple sources, run ingestion once per source by changing the env var and re-running:
+DocBrain supports ingesting from multiple sources simultaneously. Set `ingest_sources` in `config/local.yaml` to a comma-separated list of sources, and configure credentials for each:
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: confluence,github_pr,jira
+
+confluence:
+  base_url: https://acme.atlassian.net/wiki
+  user_email: you@acme.com
+  api_token: ATATT3x...
+  space_keys: DOCS,ENG
+
+github_pr:
+  token: ghp_...
+  repo: acme/platform
+
+jira_ingest:
+  base_url: https://acme.atlassian.net
+  user_email: you@acme.com
+  api_token: your-jira-token
+  projects: ENG,OPS
+```
+
+Then run a single ingestion pass to pull from all sources:
 
 ```bash
-# First: ingest local docs
-SOURCE_TYPE=local docker compose exec server docbrain-ingest
-
-# Then: ingest Confluence
-SOURCE_TYPE=confluence docker compose exec server docbrain-ingest
+docker compose exec server docbrain-ingest
 ```
 
 Documents from different sources coexist in the same index and are searched together.

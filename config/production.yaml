@@ -52,3 +52,16 @@ memory:
 
 auth:
   session_ttl_hours: "${LOGIN_SESSION_TTL_HOURS:-720}"
+
+# ── Ingest source credentials ─────────────────────────────────────────────────
+# Source-specific secrets (Confluence tokens, GitHub tokens, Slack tokens, etc.)
+# do NOT belong here. Set them in config/local.yaml (gitignored) or as
+# environment variables injected by your secrets manager.
+#
+# Example config/local.yaml:
+#   confluence:
+#     base_url: https://acme.atlassian.net/wiki
+#     api_token: ATATT3x...
+#   github_pr:
+#     token: ghp_...
+#     repo: acme/platform

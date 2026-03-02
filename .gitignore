@@ -1,4 +1,5 @@
 .env
+config/local.yaml
 *.log
 .DS_Store
 node_modules/

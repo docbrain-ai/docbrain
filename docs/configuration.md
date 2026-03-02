@@ -2,15 +2,15 @@
 
 ## How Configuration Works
 
-DocBrain uses a **layered YAML + environment variable** system. Understanding this prevents confusion about why a value isn't taking effect.
+DocBrain uses a **config-first architecture** with a layered YAML + environment variable system. Understanding this prevents confusion about why a value isn't taking effect.
 
 ### Loading Order (later = higher priority)
 
 ```
-config/default.yaml         ← committed to repo, all non-sensitive defaults
+config/default.yaml         ← committed to repo — all non-secret defaults
 config/{APP_ENV}.yaml       ← environment-specific overrides (development | production)
-config/local.yaml           ← gitignored personal overrides (optional, dev only)
-Environment variables / .env ← always win — use for secrets and deployment values
+config/local.yaml           ← gitignored — your secrets and local overrides
+Environment variables / .env ← always win — highest priority
 ```
 
 Set `APP_ENV=production` for the production profile (this is the default in the Docker image). The server defaults to `APP_ENV=development` when running locally without Docker.
@@ -19,27 +19,44 @@ Set `APP_ENV=production` for the production profile (this is the default in the 
 
 | Type | Where to put it |
 |---|---|
-| Secrets (API keys, DB passwords, tokens) | `.env` or environment variables |
+| Infrastructure secrets (DB URL, LLM API keys, Redis, OpenSearch) | `.env` or environment variables |
+| Ingest source credentials (Confluence token, GitHub token, Slack token, Jira token) | `config/local.yaml` (gitignored) |
 | Deployment-specific values (URLs, ports, CORS origins) | `.env` or environment variables |
 | Tuning (thresholds, intervals, cache TTLs) | `config/local.yaml` or env vars |
 | Team-wide defaults you want committed | `config/default.yaml` (no secrets!) |
 
-### YAML Config Structure
+**The key distinction:** `.env` is for infrastructure secrets that the runtime environment must inject (container orchestration, CI/CD, secrets managers). `config/local.yaml` is for user-managed source credentials and personal overrides — it's gitignored so it never gets committed, but it lives alongside the project where you can edit it easily.
 
-The YAML files mirror the environment variable names but are grouped by section:
+### Example `config/local.yaml`
 
 ```yaml
-# config/local.yaml — gitignored, safe for personal dev overrides
+# config/local.yaml — never committed (gitignored)
+# Configure ingest sources and personal overrides here.
+
+ingest:
+  ingest_sources: confluence,github_pr
+
+confluence:
+  base_url: https://acme.atlassian.net/wiki
+  user_email: you@acme.com
+  api_token: ATATT3x...
+  space_keys: DOCS,ENG
+
+github_pr:
+  token: ghp_...
+  repo: acme/platform
+  lookback_days: 180
+
+# Local tuning overrides (optional)
 autopilot:
   enabled: true
-  cluster_threshold: 0.78    # looser clustering for testing
+  cluster_threshold: 0.78
 
 rag:
-  cache_ttl_hours: 1         # short cache in dev
-
-slack:
-  notification_interval_hours: 1
+  cache_ttl_hours: 1
 ```
+
+### YAML Config Structure
 
 Every YAML value supports `${ENV_VAR}` and `${ENV_VAR:-default}` substitution:
 
@@ -101,30 +118,160 @@ All configuration is also available via environment variables, set in `.env` for
 
 ## Document Ingestion
 
+Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
+
+### General
+
+| Setting (`config/local.yaml` key) | Env var equivalent | Default | Description |
+|---|---|---|---|
+| `ingest.ingest_sources` | `INGEST_SOURCES` | `local` | Comma-separated list of active sources: `local`, `confluence`, `github`, `github_pr`, `gitlab_mr`, `slack_thread`, `jira` |
+| `ingest.self_ingest` | `DOCBRAIN_SELF_INGEST` | `true` | Auto-ingest DocBrain's own docs |
+| `ingest.image_extraction_enabled` | `IMAGE_EXTRACTION_ENABLED` | `true` | Extract and describe images using vision LLM |
+
+### Local Files
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE_TYPE` | `confluence` | Source: `local`, `confluence`, `github` |
-| `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion |
-| `CONFLUENCE_BASE_URL` | — | Atlassian instance URL (must include `/wiki`, e.g. `https://yourco.atlassian.net/wiki`) |
-| `CONFLUENCE_USER_EMAIL` | — | Confluence authentication email (not required for v1 Data Center) |
-| `CONFLUENCE_API_TOKEN` | — | API token (Cloud) or Personal Access Token (Data Center) |
-| `CONFLUENCE_SPACE_KEYS` | — | Comma-separated space keys to ingest |
-| `CONFLUENCE_PAGE_LIMIT` | `0` (unlimited) | Max pages to ingest per space. Set to a positive number to cap results (e.g. `100`). `0` = ingest all pages. |
-| `CONFLUENCE_API_VERSION` | `v2` | API version: `v2` for Cloud, `v1` for self-hosted Data Center 7.x+ |
-| `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` to skip TLS certificate verification (for self-signed or internal CA certs) |
-| `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |
-| `GITHUB_TOKEN` | — | GitHub personal access token (optional for public repos) |
-| `GITHUB_BRANCH` | `main` | Branch to ingest from |
+| `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion (set in `.env` or as env var) |
+
+### Confluence
+
+Set credentials in `config/local.yaml`:
+
+```yaml
+confluence:
+  base_url: https://yourco.atlassian.net/wiki
+  user_email: you@yourco.com
+  api_token: ATATT3x...
+  space_keys: ENG,DOCS
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `confluence.base_url` | `CONFLUENCE_BASE_URL` | — | Atlassian instance URL (must include `/wiki`) |
+| `confluence.user_email` | `CONFLUENCE_USER_EMAIL` | — | Auth email (not required for v1 Data Center) |
+| `confluence.api_token` | `CONFLUENCE_API_TOKEN` | — | API token (Cloud) or Personal Access Token (Data Center) |
+| `confluence.space_keys` | `CONFLUENCE_SPACE_KEYS` | — | Comma-separated space keys to ingest |
+| `confluence.page_limit` | `CONFLUENCE_PAGE_LIMIT` | `0` (unlimited) | Max pages per space. `0` = all pages. |
+| `confluence.api_version` | `CONFLUENCE_API_VERSION` | `v2` | `v2` for Cloud, `v1` for Data Center 7.x+ |
+| `confluence.tls_verify` | `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
+| `confluence.webhook_secret` | `CONFLUENCE_WEBHOOK_SECRET` | — | HMAC secret for real-time webhook sync (set as env var) |
+
+### GitHub Repository
+
+```yaml
+# config/local.yaml
+github:
+  repo_url: https://github.com/your-org/your-docs
+  token: ghp_...    # only for private repos
+  branch: main
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `github.repo_url` | `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |
+| `github.token` | `GITHUB_TOKEN` | — | Personal access token (optional for public repos) |
+| `github.branch` | `GITHUB_BRANCH` | `main` | Branch to ingest from |
+
+### GitHub Pull Requests
+
+Ingest PR titles, descriptions, and review discussions as searchable knowledge.
+
+```yaml
+# config/local.yaml
+github_pr:
+  token: ghp_...
+  repo: acme/platform
+  lookback_days: 365
+  min_comments: 1
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `github_pr.token` | `GITHUB_PR_TOKEN` | — | GitHub personal access token (secret — set in `config/local.yaml`) |
+| `github_pr.repo` | `GITHUB_PR_REPO` | — | Owner/repo (e.g. `acme/platform`) — set in `config/local.yaml` |
+| `github_pr.lookback_days` | `GITHUB_PR_LOOKBACK_DAYS` | `365` | How far back to fetch PRs |
+| `github_pr.min_comments` | `GITHUB_PR_MIN_COMMENTS` | `1` | Minimum comments for a PR to be ingested |
+| `github_pr.labels` | `GITHUB_PR_LABELS` | — | Comma-separated label filter (optional) |
+| `github_pr.api_url` | `GITHUB_PR_API_URL` | — | Override for GitHub Enterprise (optional) |
+
+### GitLab Merge Requests
+
+Ingest MR titles, descriptions, and discussion threads.
+
+```yaml
+# config/local.yaml
+gitlab_mr:
+  token: glpat-...
+  project_ids: acme/platform,acme/infra
+  lookback_days: 365
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `gitlab_mr.token` | `GITLAB_TOKEN` | — | GitLab personal access token (secret — set in `config/local.yaml`) |
+| `gitlab_mr.base_url` | `GITLAB_BASE_URL` | `https://gitlab.com` | GitLab instance URL |
+| `gitlab_mr.project_ids` | `GITLAB_PROJECT_IDS` | — | Comma-separated namespace/repo paths — set in `config/local.yaml` |
+| `gitlab_mr.lookback_days` | `GITLAB_MR_LOOKBACK_DAYS` | `365` | How far back to fetch MRs |
+| `gitlab_mr.min_notes` | `GITLAB_MR_MIN_NOTES` | `1` | Minimum notes/comments for an MR to be ingested |
+| `gitlab_mr.labels` | `GITLAB_MR_LABELS` | — | Comma-separated label filter (optional) |
+| `gitlab_mr.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
+
+### Slack Threads
+
+Ingest high-signal Slack threads (by reaction count or reply threshold).
+
+```yaml
+# config/local.yaml
+slack_ingest:
+  token: xoxb-...
+  channels: C01234567,C09876543
+  min_replies: 3
+  reactions: "white_check_mark,bookmark"
+  lookback_days: 90
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `slack_ingest.token` | `SLACK_INGEST_TOKEN` | — | Slack bot token (secret — set in `config/local.yaml`) |
+| `slack_ingest.channels` | `SLACK_INGEST_CHANNELS` | — | Comma-separated channel IDs — set in `config/local.yaml` |
+| `slack_ingest.min_replies` | `SLACK_MIN_REPLIES` | `3` | Minimum thread replies to be ingested |
+| `slack_ingest.reactions` | `SLACK_INGEST_REACTIONS` | `white_check_mark,bookmark` | Comma-separated reaction names that flag a thread for ingest |
+| `slack_ingest.lookback_days` | `SLACK_LOOKBACK_DAYS` | `90` | How far back to scan channels |
+
+### Jira
+
+Ingest Jira issues (bugs, stories, tasks, epics) as searchable knowledge.
+
+```yaml
+# config/local.yaml
+jira_ingest:
+  base_url: https://yourcompany.atlassian.net
+  user_email: you@yourcompany.com
+  api_token: your-token
+  projects: ENG,OPS
+  lookback_days: 365
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `jira_ingest.base_url` | `JIRA_BASE_URL` | — | Jira instance URL — set in `config/local.yaml` |
+| `jira_ingest.user_email` | `JIRA_USER_EMAIL` | — | Jira account email — set in `config/local.yaml` |
+| `jira_ingest.api_token` | `JIRA_API_TOKEN` | — | Jira API token (secret — set in `config/local.yaml`) |
+| `jira_ingest.projects` | `JIRA_PROJECTS` | — | Comma-separated project keys — set in `config/local.yaml` |
+| `jira_ingest.jql_filter` | `JIRA_JQL_FILTER` | — | Additional JQL filter (optional) |
+| `jira_ingest.lookback_days` | `JIRA_LOOKBACK_DAYS` | `365` | How far back to fetch issues |
+| `jira_ingest.issue_types` | `JIRA_ISSUE_TYPES` | `Bug,Story,Task,Epic` | Comma-separated issue types to ingest |
 
 ## Confluence Webhooks (Real-Time Sync)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CONFLUENCE_WEBHOOK_SECRET` | — | HMAC secret shared with Confluence. When set, DocBrain mounts `POST /confluence/events` and auto-ingests page changes in real time. |
+| `CONFLUENCE_WEBHOOK_SECRET` | — | HMAC secret shared with Confluence. When set, DocBrain mounts `POST /confluence/events` and auto-ingests page changes in real time. Set as an environment variable (not in `config/local.yaml`). |
 
 When configured, DocBrain receives `page_created`, `page_updated`, `page_restored`, `page_removed`, and `page_trashed` events from Confluence and syncs changes automatically — no scheduled re-ingest needed.
 
-Requires `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` to also be set (DocBrain needs API access to fetch the page content when a webhook fires).
+Requires `confluence.base_url` and `confluence.api_token` to also be set in `config/local.yaml` (DocBrain needs API access to fetch the page content when a webhook fires).
 
 See the [Ingestion Guide](ingestion.md#real-time-sync-confluence-webhooks) for setup instructions.
 
