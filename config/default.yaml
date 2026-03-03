@@ -33,8 +33,8 @@ redis:
 llm:
   provider: "bedrock"   # bedrock | anthropic | openai | ollama
   # model_id: ~          # defaults to provider-appropriate model
-  # ingest_model_id: ~   # optional separate model for ingestion/summarization tasks
-  # haiku_model_id: ~    # optional fast/cheap model for side-calls (image descriptions, etc.)
+  # haiku_model_id: ~    # optional fast/cheap model for side-calls
+  # ingest_model_id: ~   # cheaper model for ingest image extraction (falls back to model_id)
   # thinking_budget: ~   # extended thinking tokens, 0 = disabled
   ollama_base_url: "http://localhost:11434"
   # anthropic_api_key: ~  # set ANTHROPIC_API_KEY env var
@@ -71,54 +71,94 @@ auth:
   session_ttl_hours: 720   # 30 days. Set to 0 for non-expiring sessions.
 
 confluence:
-  # base_url: ~         # secret — set in config/local.yaml
-  # user_email: ~       # secret — set in config/local.yaml
-  # api_token: ~        # secret — set in config/local.yaml
-  # space_keys: ~       # set in config/local.yaml
+  # base_url: ~         # set CONFLUENCE_BASE_URL env var
+  # user_email: ~       # set CONFLUENCE_USER_EMAIL env var
+  # api_token: ~        # set CONFLUENCE_API_TOKEN env var
+  # space_keys: ~       # set CONFLUENCE_SPACE_KEYS env var
   # api_version: "v2"   # "v2" (Cloud) or "v1" (Data Center)
-  # webhook_secret: ~   # secret — set CONFLUENCE_WEBHOOK_SECRET env var
-  # tls_verify: true    # set to false for self-signed certs
+  # webhook_secret: ~   # set CONFLUENCE_WEBHOOK_SECRET env var
+  # tls_verify: true    # set CONFLUENCE_TLS_VERIFY=false for self-signed certs
 
 slack:
-  # bot_token: ~                   # secret — set SLACK_BOT_TOKEN env var
-  # signing_secret: ~              # secret — set SLACK_SIGNING_SECRET env var
+  # bot_token: ~                   # set SLACK_BOT_TOKEN env var
+  # signing_secret: ~              # set SLACK_SIGNING_SECRET env var
   notification_interval_hours: 24
   # notification_space_filter: ~   # optional space filter for notifications
 
 ingest:
   self_ingest: true
   image_extraction_enabled: true
-  # ingest_sources: local  # comma-separated: local, confluence, github, github_pr, gitlab_mr, slack_thread, jira
+  # ingest_sources: local   # comma-separated: local, confluence, github, github_pr, gitlab_mr, slack_thread, jira
 
+# ── GitHub PR + Review Comments ──────────────────────────────────────────────
 github_pr:
-  # token: ~           # secret — set in config/local.yaml
-  # repo: ~            # owner/repo e.g. acme/platform — set in config/local.yaml
+  # token: ~             # secret — set in config/local.yaml or GITHUB_PR_TOKEN env var
+  # repo: ~              # owner/repo format e.g. acme/platform
   lookback_days: 365
   min_comments: 1
-  # labels: ~          # comma-separated label filter (optional)
-  # api_url: ~         # override for GitHub Enterprise (optional)
+  # labels: ~            # comma-separated label filter — empty = all PRs
+  # api_url: ~           # override for GitHub Enterprise (default: https://api.github.com)
 
+# ── GitLab MR + Review Notes ─────────────────────────────────────────────────
 gitlab_mr:
-  # token: ~           # secret — set in config/local.yaml
-  base_url: "https://gitlab.com"
-  # project_ids: ~     # comma-separated namespace/repo paths — set in config/local.yaml
+  # token: ~             # secret — set in config/local.yaml or GITLAB_MR_TOKEN env var
+  base_url: "https://gitlab.com"   # override for self-hosted
+  # project_ids: ~       # comma-separated namespace/repo paths e.g. acme/platform,acme/backend
   lookback_days: 365
   min_notes: 1
-  # labels: ~          # comma-separated label filter (optional)
-  tls_verify: true
+  # labels: ~            # comma-separated label filter — empty = all MRs
+  tls_verify: true       # set false for self-hosted with self-signed certs
 
+# ── Slack Thread Ingest ───────────────────────────────────────────────────────
 slack_ingest:
-  # token: ~           # secret — set in config/local.yaml
-  # channels: ~        # comma-separated channel IDs — set in config/local.yaml
+  # token: ~             # secret — set in config/local.yaml or SLACK_INGEST_TOKEN env var
+  # channels: ~          # comma-separated channel IDs e.g. C01234,C56789
   min_replies: 3
   reactions: "white_check_mark,bookmark"
   lookback_days: 90
 
+# ── Linear Issue Ingest ───────────────────────────────────────────────────────
+linear:
+  # api_key: ~          # secret — set in config/local.yaml or LINEAR_API_KEY env var
+  # teams: ~            # comma-separated team keys e.g. ENG,OPS — empty = all teams
+  lookback_days: 365
+  states: "Done,Cancelled,Duplicate"
+
+# ── Jira Issue Ingest ─────────────────────────────────────────────────────────
 jira_ingest:
-  # base_url: ~        # set in config/local.yaml
-  # user_email: ~      # set in config/local.yaml
-  # api_token: ~       # secret — set in config/local.yaml
-  # projects: ~        # comma-separated project keys — set in config/local.yaml
-  # jql_filter: ~      # optional additional JQL filter
+  # base_url: ~          # secret — set in config/local.yaml or JIRA_BASE_URL env var
+  # user_email: ~        # secret — set in config/local.yaml or JIRA_USER_EMAIL env var
+  # api_token: ~         # secret — set in config/local.yaml or JIRA_API_TOKEN env var
+  # projects: ~          # comma-separated project keys e.g. ENG,OPS — empty = all
+  # jql_filter: ~        # optional extra JQL clause
   lookback_days: 365
   issue_types: "Bug,Story,Task,Epic"
+
+# ── PagerDuty Incident Ingest ─────────────────────────────────────────────────
+pagerduty:
+  # api_token: ~         # secret — set in config/local.yaml or PAGERDUTY_API_TOKEN env var
+  lookback_days: 180
+  min_duration_minutes: 5
+  # services: ~          # comma-separated service IDs to filter — empty = all
+
+# ── OpsGenie Alert Ingest ─────────────────────────────────────────────────────
+opsgenie:
+  # api_key: ~           # secret — set in config/local.yaml or OPSGENIE_API_KEY env var
+  lookback_days: 180
+  min_duration_minutes: 5
+  # teams: ~             # comma-separated team names to filter — empty = all
+
+# ── Zendesk Ticket Ingest ──────────────────────────────────────────────────────
+zendesk:
+  # subdomain: ~         # your-company (before .zendesk.com) — set ZENDESK_SUBDOMAIN
+  # email: ~             # agent email for Basic Auth — set ZENDESK_EMAIL
+  # api_token: ~         # secret — set in config/local.yaml or ZENDESK_API_TOKEN env var
+  lookback_days: 180
+  # min_rating: ~        # "good" | "bad" | empty (include all) — set ZENDESK_MIN_RATING
+
+# ── Intercom Conversation Ingest ───────────────────────────────────────────────
+intercom:
+  # access_token: ~      # secret — set in config/local.yaml or INTERCOM_ACCESS_TOKEN env var
+  lookback_days: 180
+  min_messages: 2
+  # tags: ~              # comma-separated tag names to filter — empty = all

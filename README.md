@@ -3,12 +3,15 @@
 </p>
 
 <p align="center">
-  <strong>The real cost isn't wrong documentation.<br/>
-  It's that you don't know it's wrong until it hurts you.<br/></strong>
+  <strong>Most teams have a knowledge problem they don't know how to name.<br/>
+  The answer was in a Slack thread. A PR comment. An incident timeline.<br/>
+  Somewhere no one thought to look — and now it's gone.</strong>
 </p>
 
 <p align="center">
-  DocBrain makes documentation improve itself.
+  DocBrain closes the loop: it learns from every place your team already works,<br/>
+  answers questions like your most knowledgeable teammate,<br/>
+  and turns every unanswered question into a documented solution.
 </p>
 
 <p align="center">
@@ -20,59 +23,96 @@
 
 <p align="center">
   <a href="#quickstart">Quickstart</a> &bull;
-  <a href="#real-world-use-cases">Use Cases</a> &bull;
   <a href="#who-is-this-for">Who Is This For</a> &bull;
   <a href="#why-docbrain-is-different">Why Different</a> &bull;
+  <a href="#real-world-use-cases">Use Cases</a> &bull;
   <a href="#documentation-autopilot">Autopilot</a> &bull;
+  <a href="#connect-your-knowledge-sources">Sources</a> &bull;
   <a href="#how-it-works">How It Works</a> &bull;
   <a href="docs/architecture.md">Architecture</a> &bull;
-  <a href="docs/api-reference.md">API Reference</a> &bull;
+  <a href="docs/api-reference.md">API</a> &bull;
   <a href="docs/slack.md">Slack</a> &bull;
   <a href="docs/kubernetes.md">Deploy</a>
 </p>
 
 ---
 
-## The Problem Every Engineering Team Shares
+## The Feedback Loop Your Team Is Missing
 
-Documentation has a lifecycle problem that no one talks about honestly.
+Your team's knowledge doesn't live in Confluence. It lives in the places where real work happens.
 
-It starts strong. Someone writes a deployment guide. An SRE documents the incident runbook. A platform team publishes onboarding materials. Everything looks good.
+It's in the GitHub PR where someone explained *why* you're not using gRPC — buried in a review comment that took 20 minutes to write and has never been read since. It's in the Jira ticket that documented the edge case discovered in production. It's in the Slack thread where the 2am incident finally got resolved after 47 minutes. It's in the PagerDuty timeline of the same Redis OOM error you've seen 14 times. It's in the Zendesk ticket where 23 customers independently asked how to configure SSO — which means your docs don't cover it.
 
-Then time passes. Systems change. The guide becomes subtly wrong. The runbook references a service that was renamed. The onboarding doc points to a repo that was archived. Nobody updates them because nobody knows they're broken — until a new engineer follows outdated steps and spends four hours in the wrong direction, or an incident drags on because the runbook is lying about how the system actually works.
+**None of that is searchable. None of it learns. None of it knows when it's wrong.**
 
-**The real cost isn't the wrong documentation. It's that you don't know it's wrong until it hurts you.**
+Every AI documentation tool on the market solves the same half of this problem: embed your Confluence, run vector search, wrap it in an LLM. You get faster answers to questions about things you've already documented.
 
-DocBrain solves this differently. Instead of asking humans to maintain documentation manually, it makes documentation maintain itself — monitoring its own health, surfacing its own gaps, and proposing its own improvements based on how your team actually works.
+What you don't get is a system that closes the loop. One that learns what's undocumented from the questions people ask. One that turns a resolved Slack thread into a runbook. One that notices the same incident happened 14 times and surfaces the resolution pattern automatically. One that sees 23 support tickets about SSO configuration and creates a documentation gap signal.
+
+**DocBrain closes that loop. That's the product.**
 
 ```mermaid
-graph LR
-    A["Team asks questions"] --> B["DocBrain answers<br/>(with memory + freshness)"]
-    B --> C["Unanswered? Low confidence?"]
-    C --> D["Autopilot clusters gaps"]
-    D --> E["Drafts missing docs"]
-    E --> F["Team reviews + publishes"]
-    F --> A
-    style D fill:#2563eb,color:#fff
-    style E fill:#2563eb,color:#fff
+graph TB
+    subgraph "Knowledge enters from everywhere your team works"
+        SL["Slack threads<br/>(resolved incidents, Q&A)"]
+        PR["GitHub PRs / GitLab MRs<br/>(the 'why' behind decisions)"]
+        JR["Jira tickets<br/>(requirements + edge cases)"]
+        PD["PagerDuty / OpsGenie<br/>(incident timelines)"]
+        ZD["Zendesk / Intercom<br/>(customer signal)"]
+        CF["Confluence / Notion<br/>(formal docs)"]
+    end
+
+    subgraph "DocBrain learns from every interaction"
+        Q["Engineer asks a question"]
+        Q --> ANS{"Confident answer?"}
+        ANS -->|"Yes ≥85%"| A["Answer + sources + freshness"]
+        ANS -->|"No <70%"| CQ["Clarifying question<br/>(never guesses)"]
+        A --> FB["Feedback: 👍 or 👎"]
+        FB -->|"👎 wrong answer"| EP["Episode stored as gap signal"]
+        ANS -->|"Not found"| EP
+        CQ --> EP
+    end
+
+    subgraph "The loop closes automatically"
+        EP --> CL["Autopilot clusters gaps<br/>(daily, semantic similarity)"]
+        CL --> DR["Draft generated<br/>(using your org's voice)"]
+        DR --> REV["Human reviews + publishes"]
+        REV --> SL
+        REV --> CF
+    end
+
+    SL & PR & JR & PD & ZD & CF --> Q
+
+    style EP fill:#dc2626,color:#fff
+    style CL fill:#2563eb,color:#fff
+    style DR fill:#2563eb,color:#fff
 ```
+
+The moat is not the features. Any team can build a RAG pipeline in a weekend. The moat is **the accumulated loop** — 6 months of your org's questions, answers, feedback, incident patterns, and gap signals. That history cannot be replicated. Every question asked makes the next answer better. Every unanswered question becomes a documented solution. The system compounds.
 
 ---
 
 ## Who Is This For
 
-You'll know immediately if DocBrain belongs in your stack.
+Any organization where knowledge lives in people's heads instead of somewhere searchable — and where that gap causes downtime, mistakes, slow onboarding, or repeated questions that no one has time to answer.
 
-| If you are... | DocBrain helps you... |
-|---|---|
-| **Platform Engineer** | Reduce runbook chaos — one source of truth your whole org trusts |
-| **SRE / On-Call Engineer** | Surface operational knowledge gaps *before* the next incident exposes them |
-| **Dev Team Lead** | Answer internal questions safely, without pulling senior engineers into Slack |
-| **Technical Writer** | Find what's missing before anyone complains it's missing |
-| **Engineering Leader** | Measure your team's knowledge health the same way you measure system health |
-| **Support / Ops Team** | Stop giving users stale answers from documentation you didn't know was outdated |
+That's not a software problem. That's an organizational problem. DocBrain solves it regardless of industry.
 
-If your organization has more than two teams sharing documentation, more than one deployment environment, or more than one engineer who has ever typed "how do I..." in Slack — DocBrain was built for you.
+| Who | The knowledge problem | How DocBrain closes the loop |
+|---|---|---|
+| **Software Engineering Team** | Runbooks, architecture decisions, deployment procedures — scattered across Confluence, Slack, PR comments, and tribal knowledge | Ingests all of it. Answers in seconds. Learns from every unanswered question. |
+| **SRE / On-Call Engineer** | The same incident has happened 14 times. The resolution lived in a Slack thread that's now buried. | Incident pattern memory: "We've seen this 14 times. Here's what worked 11/14." |
+| **Manufacturing / Operations** | Line operators need fault procedures on the floor. The expert who wrote them retired. New operators make expensive mistakes. | Tablet-accessible Q&A against your maintenance manuals, SOP library, and fault logs. Unanswered questions surface gaps before the next shift. |
+| **Logistics / Field Operations** | Dispatch procedures, compliance checklists, equipment manuals — siloed by site, team, or vehicle type. Onboarding takes weeks. | One interface across all sites. New hires get the right procedure, not a 200-page PDF. |
+| **Healthcare / Clinical Operations** | Protocols update. Staff miss the update. Someone follows the old procedure. | Every protocol has a health score. Staff get answers from the current version. Outdated procedures are flagged automatically. |
+| **Legal / Compliance** | Policy changes are emailed. Three months later, someone acts on the old version. Nobody knows it's happened. | Policies ingested, versioned, health-scored. Questions answered from the latest version. Conflicts between documents surfaced automatically. |
+| **Customer Support** | Agents give inconsistent answers because internal docs are out of sync with product reality. | Agents ask DocBrain, not each other. Every question that can't be answered confidently becomes a documentation gap. |
+| **Technical Writers** | Nobody tells you what's missing until someone complains. | Autopilot shows you exactly what's missing, how often it's being asked, and who's asking — before anyone files a ticket. |
+| **Engineering Leaders** | You can measure system health. You can't measure knowledge health. | A health score for every document, a gap dashboard for every team, and a feedback loop that improves both automatically. |
+
+The common thread: **a team with institutional knowledge that isn't captured, isn't searchable, and isn't improving on its own.**
+
+If that's your organization — regardless of whether your "runbook" is a Kubernetes deployment guide or a machine fault recovery procedure — DocBrain was built for you.
 
 ---
 
@@ -81,23 +121,49 @@ If your organization has more than two teams sharing documentation, more than on
 This needs to be said plainly, because the category is noisy.
 
 **DocBrain is not semantic search over your Confluence.**
-Most AI documentation tools are retrieval layers: embed your docs, do a vector lookup, pass the result to an LLM. That's useful. It's also the same tool you could build in a weekend. The problem of *documentation decay* remains entirely unsolved.
+Most AI documentation tools are retrieval layers: embed your docs, vector lookup, pass to an LLM. That's useful. It's also the same tool you could build in a weekend. The problem — fragmented knowledge across 10 sources, a broken feedback loop, docs that decay silently — remains entirely unsolved.
 
 **DocBrain is not a chatbot on top of your docs.**
-A chatbot answers questions. DocBrain answers questions *and* watches which questions go unanswered, clusters them by theme, detects when the gaps are becoming critical, and proposes drafts to fill them — automatically, on a daily schedule, without anyone asking it to.
+A chatbot answers questions. DocBrain answers questions *and* ingests the Slack thread where the answer was discovered, watches which questions go unanswered, clusters them by theme, and proposes drafts to fill the gaps — without anyone asking it to.
 
-**DocBrain is knowledge lifecycle infrastructure.**
+**DocBrain behaves like your most knowledgeable teammate — not a search engine.**
+
+When it has a confident answer, it leads with it. When it doesn't, it asks a focused clarifying question instead of guessing. When a document is stale, it tells you. When a question has been asked and positively answered before, it remembers. When the same question goes unanswered by 12 engineers over a month, it files a bug against your documentation.
 
 | Generic AI Doc Tool | DocBrain |
 |---|---|
-| Answers questions | Answers questions + learns from every answer |
-| Static retrieval | Freshness-aware retrieval with staleness signals |
-| No memory between sessions | 4-tier memory system that compounds over time |
+| One knowledge source | 10+ sources: every place your team actually works |
+| Answers questions | Answers questions + stores every interaction as a learning signal |
+| Static retrieval | Freshness-aware, with per-document health scores |
+| Stateless | 4-tier memory that compounds: working · episodic · semantic · procedural |
 | You discover gaps when people complain | Autopilot detects gaps before anyone complains |
-| Docs decay silently | Every document has a live health score |
-| Search returns results | Search returns results ranked by freshness + confidence |
+| Docs decay silently | Every document has a live health score + owner-aware staleness alerts |
+| Guesses when unsure | Zero-guess: asks clarifying questions when confidence is low |
+| Knowledge locked in individual tools | Cross-source synthesis: PR + Slack + incident → one answer with attribution |
 
-The difference is orientation. Other tools treat documentation as a static artifact. DocBrain treats it as a living system — one that can monitor its own health and signal when it needs attention.
+The competitor can copy the code. They cannot copy your org's 12 months of accumulated questions, answers, incident patterns, and feedback — the loop you've already closed.
+
+---
+
+## 🎬 Demo
+
+### ⚡ MCP Preview (30-Second Overview)
+
+[![Watch Quick Preview](https://img.youtube.com/vi/9mZLoQnGLl8/maxresdefault.jpg)](https://youtu.be/9mZLoQnGLl8)
+
+DocBrain MCP plugin in action — org knowledge inline in your IDE.
+
+### ⚡ Quick Preview (30-Second Overview)
+
+[![Watch Quick Preview](https://img.youtube.com/vi/IXGaJioq6Og/maxresdefault.jpg)](https://youtu.be/IXGaJioq6Og)
+
+A fast visual walkthrough of DocBrain in action.
+
+### 🔎 Full Proof Demo (Downvote → Gap → Draft)
+
+[![Watch Full Proof Demo](https://img.youtube.com/vi/yqj5BCVOLHw/maxresdefault.jpg)](https://youtu.be/yqj5BCVOLHw)
+
+Complete proof flow: ask questions → downvote weak responses → Autopilot detects the gap → generates a structured draft automatically.
 
 ---
 
@@ -108,32 +174,112 @@ The difference is orientation. Other tools treat documentation as a static artif
 It's 2am. The payments service is returning 502s after a deploy.
 
 ```bash
-docbrain ask "payments service 502 after deploy"
+/docbrain incident payments service 502 after deploy
 ```
 
 ```
+🚨 Incident Search: payments service 502 after deploy
+
 Runbook: Payments Service Rollback Procedure
-Source: "Payments On-Call Guide" (Confluence: OPS)
-Freshness: ✓ Updated 3 days ago
+Source: "Payments On-Call Guide" (Confluence: OPS) · ✓ Updated 3 days ago
 
 1. Check the deploy diff: git log --oneline production..main
 2. If the issue is in the payment-processor service, roll back with:
    kubectl rollout undo deployment/payment-processor -n payments
 3. Verify recovery: curl -sf https://api.example.com/health/payments
-...
 
 Confidence: 91% — documentation fully covers this scenario.
+
+[👍 Helpful]  [👎 Not helpful]
 ```
 
-No channel-surfing. No asking who wrote the runbook. One command, the exact procedure, with a freshness stamp so you know it's reliable.
-
-Low confidence (< 50%) means DocBrain warns you explicitly: *"Documentation may not fully cover this topic. Verify before acting."* You know when to trust it and when to call someone.
+No channel-surfing. No asking who wrote the runbook. The answer is sourced, timestamped, and confidence-scored. When DocBrain can't answer confidently — below 70% — it asks a targeted clarifying question instead of guessing. You always know whether to trust it or call someone.
 
 ---
 
-### 2. IaC in the IDE — Org Standards Inline via MCP
+### 2. Cross-Source Intelligence — The "Why" Behind Every Decision
 
-Your engineer is writing a Terraform module for a new RDS instance. They add DocBrain as an MCP server in Claude Code or Cursor. Now when Claude generates code, it retrieves your org's actual infrastructure standards — not generic AWS docs.
+Three years of architectural decisions live in GitHub PR review threads. The Jira tickets that shaped your service boundaries. The Slack thread where someone explained why you're not using gRPC.
+
+None of that was searchable. Until now.
+
+```
+Q: Why is the auth service synchronous?
+
+DocBrain: The auth service uses a synchronous request model for two reasons:
+
+1. PCI compliance requirements prevent async token validation for payment flows
+   [Jira: PLAT-2341 — "PCI audit findings Q2 2023"]
+
+2. The async migration was scoped in Q4 2022 but deprioritized due to latency
+   concerns raised in code review
+   [GitHub PR #892 — "RFC: Auth service async migration"]
+
+The original decision is in the Slack thread from Feb 2023:
+[#platform-eng — "Auth service architecture discussion"]
+
+Confidence: 88%
+```
+
+Every fact attributed to its source. The architectural reasoning your senior engineers carry in their heads — now searchable.
+
+---
+
+### 3. Support Ticket Intelligence — What Customers Can't Figure Out
+
+After ingesting 6 months of Zendesk and Intercom tickets, DocBrain knows more about your documentation gaps than any internal audit ever would.
+
+```
+Autopilot Gap Report — Customer Signal Analysis
+
+Cluster: "SSO configuration with Okta"
+  · 23 support tickets (last 90 days)
+  · 14 internal engineers asked the same question
+  · Existing docs cover login flow but not SCIM provisioning
+  · Suggested: "SSO Configuration Guide — SCIM Provisioning"
+
+Cluster: "API rate limits in production"
+  · 18 support tickets
+  · 31 internal queries, confidence avg 0.61
+  · No existing documentation found
+  · Suggested: "API Rate Limits and Backoff Strategies"
+```
+
+Your support team's most-asked questions become a prioritized backlog for your technical writers — ranked by combined internal + external signal volume.
+
+---
+
+### 4. Incident Pattern Memory — "We've Seen This Before"
+
+After 100 resolved incidents, DocBrain has a pattern database of your failure modes. When a familiar error appears:
+
+```
+/docbrain incident redis connection pool exhausted auth-service
+```
+
+```
+🚨 Incident: Redis connection pool exhausted — auth-service
+
+📊 We've seen this 14 times. Avg resolution: 23 min.
+   Most effective: "Redis Memory Management Runbook" resolved it 11/14 times.
+
+Most likely resolution:
+1. Check connection pool saturation:
+   redis-cli -h redis-prod info clients | grep connected_clients
+2. If connected_clients > maxclients:
+   kubectl rollout restart deployment/auth-service -n platform
+3. Verify pool recovery: watch -n2 'redis-cli info clients | grep connected'
+
+Source: "Redis On-Call Runbook" · ✓ Updated 5 days ago · Confidence: 92%
+```
+
+Not just a document search. A structured memory of what has worked — ranked by historical success rate.
+
+---
+
+### 5. IaC in the IDE — Org Standards Inline via MCP
+
+Your engineer is writing a Terraform module for a new RDS instance. With DocBrain as an MCP server in Claude Code or Cursor, generated code reflects your org's actual standards — not generic AWS docs.
 
 ```
 User: "Add RDS to this module"
@@ -141,113 +287,29 @@ User: "Add RDS to this module"
 Claude (via DocBrain MCP): [fetches "RDS Provisioning Standards" from Confluence]
   → Multi-AZ required in production (Source: Infra Standards v2.3)
   → Use db.r7g.xlarge minimum for production workloads
-  → ⚠ Doc flagged as STALE — last updated 14 months ago. Verify instance types with #platform-eng
+  → ⚠ Doc flagged as STALE — last updated 14 months ago.
+    Verify instance types with #platform-eng
 ```
 
-When the engineer ignores a recommendation ("this answer wasn't useful"), DocBrain records it. After enough similar signals, Autopilot surfaces it: *"5 engineers asked about RDS instance types this month and marked the answers as outdated — the doc needs updating."* The author gets notified automatically.
+When the engineer marks the answer as unhelpful, DocBrain records it. After similar signals from other engineers, Autopilot surfaces it: *"5 engineers asked about RDS instance types this month and marked the answers as outdated."* The author gets notified automatically.
 
 ---
 
-### 3. Onboarding — Day 1, Not Week 3
+### 6. Onboarding — Day 1, Not Week 3
 
-New hire joins the platform team. Instead of a 47-page "new hire wiki" nobody reads:
+New hire joins the platform team:
 
 ```bash
-docbrain ask "how do I get access to production as a new platform engineer?"
-```
-
-```
-Access Request Flow (Platform Engineering)
-Source: "Onboarding: Platform Team" (Confluence: ENG, freshness: ✓)
-
-1. Submit a Jira ticket to #access-requests with your manager CC'd
-2. Attach the completed "Production Access Checklist" (link: ...)
-3. You'll receive a Vault token within 24h — store it in 1Password under "prod-vault"
-...
-```
-
-And when they ask something nobody documented — *"How do I trigger the integration test suite without a PR?"* — DocBrain can't answer. That signal joins a cluster with the 7 other engineers who asked the same thing in the last month. Autopilot drafts a doc. The team lead reviews and publishes it. Next new hire gets the answer on day 1.
-
----
-
-### 4. Doc Authorship Intelligence — Write Once, Get It Right
-
-Before a senior engineer spends two hours writing a new Redis runbook, they check:
-
-```bash
-docbrain ask "Redis OOM error troubleshooting"
-```
-
-DocBrain's Autopilot gap dashboard shows:
-- **12 engineers asked** about Redis OOM errors in the last 30 days
-- **3 existing docs** partially cover it: "Redis Configuration", "Memory Limits", "On-Call Runbook v1"
-- **What's missing**: none of the docs cover the specific `maxmemory-policy` settings for your use case, or the cache eviction monitoring dashboards
-- **User feedback**: *"The existing runbook doesn't cover what to do after the OOM — only how to detect it"*
-
-The engineer writes the runbook once, covering exactly what's missing. The gap cluster auto-resolves when the doc is ingested. The 12 engineers who would've asked again get the answer immediately.
-
----
-
-### 5. The Living Knowledge Base — Docs That Don't Rot
-
-Your Confluence has 800 pages. 340 haven't been touched in over a year. Nobody knows which ones are accurate.
-
-DocBrain tracks freshness automatically:
-- Pages that haven't been updated but are being frequently retrieved → flagged as `stale`
-- Answers citing stale docs include a warning badge in the UI and CLI
-- Authors get a Slack DM: *"Your doc 'Redis Configuration Guide' was retrieved 47 times this month and hasn't been updated in 14 months. It may need a review."*
-
-When a doc is updated and re-ingested, its freshness score resets, and any gap clusters that depended on it are re-evaluated. The knowledge base improves itself — not because someone runs a quarterly audit, but because every question is a signal.
-
----
-
-### 6. Slack-Native Knowledge — Answers Where Your Team Already Works
-
-Your on-call engineer shouldn't have to leave Slack to find the runbook. Your new hire shouldn't need to bookmark a separate tool. DocBrain lives in your workspace as a `/docbrain` slash command.
-
-**Incident triage in-channel:**
-
-```
-/docbrain incident redis connection timeouts in auth-service
-```
-
-```
-🚨 Incident Search: redis connection timeouts in auth-service
-
-Runbook: Redis Connection Pool Exhaustion
-Source: "Redis On-Call Runbook" (Confluence: SRE) · ✓ Updated 5 days ago
-
-1. Check connection pool saturation:
-   redis-cli -h redis-prod info clients | grep connected_clients
-2. If connected_clients > maxclients (default 10000):
-   kubectl rollout restart deployment/auth-service -n platform
-3. Verify pool recovery:
-   watch -n2 'redis-cli info clients | grep connected'
-
-Confidence: 87% — runbook covers this scenario.
-
-[👍 Helpful]  [👎 Not helpful]
-```
-
-The answer is posted to the channel so the whole on-call team can see it. Feedback buttons feed back into DocBrain's learning loop — a thumbs-down here contributes to gap detection the same way it does in the web UI.
-
-**Quick questions without context-switching:**
-
-```
-/docbrain ask what's the SLA for the payments API?
-```
-
-Your engineer gets a sourced answer with freshness indicators in 3-5 seconds, right in the Slack thread. No tab-switching, no login, no separate tool to remember.
-
-**Onboarding a new teammate:**
-
-```
 /docbrain onboard PLATFORM
 ```
 
-Generates an AI-curated reading list of the most important docs in the PLATFORM space — freshness-sorted, with "commonly asked by new team members" context. The new hire gets their week-1 guide in Slack, not a 47-page wiki nobody reads.
+Gets an AI-curated reading list tailored to their first week — not a sorted list of most-viewed pages, but a semantically assembled set of docs chosen for a week-1 persona. The LLM explicitly excludes meeting notes, sprint pages, deep technical specs, and infrastructure runbooks — everything that belongs in month 2, not week 1.
 
-**Proactive stale-doc nudges — no command needed:**
+And when they ask something nobody documented — *"How do I trigger the integration test suite without a PR?"* — DocBrain can't answer confidently. It asks a clarifying question. If it still doesn't know, that signal joins a cluster with the 7 other engineers who asked the same thing. Autopilot drafts a doc. The team lead reviews and publishes it. The next new hire gets the answer on day 1.
+
+---
+
+### 7. Proactive Stale-Doc Nudges — No Command Needed
 
 DocBrain's background scheduler runs daily and DMs doc owners automatically:
 
@@ -256,49 +318,13 @@ DocBrain's background scheduler runs daily and DMs doc owners automatically:
 > • [Deploy Guide](https://...) — freshness 23/100 · cited 47 times this week · last updated 8 months ago
 > • [API Rate Limits](https://...) — freshness 31/100 · cited 12 times this week · last updated 3 months ago
 >
-> These docs are actively being served to your team. A quick review would help.
+> 🚨 High Impact — your team is actively relying on outdated information.
 
-No command needed. No ticket filed. The system watches and nudges the right person at the right time.
-
-Full setup guide (10 minutes): **[docs/slack.md](docs/slack.md)**
-
----
-
-## 🎬 Demo
-
-### ⚡ MCP Preview (30-Second Overview)
-
-[![Watch Quick Preview](https://img.youtube.com/vi/9mZLoQnGLl8/maxresdefault.jpg)](https://youtu.be/9mZLoQnGLl8)
-
-A fast visual walkthrough of DocBrain MCP plugin in action.
-
-### ⚡ Quick Preview (30-Second Overview)
-
-[![Watch Quick Preview](https://img.youtube.com/vi/IXGaJioq6Og/maxresdefault.jpg)](https://youtu.be/IXGaJioq6Og)
-
-A fast visual walkthrough of DocBrain in action.
-
----
-
-### 🔎 Full Proof Demo (Downvote → Gap → Draft)
-
-[![Watch Full Proof Demo](https://img.youtube.com/vi/yqj5BCVOLHw/maxresdefault.jpg)](https://youtu.be/yqj5BCVOLHw)
-
-In this complete proof flow, we:
-
-1. Ask related questions  
-2. Downvote weak responses  
-3. Run Autopilot analysis  
-4. Confirm a detected documentation gap  
-5. Generate a structured draft automatically  
-
-This demonstrates how DocBrain moves beyond Q&A and becomes a documentation intelligence engine.
+No ticket filed. No command run. The system watches, knows who owns what, and nudges the right person at the right time.
 
 ---
 
 ## Quickstart
-
-You can run DocBrain locally in under 5 minutes.
 
 ```bash
 git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
@@ -314,7 +340,7 @@ docker compose exec server cat /app/admin-bootstrap-key.txt
 # Ingest the included sample docs
 docker compose exec server docbrain-ingest
 
-# Ask a question (replace <key> with the key from above)
+# Ask a question
 docker compose exec -e DOCBRAIN_API_KEY=<key> server \
   docbrain-cli ask "How do I deploy to production?"
 ```
@@ -328,17 +354,15 @@ DocBrain uses a **config-first architecture** with three layers:
 | File | Purpose |
 |---|---|
 | `config/default.yaml` | All non-secret defaults — committed, safe to inspect |
-| `config/local.yaml` | Your secrets and local overrides — **gitignored, never committed** |
+| `config/local.yaml` | Your credentials and local overrides — **gitignored, never committed** |
 | `.env` | Infrastructure secrets only: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `REDIS_URL`, `OPENSEARCH_URL` |
 
-Environment variables always override config files (highest priority).
-
-**The rule**: ingest source credentials go in `config/local.yaml`. Infrastructure secrets go in `.env`.
+Environment variables always override config files.
 
 ```yaml
 # config/local.yaml — create this file, it's gitignored
 ingest:
-  ingest_sources: confluence,github_pr
+  ingest_sources: confluence,github_pr,slack_thread,jira
 
 confluence:
   base_url: https://yourco.atlassian.net/wiki
@@ -350,6 +374,11 @@ github_pr:
   token: ghp_...
   repo: yourco/platform
   lookback_days: 180
+
+slack_ingest:
+  token: xoxb-...
+  channels: C01234567,C09876543
+  min_replies: 3
 ```
 
 ```env
@@ -358,16 +387,10 @@ LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 LLM_MODEL_ID=claude-sonnet-4-5-20250929
 
-# Optional: enable Autopilot
 AUTOPILOT_ENABLED=true
-
-# Optional: Slack integration
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_SIGNING_SECRET=...
-SLACK_GAP_NOTIFICATION_CHANNEL=#docs-alerts
 ```
-
-For the full configuration reference: [docs/configuration.md](docs/configuration.md).
 
 ### Choose Your LLM Provider
 
@@ -383,8 +406,6 @@ EMBED_PROVIDER=bedrock
 EMBED_MODEL_ID=cohere.embed-v4:0
 AWS_REGION=us-east-1
 ```
-
-Ensure the models are enabled in your [Bedrock Model Access](https://console.aws.amazon.com/bedrock/home#/modelaccess) console. Credentials are picked up from environment variables, `~/.aws/credentials`, or instance profiles.
 
 </details>
 
@@ -403,7 +424,7 @@ EMBED_MODEL_ID=text-embedding-3-small
 </details>
 
 <details>
-<summary><strong>OpenAI only (single API key)</strong></summary>
+<summary><strong>OpenAI only</strong></summary>
 
 ```env
 LLM_PROVIDER=openai
@@ -432,22 +453,9 @@ EMBED_MODEL_ID=nomic-embed-text
 
 </details>
 
-<details>
-<summary><strong>Interactive setup wizard</strong></summary>
-
-```bash
-git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
-./scripts/setup.sh
-```
-
-Walks you through provider selection, API key configuration, and document source setup.
-
-</details>
-
 See [Provider Setup](docs/providers.md) for full configuration details.
 
 ---
-
 
 ## Documentation Autopilot
 
@@ -460,11 +468,12 @@ Most AI tools help you consume documentation faster. Autopilot helps your docume
 Here is what it watches, every day, without being asked:
 
 - Which questions your team asked that received no confident answer
-- Which questions surfaced negative feedback from users
+- Which questions received negative feedback from users
 - Which knowledge gaps are appearing repeatedly across different people and teams
 - Which gaps are growing in severity as query volume climbs
+- Which customer support tickets are asking questions your internal docs can't answer
 
-It then clusters these patterns semantically, classifies them by documentation type (runbook, FAQ, troubleshooting guide, reference doc), uses your existing documentation as context to match your team's language and domain knowledge, and drafts the missing content.
+It then clusters these patterns semantically, classifies them by documentation type (runbook, FAQ, troubleshooting guide, reference doc), uses your existing documentation as context to match your team's language, and drafts the missing content.
 
 Not because someone filed a ticket. Not because a tech writer noticed. Because the system was watching.
 
@@ -491,13 +500,273 @@ graph TB
     style DFT fill:#2563eb,color:#fff
 ```
 
-The draft is not the end product — it is a starting point for a human reviewer who already knows what's needed, already has the domain expertise, but previously had no signal that anything was missing. Autopilot provides that signal, and removes the blank-page problem.
-
-Enable it with one line:
+The draft is a starting point for a human reviewer who has the domain expertise but previously had no signal that anything was missing. Autopilot provides that signal and removes the blank-page problem.
 
 ```env
 AUTOPILOT_ENABLED=true
 ```
+
+---
+
+## How Knowledge Gets Into DocBrain
+
+There are two modes: **scheduled batch ingestion** that runs automatically, and **on-demand capture** for things you want indexed right now.
+
+### Mode 1 — Scheduled Ingestion (runs automatically)
+
+Configure your sources once. DocBrain polls them on a schedule and indexes everything within the lookback window — every merged PR, every resolved Slack thread with enough replies, every closed Jira ticket. New content appears in search automatically.
+
+```yaml
+# config/local.yaml
+ingest:
+  ingest_sources: confluence,github_pr,slack_thread,jira,pagerduty
+```
+
+Run manually to sync immediately:
+
+```bash
+# Run all configured sources now
+docker compose exec server docbrain-ingest
+
+# Run a single source for testing
+INGEST_SOURCES=github_pr docker compose exec server docbrain-ingest
+INGEST_SOURCES=slack_thread docker compose exec server docbrain-ingest
+```
+
+**What each source pulls and when:**
+
+| Source | What gets ingested | Trigger |
+|---|---|---|
+| `confluence` | All pages in configured spaces | Schedule + webhook (instant on publish) |
+| `github_pr` | Merged PRs: description + all review comments | Schedule (nightly) |
+| `gitlab_mr` | Merged MRs: description + discussion notes | Schedule |
+| `slack_thread` | Threads with `min_replies` or target emoji reactions | Schedule |
+| `jira` | Resolved issues: description + all comments | Schedule |
+| `pagerduty` | Resolved incidents: timeline + resolution notes | Schedule |
+| `opsgenie` | Resolved alerts with timeline | Schedule |
+| `zendesk` | Solved tickets: public replies only (internal notes excluded) | Schedule |
+| `intercom` | Resolved conversations above `min_messages` threshold | Schedule |
+| `local` | Markdown files from `LOCAL_DOCS_PATH` | Schedule |
+
+**Confluence gets an extra shortcut** — a webhook re-ingests a page the moment it's published, so it appears in search within seconds:
+
+```bash
+# Register Confluence webhook (one-time setup)
+curl -X POST https://yourco.atlassian.net/wiki/rest/api/webhook \
+  -u "you@yourco.com:$CONFLUENCE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "DocBrain live sync",
+    "url": "https://your-docbrain-host/api/v1/webhooks/confluence",
+    "events": ["page_created", "page_updated"]
+  }'
+```
+
+---
+
+### Mode 2 — On-Demand Capture (instant, from Slack)
+
+The scheduled ingest covers the past. On-demand capture covers the present — when an incident just resolved, a key architecture decision just happened in a thread, or you want something indexed right now without waiting for the next scheduled run.
+
+**Capture any Slack thread in 10 seconds:**
+
+```
+# Run this inside any thread
+/docbrain capture
+```
+
+```
+✅ Thread from #platform-incidents captured.
+   Indexing now — searchable within the next ingest cycle,
+   or run INGEST_SOURCES=slack_thread to sync immediately.
+```
+
+This bypasses the schedule entirely. Use it when:
+- An incident just resolved and you want the fix searchable before anyone forgets
+- A review thread has a clear architectural decision that should be a doc
+- You want a resolution indexed *now*, not tomorrow morning
+
+**The loop closing in real time:**
+
+```
+3:47am — incident resolves in #platform-incidents
+
+Engineer: "Fixed — Redis maxmemory-policy needed to be allkeys-lru.
+           Runbook updated. Took 47 min."
+
+/docbrain capture   ← engineer runs this in the thread
+
+─────────────────────────────────────────────────────────
+3 hours later — different engineer hits the same error
+
+/docbrain incident redis memory eviction
+
+DocBrain: Based on a recent incident resolution (#platform-incidents, 3h ago):
+          Set maxmemory-policy to allkeys-lru on the Redis instance.
+
+          Source: Slack thread (captured 3h ago) · Confidence: 91%
+```
+
+The knowledge didn't exist in any formal doc. It existed in a Slack thread from three hours ago. DocBrain found it.
+
+---
+
+## Connect Your Knowledge Sources
+
+DocBrain ingests from every place your team actually thinks. Documents are chunked with heading-aware splitting, embedded, and indexed in OpenSearch.
+
+<details>
+<summary><strong>Confluence (Cloud + Data Center)</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: confluence
+
+confluence:
+  base_url: https://yourcompany.atlassian.net/wiki
+  user_email: you@yourcompany.com
+  api_token: your-token
+  space_keys: ENG,DOCS,OPS
+```
+
+For Data Center / self-hosted, use `api_version: v1` with a Personal Access Token.
+
+</details>
+
+<details>
+<summary><strong>GitHub — Repositories + Pull Requests</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: github,github_pr
+
+github:
+  repo_url: https://github.com/your-org/your-docs
+  token: ghp_...
+
+github_pr:
+  token: ghp_...
+  repo: your-org/platform
+  lookback_days: 365
+  min_comments: 1   # skip trivial PRs
+```
+
+GitHub PR ingestion captures merged PR descriptions, all review comments, and inline code discussions. This is your "why" corpus — years of architectural decisions that were never written down anywhere else.
+
+</details>
+
+<details>
+<summary><strong>GitLab Merge Requests</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: gitlab_mr
+
+gitlab_mr:
+  token: glpat-...
+  project_ids: your-org/platform
+  lookback_days: 365
+```
+
+Supports self-hosted GitLab with `tls_verify: false` for internal certs.
+
+</details>
+
+<details>
+<summary><strong>Slack Threads</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: slack_thread
+
+slack_ingest:
+  token: xoxb-...
+  channels: C01234567,C09876543
+  min_replies: 3
+  reactions: white_check_mark,bookmark
+  lookback_days: 90
+```
+
+Ingests threads with resolved knowledge — minimum reply count, specific emoji reactions, or both. Bot messages are preserved (bots often post the incident resolution summary).
+
+</details>
+
+<details>
+<summary><strong>Jira</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: jira
+
+jira_ingest:
+  base_url: https://yourcompany.atlassian.net
+  user_email: you@yourcompany.com
+  api_token: your-token
+  projects: ENG,OPS,PLATFORM
+  issue_types: Bug,Story,Task,Epic
+  lookback_days: 365
+```
+
+Ingests resolved issues: description (Atlassian Document Format → Markdown) + all comments. Closed Jira issues carry the requirements, edge cases, and production-discovered nuances that live nowhere else.
+
+</details>
+
+<details>
+<summary><strong>PagerDuty / OpsGenie</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: pagerduty  # or opsgenie
+
+pagerduty_ingest:
+  api_token: your-token
+  lookback_days: 180
+  min_duration_minutes: 5   # skip blips, keep real incidents
+```
+
+Each resolved incident becomes a mini postmortem: what alerted, what was tried, who escalated, what resolved it. After 100 incidents, DocBrain has a pattern database of your failure modes.
+
+</details>
+
+<details>
+<summary><strong>Zendesk / Intercom</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: zendesk  # or intercom
+
+zendesk_ingest:
+  subdomain: yourcompany
+  user_email: you@yourcompany.com
+  api_token: your-token
+  lookback_days: 180
+
+intercom_ingest:
+  access_token: your-token
+  lookback_days: 90
+  min_messages: 3
+  tag_filter: billing,enterprise   # optional
+```
+
+Solved support tickets reveal what customers can't figure out from your docs — the clearest signal of documentation gaps you can get. Internal notes are excluded; only public agent responses are ingested.
+
+</details>
+
+<details>
+<summary><strong>Local Markdown Files</strong></summary>
+
+```env
+LOCAL_DOCS_PATH=/data/docs
+```
+
+```yaml
+ingest:
+  ingest_sources: local
+```
+
+</details>
+
+Full ingestion guide: [docs/ingestion.md](docs/ingestion.md)
 
 ---
 
@@ -507,7 +776,7 @@ DocBrain is a RAG pipeline with three layers that most implementations skip: **m
 
 ```mermaid
 graph TB
-    Q["Question"] --> IC["Intent Classification<br/><i>factual · procedural · troubleshooting · comparative</i>"]
+    Q["Question"] --> IC["Intent Classification<br/><i>find · troubleshoot · how_to · who_owns · status · explain</i>"]
     IC --> QR["Query Rewriting<br/><i>using conversation context</i>"]
     QR --> HS["Hybrid Search<br/><i>k-NN vectors + BM25 keywords</i>"]
     QR --> ML["Memory Lookup<br/><i>episodic · semantic · procedural</i>"]
@@ -515,14 +784,24 @@ graph TB
     ML --> CA
     CA --> FS["Freshness Check<br/><i>flag stale sources</i>"]
     FS --> LLM["LLM Generation<br/><i>streaming, with citations</i>"]
-    LLM --> R["Answer + Sources + Confidence"]
-    R --> EP["Episode Storage"]
+    LLM --> CF{"Confidence?"}
+    CF -->|"≥ 85%"| R["Answer + Sources"]
+    CF -->|"70–84%"| NF["Confident not found<br/>(max 2 sentences)"]
+    CF -->|"< 70%"| CQ["Clarifying question"]
+    R & NF & CQ --> EP["Episode Storage"]
     EP -. "feedback loop" .-> AP["Autopilot<br/><i>gap detection · draft generation</i>"]
 
     style AP fill:#2563eb,color:#fff
     style FS fill:#059669,color:#fff
     style ML fill:#7c3aed,color:#fff
+    style CQ fill:#dc2626,color:#fff
 ```
+
+### The Zero-Guess Policy
+
+DocBrain never speculates. Confidence below 70% → targeted clarifying question, not a wall of hallucinated text. Confidence 70–84% (confidently not found) → two-sentence answer, no sources shown. Confidence 85%+ → full answer with sources and freshness indicators.
+
+Every low-confidence interaction is recorded as a gap signal and feeds Autopilot's clustering engine.
 
 ### Memory System
 
@@ -535,332 +814,76 @@ Most Q&A tools are stateless — every question starts from zero. DocBrain maint
 | **Semantic** | Entity graph — services, teams, dependencies | "auth-service depends on Redis, owned by Platform" |
 | **Procedural** | Rules learned from feedback patterns | "for deploy questions, always include the canary step" |
 
-Working memory is session-scoped (Redis). The other three are permanent (PostgreSQL + OpenSearch) and compound over time.
+Working memory is session-scoped (Redis, 50-turn sliding window). The other three are permanent (PostgreSQL + OpenSearch) and compound over time.
 
 ### Document Health Scores
 
-Every document in DocBrain has a health score — a single number from 0 to 100 that measures how alive, accurate, and reliable it is.
-
-This score is recalculated on a configurable schedule using five signals:
+Every document has a health score — a single number from 0 to 100 recalculated on a configurable schedule using five signals:
 
 | Signal | Weight | What It Measures |
 |--------|--------|-----------------|
 | Time Decay | 30% | Time since last edit |
 | Engagement | 20% | Query frequency, view count, feedback ratio |
-| Content Currency | 20% | LLM analysis of temporal references ("as of Q1 2024") |
-| Link Health | 15% | Broken or redirected links within the document |
-| Contradiction | 15% | Cross-document consistency — does this conflict with other docs? |
+| Content Currency | 20% | Temporal references ("as of Q1 2024") |
+| Link Health | 15% | Broken or redirected links |
+| Contradiction | 15% | Cross-document consistency conflicts |
 
-Documents scoring below 40 are flagged as outdated. When combined with Autopilot data, this surfaces docs that are both stale *and* frequently asked about — the highest-impact content to fix, ranked automatically.
+Documents scoring below 40 are flagged as stale. Combined with Autopilot data, this surfaces docs that are both stale *and* frequently asked about — the highest-impact content to fix, ranked automatically.
 
 ### Intent-Adaptive Responses
 
-DocBrain classifies each query and adapts the response format:
+DocBrain classifies each query and adapts both the search strategy and response format:
 
 | Intent | Response Format |
 |--------|----------------|
-| Factual | Direct answer with source citation |
-| Procedural | Numbered step-by-step instructions |
-| Troubleshooting | Diagnostic tree with ranked causes |
-| Comparative | Structured comparison table |
-| Incident | Runbooks and playbooks surfaced first |
+| `find` | Direct answer with source citation |
+| `how_to` | Numbered step-by-step instructions with ownership context |
+| `troubleshoot` | Runbook-first, incident brevity — link + max 5 sentences |
+| `who_owns` | Team ownership with service boundary context |
+| `status` | Current state with timestamp and freshness indicator |
+| `explain` | Depth-appropriate explanation with cross-source synthesis |
 
 ### Multi-Team / Space-Aware Search
 
-When connected to Confluence with multiple spaces (or multiple doc sources), DocBrain tracks which space each chunk belongs to. Pass `"space": "PLATFORM"` in your `/api/v1/ask` request to boost results from that team's docs — results from other spaces still appear, they just rank lower (soft boost, not hard filter).
+Three levels of space control for multi-team deployments:
 
+**Soft boost** — prefer results from a space, but don't exclude others:
 ```json
-{
-  "title": "Production Deployment Guide",
-  "source_url": "https://confluence.example.com/...",
-  "space": "PLATFORM",
-  "freshness_score": 82.0,
-  "freshness_status": "fresh",
-  "score": 14.2
-}
+{ "question": "How do I deploy?", "space": "PLATFORM" }
 ```
 
-Sources flagged as `stale` or `outdated` are visually marked so users know when to treat information with caution.
-
-### Space Access Control
-
-DocBrain gives you three levels of space control for multi-team deployments. Understanding the distinction is important:
-
-#### 1. Soft Boost — prefer results from a space, but don't exclude others
-
+**Per-request hard filter** — restrict a single query to specific spaces:
 ```json
-POST /api/v1/ask
-{
-  "question": "How do I deploy to production?",
-  "space": "PLATFORM"
-}
+{ "question": "How do I deploy?", "spaces": ["PLATFORM", "SRE"] }
 ```
 
-Results from `PLATFORM` get a 1.5× score multiplier — they rank higher but docs from other spaces can still appear. Use this for cross-team collaboration where you want your team's docs to surface first.
-
-#### 2. Per-Request Hard Filter — restrict a single query to specific spaces
-
-```json
-POST /api/v1/ask
-{
-  "question": "How do I deploy to production?",
-  "spaces": ["PLATFORM", "SRE"]
-}
-```
-
-Only chunks from `PLATFORM` and `SRE` are fetched from OpenSearch. Docs from `ENG`, `OPS`, or any other space are completely excluded for this request. No API key change required — useful for cross-space queries where you want to scope the search dynamically.
-
-#### 3. API Key Hard Restriction — enforce space isolation at the key level
-
+**API Key hard restriction** — enforce space isolation at the key level:
 ```bash
-curl -X POST http://localhost:3000/api/v1/admin/keys \
-  -H "Authorization: Bearer $ADMIN_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Platform Team Key", "role": "editor", "allowed_spaces": ["PLATFORM", "SRE"]}'
+curl -X POST /api/v1/admin/keys \
+  -d '{"name": "Platform Key", "allowed_spaces": ["PLATFORM", "SRE"]}'
 ```
 
-Every request made with this key is restricted to `PLATFORM` and `SRE` — regardless of what the caller passes in the request body. Use this when a team or service should never see data from other spaces, regardless of who makes the request.
-
-#### How they combine
-
-If both an API key restriction and a per-request `spaces` filter are set, DocBrain computes the **intersection**:
-
-```
-API key:          ["PLATFORM", "OPS"]
-Request spaces:   ["PLATFORM", "ENG"]
-Effective filter: ["PLATFORM"]          ← most restrictive wins
-```
-
-| Scenario | Recommended approach |
-|---|---|
-| You want answers from your team's space first, but will accept others | `space: "PLATFORM"` (soft boost) |
-| You want answers from exactly two spaces for this query | `spaces: ["PLATFORM", "SRE"]` (per-request hard filter) |
-| Your team's API key should never see other teams' data | `allowed_spaces` on the key (permanent hard restriction) |
-| Full cross-team collaboration | No restriction (omit both) |
+If both an API key restriction and per-request filter are set, DocBrain computes the intersection — most restrictive wins.
 
 ### Knowledge Base Health Dashboard
 
-A single endpoint that gives you the health of your entire documentation corpus:
-
 ```bash
-curl http://localhost:3000/api/v1/health/report \
-  -H "Authorization: Bearer $API_KEY"
+curl http://localhost:3000/api/v1/health/report -H "Authorization: Bearer $API_KEY"
 ```
 
 ```json
 {
   "total_documents": 342,
   "overall_health_score": 67.3,
-  "freshness_distribution": { "fresh": 120, "review": 89, "stale": 72, "outdated": 41, "archive": 20 },
+  "freshness_distribution": { "fresh": 120, "review": 89, "stale": 72, "outdated": 41 },
   "top_stale_cited_docs": [
-    { "title": "Deploy Guide", "freshness_score": 23, "citations_last_7d": 47, "contradiction_score": 45 }
+    { "title": "Deploy Guide", "freshness_score": 23, "citations_last_7d": 47 }
   ],
   "coverage_gaps": 15
 }
 ```
 
-The `top_stale_cited_docs` list is the most actionable output in this response — docs that are simultaneously stale and frequently served to users. Fix these first.
-
-### AI-Curated Onboarding
-
-New team member joining? Get an AI-curated reading list tailored to their first week — not a sorted list of most-viewed pages, but a semantically assembled set of docs chosen for a week-1 persona:
-
-```json
-{
-  "reading_list": [
-    {
-      "title": "SaaS UI Engineer Onboarding Guide",
-      "freshness_score": 85,
-      "reason": "Direct onboarding guide covering role-specific processes and expectations."
-    },
-    {
-      "title": "Team Overview & What We Own",
-      "freshness_score": 92,
-      "reason": "Gives new hires context on team mission and responsibilities in week 1."
-    }
-  ]
-}
-```
-
-The LLM explicitly filters out meeting notes, sprint pages, deep technical specs, and infrastructure runbooks — anything that belongs in month 2, not week 1.
-
-### Contradiction Detection
-
-DocBrain's freshness scorer detects conflicting instructions, inconsistent config values, and contradictory ownership claims across documents in the same space.
-
-```json
-{
-  "title": "Deploy Guide v2",
-  "freshness_score": 45,
-  "freshness_status": "stale",
-  "contradiction_score": 32
-}
-```
-
-A `contradiction_score` of 32 means this doc significantly contradicts other docs in the same space. Combined with the health dashboard, you can prioritize which docs need reconciliation.
-
-### Owner-Aware Stale Notifications
-
-DocBrain sends targeted Slack DMs to document owners when their docs go stale — not a bulk notification that gets ignored, but a personal alert with citation counts and last-edit age that make the urgency real:
-
-> ⚠️ **Stale Documentation Alert**
->
-> 1. [Deploy Guide](https://...) — freshness 23/100 · **cited 47 times this week** · last updated ~8mo ago
-> 2. [API Rate Limits](https://...) — freshness 31/100 · **cited 12 times this week** · last updated ~3mo ago
->
-> 🚨 High Impact — your team is actively relying on outdated information.
-
-```env
-NOTIFICATION_INTERVAL_HOURS=24
-NOTIFICATION_SPACE_FILTER=PLATFORM,SRE
-```
-
-When Autopilot detects a critical gap, it also DMs the authors of the most closely related documents — surfacing the content most likely to need updating, before anyone files a ticket.
-
----
-
-## Connect Your Documents
-
-DocBrain ingests from multiple source types. Documents are chunked with heading-aware splitting, embedded, and indexed in OpenSearch. Ingestion runs on a configurable cron schedule for continuous sync.
-
-Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
-
-<details>
-<summary><strong>Confluence (Cloud)</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: confluence
-
-confluence:
-  base_url: https://yourcompany.atlassian.net/wiki
-  user_email: you@yourcompany.com
-  api_token: your-token
-  space_keys: ENG,DOCS,OPS
-```
-
-</details>
-
-<details>
-<summary><strong>Confluence (Self-Hosted / Data Center)</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: confluence
-
-confluence:
-  base_url: https://confluence.yourcompany.com
-  api_token: your-personal-access-token
-  space_keys: ENG,DOCS,OPS
-  api_version: v1    # v1 for Data Center 7.x+
-```
-
-Uses Bearer auth with a Personal Access Token. `user_email` is not required for v1.
-
-</details>
-
-<details>
-<summary><strong>GitHub Repository</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: github
-
-github:
-  repo_url: https://github.com/your-org/your-docs
-  token: ghp_...    # only for private repos
-  branch: main
-```
-
-</details>
-
-<details>
-<summary><strong>GitHub Pull Requests</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: github_pr
-
-github_pr:
-  token: ghp_...
-  repo: your-org/your-repo
-  lookback_days: 365
-  min_comments: 1
-```
-
-</details>
-
-<details>
-<summary><strong>GitLab Merge Requests</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: gitlab_mr
-
-gitlab_mr:
-  token: glpat-...
-  project_ids: your-org/your-repo
-  lookback_days: 365
-```
-
-</details>
-
-<details>
-<summary><strong>Slack Threads</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: slack_thread
-
-slack_ingest:
-  token: xoxb-...
-  channels: C01234567,C09876543
-  min_replies: 3
-  lookback_days: 90
-```
-
-</details>
-
-<details>
-<summary><strong>Jira</strong></summary>
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: jira
-
-jira_ingest:
-  base_url: https://yourcompany.atlassian.net
-  user_email: you@yourcompany.com
-  api_token: your-token
-  projects: ENG,OPS
-```
-
-</details>
-
-<details>
-<summary><strong>Local Markdown Files</strong></summary>
-
-```env
-# .env
-LOCAL_DOCS_PATH=/data/docs
-```
-
-```yaml
-# config/local.yaml
-ingest:
-  ingest_sources: local
-```
-
-</details>
-
-Full ingestion guide: [docs/ingestion.md](docs/ingestion.md)
+`top_stale_cited_docs` is the most actionable output — docs simultaneously stale and frequently served to your team. Fix these first.
 
 ---
 
@@ -868,9 +891,7 @@ Full ingestion guide: [docs/ingestion.md](docs/ingestion.md)
 
 Most documentation tools throw away images during ingestion. DocBrain reads them.
 
-Architecture diagrams, config screenshots, flowcharts, decision tables, UI walkthroughs — during ingestion, DocBrain downloads each image from Confluence, sends it to a vision-capable LLM for description, and injects the description into the document content. The descriptions get chunked, embedded, and indexed like normal text — zero changes to the search pipeline.
-
-**This means you can ask questions about content that only exists in images.**
+Architecture diagrams, config screenshots, flowcharts, decision tables — during ingestion, DocBrain sends each image to a vision-capable LLM for description, and injects the description into the document content. The descriptions get chunked, embedded, and indexed like normal text — zero changes to the search pipeline.
 
 ```
 Q: "What are the three steps to onboard a service to EKS?"
@@ -881,22 +902,12 @@ A: Based on the onboarding infographic:
    Source: [Helm Chart Deployment Guide] — extracted from diagram
 ```
 
-Image extraction is **enabled by default**. To disable:
-
-```env
-IMAGE_EXTRACTION_ENABLED=false
-```
-
 | Provider | Vision Support |
 |----------|---------------|
-| **AWS Bedrock** | Yes — uses Claude's native vision |
-| **Anthropic** | Yes — uses Claude's native vision |
-| **OpenAI** | Yes — uses GPT-4o vision |
-| **Ollama** | Yes, with vision models (`llava`, `llama3.2-vision`, `moondream`). Text-only models auto-detect and skip gracefully. |
-
-**Guardrails**: max 20 images/page, skips icons under 5KB and files over 10MB, 30s timeout per image, only processes `png`/`jpeg`/`gif`/`webp`.
-
-See [Ingestion Guide](docs/ingestion.md) for details.
+| **AWS Bedrock** | Yes — Claude native vision |
+| **Anthropic** | Yes — Claude native vision |
+| **OpenAI** | Yes — GPT-4o vision |
+| **Ollama** | Yes, with vision models (`llava`, `llama3.2-vision`). Text-only models auto-skip gracefully. |
 
 ---
 
@@ -907,7 +918,6 @@ See [Ingestion Guide](docs/ingestion.md) for details.
 Query your documentation — and discover gaps — from Claude Code, Cursor, or any MCP-compatible editor.
 
 **Claude Code:**
-
 ```bash
 claude mcp add docbrain \
   -e DOCBRAIN_API_KEY=db_sk_... \
@@ -916,7 +926,6 @@ claude mcp add docbrain \
 ```
 
 **Cursor** (`.cursor/mcp.json`):
-
 ```json
 {
   "mcpServers": {
@@ -932,49 +941,11 @@ claude mcp add docbrain \
 }
 ```
 
-<details>
-<summary>Alternative: binary / Homebrew</summary>
-
-```json
-{
-  "mcpServers": {
-    "docbrain": {
-      "command": "docbrain-mcp",
-      "env": {
-        "DOCBRAIN_API_KEY": "db_sk_...",
-        "DOCBRAIN_SERVER_URL": "http://localhost:3000"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Alternative: Docker</summary>
-
-```json
-{
-  "mcpServers": {
-    "docbrain": {
-      "command": "docker",
-      "args": ["run", "--rm", "-i", "--network", "host",
-        "-e", "DOCBRAIN_SERVER_URL=http://localhost:3000",
-        "-e", "DOCBRAIN_API_KEY=db_sk_...",
-        "ghcr.io/docbrain-ai/docbrain:latest", "docbrain-mcp"]
-    }
-  }
-}
-```
-
-</details>
-
 **Available MCP tools:** `docbrain_ask`, `docbrain_incident`, `docbrain_freshness`, `docbrain_autopilot_gaps`, `docbrain_autopilot_generate`, `docbrain_autopilot_summary`
 
 ### Slack
 
-Use `/docbrain` as a slash command in Slack — your team can query docs, triage incidents, and get proactive stale-doc notifications without leaving their workspace.
+Use `/docbrain` as a slash command — your team queries docs, triages incidents, and gets proactive stale-doc notifications without leaving their workspace.
 
 ```
 /docbrain ask how do we deploy to production?
@@ -985,14 +956,13 @@ Use `/docbrain` as a slash command in Slack — your team can query docs, triage
 
 Answers include source links, freshness indicators, and feedback buttons that feed into DocBrain's learning loop. A background scheduler DMs doc owners when their content goes stale.
 
-Setup takes 10 minutes: create a Slack app, add two URLs, set two env vars. Full guide: **[docs/slack.md](docs/slack.md)**
+Setup takes 10 minutes. Full guide: **[docs/slack.md](docs/slack.md)**
 
 ### CLI
 
 ```bash
 brew install docbrain-ai/tap/docbrain
 # or: npm install -g docbrain
-# or: curl -sSL https://raw.githubusercontent.com/docbrain-ai/docbrain/main/scripts/install.sh | sh
 ```
 
 ```bash
@@ -1048,6 +1018,16 @@ graph TB
         FRESH["Freshness Scorer"]
     end
 
+    subgraph "Ingest Sources"
+        CF["Confluence"]
+        GH["GitHub PR / GitLab MR"]
+        SL["Slack Threads"]
+        JR["Jira"]
+        PD["PagerDuty / OpsGenie"]
+        ZD["Zendesk / Intercom"]
+        LO["Local Files"]
+    end
+
     subgraph "Storage"
         PG["PostgreSQL<br/><i>memory · episodes · entities<br/>rules · gap clusters · drafts</i>"]
         OS["OpenSearch<br/><i>vector index (k-NN)<br/>keyword index (BM25)</i>"]
@@ -1062,6 +1042,7 @@ graph TB
     end
 
     WEB & CLI & MCP & SLACK --> API
+    CF & GH & SL & JR & PD & ZD & LO --> API
     API --> AUTH --> RAG
     API --> AUTO
     API --> FRESH
@@ -1076,10 +1057,10 @@ graph TB
 |-----------|-----------|------|
 | API Server | Rust, Axum, Tower | HTTP/SSE, auth, rate limiting, routing |
 | RAG Pipeline | Custom | Intent classification, hybrid search, memory enrichment, generation |
-| Autopilot | Custom | Gap analysis, semantic clustering, draft generation, digests |
+| Autopilot | Custom | Gap analysis, semantic clustering, draft generation |
 | Freshness | Custom | 5-signal scoring, contradiction detection, staleness alerts |
-| Storage | PostgreSQL 17, OpenSearch 2.19, Redis 7 | Metadata, vectors, cache |
-| Ingestion | Custom | Confluence, GitHub, local file connectors with heading-aware chunking |
+| Storage | PostgreSQL 17, OpenSearch 2.19, Redis 7 | Metadata, vectors, sessions |
+| Ingest | Custom | 10+ source connectors, heading-aware chunking, image extraction |
 
 Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 
@@ -1090,7 +1071,7 @@ Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 | | |
 |---|---|
 | [Quickstart](docs/quickstart.md) | Running locally or in the cloud in 5 minutes |
-| [Ingestion Guide](docs/ingestion.md) | Connecting Confluence, GitHub, or local files |
+| [Ingestion Guide](docs/ingestion.md) | Connecting all knowledge sources |
 | [Configuration](docs/configuration.md) | All environment variables and options |
 | [Provider Setup](docs/providers.md) | LLM and embedding provider configuration |
 | [Architecture](docs/architecture.md) | System design, data flow, memory, freshness, and Autopilot |
@@ -1104,7 +1085,9 @@ Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 
 Every team we have talked to has the same documentation story. It started with good intentions. It fell apart under the weight of moving fast. And the failure was invisible until it wasn't.
 
-We built DocBrain because we believe there's a better model — one where documentation is treated as a living system with health signals, feedback loops, and the ability to identify its own weaknesses. Not a static artifact that engineers are guilted into maintaining, but infrastructure that participates in its own upkeep.
+We built DocBrain because we believe there's a better model — one where documentation is treated as a living system with health signals, feedback loops, and the ability to identify its own weaknesses. Not a static artifact that engineers are guilted into maintaining. Infrastructure that participates in its own upkeep.
+
+And one that behaves like the most knowledgeable engineer on the team — not a search engine that ranks results, but a system that understands what you're asking, knows what it doesn't know, and gets smarter with every question.
 
 If DocBrain helps your team, please consider starring the project — it genuinely helps us reach the engineers who need it. If it fails you, open an issue and tell us exactly why. That feedback is the most valuable thing you can give us.
 
@@ -1114,7 +1097,6 @@ If DocBrain helps your team, please consider starring the project — it genuine
 
 We welcome bug reports, feature requests, and documentation improvements via [GitHub Issues](https://github.com/docbrain-ai/docbrain/issues).
 
-
 Source code releases at **5,000 GitHub stars** or **January 1, 2028**, whichever comes first.
 
-⭐ Help us open-source this faster — source code releases at 5,000 GitHub stars. Every star moves the date forward.
+⭐ Help us open-source this faster — every star moves the date forward.

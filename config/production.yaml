@@ -30,6 +30,7 @@ llm:
   provider: "${LLM_PROVIDER:-bedrock}"
   model_id: "${LLM_MODEL_ID:-}"
   haiku_model_id: "${HAIKU_MODEL_ID:-}"
+  ingest_model_id: "${INGEST_LLM_MODEL_ID:-}"
   anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
   openai_api_key: "${OPENAI_API_KEY:-}"
 
@@ -53,15 +54,6 @@ memory:
 auth:
   session_ttl_hours: "${LOGIN_SESSION_TTL_HOURS:-720}"
 
-# ── Ingest source credentials ─────────────────────────────────────────────────
-# Source-specific secrets (Confluence tokens, GitHub tokens, Slack tokens, etc.)
-# do NOT belong here. Set them in config/local.yaml (gitignored) or as
-# environment variables injected by your secrets manager.
-#
-# Example config/local.yaml:
-#   confluence:
-#     base_url: https://acme.atlassian.net/wiki
-#     api_token: ATATT3x...
-#   github_pr:
-#     token: ghp_...
-#     repo: acme/platform
+# github_pr / slack_ingest / jira_ingest secrets come from env vars directly.
+# The env_override! mappings in config.rs pick them up automatically.
+# See .env.example for GITHUB_PR_*, SLACK_INGEST_*, JIRA_* variable names.

@@ -9,6 +9,8 @@
 server:
   host: "127.0.0.1"
   cors_allowed_origins: "http://localhost:3001,http://localhost:3000"
+  # Write bootstrap admin key to project root instead of /app/ (which doesn't exist in dev)
+  admin_key_file: "./admin-bootstrap-key.txt"
 
 rag:
   cache_ttl_hours: 1   # Short cache in dev for easier testing
