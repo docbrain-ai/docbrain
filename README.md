@@ -382,14 +382,20 @@ slack_ingest:
 ```
 
 ```env
-# .env — infrastructure secrets only
+# .env — infrastructure secrets and API keys only
 LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 LLM_MODEL_ID=claude-sonnet-4-5-20250929
 
 AUTOPILOT_ENABLED=true
+
+# Slack slash commands + /docbrain capture
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_SIGNING_SECRET=...
+
+# GitHub real-time capture (optional)
+# GITHUB_WEBHOOK_SECRET=your-webhook-secret
+# GITHUB_BOT_TOKEN=ghp_...
 ```
 
 ### Choose Your LLM Provider
@@ -510,19 +516,17 @@ AUTOPILOT_ENABLED=true
 
 ## How Knowledge Gets Into DocBrain
 
-There are two modes: **scheduled batch ingestion** that runs automatically, and **on-demand capture** for things you want indexed right now.
+There are three modes: **scheduled batch ingestion** you configure and run on a cron, **real-time Slack capture** for instantly indexing any thread into the knowledge store, and **real-time GitHub capture** for PR and issue discussions. Both capture modes feed Autopilot's gap analysis — they don't bypass it.
 
-### Mode 1 — Scheduled Ingestion (runs automatically)
+### Mode 1 — Scheduled Ingestion (opt-in, disabled by default)
 
-Configure your sources once. DocBrain polls them on a schedule and indexes everything within the lookback window — every merged PR, every resolved Slack thread with enough replies, every closed Jira ticket. New content appears in search automatically.
+The `docbrain-ingest` binary is a standalone CLI — it does **not** run in the background automatically. Configure your sources, then wire it to a cron job or run it manually.
 
 ```yaml
-# config/local.yaml
+# config/local.yaml — set which sources to ingest
 ingest:
   ingest_sources: confluence,github_pr,slack_thread,jira,pagerduty
 ```
-
-Run manually to sync immediately:
 
 ```bash
 # Run all configured sources now
@@ -531,6 +535,13 @@ docker compose exec server docbrain-ingest
 # Run a single source for testing
 INGEST_SOURCES=github_pr docker compose exec server docbrain-ingest
 INGEST_SOURCES=slack_thread docker compose exec server docbrain-ingest
+```
+
+To run on a schedule, add a cron job:
+
+```bash
+# Run every 6 hours (example)
+0 */6 * * * docker compose exec -T server docbrain-ingest >> /var/log/docbrain-ingest.log 2>&1
 ```
 
 **What each source pulls and when:**
@@ -564,27 +575,35 @@ curl -X POST https://yourco.atlassian.net/wiki/rest/api/webhook \
 
 ---
 
-### Mode 2 — On-Demand Capture (instant, from Slack)
+### Mode 2 — Real-Time Capture from Slack
 
-The scheduled ingest covers the past. On-demand capture covers the present — when an incident just resolved, a key architecture decision just happened in a thread, or you want something indexed right now without waiting for the next scheduled run.
+Run `/docbrain capture` **inside any Slack thread** to immediately index it into DocBrain's knowledge store — no waiting for the next scheduled ingest cycle.
 
-**Capture any Slack thread in 10 seconds:**
+**Requirements:** `SLACK_BOT_TOKEN` with `channels:history` + `chat:write` scopes, `SLACK_SIGNING_SECRET`.
 
 ```
-# Run this inside any thread
+# Run this inside any thread (not a top-level message)
 /docbrain capture
 ```
 
 ```
-✅ Thread from #platform-incidents captured.
-   Indexing now — searchable within the next ingest cycle,
-   or run INGEST_SOURCES=slack_thread to sync immediately.
+✅ Thread from #platform-incidents captured into DocBrain (7 chunks indexed).
+   It's now searchable and will be used by Autopilot's next gap analysis.
 ```
 
-This bypasses the schedule entirely. Use it when:
+**What happens under the hood:**
+1. DocBrain fetches all messages in the thread via `conversations.replies`
+2. Formats them as a timestamped conversation
+3. Chunks, embeds, and indexes the content into OpenSearch + Postgres — immediately
+4. The thread is now findable via `/docbrain ask`, `/docbrain incident`, and MCP
+5. On the next Autopilot analysis run, this content feeds the gap detection — gaps that the captured thread resolves may be auto-closed; clusters that touch this topic have richer context for draft generation
+
+**What it does NOT do:** It does not generate a draft directly. Autopilot generates drafts from gap clusters — patterns of unanswered questions across many users. A single thread feeds that system; it doesn't bypass it.
+
+Use it when:
 - An incident just resolved and you want the fix searchable before anyone forgets
-- A review thread has a clear architectural decision that should be a doc
-- You want a resolution indexed *now*, not tomorrow morning
+- A thread has a clear architectural decision that should be in the knowledge base
+- You want content indexed *now*, not at the next scheduled ingest
 
 **The loop closing in real time:**
 
@@ -596,18 +615,105 @@ Engineer: "Fixed — Redis maxmemory-policy needed to be allkeys-lru.
 
 /docbrain capture   ← engineer runs this in the thread
 
+✅ Thread captured into DocBrain (7 chunks indexed).
+
 ─────────────────────────────────────────────────────────
 3 hours later — different engineer hits the same error
 
 /docbrain incident redis memory eviction
 
-DocBrain: Based on a recent incident resolution (#platform-incidents, 3h ago):
-          Set maxmemory-policy to allkeys-lru on the Redis instance.
+DocBrain: Set maxmemory-policy to allkeys-lru on the Redis instance.
 
-          Source: Slack thread (captured 3h ago) · Confidence: 91%
+          Source: Slack thread (#platform-incidents, captured 3h ago) · Confidence: 91%
 ```
 
-The knowledge didn't exist in any formal doc. It existed in a Slack thread from three hours ago. DocBrain found it.
+The knowledge didn't exist in any formal doc. It existed in a Slack thread captured three hours ago.
+
+---
+
+### Mode 3 — Real-Time Capture from GitHub
+
+Comment `@docbrain capture` on any GitHub PR or issue to immediately index the full discussion into DocBrain's knowledge store.
+
+**Requirements:** `GITHUB_WEBHOOK_SECRET` + `GITHUB_BOT_TOKEN` configured, webhook registered in GitHub.
+
+**One-time setup (per repo):**
+
+```bash
+# GitHub repo → Settings → Webhooks → Add webhook
+#   Payload URL:  https://your-docbrain-host/github/events
+#   Content type: application/json
+#   Secret:       <your GITHUB_WEBHOOK_SECRET value>
+#   Events:       Issue comments, Pull request review comments
+```
+
+Or set up via GitHub CLI:
+
+```bash
+gh api repos/your-org/your-repo/hooks \
+  --method POST \
+  --field name=web \
+  --field "config[url]=https://your-docbrain-host/github/events" \
+  --field "config[content_type]=json" \
+  --field "config[secret]=$GITHUB_WEBHOOK_SECRET" \
+  --field "events[]=issue_comment" \
+  --field "events[]=pull_request_review_comment"
+```
+
+**Usage:**
+
+```
+# On any PR or issue — add a comment containing:
+@docbrain capture
+```
+
+```
+✅ Captured by DocBrain — 12 chunks indexed and immediately searchable.
+   This thread will feed Autopilot's next gap analysis run.
+```
+
+**What happens:** The PR or issue title + body + all comments are fetched, chunked, embedded, and indexed into OpenSearch. The content is immediately searchable and feeds Autopilot's gap analysis on the next scheduled run. Like Slack capture, it does not generate a draft directly — it enriches the knowledge base that Autopilot draws from.
+
+**Works for:**
+- PR review threads (architecture decisions, technical trade-offs, the "why" behind choices)
+- Issue discussions (bug root-cause analysis, feature requirements, edge cases)
+- Incident post-mortem issues
+
+---
+
+### How Slack and GitHub Know Where DocBrain Lives
+
+Webhooks and slash commands require the calling service to reach your DocBrain instance over the network. The table below covers each deployment topology:
+
+| Deployment | Slack (SaaS) | GitHub.com (SaaS) | GitHub Enterprise / Self-Hosted GitLab |
+|---|---|---|---|
+| **Public URL** (cloud VM, Kubernetes with Ingress, Fly.io, Railway, etc.) | ✅ Direct — configure your public URL | ✅ Direct | ✅ Direct (GitHub Enterprise must be able to reach DocBrain's host) |
+| **Local / internal network** (laptop, private VPC) | Requires a tunnel: [ngrok](https://ngrok.com), [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/), or VPN | Same | Same |
+| **Private Slack (self-hosted via Slack Enterprise Grid with SCIM)** | Still SaaS webhooks — same as above | — | — |
+
+**For SaaS Slack and GitHub.com:** DocBrain needs a URL reachable from the public internet. Your `CORS_ALLOWED_ORIGINS` and ingress rules don't affect inbound webhooks — only the URL needs to be reachable.
+
+**For development / localhost:**
+
+```bash
+# Option 1: ngrok (simplest)
+ngrok http 3000
+# Use the ngrok URL as your webhook URL:
+# https://abc123.ngrok-free.app/slack/commands
+# https://abc123.ngrok-free.app/github/events
+
+# Option 2: Cloudflare Tunnel (persistent subdomain, free tier)
+cloudflared tunnel --url http://localhost:3000
+```
+
+**For GitHub Enterprise (self-hosted):** GitHub Enterprise must have network access to DocBrain. Both can be on the same internal network — no public internet required. Set the webhook URL to DocBrain's internal hostname:
+
+```bash
+# e.g. if DocBrain runs at https://docbrain.internal:3000
+https://docbrain.internal:3000/github/events
+```
+
+**Verifying connectivity:** DocBrain's webhook endpoints respond `200 OK` to valid signature-verified requests and silently ignore unknown event types — safe to test by sending a ping event from GitHub's webhook settings page.
 
 ---
 
@@ -952,9 +1058,12 @@ Use `/docbrain` as a slash command — your team queries docs, triages incidents
 /docbrain incident payments service 502 after deploy
 /docbrain freshness PLATFORM
 /docbrain onboard ENG
+/docbrain capture          ← run inside a thread to generate an Autopilot draft
 ```
 
 Answers include source links, freshness indicators, and feedback buttons that feed into DocBrain's learning loop. A background scheduler DMs doc owners when their content goes stale.
+
+**Required OAuth scopes:** `channels:history`, `channels:read`, `chat:write`, `commands`, `users:read`
 
 Setup takes 10 minutes. Full guide: **[docs/slack.md](docs/slack.md)**
 
