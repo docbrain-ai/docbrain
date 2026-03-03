@@ -9,7 +9,7 @@ data:
   LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
-  SOURCE_TYPE: {{ .Values.ingest.source | quote }}
+  INGEST_SOURCES: {{ .Values.ingest.sources | quote }}
   LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
   OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
   REDIS_URL: {{ include "docbrain.redisUrl" . | quote }}

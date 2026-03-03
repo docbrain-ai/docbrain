@@ -33,13 +33,13 @@ spec:
               env:
                 - name: DATABASE_URL
                   value: {{ include "docbrain.databaseUrl" . | quote }}
-              {{- if and (eq .Values.ingest.source "local") .Values.ingest.localDocsPath }}
+              {{- if and (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
               volumeMounts:
                 - name: docs
                   mountPath: {{ .Values.ingest.localDocsPath }}
                   readOnly: true
               {{- end }}
-          {{- if and (eq .Values.ingest.source "local") .Values.ingest.localDocsPath }}
+          {{- if and (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
           volumes:
             - name: docs
               persistentVolumeClaim:
