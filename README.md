@@ -1078,6 +1078,7 @@ Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 | [API Reference](docs/api-reference.md) | REST API with Autopilot endpoints |
 | [Slack Integration](docs/slack.md) | Slash commands, feedback buttons, and proactive notifications |
 | [Kubernetes](docs/kubernetes.md) | Helm chart deployment and scaling |
+| [Threat Model](THREAT_MODEL.md) | Security analysis: assets, trust boundaries, mitigations, operator checklist |
 
 ---
 
