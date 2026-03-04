@@ -25,6 +25,7 @@ ingest:
   #   apiToken: ""
   #   spaceKeys: ""
   #   apiVersion: v2          # v2 for Cloud (default), v1 for self-hosted Data Center
+  #   pageIds: ""             # comma-separated page IDs (+ all descendants); from any space
   # github:
   #   repoUrl: ""
   #   token: ""
