@@ -421,9 +421,83 @@ The answer should reflect the latest content.
 
 ---
 
+## Real-Time Capture: `@docbrain capture` and `/docbrain capture`
+
+DocBrain supports on-demand capture from GitHub PRs/issues, GitLab MRs, and Slack threads. Capture **only ingests** the thread into the knowledge base — it does not generate a Q&A reply. After capture, the content is immediately searchable via `/docbrain ask` (Slack) or the API.
+
+### What Capture Does
+
+| Platform | Trigger | What's indexed | Reply |
+|----------|---------|----------------|-------|
+| GitHub | Comment `@docbrain capture` on any PR or issue | PR/issue description + all comments | Posts a reply comment confirming capture |
+| GitLab | Comment `@docbrain capture` on any MR | MR title, description, all human discussion notes | Posts a reply note confirming capture |
+| Slack | Run `/docbrain capture` inside a thread | All thread messages, user names resolved | Posts a message in the thread confirming capture |
+
+Capture is separate from `/docbrain ask` (Slack) or `@docbrain ask` (GitHub/GitLab) — those are Q&A commands that answer questions from the knowledge base.
+
+---
+
+## GitHub PR/Issue Capture
+
+Comment `@docbrain capture` on any GitHub pull request or issue to immediately index the discussion.
+
+**Requirements:** GitHub webhook configured to send `issue_comment` and `pull_request_review_comment` events to DocBrain.
+
+### Setup
+
+```env
+GITHUB_CAPTURE_WEBHOOK_SECRET=your-webhook-secret   # generate with: openssl rand -hex 32
+GITHUB_CAPTURE_TOKEN=ghp_...                         # Personal access token with repo:read scope
+```
+
+Optional access control (recommended for shared installations):
+
+```env
+GITHUB_CAPTURE_ALLOWED_REPOS=myorg/backend,myorg/frontend  # Only these repos can trigger capture
+GITHUB_CAPTURE_ALLOWED_USERS=alice,bob                      # Only these users can trigger capture
+```
+
+### Register the Webhook in GitHub
+
+1. Go to your repository: **Settings → Webhooks → Add webhook**
+2. Fill in:
+   - **Payload URL:** `https://your-docbrain-host/api/v1/github/events`
+   - **Content type:** `application/json`
+   - **Secret:** same value as `GITHUB_CAPTURE_WEBHOOK_SECRET`
+   - **Events:** select `Issue comments` and `Pull request review comments`
+3. Save
+
+### What Gets Indexed
+
+- Issue/PR title, description, and all comments
+- Threads over 500KB are skipped (DocBrain posts a reply explaining the limit)
+- Threads under 200 characters are skipped as too short
+
+### Reply Behavior
+
+On success, DocBrain posts a comment:
+```
+✅ Captured by DocBrain — 12 chunks indexed and immediately searchable.
+This thread will feed Autopilot's next gap analysis run.
+```
+
+On failure:
+```
+⚠️ Capture failed: <error message>
+```
+
+### Security and Access Control
+
+- All incoming webhooks are verified via HMAC-SHA256 (`X-Hub-Signature-256` header)
+- `GITHUB_CAPTURE_ALLOWED_REPOS` — restrict to specific `owner/repo` pairs
+- `GITHUB_CAPTURE_ALLOWED_USERS` — restrict to specific GitHub usernames
+- Empty allowlists = all users and repos can trigger capture (acceptable for private org webhooks)
+
+---
+
 ## GitLab MR Capture
 
-Comment `@docbrain capture` on any GitLab merge request to immediately index the full MR discussion into DocBrain's knowledge store — no waiting for the next scheduled ingest.
+Comment `@docbrain capture` on any GitLab merge request to immediately index the full MR discussion.
 
 **Requirements:** `GITLAB_CAPTURE_WEBHOOK_SECRET` and `GITLAB_CAPTURE_TOKEN` configured, webhook registered in GitLab.
 
@@ -453,25 +527,75 @@ GITLAB_CAPTURE_ALLOWED_PROJECTS=myorg/myrepo    # Only these projects can trigge
 
 ### Step 3: Test It
 
-Open any merge request and add a comment containing `@docbrain capture`. Within a few seconds, DocBrain replies:
+Open any merge request and add a comment containing `@docbrain capture`. Within a few seconds, DocBrain replies with a note on the MR:
 
 ```
-✅ Captured — 12 chunks indexed
+✅ Captured by DocBrain — 12 chunks indexed and immediately searchable.
+This MR will feed Autopilot's next gap analysis run.
 ```
-
-The MR discussion is now searchable and will feed Autopilot's gap analysis on the next scheduled run.
 
 ### What Gets Indexed
 
 - MR title and description
 - All human discussion notes (system notes — merge events, label changes, approval events — are excluded)
-- Threads over 500KB are rejected with a reply explaining the limit
+- Threads over 500KB are skipped silently (too large for the embedding pipeline)
 
-### Security
+### Reply Behavior
 
-- All incoming webhooks are verified via the `X-Gitlab-Token` header
-- User and project allowlists prevent unauthorized triggers
+- On success: DocBrain posts a note confirming the chunk count
+- On failure: DocBrain posts `⚠️ Capture failed: <error>`
+- Replies require `GITLAB_CAPTURE_TOKEN` to be set (token is also used to fetch MR notes)
+- The allowlist check is applied to the **commenter** (the user who wrote `@docbrain capture`), not the MR author
+
+### Security and Access Control
+
+- All incoming webhooks are verified via the `X-Gitlab-Token` header (constant-time comparison)
+- `GITLAB_CAPTURE_ALLOWED_USERS` — restrict to specific GitLab usernames (the commenter, not the MR author)
+- `GITLAB_CAPTURE_ALLOWED_PROJECTS` — restrict to specific project paths (e.g. `myorg/myrepo`)
 - If no allowlists are configured, any user in any project can trigger capture — consider setting `GITLAB_CAPTURE_ALLOWED_PROJECTS` at minimum
+
+---
+
+## Slack Thread Capture
+
+Run `/docbrain capture` inside any Slack thread to immediately index the conversation.
+
+**Note:** `/docbrain capture` only ingests the thread. Use `/docbrain ask <question>` separately to query the knowledge base.
+
+### Setup
+
+Ensure the Slack bot is installed and `SLACK_BOT_TOKEN` is configured. The bot needs `channels:history` and `users:read` OAuth scopes.
+
+### Usage
+
+1. Open a Slack thread with a substantive discussion
+2. Run `/docbrain capture` inside the thread (not on a top-level message)
+3. DocBrain fetches all messages, resolves user names, and indexes the conversation
+
+Within ~15 seconds, DocBrain posts back in the thread:
+```
+✅ Thread from #platform-incidents captured into DocBrain (8 chunks indexed).
+It's now searchable and will be used by Autopilot's next gap analysis.
+```
+
+### Access Control
+
+By default, any user in any channel can run `/docbrain capture`. Restrict access with:
+
+```env
+SLACK_CAPTURE_ALLOWED_CHANNELS=platform-team,infra-review  # channel names (no #) or IDs
+SLACK_CAPTURE_ALLOWED_USERS=alice,U01234567                 # usernames or user IDs
+```
+
+- Channel check matches against both `channel_name` and `channel_id`
+- User check matches against both `user_name` and `user_id`
+- If rejected, DocBrain responds with an ephemeral message: `⚠️ You don't have permission to use /docbrain capture in this channel.`
+
+### What Gets Indexed
+
+- All thread messages with resolved display names and timestamps
+- Threads under 200 characters are skipped as too short
+- The thread is immediately searchable after capture
 
 ---
 
