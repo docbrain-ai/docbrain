@@ -434,4 +434,17 @@ Only change these if you run multiple DocBrain instances sharing the same OpenSe
 | `OIDC_ISSUER_URL` | — | OIDC provider URL (e.g. `https://accounts.google.com`) |
 | `OIDC_CLIENT_ID` | — | OAuth client ID |
 | `OIDC_CLIENT_SECRET` | — | OAuth client secret |
-| `OIDC_REDIRECT_URI` | — | Callback URI (e.g. `http://localhost:3000/auth/oidc/callback`) |
+| `OIDC_REDIRECT_URI` | — | Callback URI (e.g. `https://docbrain.example.com/api/v1/auth/oidc/callback`) |
+| `OIDC_WEB_UI_URL` | `http://localhost:3001` | Where to redirect after successful login |
+| `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` to skip TLS verification — use for corporate/self-signed CAs |
+
+### GitLab OIDC
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITLAB_OIDC_ISSUER_URL` | — | GitLab instance URL (e.g. `https://gitlab.com` or `https://gitlab.corp.example.com`) |
+| `GITLAB_CLIENT_ID` | — | GitLab OAuth application client ID |
+| `GITLAB_CLIENT_SECRET` | — | GitLab OAuth application client secret |
+| `GITLAB_REDIRECT_URI` | — | Callback URL (e.g. `https://docbrain.example.com/api/v1/auth/gitlab/callback`) |
+
+> **Corporate GitLab:** If your self-hosted GitLab uses an internal CA, set `OIDC_ACCEPT_INVALID_CERTS=true`.

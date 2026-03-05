@@ -37,6 +37,26 @@
 
 ---
 
+## See It In Action
+
+<p align="center">
+  <a href="https://youtu.be/IU3haCc6WKI">
+    <img src="https://img.youtube.com/vi/IU3haCc6WKI/maxresdefault.jpg" alt="What is DocBrain?" width="560" />
+  </a>
+  <br/>
+  <strong><a href="https://youtu.be/IU3haCc6WKI">What is DocBrain?</a></strong> — 5-minute overview
+</p>
+
+<p align="center">
+  <a href="https://youtu.be/GN4SC6L8YmI">
+    <img src="https://img.youtube.com/vi/GN4SC6L8YmI/maxresdefault.jpg" alt="DocBrain Deep Dive Podcast" width="560" />
+  </a>
+  <br/>
+  <strong><a href="https://youtu.be/GN4SC6L8YmI">DocBrain Deep Dive</a></strong> — 20-minute podcast
+</p>
+
+---
+
 ## The Feedback Loop Your Team Is Missing
 
 Your team's knowledge doesn't live in Confluence. It lives in the places where real work happens.
@@ -1137,9 +1157,11 @@ docbrain login --server https://docbrain.mycompany.com
 
 # OAuth / OIDC (opens browser, captures callback automatically)
 docbrain login --github --server https://docbrain.mycompany.com
-docbrain login --gitlab --server https://docbrain.mycompany.com
-docbrain login --oidc   --server https://docbrain.mycompany.com
+docbrain login --gitlab --server https://docbrain.mycompany.com   # works with self-hosted GitLab too
+docbrain login --oidc   --server https://docbrain.mycompany.com   # Azure AD, Okta, Keycloak, ADFS, …
 ```
+
+> **Self-hosted GitLab / corporate CA:** add `OIDC_ACCEPT_INVALID_CERTS=true` to your server env if your GitLab instance uses an internal certificate authority.
 
 Session key is saved to `~/.docbrain/config.json`. All subsequent commands use it automatically.
 
