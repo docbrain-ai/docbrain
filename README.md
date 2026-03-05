@@ -147,6 +147,16 @@ The competitor can copy the code. They cannot copy your org's 12 months of accum
 
 ## 🎬 Demo
 
+### What is DocBrain?
+
+[![What is DocBrain?](https://img.youtube.com/vi/IU3haCc6WKI/maxresdefault.jpg)](https://youtu.be/IU3haCc6WKI)
+**[What is DocBrain?](https://youtu.be/IU3haCc6WKI)**
+
+[![20-Minute Podcast about DocBrain](https://img.youtube.com/vi/GN4SC6L8YmI/maxresdefault.jpg)](https://youtu.be/GN4SC6L8YmI)
+**[20-Minute Podcast about DocBrain](https://youtu.be/GN4SC6L8YmI)**
+
+---
+
 ### ⚡ MCP Preview (30-Second Overview)
 
 [![Watch Quick Preview](https://img.youtube.com/vi/9mZLoQnGLl8/maxresdefault.jpg)](https://youtu.be/9mZLoQnGLl8)
