@@ -516,7 +516,7 @@ AUTOPILOT_ENABLED=true
 
 ## How Knowledge Gets Into DocBrain
 
-There are three modes: **scheduled batch ingestion** you configure and run on a cron, **real-time Slack capture** for instantly indexing any thread into the knowledge store, and **real-time GitHub capture** for PR and issue discussions. Both capture modes feed Autopilot's gap analysis — they don't bypass it.
+There are four modes: **scheduled batch ingestion** you configure and run on a cron, **real-time Slack capture** for instantly indexing any thread into the knowledge store, **real-time GitHub capture** for PR and issue discussions, and **real-time GitLab capture** for merge request discussions. All capture modes feed Autopilot's gap analysis — they don't bypass it.
 
 ### Mode 1 — Scheduled Ingestion (opt-in, disabled by default)
 
@@ -681,13 +681,56 @@ gh api repos/your-org/your-repo/hooks \
 
 ---
 
-### How Slack and GitHub Know Where DocBrain Lives
+### Mode 4 — Real-Time Capture from GitLab
+
+Comment `@docbrain capture` on any GitLab merge request to immediately index the full MR discussion into DocBrain's knowledge store.
+
+**Requirements:** `GITLAB_CAPTURE_WEBHOOK_SECRET` + `GITLAB_CAPTURE_TOKEN` configured, webhook registered in GitLab.
+
+**One-time setup (per project):**
+
+1. Set environment variables:
+   ```env
+   GITLAB_CAPTURE_WEBHOOK_SECRET=<generate with: openssl rand -hex 32>
+   GITLAB_CAPTURE_TOKEN=glpat-...   # Personal access token with api scope
+   ```
+
+2. In GitLab: **Project → Settings → Webhooks → Add webhook**
+   - URL: `https://your-docbrain-host/api/v1/gitlab/events`
+   - Secret token: same as `GITLAB_CAPTURE_WEBHOOK_SECRET`
+   - Trigger: enable **Comments**
+
+**Usage:**
+
+```
+# On any merge request — add a comment containing:
+@docbrain capture
+```
+
+```
+✅ Captured — 12 chunks indexed
+```
+
+**What happens:** The MR title, description, and all human discussion notes are fetched, chunked, embedded, and indexed into OpenSearch. System notes (merge events, label changes, approval events) are excluded automatically. The content is immediately searchable and feeds Autopilot's gap analysis on the next scheduled run.
+
+**Optional allowlists** (recommended to restrict who can trigger capture):
+
+```env
+GITLAB_CAPTURE_ALLOWED_USERS=alice,bob          # Only these GitLab usernames
+GITLAB_CAPTURE_ALLOWED_PROJECTS=myorg/myrepo    # Only these project paths
+```
+
+A 500KB size guard prevents runaway captures on very large threads.
+
+---
+
+### How Slack, GitHub, and GitLab Know Where DocBrain Lives
 
 Webhooks and slash commands require the calling service to reach your DocBrain instance over the network. The table below covers each deployment topology:
 
 | Deployment | Slack (SaaS) | GitHub.com (SaaS) | GitHub Enterprise / Self-Hosted GitLab |
 |---|---|---|---|
-| **Public URL** (cloud VM, Kubernetes with Ingress, Fly.io, Railway, etc.) | ✅ Direct — configure your public URL | ✅ Direct | ✅ Direct (GitHub Enterprise must be able to reach DocBrain's host) |
+| **Public URL** (cloud VM, Kubernetes with Ingress, Fly.io, Railway, etc.) | ✅ Direct — configure your public URL | ✅ Direct | ✅ Direct (must be able to reach DocBrain's host) |
 | **Local / internal network** (laptop, private VPC) | Requires a tunnel: [ngrok](https://ngrok.com), [Cloudflare Tunnel](https://www.cloudflare.com/products/tunnel/), or VPN | Same | Same |
 | **Private Slack (self-hosted via Slack Enterprise Grid with SCIM)** | Still SaaS webhooks — same as above | — | — |
 
@@ -701,19 +744,21 @@ ngrok http 3000
 # Use the ngrok URL as your webhook URL:
 # https://abc123.ngrok-free.app/slack/commands
 # https://abc123.ngrok-free.app/github/events
+# https://abc123.ngrok-free.app/api/v1/gitlab/events
 
 # Option 2: Cloudflare Tunnel (persistent subdomain, free tier)
 cloudflared tunnel --url http://localhost:3000
 ```
 
-**For GitHub Enterprise (self-hosted):** GitHub Enterprise must have network access to DocBrain. Both can be on the same internal network — no public internet required. Set the webhook URL to DocBrain's internal hostname:
+**For GitHub Enterprise / self-hosted GitLab:** Both must have network access to DocBrain. Both can be on the same internal network — no public internet required. Set the webhook URL to DocBrain's internal hostname:
 
 ```bash
 # e.g. if DocBrain runs at https://docbrain.internal:3000
 https://docbrain.internal:3000/github/events
+https://docbrain.internal:3000/api/v1/gitlab/events
 ```
 
-**Verifying connectivity:** DocBrain's webhook endpoints respond `200 OK` to valid signature-verified requests and silently ignore unknown event types — safe to test by sending a ping event from GitHub's webhook settings page.
+**Verifying connectivity:** DocBrain's webhook endpoints respond `200 OK` to valid signature-verified requests and silently ignore unknown event types — safe to test by sending a ping event from GitHub's or GitLab's webhook settings page.
 
 ---
 
@@ -1074,13 +1119,34 @@ brew install docbrain-ai/tap/docbrain
 # or: npm install -g docbrain
 ```
 
-```bash
-export DOCBRAIN_API_KEY="db_sk_..."
-export DOCBRAIN_SERVER_URL="http://localhost:3000"
+**Login — email/password or SSO:**
 
+```bash
+# Email/password
+docbrain login --server https://docbrain.mycompany.com
+
+# OAuth / OIDC (opens browser, captures callback automatically)
+docbrain login --github --server https://docbrain.mycompany.com
+docbrain login --gitlab --server https://docbrain.mycompany.com
+docbrain login --oidc   --server https://docbrain.mycompany.com
+```
+
+Session key is saved to `~/.docbrain/config.json`. All subsequent commands use it automatically.
+
+**Querying:**
+
+```bash
 docbrain ask "How do I configure mTLS between services?"
 docbrain freshness --space PLATFORM
 docbrain incident "Redis connection timeouts in auth-service"
+```
+
+**Managing tokens (any authenticated user):**
+
+```bash
+docbrain token create --name "MCP Server Key" --role viewer
+docbrain token list
+docbrain token revoke <id>
 ```
 
 ---

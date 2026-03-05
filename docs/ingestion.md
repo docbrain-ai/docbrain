@@ -421,6 +421,60 @@ The answer should reflect the latest content.
 
 ---
 
+## GitLab MR Capture
+
+Comment `@docbrain capture` on any GitLab merge request to immediately index the full MR discussion into DocBrain's knowledge store — no waiting for the next scheduled ingest.
+
+**Requirements:** `GITLAB_CAPTURE_WEBHOOK_SECRET` and `GITLAB_CAPTURE_TOKEN` configured, webhook registered in GitLab.
+
+### Step 1: Configure DocBrain
+
+```env
+GITLAB_CAPTURE_WEBHOOK_SECRET=your-webhook-secret   # generate with: openssl rand -hex 32
+GITLAB_CAPTURE_TOKEN=glpat-...                       # Personal access token with api scope
+GITLAB_CAPTURE_BASE_URL=https://gitlab.com           # Default; set for self-hosted GitLab
+```
+
+Optional allowlists (recommended for shared instances):
+
+```env
+GITLAB_CAPTURE_ALLOWED_USERS=alice,bob          # Only these users can trigger capture
+GITLAB_CAPTURE_ALLOWED_PROJECTS=myorg/myrepo    # Only these projects can trigger capture
+```
+
+### Step 2: Register the Webhook in GitLab
+
+1. Go to your project: **Settings → Webhooks**
+2. Fill in:
+   - **URL:** `https://your-docbrain-host/api/v1/gitlab/events`
+   - **Secret token:** same value as `GITLAB_CAPTURE_WEBHOOK_SECRET`
+   - **Trigger:** enable **Comments**
+3. Click **Add webhook**
+
+### Step 3: Test It
+
+Open any merge request and add a comment containing `@docbrain capture`. Within a few seconds, DocBrain replies:
+
+```
+✅ Captured — 12 chunks indexed
+```
+
+The MR discussion is now searchable and will feed Autopilot's gap analysis on the next scheduled run.
+
+### What Gets Indexed
+
+- MR title and description
+- All human discussion notes (system notes — merge events, label changes, approval events — are excluded)
+- Threads over 500KB are rejected with a reply explaining the limit
+
+### Security
+
+- All incoming webhooks are verified via the `X-Gitlab-Token` header
+- User and project allowlists prevent unauthorized triggers
+- If no allowlists are configured, any user in any project can trigger capture — consider setting `GITLAB_CAPTURE_ALLOWED_PROJECTS` at minimum
+
+---
+
 ## Re-Ingestion and Updates
 
 ### Updating Documents

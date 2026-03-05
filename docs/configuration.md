@@ -263,6 +263,44 @@ jira_ingest:
 | `jira_ingest.lookback_days` | `JIRA_LOOKBACK_DAYS` | `365` | How far back to fetch issues |
 | `jira_ingest.issue_types` | `JIRA_ISSUE_TYPES` | `Bug,Story,Task,Epic` | Comma-separated issue types to ingest |
 
+## Rate Limiting
+
+DocBrain applies per-IP rate limiting to unauthenticated routes and per-API-key rate limiting to authenticated routes. Rate limiting is enabled by default.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATE_LIMIT_ENABLED` | `true` | Set to `false` to disable all rate limiting (not recommended for production) |
+| `RATE_LIMIT_RPM` | `60` | Requests per minute per IP on unauthenticated routes |
+| `RATE_LIMIT_AUTH_RPM` | `120` | Requests per minute per API key on authenticated routes |
+| `RATE_LIMIT_WEBHOOK_RPM` | `30` | Requests per minute per IP on webhook endpoints (`/github/events`, `/gitlab/events`) |
+
+When a rate limit is exceeded, DocBrain returns `429 Too Many Requests` with a `Retry-After` header.
+
+## GitLab MR Capture Webhook
+
+The GitLab capture feature lets engineers trigger immediate ingestion by commenting `@docbrain capture` on any merge request.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITLAB_CAPTURE_WEBHOOK_SECRET` | — | HMAC secret shared with GitLab for webhook signature verification |
+| `GITLAB_CAPTURE_TOKEN` | — | GitLab personal access token with `api` scope (fetches MR notes and posts reply comments) |
+| `GITLAB_CAPTURE_BASE_URL` | `https://gitlab.com` | GitLab instance base URL (override for self-hosted) |
+| `GITLAB_CAPTURE_ALLOWED_USERS` | — | Comma-separated GitLab usernames allowed to trigger capture. Empty = all users. |
+| `GITLAB_CAPTURE_ALLOWED_PROJECTS` | — | Comma-separated project paths allowed to trigger capture. Empty = all projects. e.g. `myorg/myrepo` |
+
+See [Ingestion Guide](ingestion.md#gitlab-mr-capture) for full setup instructions.
+
+## GitHub Capture Security
+
+These optional variables restrict which repos and users can trigger real-time GitHub PR/issue capture via `@docbrain capture` comments.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_CAPTURE_ALLOWED_REPOS` | — | Comma-separated `owner/repo` pairs allowed to trigger capture. Empty = all repos. e.g. `myorg/backend,myorg/frontend` |
+| `GITHUB_CAPTURE_ALLOWED_USERS` | — | Comma-separated GitHub usernames allowed to trigger capture. Empty = all users. e.g. `alice,bob` |
+
+A 500KB content size guard applies to all capture requests. Oversized threads are rejected with a reply comment.
+
 ## Confluence Webhooks (Real-Time Sync)
 
 | Variable | Default | Description |
