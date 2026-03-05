@@ -599,6 +599,32 @@ SLACK_CAPTURE_ALLOWED_USERS=alice,U01234567                 # usernames or user 
 
 ---
 
+## Capture Lifecycle and Freshness
+
+### Space Assignment
+
+Captured content is stored under a meaningful space name derived from the source:
+
+| Source | Space assigned |
+|--------|---------------|
+| GitHub PR/issue | `owner/repo` (e.g., `myorg/backend`) |
+| GitLab MR | `group/project` (e.g., `platform/api`) |
+| Slack thread | Channel name (e.g., `platform-incidents`) |
+
+This means `allowed_spaces` ACL filtering works as expected — setting `allowed_spaces: ["platform-incidents"]` on an API key will correctly scope answers to Slack captures from that channel, GitHub captures from a matching repo, etc.
+
+### Staleness and Time Decay
+
+Unlike incident records (Jira, PagerDuty, Zendesk), which are permanent historical events, **captured content decays with age**. A GitHub PR discussing an architecture from 5 years ago, or a Slack thread about a since-replaced system, should score low in freshness — not be treated as always-current.
+
+- The freshness scorer uses the **original content creation date** (when the PR/MR was opened, when the Slack thread started) as the age baseline — not the time DocBrain captured it.
+- Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one, which reduces its weight in RAG retrieval and Autopilot gap analysis.
+- **Re-capturing the same thread** (running `/docbrain capture` again on the same PR or Slack thread) updates the content but preserves the original creation date as the age baseline.
+
+This ensures that outdated design decisions, replaced architectures, or deprecated processes are progressively de-emphasized in answers as they age — without ever being deleted (the historical record is preserved for explicit search).
+
+---
+
 ## Re-Ingestion and Updates
 
 ### Updating Documents

@@ -379,6 +379,19 @@ When enabled, Autopilot runs on the configured schedule, exposes management endp
 |----------|---------|-------------|
 | `FRESHNESS_SCHEDULER_INTERVAL_HOURS` | `24` | How often freshness scores are recalculated for all documents |
 
+### Capture Lifecycle
+
+Captured content (GitHub PRs/issues, GitLab MRs, Slack threads) decays with age — unlike incident records (Jira, PagerDuty, Zendesk) which are permanent historical events. A 5-year-old PR discussing a replaced architecture should score low in freshness; a 2-week-old incident thread is always valid.
+
+**Space assignment:** Captures are stored under a meaningful space name derived from the source:
+- GitHub captures → `owner/repo` (e.g., `myorg/backend`)
+- GitLab captures → `group/project` (e.g., `platform/api`)
+- Slack captures → channel name (e.g., `platform-incidents`)
+
+This makes `allowed_spaces` ACL filtering work correctly — a key scoped to `["myorg/backend"]` will include GitHub captures from that repo.
+
+**Age baseline:** Freshness is calculated from the **original content creation date** (when the PR was opened, when the Slack thread started) — not the time DocBrain captured it. Re-capturing the same thread updates its content but preserves the original creation date as the staleness baseline.
+
 ## Memory Consolidation
 
 | Variable | Default | Description |
