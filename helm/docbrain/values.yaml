@@ -106,6 +106,65 @@ freshness:
 memory:
   consolidationIntervalHours: "6"
 
+# ── SSO / OAuth providers ────────────────────────────────────────────────
+# See docs/rbac.md for full setup guide.
+
+# -- GitHub OAuth login (docbrain login --github)
+# Create an OAuth App at https://github.com/settings/developers
+# Callback URL: https://<your-domain>/api/v1/auth/github/callback
+githubOAuth:
+  enabled: false
+  # clientId: ""        # set via --set githubOAuth.clientId=... or existingSecret
+  # clientSecret: ""    # stored in the Helm Secret
+  # redirectUri: ""     # must match the callback URL registered in GitHub
+
+# -- GitLab OIDC login (docbrain login --gitlab)
+# Enable OIDC in your GitLab application:
+#   Admin → Applications → Add → enable openid, profile, email, groups scopes
+# Callback URL: https://<your-domain>/api/v1/auth/gitlab/callback
+gitlabOAuth:
+  enabled: false
+  # instanceUrl: "https://gitlab.com"   # or your self-hosted URL
+  # clientId: ""
+  # clientSecret: ""    # stored in the Helm Secret
+  # redirectUri: ""
+
+# -- Generic OIDC login (docbrain login --oidc)
+# Works with Azure AD, Okta, Google Workspace, Keycloak, etc.
+# Callback URL: https://<your-domain>/api/v1/auth/oidc/callback
+oidc:
+  enabled: false
+  # issuerUrl: ""       # e.g. https://login.microsoftonline.com/<tenant>/v2.0
+  # clientId: ""
+  # clientSecret: ""    # stored in the Helm Secret
+  # redirectUri: ""
+  # webUiUrl: ""        # your DocBrain web UI URL (redirect destination after login)
+
+# -- RBAC / SSO access control
+# Controls who is allowed to log in and what role they receive.
+# If allowedGroups and allowedDomains are both empty, all authenticated users are permitted.
+# See docs/rbac.md for full details.
+rbac:
+  # Default role for new SSO users: viewer (default) | editor | admin
+  defaultRole: "viewer"
+  # Email domain that always gets admin role (e.g. "acme.com")
+  adminDomain: ""
+  # Comma-separated emails that always get admin role
+  adminEmails: ""
+  # Comma-separated IdP group / GitHub org names that map to admin role
+  adminGroups: ""
+  # Comma-separated IdP group / GitHub org names that map to editor role
+  editorGroups: ""
+  # ACCESS GATE — only members of these groups may log in at all.
+  # Comma-separated IdP group names (OIDC/GitLab) or GitHub org names.
+  # Leave empty to allow all authenticated users (default, backward-compatible).
+  # Example: "platform-team,sre-team"
+  allowedGroups: ""
+  # ACCESS GATE — only users with these email domains may log in.
+  # Comma-separated. Leave empty to allow all email domains (default).
+  # Example: "acme.com,acme.org"
+  allowedDomains: ""
+
 # -- Ingress
 ingress:
   enabled: false

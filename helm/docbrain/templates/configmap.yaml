@@ -45,6 +45,49 @@ data:
   {{- if .Values.autopilot.enabled }}
   AUTOPILOT_ENABLED: "true"
   {{- end }}
+
+  # OAuth / SSO providers
+  {{- if .Values.githubOAuth.enabled }}
+  GITHUB_CLIENT_ID: {{ .Values.githubOAuth.clientId | default "" | quote }}
+  GITHUB_REDIRECT_URI: {{ .Values.githubOAuth.redirectUri | default "" | quote }}
+  {{- end }}
+  {{- if .Values.gitlabOAuth.enabled }}
+  GITLAB_INSTANCE_URL: {{ .Values.gitlabOAuth.instanceUrl | default "https://gitlab.com" | quote }}
+  GITLAB_CLIENT_ID: {{ .Values.gitlabOAuth.clientId | default "" | quote }}
+  GITLAB_REDIRECT_URI: {{ .Values.gitlabOAuth.redirectUri | default "" | quote }}
+  {{- end }}
+  {{- if .Values.oidc.enabled }}
+  OIDC_ISSUER_URL: {{ .Values.oidc.issuerUrl | default "" | quote }}
+  OIDC_CLIENT_ID: {{ .Values.oidc.clientId | default "" | quote }}
+  OIDC_REDIRECT_URI: {{ .Values.oidc.redirectUri | default "" | quote }}
+  {{- if .Values.oidc.webUiUrl }}
+  OIDC_WEB_UI_URL: {{ .Values.oidc.webUiUrl | quote }}
+  {{- end }}
+  {{- end }}
+
+  # RBAC / SSO access control
+  {{- if .Values.rbac.defaultRole }}
+  OIDC_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | quote }}
+  {{- end }}
+  {{- if .Values.rbac.adminDomain }}
+  OIDC_ADMIN_DOMAIN: {{ .Values.rbac.adminDomain | quote }}
+  {{- end }}
+  {{- if .Values.rbac.adminEmails }}
+  OIDC_ADMIN_EMAILS: {{ .Values.rbac.adminEmails | quote }}
+  {{- end }}
+  {{- if .Values.rbac.adminGroups }}
+  OIDC_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
+  {{- end }}
+  {{- if .Values.rbac.editorGroups }}
+  OIDC_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
+  {{- end }}
+  {{- if .Values.rbac.allowedGroups }}
+  OIDC_ALLOWED_GROUPS: {{ .Values.rbac.allowedGroups | quote }}
+  {{- end }}
+  {{- if .Values.rbac.allowedDomains }}
+  OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
+  {{- end }}
+
   {{- range $key, $val := .Values.server.env }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}
