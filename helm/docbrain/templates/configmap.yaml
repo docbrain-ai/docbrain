@@ -14,6 +14,7 @@ data:
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
   INGEST_SOURCES: {{ .Values.ingest.sources | quote }}
   LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
+  INGEST_RUN_ON_STARTUP: {{ .Values.ingest.runOnStartup | default false | quote }}
   OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
   REDIS_URL: {{ include "docbrain.redisUrl" . | quote }}
   SERVER_BIND: "0.0.0.0"
