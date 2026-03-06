@@ -41,7 +41,7 @@ spec:
             - sh
             - -c
             - |
-              until wget -qO- http://{{ include "docbrain.fullname" . }}-opensearch:9200/_cluster/health >/dev/null 2>&1; do
+              until curl -sf http://{{ include "docbrain.fullname" . }}-opensearch:9200/_cluster/health; do
                 echo "waiting for opensearch..."; sleep 2;
               done
         {{- end }}
