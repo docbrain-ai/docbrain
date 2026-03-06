@@ -30,23 +30,23 @@ spec:
           initContainers:
             {{- if .Values.postgresql.internal }}
             - name: wait-for-postgres
-              image: busybox
+              image: {{ .Values.postgresql.image }}
               command:
                 - sh
                 - -c
                 - |
-                  until nc -z {{ include "docbrain.fullname" . }}-postgres 5432; do
+                  until pg_isready -h {{ include "docbrain.fullname" . }}-postgres -p 5432 -U docbrain; do
                     echo "waiting for postgres..."; sleep 2;
                   done
             {{- end }}
             {{- if .Values.opensearch.internal }}
             - name: wait-for-opensearch
-              image: busybox
+              image: {{ .Values.opensearch.image }}
               command:
                 - sh
                 - -c
                 - |
-                  until nc -z {{ include "docbrain.fullname" . }}-opensearch 9200; do
+                  until wget -qO- http://{{ include "docbrain.fullname" . }}-opensearch:9200/_cluster/health >/dev/null 2>&1; do
                     echo "waiting for opensearch..."; sleep 2;
                   done
             {{- end }}

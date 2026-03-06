@@ -25,36 +25,34 @@ spec:
       initContainers:
         {{- if .Values.postgresql.internal }}
         - name: wait-for-postgres
-          image: busybox
-          # Issue #8: Use exec-form and exit immediately on success/failure — no shell wrapper
-          # that can mask the exit code.
+          image: {{ .Values.postgresql.image }}
           command:
             - sh
             - -c
             - |
-              until nc -z {{ include "docbrain.fullname" . }}-postgres 5432; do
+              until pg_isready -h {{ include "docbrain.fullname" . }}-postgres -p 5432 -U docbrain; do
                 echo "waiting for postgres..."; sleep 2;
               done
         {{- end }}
         {{- if .Values.opensearch.internal }}
         - name: wait-for-opensearch
-          image: busybox
+          image: {{ .Values.opensearch.image }}
           command:
             - sh
             - -c
             - |
-              until nc -z {{ include "docbrain.fullname" . }}-opensearch 9200; do
+              until wget -qO- http://{{ include "docbrain.fullname" . }}-opensearch:9200/_cluster/health >/dev/null 2>&1; do
                 echo "waiting for opensearch..."; sleep 2;
               done
         {{- end }}
         {{- if .Values.redis.internal }}
         - name: wait-for-redis
-          image: busybox
+          image: {{ .Values.redis.image }}
           command:
             - sh
             - -c
             - |
-              until nc -z {{ include "docbrain.fullname" . }}-redis 6379; do
+              until redis-cli -h {{ include "docbrain.fullname" . }}-redis -p 6379 ping | grep -q PONG; do
                 echo "waiting for redis..."; sleep 2;
               done
         {{- end }}
