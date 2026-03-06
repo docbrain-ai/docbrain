@@ -1,0 +1,24 @@
+{{- if and (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
+---
+# PersistentVolumeClaim for local docs mounted into the ingest job and server.
+# Sized and storage-classed via ingest.docsStorage and ingest.storageClassName.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "docbrain.fullname" . }}-docs
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingest
+  annotations:
+    # Retain the PVC on helm delete so user data is never accidentally destroyed.
+    "helm.sh/resource-policy": keep
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.ingest.docsStorage | default "5Gi" }}
+  {{- if .Values.ingest.storageClassName }}
+  storageClassName: {{ .Values.ingest.storageClassName }}
+  {{- end }}
+{{- end }}

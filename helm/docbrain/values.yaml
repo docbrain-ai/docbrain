@@ -19,6 +19,9 @@ ingest:
   sources: local  # comma-separated: local, confluence, github, github_pr, slack_thread, jira, etc.
   schedule: "0 */6 * * *"   # every 6 hours
   localDocsPath: /data/docs
+  # Size of the PersistentVolumeClaim created for local docs (ingest.sources includes "local").
+  docsStorage: 5Gi
+  # storageClassName: ""   # leave empty to use the cluster default StorageClass
   # Run ingest once at server startup before the first scheduled CronJob run.
   # Ensures data is indexed immediately after install or upgrade. Default: true.
   runOnStartup: true
