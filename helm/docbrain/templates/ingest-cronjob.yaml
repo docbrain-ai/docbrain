@@ -13,17 +13,49 @@ spec:
   jobTemplate:
     spec:
       backoffLimit: 2
+      # Issue #7 (jobs): Automatically delete completed jobs after 1 hour so they don't
+      # accumulate and fill up the namespace. Requires Kubernetes 1.21+ (TTLAfterFinished GA).
+      ttlSecondsAfterFinished: 3600
       template:
         metadata:
           labels:
             {{- include "docbrain.selectorLabels" . | nindent 12 }}
             app.kubernetes.io/component: ingest
+          annotations:
+            # Issue #10: Restart pods when config changes
+            {{- include "docbrain.configChecksum" . | nindent 12 }}
         spec:
           restartPolicy: OnFailure
+          # Issue #9: Wait for dependencies before running ingest
+          initContainers:
+            {{- if .Values.postgresql.internal }}
+            - name: wait-for-postgres
+              image: busybox
+              command:
+                - sh
+                - -c
+                - |
+                  until nc -z {{ include "docbrain.fullname" . }}-postgres 5432; do
+                    echo "waiting for postgres..."; sleep 2;
+                  done
+            {{- end }}
+            {{- if .Values.opensearch.internal }}
+            - name: wait-for-opensearch
+              image: busybox
+              command:
+                - sh
+                - -c
+                - |
+                  until nc -z {{ include "docbrain.fullname" . }}-opensearch 9200; do
+                    echo "waiting for opensearch..."; sleep 2;
+                  done
+            {{- end }}
           containers:
             - name: ingest
               image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
               imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+              # Issue #8: exec-form command — the container process IS docbrain-ingest.
+              # A shell wrapper would mask non-zero exit codes from Kubernetes restart logic.
               command: ["docbrain-ingest"]
               envFrom:
                 - configMapRef:

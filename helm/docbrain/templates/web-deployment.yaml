@@ -17,6 +17,8 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: web
+      annotations:
+        {{- include "docbrain.configChecksum" . | nindent 8 }}
     spec:
       containers:
         - name: web

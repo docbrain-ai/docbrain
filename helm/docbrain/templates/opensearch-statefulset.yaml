@@ -18,7 +18,14 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: opensearch
+      annotations:
+        {{- include "docbrain.configChecksum" . | nindent 8 }}
     spec:
+      # Issue #5: Cloud PVCs are provisioned with root ownership (UID 0).
+      # fsGroup: 1000 instructs Kubernetes to chown the volume to GID 1000 at mount time
+      # so the opensearch process (UID/GID 1000) can write to it without permission errors.
+      securityContext:
+        fsGroup: 1000
       initContainers:
         - name: sysctl
           image: busybox
@@ -47,6 +54,14 @@ spec:
               port: 9200
             initialDelaySeconds: 30
             periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 3
           resources:
             requests:
               cpu: 500m

@@ -46,6 +46,12 @@ server:
     limits:
       cpu: "1"
       memory: 512Mi
+  # CORS origins (comma-separated). Required for browser clients.
+  # Example: corsAllowedOrigins: "https://docbrain.mycompany.com"
+  corsAllowedOrigins: ""
+  # Session lifetime for web logins (hours). Default: 720 (30 days)
+  loginSessionTtlHours: "720"
+  # Additional arbitrary env vars passed through to the server ConfigMap
   env: {}
 
 # -- DocBrain Web UI
@@ -70,7 +76,8 @@ postgresql:
   internal: true
   image: postgres:17-alpine
   storage: 10Gi
-  # externalUrl: ""    # if internal=false
+  # password: ""          # auto-generated if not set; stored in the Secret
+  # externalUrl: ""       # if internal=false
 
 # -- OpenSearch
 opensearch:
@@ -89,6 +96,15 @@ redis:
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
 autopilot:
   enabled: false
+  gapAnalysisIntervalHours: "24"
+
+# -- Freshness scoring scheduler
+freshness:
+  schedulerIntervalHours: "24"
+
+# -- Memory consolidation
+memory:
+  consolidationIntervalHours: "6"
 
 # -- Ingress
 ingress:
@@ -99,4 +115,6 @@ ingress:
   # tlsSecretName: docbrain-tls
 
 # -- Secret (created from values, or use existing)
+# If existingSecret is set, the chart will NOT create a Secret and will use this one instead.
+# The existing secret must contain all required keys (POSTGRES_PASSWORD, BOOTSTRAP_ADMIN_KEY, etc.)
 existingSecret: ""

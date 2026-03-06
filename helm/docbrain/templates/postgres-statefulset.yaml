@@ -18,6 +18,8 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: postgres
+      annotations:
+        {{- include "docbrain.configChecksum" . | nindent 8 }}
     spec:
       containers:
         - name: postgres
@@ -34,6 +36,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "docbrain.secretName" . }}
                   key: POSTGRES_PASSWORD
+            # Issue #4: Use a subdirectory of the mount point so PostgreSQL ignores the
+            # lost+found directory that cloud block volumes (OCI, AWS EBS, GCP PD) create
+            # at the filesystem root — PostgreSQL refuses to init into a non-empty directory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -42,6 +49,12 @@ spec:
               command: ["pg_isready", "-U", "docbrain"]
             initialDelaySeconds: 5
             periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "docbrain"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
   volumeClaimTemplates:
     - metadata:
         name: data

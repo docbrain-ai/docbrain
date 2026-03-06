@@ -36,26 +36,36 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{/* Issue #1: Use -}} to strip trailing newlines so URL values don't start with \n */}}
 {{- define "docbrain.databaseUrl" -}}
-{{- if .Values.postgresql.internal }}
+{{- if .Values.postgresql.internal -}}
 postgresql://docbrain:$(POSTGRES_PASSWORD)@{{ include "docbrain.fullname" . }}-postgres:5432/docbrain
-{{- else }}
+{{- else -}}
 {{- .Values.postgresql.externalUrl }}
-{{- end }}
+{{- end -}}
 {{- end }}
 
 {{- define "docbrain.opensearchUrl" -}}
-{{- if .Values.opensearch.internal }}
+{{- if .Values.opensearch.internal -}}
 http://{{ include "docbrain.fullname" . }}-opensearch:9200
-{{- else }}
+{{- else -}}
 {{- .Values.opensearch.externalUrl }}
-{{- end }}
+{{- end -}}
 {{- end }}
 
 {{- define "docbrain.redisUrl" -}}
-{{- if .Values.redis.internal }}
+{{- if .Values.redis.internal -}}
 redis://{{ include "docbrain.fullname" . }}-redis:6379
-{{- else }}
+{{- else -}}
 {{- .Values.redis.externalUrl }}
+{{- end -}}
 {{- end }}
+
+{{/*
+Checksum of ConfigMap + Secret — used in pod annotations to trigger rolling restarts
+when configuration changes. Append to pod template metadata.annotations.
+*/}}
+{{- define "docbrain.configChecksum" -}}
+checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{- end }}
