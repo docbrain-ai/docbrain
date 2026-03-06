@@ -41,8 +41,10 @@ ingest:
 server:
   image:
     repository: ghcr.io/docbrain-ai/docbrain
-    tag: latest
-    pullPolicy: IfNotPresent
+    # edge = latest commit from main (unstable). For production use "latest" or a specific
+    # release tag (e.g. "v1.2.0"). See https://github.com/docbrain-ai/docbrain/releases
+    tag: edge
+    pullPolicy: Always
   replicas: 1
   port: 3000
   resources:
@@ -65,8 +67,10 @@ web:
   enabled: true
   image:
     repository: ghcr.io/docbrain-ai/docbrain-web
-    tag: latest
-    pullPolicy: IfNotPresent
+    # edge = latest commit from main (unstable). For production use "latest" or a specific
+    # release tag (e.g. "v1.2.0"). See https://github.com/docbrain-ai/docbrain/releases
+    tag: edge
+    pullPolicy: Always
   replicas: 1
   port: 3001
   resources:
