@@ -19,6 +19,9 @@ spec:
       annotations:
         # Issue #10: Rolling restart on ConfigMap or Secret changes
         {{- include "docbrain.configChecksum" . | nindent 8 }}
+        {{- with .Values.server.vaultAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       # Issue #9: Wait for all dependencies before starting the server.
       # Prevents race conditions when all pods start simultaneously.
@@ -87,8 +90,24 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
+          volumeMounts:
+            - name: bootstrap
+              mountPath: /tmp/bootstrap
+            {{- if and .Values.ingest.runOnStartup (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
+            - name: docs
+              mountPath: {{ .Values.ingest.localDocsPath }}
+              readOnly: true
+            {{- end }}
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
+      volumes:
+        - name: bootstrap
+          emptyDir: {}
+        {{- if and .Values.ingest.runOnStartup (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
+        - name: docs
+          persistentVolumeClaim:
+            claimName: {{ include "docbrain.fullname" . }}-docs
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

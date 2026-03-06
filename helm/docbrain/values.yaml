@@ -61,6 +61,10 @@ server:
   loginSessionTtlHours: "720"
   # Additional arbitrary env vars passed through to the server ConfigMap
   env: {}
+  # Additional arbitrary key-value pairs added to the server Secret (e.g. for Vault references)
+  secrets: {}
+  # Extra pod annotations — injected into the server pod template (e.g. Vault Agent annotations)
+  vaultAnnotations: {}
 
 # -- DocBrain Web UI
 web:

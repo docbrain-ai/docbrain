@@ -1,3 +1,4 @@
+{{- include "docbrain.validate" . -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -35,6 +36,7 @@ data:
   CONFLUENCE_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
   CONFLUENCE_SPACE_KEYS: {{ .Values.ingest.confluence.spaceKeys | default "" | quote }}
   CONFLUENCE_API_VERSION: {{ .Values.ingest.confluence.apiVersion | default "v2" | quote }}
+  CONFLUENCE_TLS_VERIFY: {{ .Values.ingest.confluence.tlsVerify | default "true" | quote }}
   {{- if .Values.ingest.confluence.pageIds }}
   CONFLUENCE_PAGE_IDS: {{ .Values.ingest.confluence.pageIds | quote }}
   {{- end }}
