@@ -63,6 +63,9 @@ spec:
         resources:
           requests:
             storage: {{ .Values.postgresql.storage }}
+        {{- if .Values.postgresql.storageClassName }}
+        storageClassName: {{ .Values.postgresql.storageClassName }}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

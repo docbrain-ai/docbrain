@@ -47,6 +47,9 @@ spec:
         resources:
           requests:
             storage: {{ .Values.redis.storage }}
+        {{- if .Values.redis.storageClassName }}
+        storageClassName: {{ .Values.redis.storageClassName }}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

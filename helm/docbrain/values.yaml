@@ -82,6 +82,7 @@ postgresql:
   internal: true
   image: postgres:17-alpine
   storage: 10Gi
+  # storageClassName: ""  # leave empty to use cluster default StorageClass
   # password: ""          # auto-generated if not set; stored in the Secret
   # externalUrl: ""       # if internal=false
 
@@ -90,6 +91,7 @@ opensearch:
   internal: true
   image: opensearchproject/opensearch:2.19.0
   storage: 20Gi
+  # storageClassName: ""  # leave empty to use cluster default StorageClass
   # externalUrl: ""
 
 # -- Redis
@@ -97,6 +99,7 @@ redis:
   internal: true
   image: redis:7-alpine
   storage: 1Gi
+  # storageClassName: ""  # leave empty to use cluster default StorageClass
   # externalUrl: ""
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
