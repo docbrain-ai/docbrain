@@ -1,4 +1,3 @@
-{{- include "docbrain.validate" . -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,6 +7,9 @@ metadata:
 data:
   # Issue #2: APP_ENV must be "production" for production config loading
   APP_ENV: "production"
+  # Point server to the config directory baked into the container image.
+  # Without this the server looks for ./config relative to CWD and crashes silently.
+  DOCBRAIN_CONFIG_DIR: "/app/config"
 
   LLM_PROVIDER: {{ .Values.llm.provider | quote }}
   LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}

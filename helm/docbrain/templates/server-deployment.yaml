@@ -44,7 +44,7 @@ spec:
             - sh
             - -c
             - |
-              until curl -sf http://{{ include "docbrain.fullname" . }}-opensearch:9200/_cluster/health; do
+              until (echo > /dev/tcp/{{ include "docbrain.fullname" . }}-opensearch/9200) 2>/dev/null; do
                 echo "waiting for opensearch..."; sleep 2;
               done
         {{- end }}
@@ -90,24 +90,20 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
+          {{- if and (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
           volumeMounts:
-            - name: bootstrap
-              mountPath: /tmp/bootstrap
-            {{- if and .Values.ingest.runOnStartup (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
             - name: docs
               mountPath: {{ .Values.ingest.localDocsPath }}
               readOnly: true
-            {{- end }}
+          {{- end }}
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
+      {{- if and (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
       volumes:
-        - name: bootstrap
-          emptyDir: {}
-        {{- if and .Values.ingest.runOnStartup (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
         - name: docs
           persistentVolumeClaim:
             claimName: {{ include "docbrain.fullname" . }}-docs
-        {{- end }}
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

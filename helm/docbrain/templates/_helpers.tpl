@@ -62,22 +62,6 @@ redis://{{ include "docbrain.fullname" . }}-redis:6379
 {{- end }}
 
 {{/*
-Validate required API keys are not left as placeholder values.
-Called from configmap.yaml so it runs on every helm install/upgrade.
-*/}}
-{{- define "docbrain.validate" -}}
-{{- if and (eq .Values.llm.provider "anthropic") (or (eq (.Values.llm.anthropicApiKey | default "") "CHANGE_ME") (empty (.Values.llm.anthropicApiKey | default ""))) -}}
-{{- fail "ERROR: llm.anthropicApiKey must be set when llm.provider=anthropic. Pass it via --set llm.anthropicApiKey=<key>" -}}
-{{- end -}}
-{{- if and (eq .Values.llm.provider "openai") (or (eq (.Values.llm.openaiApiKey | default "") "CHANGE_ME") (empty (.Values.llm.openaiApiKey | default ""))) -}}
-{{- fail "ERROR: llm.openaiApiKey must be set when llm.provider=openai. Pass it via --set llm.openaiApiKey=<key>" -}}
-{{- end -}}
-{{- if and (eq .Values.embedding.provider "openai") (or (eq (.Values.embedding.openaiApiKey | default .Values.llm.openaiApiKey | default "") "CHANGE_ME") (empty (.Values.embedding.openaiApiKey | default .Values.llm.openaiApiKey | default ""))) -}}
-{{- fail "ERROR: embedding.openaiApiKey (or llm.openaiApiKey) must be set when embedding.provider=openai. Pass it via --set embedding.openaiApiKey=<key>" -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Checksum of ConfigMap + Secret — used in pod annotations to trigger rolling restarts
 when configuration changes. Append to pod template metadata.annotations.
 */}}
