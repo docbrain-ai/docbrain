@@ -1196,13 +1196,28 @@ Starts the API server, web UI, PostgreSQL, OpenSearch, and Redis. Schema migrati
 ### Kubernetes (Helm)
 
 ```bash
+git clone https://github.com/docbrain-ai/docbrain-public.git
+cd docbrain-public
+
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
-  --set llm.anthropicApiKey=$ANTHROPIC_API_KEY \
-  --set autopilot.enabled=true
+  --set llm.anthropicApiKey=sk-ant-... \
+  --set embedding.provider=openai \
+  --set embedding.openaiApiKey=sk-...
 ```
 
-Supports external PostgreSQL, OpenSearch, and Redis. Includes HPA, ingress, and TLS configuration. See [Kubernetes docs](docs/kubernetes.md).
+The chart deploys the API server, web UI, PostgreSQL, OpenSearch, and Redis in-cluster. All services start automatically; ingestion runs immediately on first boot.
+
+**Get the bootstrap admin key** (generated once at first boot and stored in the Helm Secret):
+
+```bash
+kubectl get secret docbrain-secret \
+  -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
+```
+
+Use this key as the `Authorization: Bearer <key>` header to create additional API keys and users via the [API](docs/api-reference.md).
+
+For the full setup guide — external databases, Confluence/GitHub ingestion, SSO, Ingress, Vault, and troubleshooting — see **[docs/kubernetes.md](docs/kubernetes.md)**.
 
 ---
 
