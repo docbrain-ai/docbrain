@@ -39,7 +39,7 @@ data:
   {{- end }}
   {{- if .Values.ingest.confluence }}
   CONFLUENCE_BASE_URL: {{ .Values.ingest.confluence.baseUrl | default "" | quote }}
-  CONFLUENCE_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
+  CONFLUENCE_USER_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
   CONFLUENCE_SPACE_KEYS: {{ .Values.ingest.confluence.spaceKeys | default "" | quote }}
   CONFLUENCE_API_VERSION: {{ .Values.ingest.confluence.apiVersion | default "v2" | quote }}
   CONFLUENCE_TLS_VERIFY: {{ .Values.ingest.confluence.tlsVerify | default "true" | quote }}
@@ -61,7 +61,7 @@ data:
   GITHUB_REDIRECT_URI: {{ .Values.githubOAuth.redirectUri | default "" | quote }}
   {{- end }}
   {{- if .Values.gitlabOAuth.enabled }}
-  GITLAB_INSTANCE_URL: {{ .Values.gitlabOAuth.instanceUrl | default "https://gitlab.com" | quote }}
+  GITLAB_OIDC_ISSUER_URL: {{ .Values.gitlabOAuth.instanceUrl | default "https://gitlab.com" | quote }}
   GITLAB_CLIENT_ID: {{ .Values.gitlabOAuth.clientId | default "" | quote }}
   GITLAB_REDIRECT_URI: {{ .Values.gitlabOAuth.redirectUri | default "" | quote }}
   {{- end }}
@@ -74,27 +74,26 @@ data:
   {{- end }}
   {{- end }}
 
-  # RBAC / SSO access control
-  {{- if .Values.rbac.defaultRole }}
-  OIDC_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | quote }}
-  {{- end }}
+  # RBAC / SSO access control — emitted unconditionally so the server always
+  # has these available regardless of which SSO provider is active.
+  SSO_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | default "viewer" | quote }}
   {{- if .Values.rbac.adminDomain }}
-  OIDC_ADMIN_DOMAIN: {{ .Values.rbac.adminDomain | quote }}
+  SSO_ADMIN_DOMAIN: {{ .Values.rbac.adminDomain | quote }}
   {{- end }}
   {{- if .Values.rbac.adminEmails }}
-  OIDC_ADMIN_EMAILS: {{ .Values.rbac.adminEmails | quote }}
+  SSO_ADMIN_EMAILS: {{ .Values.rbac.adminEmails | quote }}
   {{- end }}
   {{- if .Values.rbac.adminGroups }}
-  OIDC_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
+  SSO_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.editorGroups }}
-  OIDC_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
+  SSO_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.allowedGroups }}
-  OIDC_ALLOWED_GROUPS: {{ .Values.rbac.allowedGroups | quote }}
+  SSO_ALLOWED_GROUPS: {{ .Values.rbac.allowedGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.allowedDomains }}
-  OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
+  SSO_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
   {{- end }}
 
   {{- range $key, $val := .Values.server.env }}
