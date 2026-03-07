@@ -10,6 +10,10 @@ data:
   # Point server to the config directory baked into the container image.
   # Without this the server looks for ./config relative to CWD and crashes silently.
   DOCBRAIN_CONFIG_DIR: "/app/config"
+  # Bootstrap admin key lifecycle control.
+  # Set bootstrapKey.enabled=false to revoke the bootstrap key from the DB on
+  # next restart and have Helm delete the initial-admin-secret on next upgrade.
+  BOOTSTRAP_KEY_ENABLED: {{ .Values.bootstrapKey.enabled | default true | quote }}
 
   LLM_PROVIDER: {{ .Values.llm.provider | quote }}
   LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}

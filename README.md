@@ -1208,16 +1208,24 @@ helm install docbrain ./helm/docbrain \
 
 The chart deploys the API server, web UI, PostgreSQL, OpenSearch, and Redis in-cluster. All services start automatically; ingestion runs immediately on first boot.
 
-**Get the bootstrap admin key** (generated once at first boot and stored in the Helm Secret):
+**Get the bootstrap admin key** — stored in a dedicated Secret, separate from operational credentials:
 
 ```bash
-kubectl get secret docbrain-secret \
+kubectl get secret docbrain-initial-admin-secret \
   -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
 
 Use this key as the `Authorization: Bearer <key>` header to create additional API keys and users via the [API](docs/api-reference.md).
 
-For the full setup guide — external databases, Confluence/GitHub ingestion, SSO, Ingress, Vault, and troubleshooting — see **[docs/kubernetes.md](docs/kubernetes.md)**.
+**Disable the bootstrap key** once you've set up real credentials:
+
+```bash
+helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false
+```
+
+This revokes the key from the database and deletes the Secret in one step.
+
+For the full setup guide — external databases, Confluence/GitHub ingestion, SSO, Ingress, Vault, bootstrap key lifecycle, and troubleshooting — see **[docs/kubernetes.md](docs/kubernetes.md)**.
 
 ---
 

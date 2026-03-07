@@ -71,6 +71,10 @@ spec:
                 name: {{ include "docbrain.fullname" . }}-config
             - secretRef:
                 name: {{ include "docbrain.secretName" . }}
+            {{- if and (not .Values.existingSecret) (.Values.bootstrapKey.enabled) }}
+            - secretRef:
+                name: {{ include "docbrain.fullname" . }}-initial-admin-secret
+            {{- end }}
           env:
             - name: DATABASE_URL
               value: {{ include "docbrain.databaseUrl" . | quote }}

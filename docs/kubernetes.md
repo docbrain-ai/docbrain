@@ -149,36 +149,46 @@ kubectl logs deployment/docbrain-server -f
 kubectl logs deployment/docbrain-server | grep "bootstrap"
 ```
 
-The bootstrap admin API key is stored in the Helm-managed Secret and survives pod restarts and upgrades:
+The bootstrap admin key lives in its own Secret, separate from operational credentials:
 
 ```bash
-kubectl get secret docbrain-secret -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
+kubectl get secret docbrain-initial-admin-secret \
+  -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
 
 **Bootstrap key lifecycle:**
 
-- Generated once at `helm install` (random `db_sk_<40chars>`) and written to the Secret.
-- Preserved across `helm upgrade` — the template reads the existing Secret and never regenerates the key.
-- Deleted by `helm uninstall` along with all other chart-managed resources.
-- **Do not `kubectl delete secret docbrain-secret` while the cluster is running.** The next `helm upgrade` would write a new key to the Secret, but the server would ignore it (an active admin key already exists in the database), leaving the Secret key out of sync with the database.
+| Event | Secret | Database |
+|-------|--------|----------|
+| `helm install` | Created with generated key | Key registered on first server boot |
+| `helm upgrade` | Key preserved via `lookup` — never regenerated | No-op |
+| `kubectl delete secret ...-initial-admin-secret` | Gone | Key still active — safe to delete once you have real keys |
+| `bootstrapKey.enabled=false` + `helm upgrade` | Helm deletes the Secret | Server revokes key from DB on next restart |
+| `helm uninstall` | Deleted | Key record remains in DB (now inactive after revocation, or still active if not) |
+
+**The initial-admin-secret is intentionally separate from the main Secret** (`docbrain-secret` holds DB passwords and API keys). You can delete, inspect, or manage it without touching operational credentials.
 
 **Recommended first-boot flow:**
 
-1. Retrieve the bootstrap key from the Secret.
-2. Use it to create a named admin API key (or invite users via SSO).
-3. Revoke the bootstrap key via the API so it can no longer be used:
+1. Retrieve the bootstrap key and log in.
+2. Create a named admin API key (or configure SSO).
+3. Disable the bootstrap key — one command, no manual DB or API calls:
 
 ```bash
-# List keys to find the bootstrap key ID
-curl https://docbrain.yourcompany.com/api/v1/admin/keys \
-  -H "Authorization: Bearer <bootstrap-key>"
-
-# Revoke it
-curl -X DELETE https://docbrain.yourcompany.com/api/v1/admin/keys/<id> \
-  -H "Authorization: Bearer <your-new-named-key>"
+helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false
 ```
 
-After revocation the key in the Secret is inert — it exists in Kubernetes but is rejected by the server.
+This simultaneously:
+- Stops rendering `initial-admin-secret` → Helm deletes it on upgrade
+- Sets `BOOTSTRAP_KEY_ENABLED=false` in the ConfigMap → server revokes the key from the database on next restart
+
+To verify it's gone:
+
+```bash
+kubectl get secret docbrain-initial-admin-secret   # should return NotFound
+kubectl logs deployment/docbrain-server | grep -i bootstrap
+# → "BOOTSTRAP_KEY_ENABLED=false — revoked 1 bootstrap key(s) from database"
+```
 
 ### 5. Access the UI
 
