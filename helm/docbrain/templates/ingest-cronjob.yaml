@@ -26,6 +26,7 @@ spec:
             {{- include "docbrain.configChecksum" . | nindent 12 }}
         spec:
           restartPolicy: OnFailure
+          serviceAccountName: {{ include "docbrain.serviceAccountName" . }}
           # Issue #9: Wait for dependencies before running ingest
           initContainers:
             {{- if .Values.postgresql.internal }}

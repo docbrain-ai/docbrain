@@ -61,6 +61,14 @@ redis://{{ include "docbrain.fullname" . }}-redis:6379
 {{- end -}}
 {{- end }}
 
+{{- define "docbrain.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "docbrain.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
 {{/*
 Checksum of ConfigMap + Secret — used in pod annotations to trigger rolling restarts
 when configuration changes. Append to pod template metadata.annotations.
