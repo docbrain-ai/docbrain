@@ -25,7 +25,9 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      {{- if .Values.serviceAccount.create }}
       serviceAccountName: {{ include "docbrain.serviceAccountName" . }}
+      {{- end }}
       # Issue #9: Wait for all dependencies before starting the server.
       # Prevents race conditions when all pods start simultaneously.
       initContainers:

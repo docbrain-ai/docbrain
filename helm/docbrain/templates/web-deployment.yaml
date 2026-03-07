@@ -20,7 +20,9 @@ spec:
       annotations:
         {{- include "docbrain.configChecksum" . | nindent 8 }}
     spec:
+      {{- if .Values.serviceAccount.create }}
       serviceAccountName: {{ include "docbrain.serviceAccountName" . }}
+      {{- end }}
       containers:
         - name: web
           image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
