@@ -90,7 +90,7 @@ ingest:
   image_extraction_enabled: true
   # ingest_sources: local   # comma-separated: local, confluence, github, github_pr, gitlab_mr, slack_thread, jira
 
-# ── GitHub PR + Review Comments ──────────────────────────────────────────────
+# ── GitHub PR + Review Comments (batch ingest) ───────────────────────────────
 github_pr:
   # token: ~             # secret — set in config/local.yaml or GITHUB_PR_TOKEN env var
   # repo: ~              # owner/repo format e.g. acme/platform
@@ -99,7 +99,28 @@ github_pr:
   # labels: ~            # comma-separated label filter — empty = all PRs
   # api_url: ~           # override for GitHub Enterprise (default: https://api.github.com)
 
-# ── GitLab MR + Review Notes ─────────────────────────────────────────────────
+# ── GitHub Webhook Capture (@docbrain on PRs/issues) ─────────────────────────
+# Enables real-time capture and Q&A directly from GitHub PR/issue comments.
+#
+# Usage (in any PR or issue comment):
+#   @docbrain capture          — ingests the full thread into the knowledge base
+#   @docbrain <question>       — queries the knowledge base and posts the answer
+#
+# Required env vars:
+#   GITHUB_WEBHOOK_SECRET      — HMAC-SHA256 secret set in GitHub webhook settings
+#   GITHUB_BOT_TOKEN           — GitHub token with repo read + issues:write scope
+#                                (GITHUB_PR_TOKEN is also accepted as a fallback)
+#
+# Optional env vars:
+#   GITHUB_CAPTURE_ALLOWED_REPOS   — comma-separated allowlist e.g. acme/api,acme/web
+#                                    (empty = accept all repos)
+#   GITHUB_CAPTURE_ALLOWED_USERS   — comma-separated GitHub login allowlist
+#                                    (empty = accept all users)
+#
+# Webhook setup: POST /github/events
+#   Events to subscribe: issue_comment, pull_request_review_comment
+
+# ── GitLab MR + Review Notes (batch ingest) ──────────────────────────────────
 gitlab_mr:
   # token: ~             # secret — set in config/local.yaml or GITLAB_MR_TOKEN env var
   base_url: "https://gitlab.com"   # override for self-hosted
@@ -108,6 +129,28 @@ gitlab_mr:
   min_notes: 1
   # labels: ~            # comma-separated label filter — empty = all MRs
   tls_verify: true       # set false for self-hosted with self-signed certs
+
+# ── GitLab Webhook Capture (@docbrain on MRs) ────────────────────────────────
+# Enables real-time capture and Q&A directly from GitLab MR note comments.
+#
+# Usage (in any MR note):
+#   @docbrain capture          — ingests the full MR thread into the knowledge base
+#   @docbrain <question>       — queries the knowledge base and posts the answer
+#
+# Required env vars (at least one must be set to enable the webhook):
+#   GITLAB_CAPTURE_WEBHOOK_SECRET  — token sent in X-Gitlab-Token header
+#   GITLAB_CAPTURE_TOKEN           — GitLab PAT with api scope (for fetching notes
+#                                    and posting reply comments)
+#
+# Optional env vars:
+#   GITLAB_CAPTURE_BASE_URL        — GitLab instance URL (default: https://gitlab.com)
+#   GITLAB_CAPTURE_ALLOWED_USERS   — comma-separated username allowlist
+#                                    (empty = accept all users)
+#   GITLAB_CAPTURE_ALLOWED_PROJECTS — comma-separated project allowlist e.g. acme/api
+#                                     (empty = accept all projects)
+#
+# Webhook setup: POST /api/v1/gitlab/events
+#   Events to subscribe: Note events (MR only)
 
 # ── Slack Thread Ingest ───────────────────────────────────────────────────────
 slack_ingest:
