@@ -56,6 +56,16 @@ data:
   {{- end }}
 
   # OAuth / SSO providers
+  # OIDC_WEB_UI_URL tells the backend where to redirect the browser after any OAuth
+  # callback completes (GitHub, GitLab, or generic OIDC). It must be set whenever any
+  # SSO provider is enabled; emitting it here unconditionally when any provider is on.
+  {{- $webUiUrl := "" }}
+  {{- if .Values.oidc.webUiUrl }}{{- $webUiUrl = .Values.oidc.webUiUrl }}{{- end }}
+  {{- if .Values.githubOAuth.webUiUrl }}{{- $webUiUrl = .Values.githubOAuth.webUiUrl }}{{- end }}
+  {{- if .Values.gitlabOAuth.webUiUrl }}{{- $webUiUrl = .Values.gitlabOAuth.webUiUrl }}{{- end }}
+  {{- if $webUiUrl }}
+  OIDC_WEB_UI_URL: {{ $webUiUrl | quote }}
+  {{- end }}
   {{- if .Values.githubOAuth.enabled }}
   GITHUB_CLIENT_ID: {{ .Values.githubOAuth.clientId | default "" | quote }}
   GITHUB_REDIRECT_URI: {{ .Values.githubOAuth.redirectUri | default "" | quote }}
@@ -69,9 +79,6 @@ data:
   OIDC_ISSUER_URL: {{ .Values.oidc.issuerUrl | default "" | quote }}
   OIDC_CLIENT_ID: {{ .Values.oidc.clientId | default "" | quote }}
   OIDC_REDIRECT_URI: {{ .Values.oidc.redirectUri | default "" | quote }}
-  {{- if .Values.oidc.webUiUrl }}
-  OIDC_WEB_UI_URL: {{ .Values.oidc.webUiUrl | quote }}
-  {{- end }}
   {{- end }}
 
   # RBAC / SSO access control — emitted unconditionally so the server always

@@ -77,6 +77,11 @@ web:
     pullPolicy: Always
   replicas: 1
   port: 3001
+  # apiUrl: ""   # Override the backend API URL seen by the browser.
+  #              # Defaults to the internal cluster service URL (http://<release>-server:3000).
+  #              # Set this to your public API URL if the backend is on a different domain,
+  #              # e.g. apiUrl: "https://api.docbrain.mycompany.com"
+  #              # Not needed when using the Helm ingress (both web and API share the same host).
   resources:
     requests:
       cpu: 100m
@@ -134,6 +139,8 @@ githubOAuth:
   # clientId: ""        # set via --set githubOAuth.clientId=... or existingSecret
   # clientSecret: ""    # stored in the Helm Secret
   # redirectUri: ""     # must match the callback URL registered in GitHub
+  # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
+  #                     # The backend redirects here after OAuth completes.
 
 # -- GitLab OIDC login (docbrain login --gitlab)
 # Enable OIDC in your GitLab application:
@@ -145,6 +152,8 @@ gitlabOAuth:
   # clientId: ""
   # clientSecret: ""    # stored in the Helm Secret
   # redirectUri: ""
+  # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
+  #                     # The backend redirects here after OAuth completes.
 
 # -- Generic OIDC login (docbrain login --oidc)
 # Works with Azure AD, Okta, Google Workspace, Keycloak, etc.
@@ -155,7 +164,8 @@ oidc:
   # clientId: ""
   # clientSecret: ""    # stored in the Helm Secret
   # redirectUri: ""
-  # webUiUrl: ""        # your DocBrain web UI URL (redirect destination after login)
+  # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
+  #                     # The backend redirects here after OAuth completes.
 
 # -- RBAC / SSO access control
 # Controls who is allowed to log in and what role they receive.
