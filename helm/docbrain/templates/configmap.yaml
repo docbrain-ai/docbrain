@@ -47,6 +47,11 @@ data:
   CONFLUENCE_PAGE_IDS: {{ .Values.ingest.confluence.pageIds | quote }}
   {{- end }}
   {{- end }}
+  {{- if and .Values.confluenceWebhook.enabled (not .Values.ingest.confluence) }}
+  CONFLUENCE_BASE_URL: {{ .Values.confluenceWebhook.baseUrl | default "" | quote }}
+  CONFLUENCE_USER_EMAIL: {{ .Values.confluenceWebhook.email | default "" | quote }}
+  CONFLUENCE_API_VERSION: {{ .Values.confluenceWebhook.apiVersion | default "v2" | quote }}
+  {{- end }}
   {{- if .Values.ingest.github }}
   GITHUB_REPO_URL: {{ .Values.ingest.github.repoUrl | default "" | quote }}
   GITHUB_BRANCH: {{ .Values.ingest.github.branch | default "main" | quote }}

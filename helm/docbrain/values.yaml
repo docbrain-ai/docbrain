@@ -37,6 +37,18 @@ ingest:
   #   token: ""
   #   branch: main
 
+# -- Confluence real-time webhook sync
+# Enables POST /confluence/events for instant page indexing on create/update/delete.
+# See docs/confluence-webhook.md for Confluence-side setup instructions.
+confluenceWebhook:
+  enabled: false
+  # webhookSecret: ""   # REQUIRED: shared secret configured in Confluence — stored in Secret
+                        # Generate with: openssl rand -hex 32
+  # baseUrl: ""         # CONFLUENCE_BASE_URL — required if ingest.confluence is not configured
+  # email: ""           # CONFLUENCE_USER_EMAIL (Cloud only; not needed for Data Center)
+  # apiToken: ""        # CONFLUENCE_API_TOKEN — stored in Secret; required if ingest.confluence not set
+  # apiVersion: v2      # v2 for Confluence Cloud (default), v1 for self-hosted Data Center
+
 # -- DocBrain API Server
 server:
   image:

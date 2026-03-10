@@ -54,6 +54,11 @@ memory:
 auth:
   session_ttl_hours: "${LOGIN_SESSION_TTL_HOURS:-720}"
 
+# Confluence real-time webhook sync — POST /confluence/events
+# Set CONFLUENCE_WEBHOOK_SECRET to enable. All vars are shared with Confluence ingest.
+# See docs/confluence-webhook.md for Confluence-side setup instructions.
+# CONFLUENCE_WEBHOOK_SECRET, CONFLUENCE_BASE_URL, CONFLUENCE_API_TOKEN come from env vars.
+
 # github_pr / slack_ingest / jira_ingest secrets come from env vars directly.
 # The env_override! mappings in config.rs pick them up automatically.
 # See .env.example for GITHUB_PR_*, SLACK_INGEST_*, JIRA_* variable names.
