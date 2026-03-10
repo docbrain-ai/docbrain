@@ -31,8 +31,10 @@ spec:
             - containerPort: {{ .Values.web.port }}
               protocol: TCP
           env:
+            {{- if .Values.web.apiUrl }}
             - name: NEXT_PUBLIC_DOCBRAIN_API_URL
-              value: {{ if .Values.web.apiUrl }}{{ .Values.web.apiUrl | quote }}{{ else }}"http://{{ include "docbrain.fullname" . }}-server:{{ .Values.server.port }}"{{ end }}
+              value: {{ .Values.web.apiUrl | quote }}
+            {{- end }}
             - name: PORT
               value: {{ .Values.web.port | quote }}
           readinessProbe:

@@ -78,10 +78,9 @@ web:
   replicas: 1
   port: 3001
   # apiUrl: ""   # Override the backend API URL seen by the browser.
-  #              # Defaults to the internal cluster service URL (http://<release>-server:3000).
-  #              # Set this to your public API URL if the backend is on a different domain,
-  #              # e.g. apiUrl: "https://api.docbrain.mycompany.com"
-  #              # Not needed when using the Helm ingress (both web and API share the same host).
+  #              # When omitted, the frontend uses window.location.origin (same-origin),
+  #              # which works out of the box with the Helm ingress (/api/* → backend).
+  #              # Only set this if the backend lives on a separate domain/port.
   resources:
     requests:
       cpu: 100m
