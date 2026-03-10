@@ -59,7 +59,7 @@ data:
   # OIDC_WEB_UI_URL tells the backend where to redirect the browser after any OAuth
   # callback completes (GitHub, GitLab, or generic OIDC). It must be set whenever any
   # SSO provider is enabled; emitting it here unconditionally when any provider is on.
-  {{- $webUiUrl := "" }}
+  {{- $webUiUrl := .Values.sso.webUiUrl | default "" }}
   {{- if .Values.oidc.webUiUrl }}{{- $webUiUrl = .Values.oidc.webUiUrl }}{{- end }}
   {{- if .Values.githubOAuth.webUiUrl }}{{- $webUiUrl = .Values.githubOAuth.webUiUrl }}{{- end }}
   {{- if .Values.gitlabOAuth.webUiUrl }}{{- $webUiUrl = .Values.gitlabOAuth.webUiUrl }}{{- end }}
