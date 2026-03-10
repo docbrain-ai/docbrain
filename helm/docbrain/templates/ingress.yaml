@@ -27,6 +27,13 @@ spec:
                 name: {{ include "docbrain.fullname" . }}-server
                 port:
                   number: {{ .Values.server.port }}
+          - path: /slack
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "docbrain.fullname" . }}-server
+                port:
+                  number: {{ .Values.server.port }}
           - path: /health
             pathType: Exact
             backend:
