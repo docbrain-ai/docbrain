@@ -31,10 +31,9 @@ spec:
             - containerPort: {{ .Values.web.port }}
               protocol: TCP
           env:
-            {{- if .Values.web.apiUrl }}
-            - name: NEXT_PUBLIC_DOCBRAIN_API_URL
-              value: {{ .Values.web.apiUrl | quote }}
-            {{- end }}
+            # NEXT_PUBLIC_* vars are inlined at build time — setting them here has no effect.
+            # The web UI uses window.location.origin as its API base, so the ingress
+            # routing /api -> backend is all that is needed. No build-time config required.
             - name: PORT
               value: {{ .Values.web.port | quote }}
           readinessProbe:

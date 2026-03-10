@@ -77,10 +77,9 @@ web:
     pullPolicy: Always
   replicas: 1
   port: 3001
-  # apiUrl: ""   # Override the backend API URL seen by the browser.
-  #              # When omitted, the frontend uses window.location.origin (same-origin),
-  #              # which works out of the box with the Helm ingress (/api/* → backend).
-  #              # Only set this if the backend lives on a separate domain/port.
+  # The frontend resolves the backend URL via window.location.origin (same-origin).
+  # The ingress above routes /api/* to the backend — no extra config needed.
+  # NEXT_PUBLIC_* env vars are baked at build time and cannot be overridden at runtime.
   resources:
     requests:
       cpu: 100m
