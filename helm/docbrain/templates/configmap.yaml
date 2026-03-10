@@ -83,24 +83,24 @@ data:
 
   # RBAC / SSO access control — emitted unconditionally so the server always
   # has these available regardless of which SSO provider is active.
-  SSO_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | default "viewer" | quote }}
+  OIDC_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | default "viewer" | quote }}
   {{- if .Values.rbac.adminDomain }}
-  SSO_ADMIN_DOMAIN: {{ .Values.rbac.adminDomain | quote }}
+  OIDC_ADMIN_DOMAIN: {{ .Values.rbac.adminDomain | quote }}
   {{- end }}
   {{- if .Values.rbac.adminEmails }}
-  SSO_ADMIN_EMAILS: {{ .Values.rbac.adminEmails | quote }}
+  OIDC_ADMIN_EMAILS: {{ .Values.rbac.adminEmails | quote }}
   {{- end }}
   {{- if .Values.rbac.adminGroups }}
-  SSO_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
+  OIDC_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.editorGroups }}
-  SSO_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
+  OIDC_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.allowedGroups }}
-  SSO_ALLOWED_GROUPS: {{ .Values.rbac.allowedGroups | quote }}
+  OIDC_ALLOWED_GROUPS: {{ .Values.rbac.allowedGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.allowedDomains }}
-  SSO_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
+  OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
   {{- end }}
 
   {{- range $key, $val := .Values.server.env }}
