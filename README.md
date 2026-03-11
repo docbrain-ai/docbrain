@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Most teams have a knowledge problem they don't know how to name.<br/>
-  The answer was in a Slack thread. A PR comment. An incident timeline.<br/>
+  The answer was in a Slack thread. A Teams channel. A PR comment. An incident timeline.<br/>
   Somewhere no one thought to look — and now it's gone.</strong>
 </p>
 
@@ -75,6 +75,7 @@ What you don't get is a system that closes the loop. One that learns what's undo
 graph TB
     subgraph "Knowledge enters from everywhere your team works"
         SL["Slack threads<br/>(resolved incidents, Q&A)"]
+        MT["Microsoft Teams<br/>(channels, chats, files, transcripts)"]
         PR["GitHub PRs / GitLab MRs<br/>(the 'why' behind decisions)"]
         JR["Jira tickets<br/>(requirements + edge cases)"]
         PD["PagerDuty / OpsGenie<br/>(incident timelines)"]
@@ -101,7 +102,7 @@ graph TB
         REV --> CF
     end
 
-    SL & PR & JR & PD & ZD & CF --> Q
+    SL & MT & PR & JR & PD & ZD & CF --> Q
 
     style EP fill:#dc2626,color:#fff
     style CL fill:#2563eb,color:#fff
@@ -152,7 +153,7 @@ When it has a confident answer, it leads with it. When it doesn't, it asks a foc
 
 | Generic AI Doc Tool | DocBrain |
 |---|---|
-| One knowledge source | 10+ sources: every place your team actually works |
+| One knowledge source | 13+ sources: every place your team actually works |
 | Answers questions | Answers questions + stores every interaction as a learning signal |
 | Static retrieval | Freshness-aware, with per-document health scores |
 | Stateless | 4-tier memory that compounds: working · episodic · semantic · procedural |
@@ -869,6 +870,36 @@ slack_ingest:
 ```
 
 Ingests threads with resolved knowledge — minimum reply count, specific emoji reactions, or both. Bot messages are preserved (bots often post the incident resolution summary).
+
+</details>
+
+<details>
+<summary><strong>Microsoft Teams</strong></summary>
+
+```yaml
+ingest:
+  ingest_sources: ms_teams
+
+ms_teams:
+  tenant_id: your-azure-tenant-id
+  client_id: your-entra-app-client-id
+  client_secret: your-client-secret
+  teams: Engineering,Platform            # optional — empty = all teams
+  lookback_days: 90
+  include_chats: false                   # 1:1/group chats (high volume — opt-in)
+  include_files: true                    # channel files from SharePoint
+  include_transcripts: true              # meeting transcripts (requires app access policy)
+  min_replies: 2                         # thread indexing threshold
+```
+
+Ingests four data types: **channel message threads** (the Teams equivalent of Slack threads), **1:1/group chat messages** (opt-in), **files shared in channels** (from SharePoint), and **meeting transcripts** (VTT converted to readable Markdown with speaker attribution).
+
+**Prerequisites:**
+- Register an app in Azure Entra ID (formerly Azure AD) with these **application** permissions: `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Read.All`, `Files.Read.All`. Optionally add `Chat.Read.All` (for chats) and `OnlineMeetingTranscript.Read.All` (for transcripts).
+- A **tenant admin must grant consent** for the app — this is the main onboarding gate.
+- For meeting transcripts, the admin must also create an [application access policy](https://learn.microsoft.com/en-us/microsoftteams/teams-recording-policy).
+
+Rate limits are respected automatically (4 req/sec per team, with Retry-After backoff on 429s).
 
 </details>
 
