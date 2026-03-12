@@ -370,8 +370,17 @@ Image extraction requires a vision-capable LLM. Supported providers: **Bedrock**
 | `AUTOPILOT_MIN_NEGATIVE_RATIO` | `0.15` | Minimum fraction of queries on a topic that must have negative feedback |
 | `AUTOPILOT_MAX_CLUSTERS` | `50` | Maximum gap clusters to persist per analysis run |
 | `AUTOPILOT_MAX_EPISODES` | `500` | Maximum negative episodes to load per analysis run |
+| `AUTOPILOT_AUTO_DRAFT` | `false` | Automatically generate drafts for qualifying gaps (no human trigger). Set to `true` to enable. |
+| `AUTOPILOT_AUTO_DRAFT_SEVERITY` | `critical` | Minimum gap severity for auto-drafting: `critical`, `high`, `medium`, or `low` |
+| `AUTOPILOT_CRITICAL_USERS` | `5` | Unique users needed for breadth score to reach 1.0. Lower for small teams. |
+| `AUTOPILOT_CRITICAL_SIGNALS` | `15` | Negative signals needed for volume score to reach 1.0. Lower for low-traffic deployments. |
+| `AUTOPILOT_CRITICAL_THRESHOLD` | `0.75` | Composite score cutoff for "critical" severity. |
+| `AUTOPILOT_HIGH_THRESHOLD` | `0.55` | Composite score cutoff for "high" severity. |
+| `AUTOPILOT_MEDIUM_THRESHOLD` | `0.35` | Composite score cutoff for "medium" severity. |
 
 When enabled, Autopilot runs on the configured schedule, exposes management endpoints at `/api/v1/autopilot/*`, and posts critical gap alerts to `SLACK_GAP_NOTIFICATION_CHANNEL` if configured. See the [API Reference](api-reference.md) for endpoint details.
+
+> **Small teams / dev environments:** Set `AUTOPILOT_CRITICAL_USERS=1`, `AUTOPILOT_CRITICAL_SIGNALS=3`, `AUTOPILOT_CRITICAL_THRESHOLD=0.3` to see critical gaps with minimal signal. See [autopilot.md](autopilot.md) for a full tuning guide.
 
 ## Freshness Scoring
 
