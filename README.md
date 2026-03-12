@@ -15,6 +15,12 @@
 </p>
 
 <p align="center">
+  <a href="https://glama.ai/mcp/servers/docbrain-ai/docbrain">
+    <img width="380" height="200" src="https://glama.ai/mcp/servers/docbrain-ai/docbrain/badge" />
+  </a>
+</p>
+
+<p align="center">
   <a href="https://github.com/docbrain-ai/docbrain/stargazers"><img src="https://img.shields.io/github/stars/docbrain-ai/docbrain?style=social" alt="Stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSL%201.1-blue" alt="License" /></a>
   <a href="https://github.com/docbrain-ai/docbrain/releases/latest"><img src="https://img.shields.io/github/v/release/docbrain-ai/docbrain" alt="Release" /></a>

@@ -2,5 +2,68 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
     "abhipsnl"
-  ]
+  ],
+  "environmentVariables": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "POSTGRES_PASSWORD": {
+          "type": "string",
+          "minLength": 1,
+          "description": "PostgreSQL password for the DocBrain database"
+        },
+        "LLM_PROVIDER": {
+          "type": "string",
+          "enum": ["anthropic", "bedrock", "openai", "ollama"],
+          "description": "LLM provider to use (anthropic | bedrock | openai | ollama)"
+        },
+        "LLM_MODEL_ID": {
+          "type": "string",
+          "description": "Model ID for the LLM provider (e.g. claude-sonnet-4-5-20250929)"
+        },
+        "ANTHROPIC_API_KEY": {
+          "type": "string",
+          "description": "Anthropic API key (required if LLM_PROVIDER=anthropic)"
+        },
+        "OPENAI_API_KEY": {
+          "type": "string",
+          "description": "OpenAI API key (required if LLM_PROVIDER=openai or EMBED_PROVIDER=openai)"
+        },
+        "AWS_REGION": {
+          "type": "string",
+          "description": "AWS region (required if LLM_PROVIDER=bedrock)"
+        },
+        "AWS_ACCESS_KEY_ID": {
+          "type": "string",
+          "description": "AWS access key ID (required if LLM_PROVIDER=bedrock and not using instance profile)"
+        },
+        "AWS_SECRET_ACCESS_KEY": {
+          "type": "string",
+          "description": "AWS secret access key (required if LLM_PROVIDER=bedrock and not using instance profile)"
+        },
+        "EMBED_PROVIDER": {
+          "type": "string",
+          "enum": ["anthropic", "bedrock", "openai", "ollama"],
+          "description": "Embedding provider (anthropic | bedrock | openai | ollama)"
+        },
+        "EMBED_MODEL_ID": {
+          "type": "string",
+          "description": "Model ID for the embedding provider (e.g. text-embedding-3-small)"
+        }
+      },
+      "required": ["POSTGRES_PASSWORD", "LLM_PROVIDER", "LLM_MODEL_ID", "EMBED_PROVIDER", "EMBED_MODEL_ID"]
+    },
+    "placeholderArguments": [
+      "POSTGRES_PASSWORD",
+      "LLM_PROVIDER",
+      "LLM_MODEL_ID",
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "AWS_REGION",
+      "AWS_ACCESS_KEY_ID",
+      "AWS_SECRET_ACCESS_KEY",
+      "EMBED_PROVIDER",
+      "EMBED_MODEL_ID"
+    ]
+  }
 }
