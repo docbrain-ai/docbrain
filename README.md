@@ -539,8 +539,40 @@ graph TB
 
 The draft is a starting point for a human reviewer who has the domain expertise but previously had no signal that anything was missing. Autopilot provides that signal and removes the blank-page problem.
 
+**Autopilot is enabled by default.** Teams that don't want it can opt out:
 ```env
-AUTOPILOT_ENABLED=true
+AUTOPILOT_ENABLED=false
+```
+
+### The Closed Feedback Loop
+
+DocBrain drafts are not generic AI writing. They are grounded in your organization's knowledge using all 5 memory layers:
+
+| Memory Layer | Contribution |
+|---|---|
+| **Episodic (Layer 2)** | User feedback notes and failed answers — what people said was wrong |
+| **Semantic (Layer 3)** | Knowledge graph entities — verified org systems, teams, and relationships |
+| **Procedural (Layer 4)** | Learned retrieval rules — which spaces are most relevant for this topic |
+| **Freshness (Layer 5)** | Stale source warnings — flags outdated sources the draft relies on |
+
+When the draft is reviewed and approved, DocBrain publishes it to Confluence, marks the gap cluster as resolved, and queues the new page for re-ingest — so the system immediately learns from what it just wrote.
+
+```
+Users ask → Gap detected → Draft (grounded in org docs only, no hallucination)
+  → Admin reviews → Publish to Confluence → Re-ingest → Next user gets the answer
+```
+
+**Enable the publish loop** (optional — manual drafts work without this):
+```yaml
+draft_publish:
+  target: "confluence"
+  confluence_space_key: "ENG"     # Where to create pages
+  auto_ingest_after_publish: true  # DocBrain learns from what it publishes
+
+# Optional: fully autonomous — no human trigger for critical gaps
+autopilot:
+  auto_draft_enabled: true
+  auto_draft_severity: critical
 ```
 
 ---

@@ -30,7 +30,7 @@ data:
   # Issue #3: env vars documented in docker-compose but previously missing
   CORS_ALLOWED_ORIGINS: {{ .Values.server.corsAllowedOrigins | default "" | quote }}
   LOGIN_SESSION_TTL_HOURS: {{ .Values.server.loginSessionTtlHours | default "720" | quote }}
-  AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: {{ .Values.autopilot.gapAnalysisIntervalHours | default "24" | quote }}
+  AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: {{ .Values.autopilot.gapAnalysisIntervalHours | default "6" | quote }}
   FRESHNESS_SCHEDULER_INTERVAL_HOURS: {{ .Values.freshness.schedulerIntervalHours | default "24" | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.memory.consolidationIntervalHours | default "6" | quote }}
 
@@ -56,8 +56,23 @@ data:
   GITHUB_REPO_URL: {{ .Values.ingest.github.repoUrl | default "" | quote }}
   GITHUB_BRANCH: {{ .Values.ingest.github.branch | default "main" | quote }}
   {{- end }}
-  {{- if .Values.autopilot.enabled }}
+  {{- if ne .Values.autopilot.enabled false }}
   AUTOPILOT_ENABLED: "true"
+  {{- else }}
+  AUTOPILOT_ENABLED: "false"
+  {{- end }}
+  {{- if .Values.autopilot.autoDraft }}
+  AUTOPILOT_AUTO_DRAFT: "true"
+  AUTOPILOT_AUTO_DRAFT_SEVERITY: {{ .Values.autopilot.autoDraftSeverity | default "critical" | quote }}
+  {{- end }}
+  {{- if and .Values.draftPublish .Values.draftPublish.target (ne .Values.draftPublish.target "none") }}
+  DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
+  {{- end }}
+  {{- if and .Values.draftPublish .Values.draftPublish.confluenceSpaceKey }}
+  DRAFT_PUBLISH_CONFLUENCE_SPACE_KEY: {{ .Values.draftPublish.confluenceSpaceKey | quote }}
+  {{- end }}
+  {{- if and .Values.draftPublish .Values.draftPublish.confluenceParentPageId }}
+  DRAFT_PUBLISH_PARENT_PAGE_ID: {{ .Values.draftPublish.confluenceParentPageId | quote }}
   {{- end }}
 
   # OAuth / SSO providers

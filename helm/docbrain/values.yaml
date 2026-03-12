@@ -126,9 +126,26 @@ redis:
   # externalUrl: ""
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
+# Enabled by default. Set enabled: false to opt out.
 autopilot:
-  enabled: false
-  gapAnalysisIntervalHours: "24"
+  enabled: true
+  gapAnalysisIntervalHours: "6"
+  # Auto-draft: automatically generate drafts for qualifying gaps (no human trigger).
+  # Manual by default. Set autoDraft: true to enable.
+  autoDraft: false
+  # Minimum gap severity for auto-drafting: critical | high | medium | low
+  autoDraftSeverity: critical
+
+# -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
+# When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
+# and mark the originating gap cluster as resolved.
+draftPublish:
+  # Target system: "confluence" | "none"
+  target: none
+  # confluenceSpaceKey: ""       # Confluence space key for new pages (e.g. "ENG")
+  # confluenceParentPageId: ""   # Optional parent page ID — new pages become children
+  # Re-ingest the published page so DocBrain learns from it immediately
+  autoIngestAfterPublish: true
 
 # -- Freshness scoring scheduler
 freshness:
