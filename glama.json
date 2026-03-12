@@ -3,6 +3,32 @@
   "maintainers": [
     "abhipsnl"
   ],
+  "tools": [
+    {
+      "name": "docbrain_ask",
+      "description": "Ask a question against your organization's documentation. Returns an answer with source attribution across all connected knowledge sources (Confluence, Notion, GitHub, Slack, etc.)."
+    },
+    {
+      "name": "docbrain_incident",
+      "description": "Query documentation in the context of an ongoing incident. Returns relevant runbooks, past incident reports, and troubleshooting guides with source attribution."
+    },
+    {
+      "name": "docbrain_freshness",
+      "description": "Check the freshness and staleness of documentation. Identifies docs that may be outdated based on recent code changes, PRs, or time elapsed since last update."
+    },
+    {
+      "name": "docbrain_autopilot_gaps",
+      "description": "Analyze your documentation for gaps — areas that are undocumented or insufficiently documented based on your codebase and recent activity."
+    },
+    {
+      "name": "docbrain_autopilot_generate",
+      "description": "Generate missing documentation for identified gaps. Produces draft documentation grounded in your codebase, PRs, Slack threads, and existing docs."
+    },
+    {
+      "name": "docbrain_autopilot_summary",
+      "description": "Get a summary of Autopilot activity — recently generated docs, identified gaps, freshness alerts, and documentation health metrics."
+    }
+  ],
   "environmentVariables": {
     "schema": {
       "type": "object",
