@@ -65,6 +65,11 @@ data:
   AUTOPILOT_AUTO_DRAFT: "true"
   AUTOPILOT_AUTO_DRAFT_SEVERITY: {{ .Values.autopilot.autoDraftSeverity | default "critical" | quote }}
   {{- end }}
+  AUTOPILOT_CRITICAL_USERS: {{ .Values.autopilot.criticalUsers | default 5 | quote }}
+  AUTOPILOT_CRITICAL_SIGNALS: {{ .Values.autopilot.criticalSignals | default 15 | quote }}
+  AUTOPILOT_CRITICAL_THRESHOLD: {{ .Values.autopilot.thresholdCritical | default 0.75 | quote }}
+  AUTOPILOT_HIGH_THRESHOLD: {{ .Values.autopilot.thresholdHigh | default 0.55 | quote }}
+  AUTOPILOT_MEDIUM_THRESHOLD: {{ .Values.autopilot.thresholdMedium | default 0.35 | quote }}
   {{- if and .Values.draftPublish .Values.draftPublish.target (ne .Values.draftPublish.target "none") }}
   DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
   {{- end }}

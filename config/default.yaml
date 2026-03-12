@@ -60,6 +60,19 @@ autopilot:
   max_clusters_per_run: 50
   max_episodes_per_run: 500
   gap_analysis_interval_hours: 6
+  # Auto-draft: automatically generate drafts for qualifying gaps after each analysis run.
+  # Manual by default — enable to let DocBrain draft docs without human trigger.
+  auto_draft_enabled: false
+  # Minimum severity to auto-draft: critical | high | medium | low
+  auto_draft_severity: "critical"
+  # Severity scoring thresholds — tune for your org's signal volume.
+  # critical_users / critical_signals define the scale at which breadth/volume scores hit 1.0.
+  # threshold_* define the composite score cutoffs for each severity band.
+  critical_users: 5         # Unique users needed for full breadth score
+  critical_signals: 15      # Negative signals needed for full volume score
+  threshold_critical: 0.75  # Composite score >= this → "critical"
+  threshold_high: 0.55      # Composite score >= this → "high"
+  threshold_medium: 0.35    # Composite score >= this → "medium"
 
 freshness:
   scheduler_interval_hours: 24

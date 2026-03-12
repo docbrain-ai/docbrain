@@ -135,6 +135,12 @@ autopilot:
   autoDraft: false
   # Minimum gap severity for auto-drafting: critical | high | medium | low
   autoDraftSeverity: critical
+  # Severity scale factors — tune for your org's signal volume.
+  criticalUsers: 5        # env: AUTOPILOT_CRITICAL_USERS
+  criticalSignals: 15     # env: AUTOPILOT_CRITICAL_SIGNALS
+  thresholdCritical: 0.75 # env: AUTOPILOT_CRITICAL_THRESHOLD
+  thresholdHigh: 0.55     # env: AUTOPILOT_HIGH_THRESHOLD
+  thresholdMedium: 0.35   # env: AUTOPILOT_MEDIUM_THRESHOLD
 
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
