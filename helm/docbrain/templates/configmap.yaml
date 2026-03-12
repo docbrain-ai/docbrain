@@ -20,6 +20,9 @@ data:
   {{- if .Values.llm.fastModelId }}
   FAST_MODEL_ID: {{ .Values.llm.fastModelId | quote }}
   {{- end }}
+  {{- if .Values.llm.ingestModelId }}
+  INGEST_LLM_MODEL_ID: {{ .Values.llm.ingestModelId | quote }}
+  {{- end }}
   {{- if .Values.llm.thinkingBudget }}
   LLM_THINKING_BUDGET: {{ .Values.llm.thinkingBudget | quote }}
   {{- end }}

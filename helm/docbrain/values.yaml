@@ -4,12 +4,19 @@
 llm:
   provider: anthropic
   modelId: claude-sonnet-4-5-20250929
-  # fastModelId: ""        # optional fast/cheap model for side-calls
+  # fastModelId: ""        # fast/cheap model for side-calls (intent classify, query rewrite, entity extraction)
   #                        # Bedrock: us.anthropic.claude-haiku-4-5-20251001-v1:0
   #                        # Anthropic: claude-haiku-4-5-20251001
-  #                        # OpenAI: gpt-4o-mini
+  #                        # OpenAI: gpt-4o-mini  |  Ollama: same as modelId
+  #                        # Falls back to modelId if not set
+  # ingestModelId: ""      # model used ONLY during ingest for image extraction
+  #                        # IMPORTANT: set this to a cheaper model when using Opus 4 + thinkingBudget
+  #                        # otherwise image extraction will trigger throttling errors on every page
+  #                        # Bedrock: us.anthropic.claude-haiku-4-5-20251001-v1:0
+  #                        # Anthropic: claude-haiku-4-5-20251001  |  OpenAI: gpt-4o-mini
   #                        # Falls back to modelId if not set
   # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
+  #                        # does NOT apply to fastModelId or ingestModelId
   # anthropicApiKey: ""    # set via --set or secret
   # openaiApiKey: ""
   # ollamaBaseUrl: "http://ollama:11434"

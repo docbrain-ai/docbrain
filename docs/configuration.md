@@ -101,7 +101,9 @@ All configuration is also available via environment variables, set in `.env` for
 |----------|---------|-------------|
 | `LLM_PROVIDER` | `bedrock` | Provider: `bedrock`, `anthropic`, `openai`, `ollama` |
 | `LLM_MODEL_ID` | varies | Model identifier (provider-specific) |
-| `LLM_THINKING_BUDGET` | `10000` | Max thinking tokens for extended thinking models |
+| `FAST_MODEL_ID` | — | Fast/cheap model for background side-calls: intent classification, query rewriting, entity extraction. Falls back to `LLM_MODEL_ID` if not set. Recommended: Haiku (Bedrock/Anthropic), `gpt-4o-mini` (OpenAI), same model (Ollama). Alias: `HAIKU_MODEL_ID` (deprecated). |
+| `INGEST_LLM_MODEL_ID` | — | Model used **during ingest only** for image extraction. Falls back to `LLM_MODEL_ID` if not set. **Set this to a cheaper model** — image extraction fires for every page with images. Using Opus 4 with `LLM_THINKING_BUDGET` without this override will cause throttling errors during ingest. |
+| `LLM_THINKING_BUDGET` | — | Extended thinking token budget (tokens). Unset or `0` = disabled. Only applies to the primary `LLM_MODEL_ID`, never to `FAST_MODEL_ID` or `INGEST_LLM_MODEL_ID`. |
 | `ANTHROPIC_API_KEY` | — | API key (if `LLM_PROVIDER=anthropic`) |
 | `OPENAI_API_KEY` | — | API key (if `LLM_PROVIDER=openai`) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
@@ -318,7 +320,7 @@ See the [Ingestion Guide](ingestion.md#real-time-sync-confluence-webhooks) for s
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `IMAGE_EXTRACTION_ENABLED` | `true` | Extract and describe images from Confluence pages using vision LLM. Set to `false` to disable. |
-| `HAIKU_MODEL_ID` | — | Model used for image descriptions (cheaper/faster). Falls back to `LLM_MODEL_ID` if not set. |
+| `INGEST_LLM_MODEL_ID` | — | Model used for image extraction during ingest. Falls back to `LLM_MODEL_ID` if not set. Set this to a cheaper model (Haiku, `gpt-4o-mini`) to avoid throttling and reduce cost. |
 | `IMAGE_MAX_PER_PAGE` | `20` | Maximum images to process per Confluence page |
 | `IMAGE_MIN_SIZE_BYTES` | `5120` | Skip images smaller than this in bytes (default: 5 KB) — filters out icons and decorative images |
 | `IMAGE_MAX_SIZE_BYTES` | `10485760` | Skip images larger than this in bytes (default: 10 MB) |
