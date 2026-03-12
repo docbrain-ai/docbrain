@@ -101,17 +101,14 @@ data:
   OIDC_WEB_UI_URL: {{ $webUiUrl | quote }}
   {{- end }}
   {{- if .Values.githubOAuth.enabled }}
-  GITHUB_CLIENT_ID: {{ .Values.githubOAuth.clientId | default "" | quote }}
   GITHUB_REDIRECT_URI: {{ .Values.githubOAuth.redirectUri | default "" | quote }}
   {{- end }}
   {{- if .Values.gitlabOAuth.enabled }}
   GITLAB_OIDC_ISSUER_URL: {{ .Values.gitlabOAuth.instanceUrl | default "https://gitlab.com" | quote }}
-  GITLAB_CLIENT_ID: {{ .Values.gitlabOAuth.clientId | default "" | quote }}
   GITLAB_REDIRECT_URI: {{ .Values.gitlabOAuth.redirectUri | default "" | quote }}
   {{- end }}
   {{- if .Values.oidc.enabled }}
   OIDC_ISSUER_URL: {{ .Values.oidc.issuerUrl | default "" | quote }}
-  OIDC_CLIENT_ID: {{ .Values.oidc.clientId | default "" | quote }}
   OIDC_REDIRECT_URI: {{ .Values.oidc.redirectUri | default "" | quote }}
   {{- end }}
 
