@@ -29,7 +29,7 @@ redis:
 llm:
   provider: "${LLM_PROVIDER:-bedrock}"
   model_id: "${LLM_MODEL_ID:-}"
-  haiku_model_id: "${HAIKU_MODEL_ID:-}"
+  fast_model_id: "${FAST_MODEL_ID:-${HAIKU_MODEL_ID:-}}"
   ingest_model_id: "${INGEST_LLM_MODEL_ID:-}"
   anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
   openai_api_key: "${OPENAI_API_KEY:-}"

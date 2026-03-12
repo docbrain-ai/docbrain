@@ -17,6 +17,12 @@ data:
 
   LLM_PROVIDER: {{ .Values.llm.provider | quote }}
   LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}
+  {{- if .Values.llm.fastModelId }}
+  FAST_MODEL_ID: {{ .Values.llm.fastModelId | quote }}
+  {{- end }}
+  {{- if .Values.llm.thinkingBudget }}
+  LLM_THINKING_BUDGET: {{ .Values.llm.thinkingBudget | quote }}
+  {{- end }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
   INGEST_SOURCES: {{ .Values.ingest.sources | quote }}

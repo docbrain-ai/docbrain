@@ -33,7 +33,7 @@ redis:
 llm:
   provider: "bedrock"   # bedrock | anthropic | openai | ollama
   # model_id: ~          # defaults to provider-appropriate model
-  # haiku_model_id: ~    # optional fast/cheap model for side-calls
+  # fast_model_id: ~    # optional fast/cheap model for side-calls (Bedrock: claude-haiku, OpenAI: gpt-4o-mini)
   # ingest_model_id: ~   # cheaper model for ingest image extraction (falls back to model_id)
   # thinking_budget: ~   # extended thinking tokens, 0 = disabled
   ollama_base_url: "http://localhost:11434"

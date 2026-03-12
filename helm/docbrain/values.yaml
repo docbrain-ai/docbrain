@@ -4,7 +4,13 @@
 llm:
   provider: anthropic
   modelId: claude-sonnet-4-5-20250929
-  # anthropicApiKey: ""   # set via --set or secret
+  # fastModelId: ""        # optional fast/cheap model for side-calls
+  #                        # Bedrock: us.anthropic.claude-haiku-4-5-20251001-v1:0
+  #                        # Anthropic: claude-haiku-4-5-20251001
+  #                        # OpenAI: gpt-4o-mini
+  #                        # Falls back to modelId if not set
+  # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
+  # anthropicApiKey: ""    # set via --set or secret
   # openaiApiKey: ""
   # ollamaBaseUrl: "http://ollama:11434"
 
