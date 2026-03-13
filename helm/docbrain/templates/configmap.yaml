@@ -56,6 +56,15 @@ data:
   CONFLUENCE_PAGE_IDS: {{ .Values.ingest.confluence.pageIds | quote }}
   {{- end }}
   {{- end }}
+  {{- if .Values.gitlabCapture.enabled }}
+  GITLAB_CAPTURE_BASE_URL: {{ .Values.gitlabCapture.baseUrl | default "https://gitlab.com" | quote }}
+  {{- if .Values.gitlabCapture.allowedUsers }}
+  GITLAB_CAPTURE_ALLOWED_USERS: {{ .Values.gitlabCapture.allowedUsers | quote }}
+  {{- end }}
+  {{- if .Values.gitlabCapture.allowedProjects }}
+  GITLAB_CAPTURE_ALLOWED_PROJECTS: {{ .Values.gitlabCapture.allowedProjects | quote }}
+  {{- end }}
+  {{- end }}
   {{- if and .Values.confluenceWebhook.enabled (not .Values.ingest.confluence) }}
   CONFLUENCE_BASE_URL: {{ .Values.confluenceWebhook.baseUrl | default "" | quote }}
   CONFLUENCE_USER_EMAIL: {{ .Values.confluenceWebhook.email | default "" | quote }}

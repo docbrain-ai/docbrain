@@ -50,6 +50,18 @@ ingest:
   #   token: ""
   #   branch: main
 
+# -- GitLab MR real-time capture webhook
+# Enables POST /api/v1/gitlab/events for `@docbrain capture` on merge requests.
+# See docs/gitlab-capture.md for GitLab-side webhook setup instructions.
+gitlabCapture:
+  enabled: false
+  # webhookSecret: ""    # REQUIRED: X-Gitlab-Token secret configured in GitLab — stored in Secret
+  #                      # Generate with: openssl rand -hex 32
+  # token: ""            # REQUIRED: GitLab PAT with api scope (fetch MR notes + post replies) — stored in Secret
+  # baseUrl: ""          # GITLAB_CAPTURE_BASE_URL — default: https://gitlab.com; override for self-hosted
+  # allowedUsers: ""     # GITLAB_CAPTURE_ALLOWED_USERS — comma-separated usernames; empty = all
+  # allowedProjects: ""  # GITLAB_CAPTURE_ALLOWED_PROJECTS — comma-separated group/project paths; empty = all
+
 # -- Confluence real-time webhook sync
 # Enables POST /confluence/events for instant page indexing on create/update/delete.
 # See docs/confluence-webhook.md for Confluence-side setup instructions.

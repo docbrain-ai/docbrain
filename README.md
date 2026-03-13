@@ -46,11 +46,11 @@
 ## See It In Action
 
 <p align="center">
-  <a href="https://youtu.be/IU3haCc6WKI">
-    <img src="https://img.youtube.com/vi/IU3haCc6WKI/maxresdefault.jpg" alt="What is DocBrain?" width="560" />
+  <a href="https://youtu.be/S4aSTmevvOQ">
+    <img src="https://img.youtube.com/vi/S4aSTmevvOQ/maxresdefault.jpg" alt="What is DocBrain?" width="560" />
   </a>
   <br/>
-  <strong><a href="https://youtu.be/IU3haCc6WKI">What is DocBrain?</a></strong> — 5-minute overview
+  <strong><a href="https://youtu.be/S4aSTmevvOQ">What is DocBrain?</a></strong> — 5-minute overview
 </p>
 
 <p align="center">
@@ -176,8 +176,8 @@ The competitor can copy the code. They cannot copy your org's 12 months of accum
 
 ### What is DocBrain?
 
-[![What is DocBrain?](https://img.youtube.com/vi/IU3haCc6WKI/maxresdefault.jpg)](https://youtu.be/IU3haCc6WKI)
-**[What is DocBrain?](https://youtu.be/IU3haCc6WKI)**
+[![What is DocBrain?](https://img.youtube.com/vi/S4aSTmevvOQ/maxresdefault.jpg)](https://youtu.be/S4aSTmevvOQ)
+**[What is DocBrain?](https://youtu.be/S4aSTmevvOQ)**
 
 [![20-Minute Podcast about DocBrain](https://img.youtube.com/vi/GN4SC6L8YmI/maxresdefault.jpg)](https://youtu.be/GN4SC6L8YmI)
 **[20-Minute Podcast about DocBrain](https://youtu.be/GN4SC6L8YmI)**
