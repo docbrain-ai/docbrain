@@ -24,14 +24,14 @@ Email **[security@docbrain.ai](mailto:security@docbrain.ai)** with:
 
 ### Scope
 
-The following are in scope for security reports:
+The following distributed artifacts are in scope for security reports:
 
-- The DocBrain server application
-- The ingestion pipeline
+- The DocBrain Docker images (server, web UI)
+- The Helm chart and Docker Compose configuration
 - Authentication and authorization mechanisms
+- The ingestion pipeline
 - The MCP server
 - The Slack bot integration
-- The Helm chart and Docker Compose configuration
 - The CLI tool
 
 ### Out of Scope

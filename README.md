@@ -10,8 +10,7 @@
 <p align="center">
   <a href="https://github.com/docbrain-ai/docbrain/stargazers"><img src="https://img.shields.io/github/stars/docbrain-ai/docbrain?style=social" alt="Stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSL%201.1-blue" alt="License" /></a>
-  <a href="https://github.com/docbrain-ai/docbrain/releases/latest"><img src="https://img.shields.io/github/v/release/docbrain-ai/docbrain" alt="Release" /></a>
-  <a href="https://github.com/docbrain-ai/docbrain/releases/latest"><img src="https://img.shields.io/badge/built_with-Rust-orange" alt="Rust" /></a>
+  <img src="https://img.shields.io/badge/built_with-Rust-orange" alt="Rust" />
   <a href="https://glama.ai/mcp/servers/docbrain-ai/docbrain"><img src="https://glama.ai/mcp/servers/docbrain-ai/docbrain/badge" alt="MCP" height="20" /></a>
 </p>
 
@@ -23,6 +22,10 @@
   <a href="#community">Community</a> &bull;
   <a href="#contributing">Contributing</a>
 </p>
+
+---
+
+> **Project Status:** DocBrain is currently distributed as pre-built Docker images and deployment artifacts (Helm charts, configuration, documentation). Source code is not yet published. CI/CD pipelines, build-from-source instructions, and automated test suites will be added when the source is released. Contributions are currently welcome for documentation, configuration, and bug reports against the published artifacts.
 
 ---
 
@@ -327,11 +330,10 @@ DocBrain is designed to work alongside existing tools. The following are explici
 
 ## Contributing
 
-We welcome contributions from the community. Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+We welcome contributions from the community. Since source code is not yet published, current contributions focus on documentation, configuration, and feedback. Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
 
 - Reporting bugs and requesting features
-- Submitting documentation improvements
-- Development workflow and code standards
+- Submitting documentation and configuration improvements
 - Pull request process
 
 ---
