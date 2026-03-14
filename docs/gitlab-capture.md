@@ -59,6 +59,7 @@ GITLAB_CAPTURE_TOKEN=<gitlab-pat>                      # PAT with api scope (for
 
 # Optional
 GITLAB_CAPTURE_BASE_URL=https://gitlab.com             # default; change for self-hosted GitLab
+GITLAB_CAPTURE_TLS_INSECURE=false                      # set true for self-signed certs (self-hosted GitLab)
 GITLAB_CAPTURE_ALLOWED_USERS=alice,bob                 # only process commands from these usernames
 GITLAB_CAPTURE_ALLOWED_PROJECTS=group/repo,org/app     # only process these projects
 ```
@@ -173,13 +174,21 @@ Set `GITLAB_CAPTURE_BASE_URL` to your instance URL:
 GITLAB_CAPTURE_BASE_URL=https://gitlab.internal
 ```
 
-If your instance uses a self-signed certificate, also set:
+If your instance uses a self-signed or internal CA certificate, disable TLS verification for DocBrain's API calls back to GitLab:
 
 ```bash
-GITLAB_TLS_VERIFY=false
+GITLAB_CAPTURE_TLS_INSECURE=true
 ```
 
-> ⚠️ Disabling TLS verification exposes the GitLab API token to interception. Use only in isolated networks.
+Helm:
+```yaml
+gitlabCapture:
+  tlsInsecure: true
+```
+
+Also uncheck **"Enable SSL verification"** on the GitLab webhook itself (Project → Settings → Webhooks → Edit) so GitLab can reach DocBrain.
+
+> ⚠️ Disabling TLS verification exposes API tokens to interception. Use only in isolated/private networks.
 
 ---
 

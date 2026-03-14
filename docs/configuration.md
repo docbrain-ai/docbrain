@@ -217,7 +217,8 @@ gitlab_mr:
 | `gitlab_mr.lookback_days` | `GITLAB_MR_LOOKBACK_DAYS` | `365` | How far back to fetch MRs |
 | `gitlab_mr.min_notes` | `GITLAB_MR_MIN_NOTES` | `1` | Minimum notes/comments for an MR to be ingested |
 | `gitlab_mr.labels` | `GITLAB_MR_LABELS` | — | Comma-separated label filter (optional) |
-| `gitlab_mr.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
+| `gitlab_mr.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs (batch ingest) |
+| `gitlabCapture.tlsInsecure` | `GITLAB_CAPTURE_TLS_INSECURE` | `false` | Set to `true` for self-signed certs (real-time capture) |
 
 ### Slack Threads
 

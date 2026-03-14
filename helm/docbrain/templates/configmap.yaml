@@ -58,6 +58,9 @@ data:
   {{- end }}
   {{- if .Values.gitlabCapture.enabled }}
   GITLAB_CAPTURE_BASE_URL: {{ .Values.gitlabCapture.baseUrl | default "https://gitlab.com" | quote }}
+  {{- if .Values.gitlabCapture.tlsInsecure }}
+  GITLAB_CAPTURE_TLS_INSECURE: "true"
+  {{- end }}
   {{- if .Values.gitlabCapture.allowedUsers }}
   GITLAB_CAPTURE_ALLOWED_USERS: {{ .Values.gitlabCapture.allowedUsers | quote }}
   {{- end }}

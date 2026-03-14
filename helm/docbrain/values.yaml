@@ -59,6 +59,7 @@ gitlabCapture:
   #                      # Generate with: openssl rand -hex 32
   # token: ""            # REQUIRED: GitLab PAT with api scope (fetch MR notes + post replies) — stored in Secret
   # baseUrl: ""          # GITLAB_CAPTURE_BASE_URL — default: https://gitlab.com; override for self-hosted
+  # tlsInsecure: false   # GITLAB_CAPTURE_TLS_INSECURE — set true for self-hosted GitLab with self-signed certs
   # allowedUsers: ""     # GITLAB_CAPTURE_ALLOWED_USERS — comma-separated usernames; empty = all
   # allowedProjects: ""  # GITLAB_CAPTURE_ALLOWED_PROJECTS — comma-separated group/project paths; empty = all
 
