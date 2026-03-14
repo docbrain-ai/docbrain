@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocBrain — The Knowledge Layer for Engineering Teams</title>
+  <meta name="description" content="Turn scattered documentation into instant, cited answers. DocBrain ingests Confluence, GitHub, Slack, Jira and more — then learns from every question your team asks.">
+  <meta name="theme-color" content="#0a0a1a">
+
+  <meta property="og:title" content="DocBrain — The Knowledge Layer for Engineering Teams">
+  <meta property="og:description" content="Turn scattered documentation into instant, cited answers. An open-source AI knowledge platform that gets smarter with every question.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://docbrainapi.com">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+              950: '#1e1b4b',
+            },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #06060e;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Gradient mesh background */
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .hero-bg::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      left: -20%;
+      width: 80%;
+      height: 80%;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 70%);
+      animation: drift 20s ease-in-out infinite;
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      right: -20%;
+      width: 70%;
+      height: 70%;
+      background: radial-gradient(ellipse, rgba(139,92,246,0.12) 0%, transparent 70%);
+      animation: drift 25s ease-in-out infinite reverse;
+    }
+    @keyframes drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(5%, 3%) scale(1.05); }
+      50% { transform: translate(-3%, 6%) scale(0.97); }
+      75% { transform: translate(4%, -2%) scale(1.03); }
+    }
+
+    /* Grid background */
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+      background-size: 64px 64px;
+    }
+
+    /* Glow effects */
+    .glow-line {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99,102,241,0.5), rgba(139,92,246,0.5), transparent);
+    }
+    .glow-line-v {
+      width: 1px;
+      background: linear-gradient(180deg, transparent, rgba(99,102,241,0.3), transparent);
+    }
+
+    /* Terminal */
+    .terminal {
+      background: #0d0d1a;
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(99,102,241,0.05),
+        0 25px 50px -12px rgba(0,0,0,0.5),
+        0 0 80px -20px rgba(99,102,241,0.15);
+    }
+    .terminal-bar {
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .terminal-body {
+      padding: 20px 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      min-height: 320px;
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 8px;
+      height: 16px;
+      background: #818cf8;
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 2px;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* Cards */
+    .glass-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+    .glass-card:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(99,102,241,0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px -12px rgba(99,102,241,0.15);
+    }
+
+    /* Source pill */
+    .source-pill {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    .source-pill:hover {
+      background: rgba(99,102,241,0.08);
+      border-color: rgba(99,102,241,0.2);
+    }
+    .source-pill svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Pipeline step */
+    .pipeline-step {
+      position: relative;
+    }
+    .pipeline-number {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      flex-shrink: 0;
+    }
+
+    /* Memory layer */
+    .memory-layer {
+      position: relative;
+      padding: 24px 28px;
+      border-radius: 16px;
+      border: 1px solid;
+      transition: all 0.3s ease;
+    }
+    .memory-layer:hover {
+      transform: translateX(8px);
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* Badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 500;
+      background: rgba(99,102,241,0.08);
+      border: 1px solid rgba(99,102,241,0.15);
+      color: #a5b4fc;
+    }
+
+    /* Section divider */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    }
+
+    /* Feature icon container */
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Stat card */
+    .stat-value {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff 30%, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Marquee for sources */
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-track {
+      display: flex;
+      gap: 16px;
+      animation: marquee 40s linear infinite;
+    }
+    .marquee-track:hover {
+      animation-play-state: paused;
+    }
+
+    /* Nav */
+    nav {
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+    nav.scrolled {
+      background: rgba(6,6,14,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { transition: opacity 0.4s ease; transform: none; }
+      .reveal.visible { transform: none; }
+      .hero-bg::before, .hero-bg::after { animation: none; }
+      .marquee-track { animation: none; }
+      .cursor-blink { animation: none; }
+    }
+
+    /* Code highlight */
+    .code-green { color: #34d399; }
+    .code-blue { color: #60a5fa; }
+    .code-purple { color: #a78bfa; }
+    .code-yellow { color: #fbbf24; }
+    .code-gray { color: #64748b; }
+    .code-white { color: #e2e8f0; }
+    .code-orange { color: #fb923c; }
+    .code-cyan { color: #22d3ee; }
+
+    /* Flow diagram */
+    .flow-node {
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      text-align: center;
+      border: 1px solid;
+    }
+    .flow-arrow {
+      color: #4f46e5;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    /* Demo tabs */
+    .demo-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #64748b;
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .demo-tab:hover { color: #94a3b8; }
+    .demo-tab.active {
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.08);
+    }
+    .demo-panel { display: none; }
+    .demo-panel.active { display: block; }
+
+    /* Slack mockup */
+    .slack-mock {
+      background: #1a1d21;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 80px -20px rgba(99,102,241,0.1);
+    }
+    .slack-sidebar {
+      background: #19171d;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      padding: 14px 12px;
+      width: 180px;
+      flex-shrink: 0;
+    }
+    .slack-sidebar-item {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .slack-sidebar-item.active {
+      background: rgba(99,102,241,0.15);
+      color: #e2e8f0;
+    }
+    .slack-channel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-weight: 600;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    .slack-msg {
+      padding: 10px 16px;
+      display: flex;
+      gap: 10px;
+    }
+    .slack-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .slack-msg-body { flex: 1; min-width: 0; }
+    .slack-msg-name { font-weight: 700; font-size: 13px; color: #e2e8f0; }
+    .slack-msg-time { font-size: 11px; color: #64748b; margin-left: 6px; font-weight: 400; }
+    .slack-msg-text { font-size: 13px; color: #c9d1d9; line-height: 1.5; margin-top: 2px; }
+    .slack-bot-card {
+      margin-top: 6px;
+      padding: 10px 12px;
+      border-left: 3px solid #6366f1;
+      background: rgba(99,102,241,0.06);
+      border-radius: 0 8px 8px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #c9d1d9;
+    }
+    .slack-reaction {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+      margin-top: 6px;
+      margin-right: 4px;
+    }
+
+    /* IDE mockup */
+    .ide-mock {
+      background: #1e1e2e;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 80px -20px rgba(99,102,241,0.1);
+    }
+    .ide-titlebar {
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ide-sidebar {
+      background: #181825;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      width: 44px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 16px;
+    }
+    .ide-sidebar-icon {
+      width: 24px;
+      height: 24px;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ide-sidebar-icon.active { color: #e2e8f0; }
+    .ide-editor {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .ide-tab-bar {
+      display: flex;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+    }
+    .ide-tab {
+      padding: 8px 14px;
+      color: #64748b;
+      border-bottom: 2px solid transparent;
+    }
+    .ide-tab.active {
+      color: #e2e8f0;
+      border-bottom-color: #6366f1;
+      background: rgba(99,102,241,0.05);
+    }
+    .ide-code {
+      padding: 14px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #94a3b8;
+      flex: 1;
+    }
+    .ide-chat-panel {
+      background: #11111b;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      width: 300px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .ide-chat-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ide-chat-msg {
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .ide-chat-user {
+      color: #94a3b8;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .ide-chat-ai { color: #c9d1d9; }
+    .ide-chat-source {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.15);
+      font-size: 10px;
+      color: #a5b4fc;
+      margin-top: 4px;
+      margin-right: 3px;
+    }
+    @media (max-width: 640px) {
+      .slack-sidebar { display: none; }
+      .ide-chat-panel { width: 220px; }
+      .ide-sidebar { display: none; }
+    }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- ========== NAVIGATION ========== -->
+  <nav id="nav" class="fixed top-0 w-full z-50 border-b border-transparent">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="url(#logo-grad)"/>
+          <path d="M8 10h10a4 4 0 010 8H8V10z" fill="white" opacity="0.9"/>
+          <path d="M12 14h8a4 4 0 010 8h-8V14z" fill="white" opacity="0.6"/>
+          <defs><linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+        </svg>
+        <span class="font-bold text-lg text-white tracking-tight">DocBrain</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm text-slate-400">
+        <a href="#how-it-works" class="hover:text-white transition-colors">How It Works</a>
+        <a href="#memory" class="hover:text-white transition-colors">Memory System</a>
+        <a href="#features" class="hover:text-white transition-colors">Features</a>
+        <a href="https://github.com/docbrain-ai/docbrain" class="hover:text-white transition-colors flex items-center gap-1.5" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <a href="#get-started" class="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition-colors">
+        Get Started
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- ========== HERO ========== -->
+  <section class="relative min-h-screen flex items-center pt-16 grid-bg">
+    <div class="hero-bg"></div>
+    <div class="relative z-10 max-w-7xl mx-auto px-6 py-24 lg:py-32">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+        <!-- Left: Copy -->
+        <div class="max-w-xl">
+          <div class="reveal mb-6">
+            <span class="badge">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="#34d399"/><circle cx="8" cy="8" r="6" stroke="#34d399" stroke-width="1.5" opacity="0.3"/></svg>
+              Open Source &middot; MIT License &middot; Built with Rust
+            </span>
+          </div>
+          <h1 class="reveal reveal-delay-1 text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.08] mb-6">
+            Your org's knowledge,
+            <span class="bg-gradient-to-r from-brand-400 to-violet-400 bg-clip-text text-transparent"> collected.</span><br>
+            <span class="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Connected.</span>
+            <span class="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"> Alive.</span>
+          </h1>
+          <p class="reveal reveal-delay-2 text-lg text-slate-400 leading-relaxed mb-8">
+            DocBrain ingests your scattered documentation — Confluence, GitHub, Slack, Jira — and turns it into an AI-powered knowledge system that <strong class="text-slate-200">answers questions with citations</strong>, <strong class="text-slate-200">learns from feedback</strong>, and <strong class="text-slate-200">tells you what's missing</strong>.
+          </p>
+          <div class="reveal reveal-delay-3 flex flex-wrap gap-4">
+            <a href="#get-started" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-all hover:shadow-lg hover:shadow-brand-600/25">
+              Get Started Free
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+            </a>
+            <a href="https://github.com/docbrain-ai/docbrain" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold transition-all">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+              View on GitHub
+            </a>
+          </div>
+        </div>
+
+        <!-- Right: Tabbed Demo -->
+        <div class="reveal reveal-delay-2">
+          <!-- Tab buttons -->
+          <div class="flex gap-2 mb-4">
+            <button class="demo-tab active" data-tab="terminal">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+              Terminal
+            </button>
+            <button class="demo-tab" data-tab="slack">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#E01E5A"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313z"/></svg>
+              Slack
+            </button>
+            <button class="demo-tab" data-tab="ide">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+              Cursor / IDE
+            </button>
+          </div>
+
+          <!-- Panel 1: Terminal -->
+          <div class="demo-panel active" id="panel-terminal">
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="terminal-dot" style="background:#ff5f57"></div>
+                <div class="terminal-dot" style="background:#febc2e"></div>
+                <div class="terminal-dot" style="background:#28c840"></div>
+                <span class="ml-3 text-xs text-slate-500 font-mono">docbrain — terminal</span>
+              </div>
+              <div class="terminal-body" id="terminal">
+                <div id="terminal-content"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Slack -->
+          <div class="demo-panel" id="panel-slack">
+            <div class="slack-mock">
+              <div class="flex" style="min-height:370px">
+                <div class="slack-sidebar hidden sm:block">
+                  <div class="text-xs font-bold text-slate-400 px-2 mb-3 uppercase tracking-wider">Channels</div>
+                  <div class="slack-sidebar-item mb-1"><span class="text-slate-500">#</span> general</div>
+                  <div class="slack-sidebar-item mb-1"><span class="text-slate-500">#</span> engineering</div>
+                  <div class="slack-sidebar-item active mb-1"><span class="text-slate-500">#</span> oncall-prod</div>
+                  <div class="slack-sidebar-item mb-1"><span class="text-slate-500">#</span> platform</div>
+                  <div class="slack-sidebar-item mt-4 mb-1 text-xs font-bold text-slate-400 uppercase tracking-wider" style="padding:0 8px;">Apps</div>
+                  <div class="slack-sidebar-item" style="color:#818cf8;"><svg width="14" height="14" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#6366f1"/><path d="M8 10h10a4 4 0 010 8H8V10z" fill="white" opacity="0.9"/></svg> DocBrain</div>
+                </div>
+                <div class="flex-1">
+                  <div class="slack-channel-header"># oncall-prod</div>
+                  <div class="p-2">
+                    <!-- User message -->
+                    <div class="slack-msg">
+                      <div class="slack-avatar bg-emerald-600/80 text-white">SP</div>
+                      <div class="slack-msg-body">
+                        <div><span class="slack-msg-name">Sarah Park</span><span class="slack-msg-time">2:14 AM</span></div>
+                        <div class="slack-msg-text"><span style="color:#e8912d;background:rgba(232,145,45,0.1);padding:1px 4px;border-radius:4px;font-size:12px;">/docbrain ask</span> "redis OOM errors in payments-cache cluster"</div>
+                      </div>
+                    </div>
+                    <!-- Bot response -->
+                    <div class="slack-msg">
+                      <div class="slack-avatar bg-brand-600 text-white" style="border-radius:8px;">
+                        <svg width="18" height="18" viewBox="0 0 32 32" fill="none"><path d="M8 10h10a4 4 0 010 8H8V10z" fill="white" opacity="0.9"/><path d="M12 14h8a4 4 0 010 8h-8V14z" fill="white" opacity="0.6"/></svg>
+                      </div>
+                      <div class="slack-msg-body">
+                        <div><span class="slack-msg-name">DocBrain</span><span class="slack-msg-time" style="color:#818cf8;">APP</span><span class="slack-msg-time">2:14 AM</span></div>
+                        <div class="slack-bot-card">
+                          <div style="font-weight:600;color:#e2e8f0;font-size:13px;margin-bottom:4px;">Redis OOM Troubleshooting — payments-cache</div>
+                          <div style="margin-bottom:6px;">
+                            <span style="color:#34d399;font-size:11px;">✓ Freshness: 3 days</span>&nbsp;&nbsp;
+                            <span style="color:#818cf8;font-size:11px;">Confidence: 88%</span>
+                          </div>
+                          <div style="color:#94a3b8;">
+                            <strong style="color:#c9d1d9;">1.</strong> Check current memory: <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px;font-size:11px;color:#a78bfa;">redis-cli -h payments-cache info memory</code><br>
+                            <strong style="color:#c9d1d9;">2.</strong> If maxmemory is hit, set eviction policy: <code style="background:rgba(0,0,0,0.3);padding:1px 5px;border-radius:3px;font-size:11px;color:#a78bfa;">allkeys-lru</code><br>
+                            <strong style="color:#c9d1d9;">3.</strong> Monitor eviction rate via Grafana → Redis dashboard → OPS-REDIS-001
+                          </div>
+                          <div style="margin-top:6px;font-size:11px;color:#64748b;">📎 Sources: [1] Redis Configuration Guide  [2] Payments Cache Runbook</div>
+                        </div>
+                        <div>
+                          <span class="slack-reaction">👍 3</span>
+                          <span class="slack-reaction">🎯 1</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 3: Cursor / IDE -->
+          <div class="demo-panel" id="panel-ide">
+            <div class="ide-mock">
+              <div class="ide-titlebar">
+                <div class="terminal-dot" style="background:#ff5f57;width:12px;height:12px;"></div>
+                <div class="terminal-dot" style="background:#febc2e;width:12px;height:12px;"></div>
+                <div class="terminal-dot" style="background:#28c840;width:12px;height:12px;"></div>
+                <span class="ml-2 text-xs text-slate-500">deploy.tf — infra/modules/rds — Cursor</span>
+              </div>
+              <div class="flex" style="min-height:345px">
+                <div class="ide-sidebar hidden sm:flex">
+                  <div class="ide-sidebar-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/></svg></div>
+                  <div class="ide-sidebar-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></div>
+                  <div class="ide-sidebar-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg></div>
+                  <div class="ide-sidebar-icon active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+                </div>
+                <div class="ide-editor">
+                  <div class="ide-tab-bar">
+                    <div class="ide-tab active">deploy.tf</div>
+                    <div class="ide-tab">variables.tf</div>
+                  </div>
+                  <div class="ide-code">
+                    <div><span class="code-purple">resource</span> <span class="code-yellow">"aws_db_instance"</span> <span class="code-green">"main"</span> {</div>
+                    <div>&nbsp;&nbsp;engine&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <span class="code-yellow">"postgres"</span></div>
+                    <div>&nbsp;&nbsp;engine_version = <span class="code-yellow">"16.2"</span></div>
+                    <div>&nbsp;&nbsp;instance_class = <span class="code-yellow">"db.r7g.xlarge"</span></div>
+                    <div>&nbsp;&nbsp;multi_az&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= <span class="code-purple">true</span></div>
+                    <div>&nbsp;&nbsp;<span class="code-gray">// ...</span></div>
+                    <div>}</div>
+                    <div class="mt-2"><span class="code-purple">resource</span> <span class="code-yellow">"aws_db_instance"</span> <span class="code-green">"replica"</span> {</div>
+                    <div>&nbsp;&nbsp;replicate_source_db = <span class="code-cyan">aws_db_instance.main.id</span></div>
+                    <div>&nbsp;&nbsp;<span style="opacity:0.5">█</span></div>
+                    <div>}</div>
+                  </div>
+                </div>
+                <div class="ide-chat-panel hidden sm:flex flex-col">
+                  <div class="ide-chat-header">
+                    <svg width="14" height="14" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="6" fill="#6366f1"/><path d="M8 10h10a4 4 0 010 8H8V10z" fill="white" opacity="0.9"/></svg>
+                    DocBrain (MCP)
+                  </div>
+                  <div class="ide-chat-msg ide-chat-user">
+                    <div style="font-weight:600;margin-bottom:3px;color:#c9d1d9;font-size:11px;">You</div>
+                    What are our RDS provisioning standards for production?
+                  </div>
+                  <div class="ide-chat-msg ide-chat-ai flex-1">
+                    <div style="font-weight:600;margin-bottom:3px;color:#818cf8;font-size:11px;">DocBrain via MCP</div>
+                    <div>Per your <strong style="color:#e2e8f0;">Infra Standards v2.3</strong>:</div>
+                    <div style="margin:6px 0;">
+                      <strong style="color:#e2e8f0;">•</strong> Multi-AZ <strong style="color:#34d399;">required</strong> in production<br>
+                      <strong style="color:#e2e8f0;">•</strong> Minimum <code style="background:rgba(0,0,0,0.3);padding:1px 4px;border-radius:3px;font-size:10px;color:#a78bfa;">db.r7g.xlarge</code><br>
+                      <strong style="color:#e2e8f0;">•</strong> Encryption at rest via KMS<br>
+                      <strong style="color:#e2e8f0;">•</strong> Automated backups: 7-day retention
+                    </div>
+                    <div style="color:#f59e0b;font-size:11px;margin-top:6px;">⚠ Source flagged as STALE — updated 14 months ago. Verify instance types with #platform-eng</div>
+                    <div style="margin-top:6px;">
+                      <span class="ide-chat-source">Infra Standards v2.3</span>
+                      <span class="ide-chat-source">RDS Runbook</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SOURCES MARQUEE ========== -->
+  <section class="relative py-16 border-t border-b border-white/[0.04]">
+    <div class="max-w-7xl mx-auto px-6 mb-8">
+      <p class="text-center text-sm font-medium text-slate-500 uppercase tracking-widest reveal">Collects knowledge from everywhere your team works</p>
+    </div>
+    <div class="overflow-hidden">
+      <div class="marquee-track">
+        <!-- Double for seamless loop -->
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#2684FF"><path d="M11.571 5.143c0-2.857-2.286-5.143-5.143-5.143C3.571 0 1.286 2.286 1.286 5.143c0 2.857 2.285 5.143 5.142 5.143h5.143V5.143zM12.429 5.143c0 2.857 2.285 5.143 5.142 5.143 2.858 0 5.143-2.286 5.143-5.143C22.714 2.286 20.429 0 17.571 0c-2.857 0-5.142 2.286-5.142 5.143z"/><path d="M17.571 12c-2.857 0-5.142 2.286-5.142 5.143v6.857h5.142c2.858 0 5.143-2.286 5.143-5.143V12h-5.143zM6.429 12H1.286v6.857c0 2.857 2.285 5.143 5.143 5.143 2.857 0 5.142-2.286 5.142-5.143V12H6.429z"/></svg>Confluence</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>GitHub</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#E01E5A"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.271 0a2.528 2.528 0 01-2.521 2.521 2.528 2.528 0 01-2.521-2.521V2.522A2.528 2.528 0 0115.164 0a2.528 2.528 0 012.521 2.522v6.312zM15.164 18.956a2.528 2.528 0 012.521 2.522A2.528 2.528 0 0115.164 24a2.528 2.528 0 01-2.521-2.522v-2.522h2.521zm0-1.271a2.528 2.528 0 01-2.521-2.521 2.528 2.528 0 012.521-2.521h6.314A2.528 2.528 0 0124 15.164a2.528 2.528 0 01-2.522 2.521h-6.314z"/></svg>Slack</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#0052CC"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.762a1.005 1.005 0 00-1.001-1.005zM23 0H11.442a5.215 5.215 0 005.215 5.232h2.129v2.039A5.218 5.218 0 0024 12.486V1.005A1.005 1.005 0 0023 0z"/></svg>Jira</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#FC6D26"><path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 00-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 00-.867 0L1.387 9.452.045 13.587a.924.924 0 00.331 1.023L12 23.054l11.624-8.443a.92.92 0 00.331-1.024"/></svg>GitLab</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#7B83EB"><path d="M20.625 8.5h-5.75a1.375 1.375 0 00-1.375 1.375v5.75A1.375 1.375 0 0014.875 17h5.75A1.375 1.375 0 0022 15.625v-5.75A1.375 1.375 0 0020.625 8.5zM18 7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM12 9a3 3 0 100-6 3 3 0 000 6zm1.5 2.5v4.125A2.375 2.375 0 0111.125 18H7v.5a1.5 1.5 0 001.5 1.5h7a1.5 1.5 0 001.5-1.5V12a1.5 1.5 0 00-1.5-1.5H13.5zM7 17h4.125A1.375 1.375 0 0012.5 15.625V11.5A1.375 1.375 0 0011.125 10.125H3.375A1.375 1.375 0 002 11.5v5.125A1.375 1.375 0 003.375 18H7v-1z"/></svg>MS Teams</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#2196F3"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>Local Files</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#e44332"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/></svg>PagerDuty</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#1db954"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 14.36c-.2.2-.51.2-.71 0-1.95-1.19-4.41-1.46-7.3-.8a.5.5 0 01-.22-.98c3.16-.72 5.87-.41 8.05.93.21.13.28.4.18.62v.23z"/></svg>Opsgenie</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#5E6AD2"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" stroke="#5E6AD2" stroke-width="1.5" fill="none"/><path d="M3 7l9 4 9-4M12 11v10" stroke="#5E6AD2" stroke-width="1.5"/></svg>Linear</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#1f8ceb"><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1.2 5.8a.8.8 0 00-.8.8v6.8a.8.8 0 00.8.8h2.4a.8.8 0 00.8-.8V8.6a.8.8 0 00-.8-.8h-2.4z"/></svg>Zendesk</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 00-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 00-5.487 0 12.36 12.36 0 00-.617-1.23A.077.077 0 008.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 00-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 00.031.055 20.03 20.03 0 005.993 2.98.078.078 0 00.084-.026 13.83 13.83 0 001.226-1.963.074.074 0 00-.041-.104 13.175 13.175 0 01-1.872-.878.075.075 0 01-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 01.078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 01.079.009c.12.098.245.195.372.288a.075.075 0 01-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 00-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 00.084.028 19.963 19.963 0 006.002-2.981.076.076 0 00.032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 00-.031-.028z"/></svg>Intercom</div>
+
+        <!-- Repeat for seamless loop -->
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#2684FF"><path d="M11.571 5.143c0-2.857-2.286-5.143-5.143-5.143C3.571 0 1.286 2.286 1.286 5.143c0 2.857 2.285 5.143 5.142 5.143h5.143V5.143zM12.429 5.143c0 2.857 2.285 5.143 5.142 5.143 2.858 0 5.143-2.286 5.143-5.143C22.714 2.286 20.429 0 17.571 0c-2.857 0-5.142 2.286-5.142 5.143z"/><path d="M17.571 12c-2.857 0-5.142 2.286-5.142 5.143v6.857h5.142c2.858 0 5.143-2.286 5.143-5.143V12h-5.143zM6.429 12H1.286v6.857c0 2.857 2.285 5.143 5.143 5.143 2.857 0 5.142-2.286 5.142-5.143V12H6.429z"/></svg>Confluence</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>GitHub</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#E01E5A"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 01-2.521-2.52A2.528 2.528 0 018.834 0a2.528 2.528 0 012.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 012.521 2.521 2.528 2.528 0 01-2.521 2.521H2.522A2.528 2.528 0 010 8.834a2.528 2.528 0 012.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 012.522-2.521A2.528 2.528 0 0124 8.834a2.528 2.528 0 01-2.522 2.521h-2.522V8.834zm-1.271 0a2.528 2.528 0 01-2.521 2.521 2.528 2.528 0 01-2.521-2.521V2.522A2.528 2.528 0 0115.164 0a2.528 2.528 0 012.521 2.522v6.312zM15.164 18.956a2.528 2.528 0 012.521 2.522A2.528 2.528 0 0115.164 24a2.528 2.528 0 01-2.521-2.522v-2.522h2.521zm0-1.271a2.528 2.528 0 01-2.521-2.521 2.528 2.528 0 012.521-2.521h6.314A2.528 2.528 0 0124 15.164a2.528 2.528 0 01-2.522 2.521h-6.314z"/></svg>Slack</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#0052CC"><path d="M11.571 11.513H0a5.218 5.218 0 005.232 5.215h2.13v2.057A5.215 5.215 0 0012.575 24V12.518a1.005 1.005 0 00-1.005-1.005zm5.723-5.756H5.736a5.215 5.215 0 005.215 5.214h2.129v2.058a5.218 5.218 0 005.215 5.214V6.762a1.005 1.005 0 00-1.001-1.005zM23 0H11.442a5.215 5.215 0 005.215 5.232h2.129v2.039A5.218 5.218 0 0024 12.486V1.005A1.005 1.005 0 0023 0z"/></svg>Jira</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#FC6D26"><path d="M23.955 13.587l-1.342-4.135-2.664-8.189a.455.455 0 00-.867 0L16.418 9.45H7.582L4.918 1.263a.455.455 0 00-.867 0L1.387 9.452.045 13.587a.924.924 0 00.331 1.023L12 23.054l11.624-8.443a.92.92 0 00.331-1.024"/></svg>GitLab</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#7B83EB"><path d="M20.625 8.5h-5.75a1.375 1.375 0 00-1.375 1.375v5.75A1.375 1.375 0 0014.875 17h5.75A1.375 1.375 0 0022 15.625v-5.75A1.375 1.375 0 0020.625 8.5zM18 7.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM12 9a3 3 0 100-6 3 3 0 000 6zm1.5 2.5v4.125A2.375 2.375 0 0111.125 18H7v.5a1.5 1.5 0 001.5 1.5h7a1.5 1.5 0 001.5-1.5V12a1.5 1.5 0 00-1.5-1.5H13.5zM7 17h4.125A1.375 1.375 0 0012.5 15.625V11.5A1.375 1.375 0 0011.125 10.125H3.375A1.375 1.375 0 002 11.5v5.125A1.375 1.375 0 003.375 18H7v-1z"/></svg>MS Teams</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#2196F3"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>Local Files</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#e44332"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-4-4 1.41-1.41L11 14.17l6.59-6.59L19 9l-8 8z"/></svg>PagerDuty</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#1db954"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 14.36c-.2.2-.51.2-.71 0-1.95-1.19-4.41-1.46-7.3-.8a.5.5 0 01-.22-.98c3.16-.72 5.87-.41 8.05.93.21.13.28.4.18.62v.23z"/></svg>Opsgenie</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#5E6AD2"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" stroke="#5E6AD2" stroke-width="1.5" fill="none"/><path d="M3 7l9 4 9-4M12 11v10" stroke="#5E6AD2" stroke-width="1.5"/></svg>Linear</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#1f8ceb"><path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1.2 5.8a.8.8 0 00-.8.8v6.8a.8.8 0 00.8.8h2.4a.8.8 0 00.8-.8V8.6a.8.8 0 00-.8-.8h-2.4z"/></svg>Zendesk</div>
+        <div class="source-pill"><svg viewBox="0 0 24 24" fill="#5865F2"><path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 00-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 00-5.487 0 12.36 12.36 0 00-.617-1.23A.077.077 0 008.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 00-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 00.031.055 20.03 20.03 0 005.993 2.98.078.078 0 00.084-.026 13.83 13.83 0 001.226-1.963.074.074 0 00-.041-.104 13.175 13.175 0 01-1.872-.878.075.075 0 01-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 01.078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 01.079.009c.12.098.245.195.372.288a.075.075 0 01-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 00-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 00.084.028 19.963 19.963 0 006.002-2.981.076.076 0 00.032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 00-.031-.028z"/></svg>Intercom</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PROBLEM ========== -->
+  <section class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="reveal text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">Your documentation is broken</h2>
+        <p class="reveal reveal-delay-1 text-lg text-slate-400 max-w-2xl mx-auto">Engineers waste 30-60 minutes a day searching for answers that exist somewhere. DocBrain fixes the three root causes.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Problem 1 -->
+        <div class="glass-card p-8 reveal">
+          <div class="feature-icon bg-red-500/10 mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Scattered everywhere</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Confluence, GitHub wikis, Notion, Google Docs, Slack threads, Jira comments. Knowledge lives in 7+ tools. Nobody knows where to look.</p>
+        </div>
+        <!-- Problem 2 -->
+        <div class="glass-card p-8 reveal reveal-delay-1">
+          <div class="feature-icon bg-amber-500/10 mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Same questions, daily</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">"How do I deploy to staging?" gets asked in Slack every week. Someone answers. Nobody writes it down. The cycle repeats.</p>
+        </div>
+        <!-- Problem 3 -->
+        <div class="glass-card p-8 reveal reveal-delay-2">
+          <div class="feature-icon bg-orange-500/10 mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2" stroke-linecap="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><path d="M14 2v6h6"/><path d="M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01M16 17h.01"/></svg>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Docs rot silently</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">340 of your 800 Confluence pages haven't been touched in a year. Nobody knows which ones are accurate until someone follows outdated steps at 2am.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== HOW IT WORKS ========== -->
+  <section id="how-it-works" class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-20">
+        <p class="reveal text-sm font-semibold uppercase tracking-widest text-brand-400 mb-3">How It Works</p>
+        <h2 class="reveal reveal-delay-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">From scattered docs to instant answers</h2>
+        <p class="reveal reveal-delay-2 text-lg text-slate-400 max-w-2xl mx-auto">A four-phase pipeline that ingests, understands, answers, and learns — getting smarter with every question your team asks.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- Step 1 -->
+        <div class="reveal pipeline-step">
+          <div class="pipeline-number bg-brand-500/10 text-brand-400 mb-5">01</div>
+          <h3 class="text-lg font-bold text-white mb-2">Ingest</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Point DocBrain at your Confluence spaces, GitHub repos, Slack channels, Jira projects. It chunks, embeds, and indexes everything — including images.</p>
+        </div>
+        <!-- Step 2 -->
+        <div class="reveal reveal-delay-1 pipeline-step">
+          <div class="pipeline-number bg-violet-500/10 text-violet-400 mb-5">02</div>
+          <h3 class="text-lg font-bold text-white mb-2">Understand</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Hybrid search (vector + keyword) finds the right chunks. Cross-document references pull in linked Jira tickets, PRs, and runbooks automatically.</p>
+        </div>
+        <!-- Step 3 -->
+        <div class="reveal reveal-delay-2 pipeline-step">
+          <div class="pipeline-number bg-purple-500/10 text-purple-400 mb-5">03</div>
+          <h3 class="text-lg font-bold text-white mb-2">Answer</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Grounded answers with citations, freshness badges, and confidence scores. No hallucination — every claim traces to a source document.</p>
+        </div>
+        <!-- Step 4 -->
+        <div class="reveal reveal-delay-3 pipeline-step">
+          <div class="pipeline-number bg-pink-500/10 text-pink-400 mb-5">04</div>
+          <h3 class="text-lg font-bold text-white mb-2">Learn</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">Every thumbs-up and thumbs-down trains the system. Procedural memory learns which docs answer which types of questions. It literally gets smarter.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== MEMORY SYSTEM ========== -->
+  <section id="memory" class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <!-- Left: Copy -->
+        <div>
+          <p class="reveal text-sm font-semibold uppercase tracking-widest text-brand-400 mb-3">4-Layer Memory System</p>
+          <h2 class="reveal reveal-delay-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-6">A brain that<br>remembers everything</h2>
+          <p class="reveal reveal-delay-2 text-lg text-slate-400 leading-relaxed mb-8">Inspired by cognitive science. Four memory layers work together so every question makes the system sharper. The 100th query about Kubernetes is faster and better-answered than the first.</p>
+          <div class="reveal reveal-delay-3 flex items-center gap-4">
+            <div class="text-center">
+              <div class="stat-value text-3xl">~40%</div>
+              <p class="text-xs text-slate-500 mt-1">Cache hit rate<br>(mature deploy)</p>
+            </div>
+            <div class="glow-line-v h-12"></div>
+            <div class="text-center">
+              <div class="stat-value text-3xl">&lt;3s</div>
+              <p class="text-xs text-slate-500 mt-1">Avg response<br>time</p>
+            </div>
+            <div class="glow-line-v h-12"></div>
+            <div class="text-center">
+              <div class="stat-value text-3xl">25MB</div>
+              <p class="text-xs text-slate-500 mt-1">Binary size<br>(Rust)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Memory layers -->
+        <div class="space-y-4">
+          <div class="reveal memory-layer border-sky-500/20 bg-sky-500/[0.03]">
+            <div class="flex items-start gap-4">
+              <div class="feature-icon bg-sky-500/10 mt-0.5">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-white mb-1">Working Memory <span class="text-xs font-mono text-sky-400/60 ml-2">Redis</span></h4>
+                <p class="text-sm text-slate-400">Multi-turn conversation context. Resolves "it", "that service", "the same thing" — so follow-up questions just work.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="reveal reveal-delay-1 memory-layer border-brand-500/20 bg-brand-500/[0.03]">
+            <div class="flex items-start gap-4">
+              <div class="feature-icon bg-brand-500/10 mt-0.5">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-white mb-1">Episodic Memory <span class="text-xs font-mono text-brand-400/60 ml-2">Postgres + OpenSearch</span></h4>
+                <p class="text-sm text-slate-400">Every Q&A ever asked. Enables semantic caching (skip the LLM on repeat questions) and learning from feedback. The system gets cheaper as it learns.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="reveal reveal-delay-2 memory-layer border-violet-500/20 bg-violet-500/[0.03]">
+            <div class="flex items-start gap-4">
+              <div class="feature-icon bg-violet-500/10 mt-0.5">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="M12 8v4M7.5 17.2L10 14M16.5 17.2L14 14"/></svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-white mb-1">Semantic Memory <span class="text-xs font-mono text-violet-400/60 ml-2">Knowledge Graph</span></h4>
+                <p class="text-sm text-slate-400">Entities and relationships extracted from your docs. "Who owns the payment service?" resolved via graph traversal, not keyword matching.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="reveal reveal-delay-3 memory-layer border-purple-500/20 bg-purple-500/[0.03]">
+            <div class="flex items-start gap-4">
+              <div class="feature-icon bg-purple-500/10 mt-0.5">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              </div>
+              <div>
+                <h4 class="font-bold text-white mb-1">Procedural Memory <span class="text-xs font-mono text-purple-400/60 ml-2">Learned Rules</span></h4>
+                <p class="text-sm text-slate-400">Adapts retrieval strategy from feedback. Learns: "deployment questions → search DevOps space first." Not configured — discovered.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== AUTOPILOT ========== -->
+  <section class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <!-- Left: Visual (gap dashboard mockup) -->
+        <div class="reveal order-2 lg:order-1">
+          <div class="glass-card p-6">
+            <div class="flex items-center gap-2 mb-5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+              <span class="text-sm font-semibold text-white">Documentation Gaps</span>
+              <span class="ml-auto badge text-xs py-1 px-2.5">Autopilot</span>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-red-500/[0.06] border border-red-500/10">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-500/10 px-2 py-0.5 rounded">Critical</span>
+                <span class="text-sm text-slate-300 flex-1">Redis OOM troubleshooting</span>
+                <span class="text-xs text-slate-500">12 queries &middot; 8 users</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-amber-500/[0.06] border border-amber-500/10">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">High</span>
+                <span class="text-sm text-slate-300 flex-1">Secret rotation procedure</span>
+                <span class="text-xs text-slate-500">9 queries &middot; 6 users</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-amber-500/[0.06] border border-amber-500/10">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">High</span>
+                <span class="text-sm text-slate-300 flex-1">Integration test without PR</span>
+                <span class="text-xs text-slate-500">7 queries &middot; 5 users</span>
+              </div>
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-blue-500/[0.06] border border-blue-500/10">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">Medium</span>
+                <span class="text-sm text-slate-300 flex-1">Staging environment access</span>
+                <span class="text-xs text-slate-500">4 queries &middot; 3 users</span>
+              </div>
+            </div>
+            <div class="mt-5 pt-4 border-t border-white/5 flex items-center justify-between">
+              <span class="text-xs text-slate-500">4 gaps detected from 847 queries (30 days)</span>
+              <button class="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">Auto-draft →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Copy -->
+        <div class="order-1 lg:order-2">
+          <p class="reveal text-sm font-semibold uppercase tracking-widest text-brand-400 mb-3">Autopilot</p>
+          <h2 class="reveal reveal-delay-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-6">Finds what's missing<br>before you do</h2>
+          <p class="reveal reveal-delay-2 text-lg text-slate-400 leading-relaxed mb-6">Most documentation tools serve what exists. DocBrain tells you what <em>doesn't</em> exist yet — by clustering low-confidence queries and negative feedback into actionable gaps.</p>
+          <ul class="reveal reveal-delay-3 space-y-4 text-sm text-slate-400">
+            <li class="flex items-start gap-3">
+              <svg class="mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+              <span>Clusters related failed queries using cosine similarity</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+              <span>Scores severity by unique users, volume, and feedback ratio</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+              <span>Auto-drafts documentation grounded in your existing docs</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="mt-0.5 flex-shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+              <span>Publishes to Confluence with one click — gap auto-resolves on ingest</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== ACCESS EVERYWHERE ========== -->
+  <section class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <p class="reveal text-sm font-semibold uppercase tracking-widest text-brand-400 mb-3">Access Everywhere</p>
+        <h2 class="reveal reveal-delay-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">Meets you where you work</h2>
+        <p class="reveal reveal-delay-2 text-lg text-slate-400 max-w-2xl mx-auto">One knowledge layer, five interfaces. Ask from Slack during an incident, from your IDE while coding, or from the terminal at 2am.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="glass-card p-6 text-center reveal">
+          <div class="feature-icon bg-[#E01E5A]/10 mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#E01E5A"><path d="M5.042 15.165a2.528 2.528 0 01-2.52 2.523A2.528 2.528 0 010 15.165a2.527 2.527 0 012.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 012.521-2.52 2.527 2.527 0 012.521 2.52v6.313A2.528 2.528 0 018.834 24a2.528 2.528 0 01-2.521-2.522v-6.313z"/></svg>
+          </div>
+          <h4 class="font-bold text-white text-sm mb-1">Slack</h4>
+          <p class="text-xs text-slate-500">/docbrain ask</p>
+        </div>
+        <div class="glass-card p-6 text-center reveal reveal-delay-1">
+          <div class="feature-icon bg-brand-500/10 mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div>
+          <h4 class="font-bold text-white text-sm mb-1">Web UI</h4>
+          <p class="text-xs text-slate-500">Dashboard + chat</p>
+        </div>
+        <div class="glass-card p-6 text-center reveal reveal-delay-2">
+          <div class="feature-icon bg-emerald-500/10 mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+          </div>
+          <h4 class="font-bold text-white text-sm mb-1">CLI</h4>
+          <p class="text-xs text-slate-500">docbrain ask</p>
+        </div>
+        <div class="glass-card p-6 text-center reveal reveal-delay-3">
+          <div class="feature-icon bg-cyan-500/10 mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>
+          </div>
+          <h4 class="font-bold text-white text-sm mb-1">MCP (IDE)</h4>
+          <p class="text-xs text-slate-500">Cursor &middot; Claude</p>
+        </div>
+        <div class="glass-card p-6 text-center reveal reveal-delay-4">
+          <div class="feature-icon bg-amber-500/10 mx-auto mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <h4 class="font-bold text-white text-sm mb-1">REST API</h4>
+          <p class="text-xs text-slate-500">Build anything</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== FEATURES GRID ========== -->
+  <section id="features" class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <p class="reveal text-sm font-semibold uppercase tracking-widest text-brand-400 mb-3">Features</p>
+        <h2 class="reveal reveal-delay-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white">Everything you need</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="glass-card p-7 reveal">
+          <div class="feature-icon bg-brand-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Hybrid Search</h4>
+          <p class="text-sm text-slate-400">Vector similarity + BM25 keyword in a single query. Catches both semantic meaning and exact matches like error codes and service names.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal reveal-delay-1">
+          <div class="feature-icon bg-emerald-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Cited Answers</h4>
+          <p class="text-sm text-slate-400">Every claim traces to a source document. No hallucination. Phantom citations are stripped. Trust what you read.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal reveal-delay-2">
+          <div class="feature-icon bg-amber-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Freshness Scoring</h4>
+          <p class="text-sm text-slate-400">Every answer shows a freshness badge. Stale docs get flagged. Authors get notified when their high-traffic page is 14 months old.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal">
+          <div class="feature-icon bg-violet-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="M12 8v4M7.5 17.2L10 14M16.5 17.2L14 14"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Knowledge Graph</h4>
+          <p class="text-sm text-slate-400">Entities and relationships extracted from your docs. "Who owns the payment service?" resolves through graph traversal, not keyword guessing.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal reveal-delay-1">
+          <div class="feature-icon bg-cyan-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Cross-Doc References</h4>
+          <p class="text-sm text-slate-400">Slack thread links to a PR, PR references a Jira ticket, Jira points to a runbook. DocBrain follows the chain and enriches every answer.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal reveal-delay-2">
+          <div class="feature-icon bg-pink-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">SSO & RBAC</h4>
+          <p class="text-sm text-slate-400">OIDC, GitHub OAuth, GitLab OIDC. Three roles: viewer, editor, admin. Role mapping from IdP claims. API keys are Argon2-hashed.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal">
+          <div class="feature-icon bg-orange-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M3 12h18"/><path d="M8 8l4-4 4 4M8 16l4 4 4-4M16 8l4 4-4 4M8 8L4 12l4 4"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Provider Agnostic</h4>
+          <p class="text-sm text-slate-400">Anthropic, AWS Bedrock, OpenAI, or Ollama (fully local). Swap LLM providers via config — zero code changes. No vendor lock-in.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal reveal-delay-1">
+          <div class="feature-icon bg-red-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Built with Rust</h4>
+          <p class="text-sm text-slate-400">Single 25MB static binary. Starts in &lt;500ms. Under 100MB memory at load. Runs on 2 vCPUs. No Python virtualenv, no node_modules.</p>
+        </div>
+
+        <div class="glass-card p-7 reveal reveal-delay-2">
+          <div class="feature-icon bg-teal-500/10 mb-4">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h4 class="font-bold text-white mb-2">Self-Hosted</h4>
+          <p class="text-sm text-slate-400">Your data never leaves your infrastructure. Docker Compose for dev, Helm chart for production Kubernetes. MIT licensed.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== THE FEEDBACK LOOP ========== -->
+  <section class="py-24 lg:py-32">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <p class="reveal text-sm font-semibold uppercase tracking-widest text-brand-400 mb-3">The Complete Loop</p>
+        <h2 class="reveal reveal-delay-1 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">Documentation that improves itself</h2>
+        <p class="reveal reveal-delay-2 text-lg text-slate-400 max-w-3xl mx-auto">Every question is a signal. Every answer gets feedback. Every gap becomes a draft. Every draft becomes a doc. The loop closes automatically.</p>
+      </div>
+
+      <!-- Flow diagram -->
+      <div class="reveal reveal-delay-2 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+        <div class="flow-node border-brand-500/30 bg-brand-500/[0.06] text-brand-300">
+          <span class="block text-xs text-brand-500/60 mb-0.5">01</span>
+          Users ask questions
+        </div>
+        <span class="flow-arrow hidden sm:block">→</span>
+        <div class="flow-node border-violet-500/30 bg-violet-500/[0.06] text-violet-300">
+          <span class="block text-xs text-violet-500/60 mb-0.5">02</span>
+          Gaps detected
+        </div>
+        <span class="flow-arrow hidden sm:block">→</span>
+        <div class="flow-node border-purple-500/30 bg-purple-500/[0.06] text-purple-300">
+          <span class="block text-xs text-purple-500/60 mb-0.5">03</span>
+          Draft generated
+        </div>
+        <span class="flow-arrow hidden sm:block">→</span>
+        <div class="flow-node border-pink-500/30 bg-pink-500/[0.06] text-pink-300">
+          <span class="block text-xs text-pink-500/60 mb-0.5">04</span>
+          Admin reviews
+        </div>
+        <span class="flow-arrow hidden sm:block">→</span>
+        <div class="flow-node border-emerald-500/30 bg-emerald-500/[0.06] text-emerald-300">
+          <span class="block text-xs text-emerald-500/60 mb-0.5">05</span>
+          Published & re-ingested
+        </div>
+      </div>
+      <p class="text-center text-xs text-slate-600 mt-6 reveal reveal-delay-3">Next user gets the answer. Loop closed.</p>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ========== GET STARTED ========== -->
+  <section id="get-started" class="py-24 lg:py-32 relative">
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-brand-600/[0.06] blur-[120px]"></div>
+    </div>
+    <div class="relative z-10 max-w-4xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <h2 class="reveal text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">Self-host in 5 minutes</h2>
+        <p class="reveal reveal-delay-1 text-lg text-slate-400">Docker, an API key, and three commands. That's it.</p>
+      </div>
+
+      <div class="reveal reveal-delay-2 terminal max-w-2xl mx-auto">
+        <div class="terminal-bar">
+          <div class="terminal-dot" style="background:#ff5f57"></div>
+          <div class="terminal-dot" style="background:#febc2e"></div>
+          <div class="terminal-dot" style="background:#28c840"></div>
+          <span class="ml-3 text-xs text-slate-500 font-mono">quickstart</span>
+        </div>
+        <div class="terminal-body text-sm">
+          <div><span class="code-gray">$</span> <span class="code-green">git clone</span> <span class="code-blue">https://github.com/docbrain-ai/docbrain</span></div>
+          <div><span class="code-gray">$</span> <span class="code-green">cd</span> docbrain</div>
+          <div><span class="code-gray">$</span> <span class="code-green">bash</span> scripts/setup.sh</div>
+          <div class="mt-3 text-slate-500">
+            <div>✓ Created .env with defaults</div>
+            <div>✓ Started PostgreSQL, OpenSearch, Redis</div>
+            <div>✓ Ran 43 migrations</div>
+            <div>✓ Ingested sample docs</div>
+            <div>✓ Server running at <span class="text-brand-400">http://localhost:3000</span></div>
+            <div>✓ Web UI at <span class="text-brand-400">http://localhost:3001</span></div>
+            <div class="mt-2 text-emerald-400">Bootstrap admin key: <span class="text-slate-400">db_sk_boot_...</span></div>
+          </div>
+          <div class="mt-3"><span class="code-gray">$</span> <span class="code-green">open</span> http://localhost:3001</div>
+        </div>
+      </div>
+
+      <div class="reveal reveal-delay-3 flex flex-wrap justify-center gap-4 mt-10">
+        <a href="https://github.com/docbrain-ai/docbrain" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition-all hover:shadow-lg hover:shadow-brand-600/25">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          Star on GitHub
+        </a>
+        <a href="#" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-semibold transition-all">
+          Read the Docs
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="border-t border-white/[0.04] py-12">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-2.5">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="url(#logo-grad2)"/>
+            <path d="M8 10h10a4 4 0 010 8H8V10z" fill="white" opacity="0.9"/>
+            <path d="M12 14h8a4 4 0 010 8h-8V14z" fill="white" opacity="0.6"/>
+            <defs><linearGradient id="logo-grad2" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+          </svg>
+          <span class="font-bold text-white tracking-tight">DocBrain</span>
+        </div>
+        <div class="flex items-center gap-6 text-sm text-slate-500">
+          <a href="#" class="hover:text-slate-300 transition-colors">Documentation</a>
+          <a href="#" class="hover:text-slate-300 transition-colors">API Reference</a>
+          <a href="https://github.com/docbrain-ai/docbrain" class="hover:text-slate-300 transition-colors" target="_blank" rel="noopener">GitHub</a>
+          <a href="#" class="hover:text-slate-300 transition-colors">License (MIT)</a>
+        </div>
+        <p class="text-xs text-slate-600">Built with Rust. Powered by curiosity.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Nav background on scroll
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // ===== Demo tab switching =====
+    const tabs = document.querySelectorAll('.demo-tab');
+    const panels = document.querySelectorAll('.demo-panel');
+    const tabOrder = ['terminal', 'slack', 'ide'];
+    let currentTabIndex = 0;
+    let autoCycleTimer = null;
+    let userInteracted = false;
+
+    function switchTab(tabName) {
+      currentTabIndex = tabOrder.indexOf(tabName);
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+      panels.forEach(p => p.classList.toggle('active', p.id === `panel-${tabName}`));
+      if (tabName === 'terminal') runTerminalAnimation();
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        userInteracted = true;
+        clearInterval(autoCycleTimer);
+        switchTab(tab.dataset.tab);
+        autoCycleTimer = setInterval(() => {
+          currentTabIndex = (currentTabIndex + 1) % tabOrder.length;
+          switchTab(tabOrder[currentTabIndex]);
+        }, 8000);
+      });
+    });
+
+    function startAutoCycle() {
+      autoCycleTimer = setInterval(() => {
+        currentTabIndex = (currentTabIndex + 1) % tabOrder.length;
+        switchTab(tabOrder[currentTabIndex]);
+      }, 6000);
+    }
+
+    // ===== Terminal typewriter animation =====
+    const terminalContent = document.getElementById('terminal-content');
+    const lines = [
+      { text: '<span class="code-gray">$</span> <span class="code-green">docbrain ask</span> <span class="code-yellow">"payments service 502 after deploy"</span>', delay: 0 },
+      { text: '', delay: 400 },
+      { text: '<span class="code-gray">⠋</span> <span class="text-slate-500">Classifying intent...</span>', delay: 600 },
+      { text: '<span class="code-gray">⠙</span> <span class="text-slate-500">Searching 3 query variants...</span>', delay: 1200, replace: true },
+      { text: '<span class="code-gray">⠸</span> <span class="text-slate-500">Enriching with cross-document refs...</span>', delay: 1800, replace: true },
+      { text: '', delay: 2200, replace: true },
+      { text: '<span class="code-cyan font-semibold">Runbook: Payments Service Rollback Procedure</span>', delay: 2400 },
+      { text: '<span class="text-slate-500">Source:</span> <span class="text-slate-300">"Payments On-Call Guide"</span> <span class="text-slate-600">(Confluence: OPS)</span>', delay: 2600 },
+      { text: '<span class="text-slate-500">Freshness:</span> <span class="code-green">✓ Updated 3 days ago</span>  <span class="text-slate-500">Confidence:</span> <span class="code-green">91%</span>', delay: 2800 },
+      { text: '', delay: 3000 },
+      { text: '<span class="text-slate-300">1.</span> <span class="text-slate-400">Check the deploy diff:</span> <span class="code-purple">git log --oneline production..main</span>', delay: 3200 },
+      { text: '<span class="text-slate-300">2.</span> <span class="text-slate-400">Roll back:</span> <span class="code-purple">kubectl rollout undo deployment/payment-processor</span>', delay: 3500 },
+      { text: '<span class="text-slate-300">3.</span> <span class="text-slate-400">Verify:</span> <span class="code-purple">curl -sf https://api.example.com/health/payments</span>', delay: 3800 },
+      { text: '', delay: 4100 },
+      { text: '<span class="text-slate-600">📎 Sources: [1] Payments On-Call Guide  [2] Deploy Runbook v3</span>', delay: 4300 },
+    ];
+
+    let currentLines = [];
+    let animationStarted = false;
+
+    function runTerminalAnimation() {
+      if (animationStarted) return;
+      animationStarted = true;
+      currentLines = [];
+      terminalContent.innerHTML = '';
+
+      lines.forEach((line, i) => {
+        setTimeout(() => {
+          if (line.replace && currentLines.length > 0) {
+            currentLines[currentLines.length - 1] = line.text;
+          } else {
+            currentLines.push(line.text);
+          }
+          terminalContent.innerHTML = currentLines.map(l => `<div>${l}</div>`).join('');
+          if (i === lines.length - 1) {
+            setTimeout(() => { animationStarted = false; }, 2000);
+          }
+        }, line.delay);
+      });
+    }
+
+    const terminalObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            runTerminalAnimation();
+            startAutoCycle();
+          }, 600);
+          terminalObserver.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    terminalObserver.observe(document.getElementById('terminal'));
+  </script>
+</body>
+</html>
