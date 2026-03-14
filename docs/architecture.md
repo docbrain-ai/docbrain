@@ -32,7 +32,8 @@ The intelligence layer. For each query:
 2. **Query Rewriting** — Reformulates for better retrieval using conversation context
 3. **Hybrid Search** — Combines k-NN vector similarity with BM25 keyword matching
 4. **Memory Enrichment** — Augments context from the 4-tier memory system
-5. **Response Generation** — LLM synthesizes an answer with source attribution
+5. **Reference Enrichment** — Fetches chunks from cross-referenced documents (linked PRs, Jira tickets, Confluence pages) to provide broader context
+6. **Response Generation** — LLM synthesizes an answer with source attribution
 6. **Caching** — Semantic cache for repeated questions
 
 ### Documentation Autopilot (`docbrain-core/autopilot`)
@@ -45,7 +46,7 @@ The autonomous documentation improvement engine. Runs on a daily schedule:
 3. **Digest Builder** — Compiles weekly documentation health reports combining: query volume, unanswered rate, top gap clusters, new drafts, and stale document count. Formats as Slack Block Kit messages for team delivery.
 
 ### Ingestion Pipeline (`docbrain-ingest`)
-Fetches documents from configured sources (Confluence, GitHub, local files), converts to Markdown, chunks with heading-aware splitting, generates embeddings, and indexes in OpenSearch.
+Fetches documents from configured sources (Confluence, GitHub, local files), converts to Markdown, chunks with heading-aware splitting, generates embeddings, and indexes in OpenSearch. During ingestion, cross-document references (URLs to GitHub PRs, GitLab MRs, Jira tickets, Confluence pages, etc.) are automatically extracted from content and stored as a reference graph in PostgreSQL. Referenced document IDs are attached to each chunk in OpenSearch for enrichment at query time.
 
 ### MCP Server (`docbrain-mcp`)
 Model Context Protocol server for integration with AI coding tools (Claude Code, Cursor).
@@ -121,6 +122,10 @@ Memory Lookup              Hybrid Search
         (ranked chunks + memory)
                │
                ▼
+        Reference Enrichment
+        (fetch chunks from linked docs)
+               │
+               ▼
         LLM Generation
         (streaming SSE)
                │
@@ -165,3 +170,4 @@ Classify content type       Assemble context from related docs
 | `autopilot_gap_clusters` | Detected documentation gaps with severity, sample queries, and status |
 | `autopilot_drafts` | Generated draft documents linked to gap clusters |
 | `autopilot_digests` | Weekly digest send history for deduplication |
+| `document_references` | Cross-document reference graph (source → target edges with type and URL) |

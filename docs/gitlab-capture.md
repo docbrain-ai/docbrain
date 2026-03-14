@@ -38,6 +38,7 @@ Beyond capture, DocBrain can also **answer questions** inline: comment `@docbrai
 - MR title
 - MR description (markdown)
 - All human comment notes (system notes are excluded)
+- **Cross-document references** — URLs in the description and notes are automatically extracted and classified (GitHub PRs, Jira tickets, Confluence pages, other GitLab MRs/issues, etc.). GitLab shorthand references (`!123` for MRs, `#123` for issues) are resolved to full URLs within the same project. Referenced documents are linked in a reference graph and enriched at query time.
 - Stored as `source_type = "gitlab_capture"` with metadata: `project`, `mr_iid`, `mr_state`, `type: "merge_request"`
 
 ### Content Limits

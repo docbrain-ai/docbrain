@@ -8,9 +8,10 @@ When you run ingestion, DocBrain:
 
 1. **Fetches** documents from your configured source
 2. **Converts** them to Markdown (HTML, Confluence storage format, etc.)
-3. **Chunks** them using heading-aware splitting (preserves semantic coherence)
-4. **Embeds** each chunk into vectors using your configured embedding provider
-5. **Indexes** the vectors in OpenSearch for hybrid search (k-NN + BM25)
+3. **Extracts cross-document references** — URLs to GitHub PRs, GitLab MRs, Jira tickets, Confluence pages, and other linked resources are identified, classified, and stored as a reference graph in PostgreSQL
+4. **Chunks** them using heading-aware splitting (preserves semantic coherence)
+5. **Embeds** each chunk into vectors using your configured embedding provider
+6. **Indexes** the vectors in OpenSearch for hybrid search (k-NN + BM25), with referenced document IDs attached to each chunk for enrichment at query time
 
 After ingestion, you can immediately start asking questions. DocBrain cites sources in every answer, linking back to the original document.
 
@@ -470,6 +471,7 @@ GITHUB_CAPTURE_ALLOWED_USERS=alice,bob                      # Only these users c
 ### What Gets Indexed
 
 - Issue/PR title, description, and all comments
+- Cross-document references (URLs to other PRs, Jira tickets, Confluence pages, etc.) are extracted and stored in the reference graph
 - Threads over 500KB are skipped (DocBrain posts a reply explaining the limit)
 - Threads under 200 characters are skipped as too short
 
@@ -538,6 +540,7 @@ This MR will feed Autopilot's next gap analysis run.
 
 - MR title and description
 - All human discussion notes (system notes — merge events, label changes, approval events — are excluded)
+- Cross-document references — URLs and GitLab shorthand references (`!123`, `#123`) are extracted, resolved, and stored in the reference graph
 - Threads over 500KB are skipped silently (too large for the embedding pipeline)
 
 ### Reply Behavior
@@ -594,6 +597,7 @@ SLACK_CAPTURE_ALLOWED_USERS=alice,U01234567                 # usernames or user 
 ### What Gets Indexed
 
 - All thread messages with resolved display names and timestamps
+- Cross-document references (URLs to PRs, tickets, Confluence pages, etc.) are extracted from messages and stored in the reference graph
 - Threads under 200 characters are skipped as too short
 - The thread is immediately searchable after capture
 

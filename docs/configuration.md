@@ -394,6 +394,8 @@ When enabled, Autopilot runs on the configured schedule, exposes management endp
 
 Captured content (GitHub PRs/issues, GitLab MRs, Slack threads) decays with age — unlike incident records (Jira, PagerDuty, Zendesk) which are permanent historical events. A 5-year-old PR discussing a replaced architecture should score low in freshness; a 2-week-old incident thread is always valid.
 
+**Cross-document references:** During capture, DocBrain automatically extracts URLs from the description and comments — GitHub PRs, GitLab MRs, Jira tickets, Confluence pages, and other linked resources. These are stored as a reference graph in PostgreSQL and used to enrich RAG context at query time by fetching chunks from referenced documents. GitLab shorthand references (`!123` for MRs, `#123` for issues) are resolved to full URLs within the same project.
+
 **Space assignment:** Captures are stored under a meaningful space name derived from the source:
 - GitHub captures → `owner/repo` (e.g., `myorg/backend`)
 - GitLab captures → `group/project` (e.g., `platform/api`)

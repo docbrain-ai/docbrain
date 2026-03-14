@@ -53,6 +53,7 @@ Unlike static search tools, DocBrain maintains a multi-tier memory system that c
 - **Documentation Autopilot** — Autonomously clusters unanswered questions, detects gaps, and drafts missing documentation using your org's existing voice
 - **4-Tier Memory System** — Working, episodic, semantic, and procedural memory that compounds with every interaction
 - **Document Health Scores** — 5-signal freshness scoring (time decay, engagement, content currency, link health, contradiction detection) with proactive staleness alerts
+- **Cross-Document Reference Graph** — Automatically extracts and links references across documents (GitHub PRs, GitLab MRs, Jira tickets, Confluence pages) for richer context during retrieval
 - **Real-Time Capture** — `/docbrain capture` in Slack threads, `@docbrain capture` on GitHub PRs and GitLab MRs for instant knowledge indexing
 - **Intent-Adaptive Responses** — Classifies queries (find, how-to, troubleshoot, who-owns, status, explain) and adapts response format accordingly
 - **Image Intelligence** — Vision-capable LLM extraction of architecture diagrams, flowcharts, and screenshots during ingestion
@@ -184,7 +185,8 @@ graph TB
     QR --> ML["Memory Lookup<br/><i>episodic · semantic · procedural</i>"]
     HS --> CA["Context Assembly"]
     ML --> CA
-    CA --> FS["Freshness Check"]
+    CA --> RE["Reference Enrichment<br/><i>fetch linked doc chunks</i>"]
+    RE --> FS["Freshness Check"]
     FS --> LLM["LLM Generation<br/><i>streaming, with citations</i>"]
     LLM --> CF{"Confidence?"}
     CF -->|"≥ 85%"| R["Answer + Sources"]
