@@ -43,8 +43,8 @@ Beyond capture, DocBrain can also **answer questions** inline: comment `@docbrai
 
 ### Content Limits
 
-- Minimum 200 characters — very short MRs are silently skipped
 - Maximum 500 KB — oversized MRs are skipped with a warning log
+- MRs with no content at all (no title, no description, no notes, no changes) are silently skipped
 
 ---
 
