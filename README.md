@@ -354,7 +354,7 @@ DocBrain is licensed under the [Business Source License 1.1](LICENSE) (BSL 1.1).
 
 - **Production use** is permitted, except offering DocBrain as a hosted/managed service to third parties.
 - **Change date:** The earlier of January 1, 2028, or when the repository reaches 5,000 GitHub stars, at which point the license converts to [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
-- For alternative licensing, contact [licensing@docbrain.ai](mailto:licensing@docbrain.ai).
+- For alternative licensing, contact [licensing@docbrainapi.com](mailto:licensing@docbrainapi.com).
 
 ---
 
