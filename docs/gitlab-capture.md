@@ -221,19 +221,28 @@ Batch-ingested MRs are stored as `source_type = "gitlab_mr"` (distinct from `"gi
 
 ```yaml
 # values.yaml
-gitlab:
-  # Webhook-triggered real-time capture
-  captureEnabled: true
-  captureBaseUrl: "https://gitlab.com"        # or your self-hosted URL
-  captureAllowedUsers: ""                     # comma-separated; empty = allow all
-  captureAllowedProjects: ""                  # comma-separated; empty = allow all
+gitlabCapture:
+  enabled: true
+  baseUrl: "https://gitlab.com"               # or your self-hosted URL
+  tlsInsecure: false                          # set true for self-signed certs
+  allowedUsers: ""                            # comma-separated usernames; empty = allow all
+  allowedProjects: ""                         # comma-separated group/project paths; empty = allow all
 
-  # Secrets — set via external secret or --set
-  # captureWebhookSecret: ""                  # GITLAB_CAPTURE_WEBHOOK_SECRET
-  # captureToken: ""                          # GITLAB_CAPTURE_TOKEN
+  # Secrets — set via --set or external secret
+  webhookSecret: ""                           # GITLAB_CAPTURE_WEBHOOK_SECRET
+  token: ""                                   # GITLAB_CAPTURE_TOKEN (PAT with api scope)
 ```
 
-Secrets are typically managed via `kubectl create secret` or an external secrets operator:
+Or set secrets separately via `--set`:
+
+```bash
+helm upgrade docbrain ./helm/docbrain \
+  --set gitlabCapture.enabled=true \
+  --set gitlabCapture.webhookSecret="$(openssl rand -hex 32)" \
+  --set gitlabCapture.token="glpat-xxxx"
+```
+
+Alternatively, manage secrets externally:
 
 ```bash
 kubectl create secret generic docbrain-gitlab \
@@ -241,12 +250,10 @@ kubectl create secret generic docbrain-gitlab \
   --from-literal=GITLAB_CAPTURE_TOKEN=<pat>
 ```
 
-Reference in your `values.yaml`:
+Then reference it in your `values.yaml`:
 
 ```yaml
-envFrom:
-  - secretRef:
-      name: docbrain-gitlab
+existingSecret: docbrain-gitlab
 ```
 
 ---
