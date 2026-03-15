@@ -73,8 +73,15 @@ Unlike static search tools, DocBrain maintains a multi-tier memory system that c
 
 ```bash
 git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
+./scripts/setup.sh    # interactive wizard — picks provider, sets keys, starts services
+```
+
+Or configure manually:
+
+```bash
 cp .env.example .env
-# Edit .env — set LLM_PROVIDER and API keys
+# Edit .env — set LLM_PROVIDER and API keys (defaults to AWS Bedrock)
+# For 100% local: set LLM_PROVIDER=ollama (see docs/quickstart.md)
 docker compose up -d
 ```
 

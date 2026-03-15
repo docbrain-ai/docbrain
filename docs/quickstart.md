@@ -8,7 +8,7 @@ Get DocBrain running in under 5 minutes.
 - **For local mode (default):** [Ollama](https://ollama.ai) installed and running — no API keys needed
 - **For cloud mode:** An API key from Anthropic or OpenAI
 
-## Option 1: 100% Local with Ollama (Default — No API Keys)
+## Option 1: 100% Local with Ollama (No API Keys)
 
 The fastest path. Runs entirely on your hardware — no API keys, no data leaves your machine.
 
@@ -20,11 +20,29 @@ ollama pull nomic-embed-text
 # Clone and start
 git clone https://github.com/docbrain-ai/docbrain.git
 cd docbrain
-cp .env.example .env    # defaults are already set for Ollama
+./scripts/setup.sh      # choose option 3 (Ollama) when prompted
+```
+
+Or configure manually:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` and set:
+```env
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+LLM_MODEL_ID=llama3.1
+EMBED_PROVIDER=ollama
+EMBED_MODEL_ID=nomic-embed-text
+```
+
+```bash
 docker compose up -d
 ```
 
-> **RAM requirements:** Ollama needs ~8GB for llama3.1 (8B). If your machine has <16GB RAM, use a cloud provider instead (Option 3).
+> **RAM requirements:** Ollama needs ~8GB for llama3.1 (8B). For best answer quality, use a 32B+ model (`llama3.1:70b` or `qwen2.5:32b`). If your machine has <16GB RAM, use a cloud provider instead (Option 3).
 
 ## Option 2: Interactive Setup (Recommended for first-timers)
 
@@ -246,6 +264,8 @@ If ingestion completed but answers are still empty, check:
 - **"model not found":** Run `ollama pull llama3.1` and `ollama pull nomic-embed-text`
 - **"connection refused":** Make sure Ollama is running (`ollama serve`)
 - **On Linux in Docker:** Change `OLLAMA_BASE_URL` from `host.docker.internal` to your machine's local IP
+- **Most answers say "Not covered":** Small models (8B) can't follow grounding instructions reliably. Use a 32B+ model (`qwen2.5:32b` or `llama3.1:70b`) for production quality. Set `FAST_MODEL_ID=llama3.1:8b` to keep intent classification fast.
+- **"operation timed out":** Large models (32B+) can take 2-3 minutes per answer. Set `OLLAMA_TIMEOUT_SECS=300` in `.env`.
 
 ### Resetting everything
 

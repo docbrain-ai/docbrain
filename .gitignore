@@ -3,3 +3,10 @@ config/local.yaml
 *.log
 .DS_Store
 node_modules/
+
+# IDE / AI tools (may contain API keys)
+.claude/
+.idea/
+.vscode/
+.cursor/
+.mcp.json
