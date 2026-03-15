@@ -101,26 +101,36 @@ All configuration is also available via environment variables, set in `.env` for
 |----------|---------|-------------|
 | `LLM_PROVIDER` | `bedrock` | Provider: `bedrock`, `anthropic`, `openai`, `ollama` |
 | `LLM_MODEL_ID` | varies | Model identifier (provider-specific) |
-| `FAST_MODEL_ID` | — | Fast/cheap model for background side-calls: intent classification, query rewriting, entity extraction. Falls back to `LLM_MODEL_ID` if not set. Recommended: Haiku (Bedrock/Anthropic), `gpt-4o-mini` (OpenAI), same model (Ollama). Alias: `HAIKU_MODEL_ID` (deprecated). |
+| `FAST_MODEL_ID` | — | Fast/cheap model for background side-calls: intent classification, query rewriting, entity extraction. Falls back to `LLM_MODEL_ID` if not set. Recommended: Haiku (Bedrock/Anthropic), `gpt-4o-mini` (OpenAI). **Ollama with 70B**: set to a small model (e.g. `llama3.1:8b`) so only the final answer uses 70B; intent and rewrite stay fast. Alias: `HAIKU_MODEL_ID` (deprecated). |
 | `INGEST_LLM_MODEL_ID` | — | Model used **during ingest only** for image extraction. Falls back to `LLM_MODEL_ID` if not set. **Set this to a cheaper model** — image extraction fires for every page with images. Using Opus 4 with `LLM_THINKING_BUDGET` without this override will cause throttling errors during ingest. |
 | `LLM_THINKING_BUDGET` | — | Extended thinking token budget (tokens). Unset or `0` = disabled. Only applies to the primary `LLM_MODEL_ID`, never to `FAST_MODEL_ID` or `INGEST_LLM_MODEL_ID`. |
 | `ANTHROPIC_API_KEY` | — | API key (if `LLM_PROVIDER=anthropic`) |
 | `OPENAI_API_KEY` | — | API key (if `LLM_PROVIDER=openai`) |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `OLLAMA_TIMEOUT_SECS` | `120` | HTTP timeout in seconds for Ollama requests. Increase for large/slow models (e.g. 70B) to avoid "error decoding response body" when the model takes longer than 2 minutes. Example: `300` or `600`. Allowed range: 60–900. |
 | `OLLAMA_TLS_VERIFY` | `false` | Set to `true` to enforce TLS certificate validation for Ollama |
 | `OLLAMA_VISION_ENABLED` | `true` | Set to `false` if your Ollama model doesn't support vision (skips image calls) |
-| `AWS_REGION` | — | AWS region (if `LLM_PROVIDER=bedrock`) |
+| `AWS_REGION` | — | AWS region for Bedrock (e.g. `us-east-1`) |
 | `AWS_ACCESS_KEY_ID` | — | AWS access key (optional — see credential chain below) |
 | `AWS_SECRET_ACCESS_KEY` | — | AWS secret key (optional — see credential chain below) |
 
 > **AWS Credential Chain**: Bedrock uses the AWS SDK default credential chain: env vars → `~/.aws/credentials` → IRSA (EKS) → EC2 Instance Profile → ECS Task Role. In production, use IRSA or instance profiles — no keys in env. Set `serviceAccount.create=true` and `serviceAccount.annotations.eks.amazonaws.com/role-arn` in Helm. The IAM role needs `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` permissions. See [providers.md](providers.md#aws-bedrock) for full setup details.
 
+### Ollama: large models (e.g. 70B)
+
+When using a large Ollama model like `llama3.1:70b` for better answer quality:
+
+- **Slowness on "Understanding" / "Searching"**: If you don't set `FAST_MODEL_ID`, intent classification and query rewriting also use the 70B model, so those phases are slow. Set `FAST_MODEL_ID` to a small model (e.g. `llama3.1:8b`) so only the final answer uses 70B; intent and rewrite stay fast. Example: `LLM_MODEL_ID=llama3.1:70b` and `FAST_MODEL_ID=llama3.1:8b`.
+- **"Error decoding response body" after 2–3 minutes**: The default HTTP timeout is 120 seconds. If 70B takes longer to generate the full response, the connection is cut and you get a decode error. Set `OLLAMA_TIMEOUT_SECS=300` (or `600`) so the client waits long enough.
+
 ## Embedding Provider
+
+Set `EMBED_PROVIDER` to choose your embedding model. One of: `openai`, `bedrock`, `ollama`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `EMBED_PROVIDER` | `bedrock` | Provider: `bedrock`, `openai`, `ollama` |
-| `EMBED_MODEL_ID` | varies | Embedding model identifier |
+| `EMBED_MODEL_ID` | varies | Embedding model identifier (e.g. `text-embedding-3-small`, `cohere.embed-v4:0`) |
 
 ### Switching Embedding Models
 

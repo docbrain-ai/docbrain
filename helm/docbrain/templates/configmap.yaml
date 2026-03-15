@@ -48,6 +48,9 @@ data:
 
   {{- if eq .Values.llm.provider "ollama" }}
   OLLAMA_BASE_URL: {{ .Values.llm.ollamaBaseUrl | default "http://ollama:11434" | quote }}
+  {{- if .Values.llm.ollamaTimeoutSecs }}
+  OLLAMA_TIMEOUT_SECS: {{ .Values.llm.ollamaTimeoutSecs | quote }}
+  {{- end }}
   {{- end }}
   {{- if .Values.ingest.confluence }}
   CONFLUENCE_BASE_URL: {{ .Values.ingest.confluence.baseUrl | default "" | quote }}

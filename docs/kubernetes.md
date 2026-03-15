@@ -69,11 +69,26 @@ helm install docbrain ./helm/docbrain \
 
 #### Ollama (local/self-hosted)
 
+Basic (e.g. 8B):
+
 ```bash
 helm install docbrain ./helm/docbrain \
   --set llm.provider=ollama \
   --set llm.ollamaBaseUrl=http://ollama-service:11434 \
   --set llm.modelId=llama3.1 \
+  --set embedding.provider=ollama \
+  --set embedding.modelId=nomic-embed-text
+```
+
+For **large models (e.g. 70B)** set `llm.fastModelId` so intent/rewrite stay fast, and `llm.ollamaTimeoutSecs` to avoid "error decoding response body" when the model takes longer than 2 minutes:
+
+```bash
+helm install docbrain ./helm/docbrain \
+  --set llm.provider=ollama \
+  --set llm.ollamaBaseUrl=http://ollama-service:11434 \
+  --set llm.modelId=llama3.1:70b \
+  --set llm.fastModelId=llama3.1:8b \
+  --set llm.ollamaTimeoutSecs=300 \
   --set embedding.provider=ollama \
   --set embedding.modelId=nomic-embed-text
 ```

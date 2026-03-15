@@ -44,6 +44,18 @@ ollama pull llama3.1:70b
 ollama serve
 ```
 
+#### Tuning for 70B and other large models
+
+- **Speed up "Understanding" and "Searching"**: If you use a large model (e.g. `llama3.1:70b`), intent classification and query rewriting also use it when `FAST_MODEL_ID` is unset, so those phases can be slow. Set `FAST_MODEL_ID` to a small model (e.g. `llama3.1:8b`) so only the final answer uses 70B; intent and rewrite stay fast:
+  ```env
+  LLM_MODEL_ID=llama3.1:70b
+  FAST_MODEL_ID=llama3.1:8b
+  ```
+- **"Error decoding response body" after 2–3 minutes**: The default HTTP timeout is 120 seconds. If the 70B model takes longer to generate the full response, the connection is cut and you get a decode error. Set `OLLAMA_TIMEOUT_SECS=300` (or `600`):
+  ```env
+  OLLAMA_TIMEOUT_SECS=300
+  ```
+
 #### Model Selection — Critical for Answer Quality
 
 DocBrain's RAG pipeline relies on the LLM to stay strictly grounded in retrieved documents and follow structured formatting rules. **Small models (7B-8B) will hallucinate, fabricate facts not in the sources, and produce verbose repetitive answers.** Choose the largest model your hardware supports:
@@ -208,14 +220,19 @@ For fully air-gapped / local deployments:
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 LLM_MODEL_ID=llama3.1:70b
+# Optional: use 8B for intent/rewrite so only the final answer uses 70B (faster "Understanding" phase)
+FAST_MODEL_ID=llama3.1:8b
+# Optional: increase timeout for 70B so long answers don't hit "error decoding response body"
+OLLAMA_TIMEOUT_SECS=300
 
 EMBED_PROVIDER=ollama
 EMBED_MODEL_ID=mxbai-embed-large
 ```
 
 ```bash
-# Pull both models before starting
+# Pull models before starting
 ollama pull llama3.1:70b
+ollama pull llama3.1:8b    # if using FAST_MODEL_ID
 ollama pull mxbai-embed-large
 ```
 

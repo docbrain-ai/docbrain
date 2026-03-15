@@ -20,6 +20,7 @@ llm:
   # anthropicApiKey: ""    # set via --set or secret
   # openaiApiKey: ""
   # ollamaBaseUrl: "http://ollama:11434"
+  # ollamaTimeoutSecs: 300  # HTTP timeout (seconds) for Ollama; increase for large models (e.g. 70B) to avoid "error decoding response body". Default 120.
 
 # -- Embedding provider: bedrock | openai | ollama
 embedding:
