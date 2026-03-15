@@ -30,21 +30,33 @@ LLM_MODEL_ID=gpt-4o
 
 ### Ollama (Local)
 
-100% local inference. No API keys, no data leaves your machine. Requires a machine with sufficient RAM (16GB+ recommended).
+100% local inference. No API keys, no data leaves your machine.
 
 ```env
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://host.docker.internal:11434
-LLM_MODEL_ID=llama3.1
+LLM_MODEL_ID=llama3.1:70b
 ```
 
 **Setup**:
 ```bash
-ollama pull llama3.1
+ollama pull llama3.1:70b
 ollama serve
 ```
 
-**Models**: `llama3.1` (recommended, 8B), `llama3.1:70b` (better quality, needs 48GB+ RAM)
+#### Model Selection — Critical for Answer Quality
+
+DocBrain's RAG pipeline relies on the LLM to stay strictly grounded in retrieved documents and follow structured formatting rules. **Small models (7B-8B) will hallucinate, fabricate facts not in the sources, and produce verbose repetitive answers.** Choose the largest model your hardware supports:
+
+| Model | Params | RAM Required | Quality | Notes |
+|-------|--------|-------------|---------|-------|
+| `llama3.1:70b` | 70B | 48GB+ | **Good** | Closest to cloud model quality. Recommended for production local deployments. |
+| `qwen2.5:32b` | 32B | 26GB+ | **Good** | Strong instruction follower, competitive with 70B on grounding tasks. |
+| `mistral-small:22b` | 22B | 16GB+ | Decent | Good middle ground for moderate hardware. |
+| `phi4:14b` | 14B | 12GB+ | Decent | Better instruction following than larger 8B models. |
+| `llama3.1` (8B) | 8B | 8GB+ | **Poor** | Will hallucinate, pad answers, and ignore grounding rules. Only use for quick testing, not real workloads. |
+
+> **Warning**: Using 7B-8B models (like `llama3.1`, `mistral:7b`, `gemma2`) for Q&A will produce unreliable answers. The model will invent facts, ignore source citations, and generate verbose filler. If your hardware can only run 8B models, use a cloud LLM provider (Anthropic, OpenAI, Bedrock) for Q&A and Ollama only for embeddings — this is a fully supported mixed configuration.
 
 **Vision models** (for image extraction): `llava`, `llama3.2-vision`, `moondream`, `bakllava`. If your `LLM_MODEL_ID` is a text-only model, image extraction is automatically skipped — no errors, no configuration needed.
 
@@ -158,7 +170,8 @@ Based on testing across DocBrain's core workloads — RAG retrieval, intent clas
 |----------|-----|------------|-------|
 | **Best quality** | `claude-sonnet-4-5-20250929` (Anthropic) | `text-embedding-3-small` (OpenAI) | Top answer accuracy and citation quality |
 | **Best fully local** | `llama3.1:70b` (Ollama) | `mxbai-embed-large` (Ollama) | No data leaves your machine; needs 48GB+ RAM |
-| **Local / low resource** | `llama3.1` 8B (Ollama) | `nomic-embed-text` (Ollama) | Runs on 16GB RAM; quality drops on complex queries |
+| **Local / mid-range** | `qwen2.5:32b` or `mistral-small:22b` (Ollama) | `mxbai-embed-large` (Ollama) | 16-26GB RAM; good quality for most queries |
+| **Local / low resource** | Cloud LLM (Anthropic/OpenAI) | `nomic-embed-text` (Ollama) | Use cloud for Q&A, Ollama for embeddings only. 8B models produce unreliable answers. |
 | **Cost-optimized cloud** | `gpt-4o-mini` (OpenAI) | `text-embedding-3-small` (OpenAI) | Good for high-volume teams on a budget |
 | **AWS-native** | Claude Sonnet via Bedrock | Cohere via Bedrock | IAM auth, no key management |
 
@@ -166,7 +179,7 @@ Based on testing across DocBrain's core workloads — RAG retrieval, intent clas
 
 **Anthropic Claude Sonnet 4.5** produced the most accurate answers on multi-hop questions and handled DocBrain's structured prompt format (context blocks + freshness metadata) without truncation issues. Extended thinking helped on ambiguous procedural queries.
 
-**Ollama `llama3.1:70b`** was the strongest local option — retrieval quality and draft generation were close to cloud models for straightforward factual and procedural queries. The 8B variant is viable for teams with strict data-residency requirements but expect degraded performance on comparative and troubleshooting intents.
+**Ollama `llama3.1:70b`** was the strongest local option — retrieval quality and draft generation were close to cloud models for straightforward factual and procedural queries. `qwen2.5:32b` is a strong alternative if you're RAM-constrained. **The 8B variant (`llama3.1`) is not recommended** — it consistently hallucinated facts not present in source documents, produced verbose repetitive answers, and failed to follow grounding constraints. If your hardware only supports 8B models, use a cloud LLM provider for Q&A and Ollama only for embeddings.
 
 **Embeddings matter more than you might expect.** `nomic-embed-text` (Ollama) performed well for semantic similarity but lagged on keyword-dense technical content (CLI flags, error codes). If you're on Ollama for LLM but have network access, using `text-embedding-3-small` for embeddings is a practical middle ground.
 
@@ -207,3 +220,5 @@ ollama pull mxbai-embed-large
 ```
 
 > **Tip**: If you're using Ollama for a fully local setup and find answer quality lacking, try increasing `RAG_TOP_K` to `15` and `CHUNK_SIZE` to `2000`. Smaller local models benefit more from additional retrieved context than cloud models do.
+
+> **Hardware-constrained?** If you can't run 30B+ models locally, use a **mixed configuration**: cloud LLM for Q&A (Anthropic or OpenAI) + Ollama for embeddings. This keeps embedding data local while getting cloud-grade answer quality. See [Mixing Providers](#mixing-providers).
