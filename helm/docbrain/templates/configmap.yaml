@@ -41,6 +41,9 @@ data:
   LOGIN_SESSION_TTL_HOURS: {{ .Values.server.loginSessionTtlHours | default "720" | quote }}
   AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: {{ .Values.autopilot.gapAnalysisIntervalHours | default "6" | quote }}
   FRESHNESS_SCHEDULER_INTERVAL_HOURS: {{ .Values.freshness.schedulerIntervalHours | default "24" | quote }}
+  CONTRADICTION_CHECKS_PER_PASS: {{ .Values.freshness.contradictionChecksPerPass | default "10" | quote }}
+  CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS: {{ .Values.freshness.contradictionIncludeRecentEventDocs | default true | quote }}
+  CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS: {{ .Values.freshness.contradictionEventDocMaxAgeDays | default 90 | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.memory.consolidationIntervalHours | default "6" | quote }}
 
   {{- if eq .Values.llm.provider "ollama" }}

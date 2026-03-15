@@ -110,6 +110,10 @@ All configuration is also available via environment variables, set in `.env` for
 | `OLLAMA_TLS_VERIFY` | `false` | Set to `true` to enforce TLS certificate validation for Ollama |
 | `OLLAMA_VISION_ENABLED` | `true` | Set to `false` if your Ollama model doesn't support vision (skips image calls) |
 | `AWS_REGION` | — | AWS region (if `LLM_PROVIDER=bedrock`) |
+| `AWS_ACCESS_KEY_ID` | — | AWS access key (optional — see credential chain below) |
+| `AWS_SECRET_ACCESS_KEY` | — | AWS secret key (optional — see credential chain below) |
+
+> **AWS Credential Chain**: Bedrock uses the AWS SDK default credential chain: env vars → `~/.aws/credentials` → IRSA (EKS) → EC2 Instance Profile → ECS Task Role. In production, use IRSA or instance profiles — no keys in env. Set `serviceAccount.create=true` and `serviceAccount.annotations.eks.amazonaws.com/role-arn` in Helm. The IAM role needs `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` permissions. See [providers.md](providers.md#aws-bedrock) for full setup details.
 
 ## Embedding Provider
 
@@ -117,6 +121,24 @@ All configuration is also available via environment variables, set in `.env` for
 |----------|---------|-------------|
 | `EMBED_PROVIDER` | `bedrock` | Provider: `bedrock`, `openai`, `ollama` |
 | `EMBED_MODEL_ID` | varies | Embedding model identifier |
+
+### Switching Embedding Models
+
+When you change `EMBED_PROVIDER` or `EMBED_MODEL_ID` to a model with different vector dimensions (e.g. Bedrock Cohere/1024 → Ollama nomic-embed-text/768), the server will **refuse to start** with a clear error:
+
+```
+Embedding dimension mismatch on index 'docbrain-chunks': existing=1024, required=768.
+```
+
+To migrate:
+
+1. Set `FORCE_REINDEX=true` in your environment
+2. Restart the server and run ingest — the old indexes are deleted and recreated
+3. Remove `FORCE_REINDEX` after the migration completes
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FORCE_REINDEX` | `false` | Delete and recreate OpenSearch indexes when embedding dimensions change. Set once during migration, then remove. |
 
 ## Document Ingestion
 
@@ -390,6 +412,9 @@ When enabled, Autopilot runs on the configured schedule, exposes management endp
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `FRESHNESS_SCHEDULER_INTERVAL_HOURS` | `24` | How often freshness scores are recalculated for all documents |
+| `CONTRADICTION_CHECKS_PER_PASS` | `10` | Max documents checked for contradictions per freshness run (LLM cost) |
+| `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
+| `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
 
 ### Capture Lifecycle
 

@@ -50,6 +50,21 @@ rag:
   cache_ttl_hours: 24     # Cache max age in hours
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
 
+rbac:
+  # Default role for new SSO users: viewer (default) | editor | admin
+  defaultRole: "viewer"
+  # Email domain that always gets admin role (e.g. "acme.com")
+  # adminEmails: ~
+
+# Where to publish AI-generated drafts (optional).
+# When configured, the "Publish" button in the UI and auto-draft loop will push
+# docs directly to the target system and trigger re-ingest automatically.
+draft_publish:
+  target: "none"           # "confluence" | "none"
+  # confluence_space_key: ~      # Space key to create pages in (e.g. "SAAS")
+  # confluence_parent_page_id: ~ # Optional parent page ID
+  auto_ingest_after_publish: true   # Re-ingest the created page so DocBrain learns from it
+
 autopilot:
   enabled: false          # Opt-in. Set AUTOPILOT_ENABLED=true to enable.
   cluster_threshold: 0.82
@@ -76,6 +91,9 @@ autopilot:
 
 freshness:
   scheduler_interval_hours: 24
+  contradiction_checks_per_pass: 10   # Max docs checked for contradictions per freshness run (LLM cost)
+  contradiction_include_recent_event_docs: true   # Include recent Slack/PR/Jira docs in contradiction pass
+  contradiction_event_doc_max_age_days: 90        # Only event-based docs edited within N days are eligible
 
 memory:
   consolidation_interval_hours: 6
@@ -101,7 +119,21 @@ slack:
 ingest:
   self_ingest: true
   image_extraction_enabled: true
-  # ingest_sources: local   # comma-separated: local, confluence, github, github_pr, gitlab_mr, slack_thread, jira
+  # ── Scheduled ingest sources (DISABLED by default) ──────────────────────
+  # The docbrain-ingest binary is a standalone CLI, not a background job.
+  # It does not run automatically unless you wire it to a cron job or
+  # docker-compose scheduled service.
+  #
+  # To enable scheduled ingestion:
+  #   1. Set ingest_sources to the sources you want:
+  #        ingest_sources: confluence,github_pr,slack_thread
+  #   2. Run docbrain-ingest on a schedule (cron, systemd timer, etc.):
+  #        # example cron — run every 6 hours
+  #        0 */6 * * * docker compose exec -T server docbrain-ingest
+  #   3. Or trigger manually at any time:
+  #        docker compose exec server docbrain-ingest
+  #
+  # ingest_sources: ~   # disabled — set to: local, confluence, github, github_pr, slack_thread, jira, ms_teams, etc.
 
 # ── GitHub PR + Review Comments (batch ingest) ───────────────────────────────
 github_pr:
@@ -112,26 +144,12 @@ github_pr:
   # labels: ~            # comma-separated label filter — empty = all PRs
   # api_url: ~           # override for GitHub Enterprise (default: https://api.github.com)
 
-# ── GitHub Webhook Capture (@docbrain on PRs/issues) ─────────────────────────
-# Enables real-time capture and Q&A directly from GitHub PR/issue comments.
-#
-# Usage (in any PR or issue comment):
-#   @docbrain capture          — ingests the full thread into the knowledge base
-#   @docbrain <question>       — queries the knowledge base and posts the answer
-#
-# Required env vars:
-#   GITHUB_WEBHOOK_SECRET      — HMAC-SHA256 secret set in GitHub webhook settings
-#   GITHUB_BOT_TOKEN           — GitHub token with repo read + issues:write scope
-#                                (GITHUB_PR_TOKEN is also accepted as a fallback)
-#
-# Optional env vars:
-#   GITHUB_CAPTURE_ALLOWED_REPOS   — comma-separated allowlist e.g. acme/api,acme/web
-#                                    (empty = accept all repos)
-#   GITHUB_CAPTURE_ALLOWED_USERS   — comma-separated GitHub login allowlist
-#                                    (empty = accept all users)
-#
-# Webhook setup: POST /github/events
-#   Events to subscribe: issue_comment, pull_request_review_comment
+# ── GitHub Real-Time Capture ───────────────────────────────────────────────
+# Enables `@docbrain capture` on GitHub PRs/issues.
+# Both fields are required; if either is missing, the route is not registered.
+github_capture:
+  # webhook_secret: ~   # set GITHUB_WEBHOOK_SECRET env var
+  # bot_token: ~        # set GITHUB_BOT_TOKEN env var (or GITHUB_PR_TOKEN as fallback)
 
 # ── GitLab MR + Review Notes (batch ingest) ──────────────────────────────────
 gitlab_mr:
@@ -143,27 +161,16 @@ gitlab_mr:
   # labels: ~            # comma-separated label filter — empty = all MRs
   tls_verify: true       # set false for self-hosted with self-signed certs
 
-# ── GitLab Webhook Capture (@docbrain on MRs) ────────────────────────────────
-# Enables real-time capture and Q&A directly from GitLab MR note comments.
-#
-# Usage (in any MR note):
-#   @docbrain capture          — ingests the full MR thread into the knowledge base
-#   @docbrain <question>       — queries the knowledge base and posts the answer
-#
-# Required env vars (at least one must be set to enable the webhook):
-#   GITLAB_CAPTURE_WEBHOOK_SECRET  — token sent in X-Gitlab-Token header
-#   GITLAB_CAPTURE_TOKEN           — GitLab PAT with api scope (for fetching notes
-#                                    and posting reply comments)
-#
-# Optional env vars:
-#   GITLAB_CAPTURE_BASE_URL        — GitLab instance URL (default: https://gitlab.com)
-#   GITLAB_CAPTURE_ALLOWED_USERS   — comma-separated username allowlist
-#                                    (empty = accept all users)
-#   GITLAB_CAPTURE_ALLOWED_PROJECTS — comma-separated project allowlist e.g. acme/api
-#                                     (empty = accept all projects)
-#
-# Webhook setup: POST /api/v1/gitlab/events
-#   Events to subscribe: Note events (MR only)
+# ── GitLab MR Real-Time Capture ───────────────────────────────────────────
+# Enables `@docbrain capture` on GitLab MRs via POST /api/v1/gitlab/events.
+# At least one of webhook_secret or token must be set; if neither is present,
+# the route is not registered.
+gitlab_capture:
+  # webhook_secret: ~        # set GITLAB_CAPTURE_WEBHOOK_SECRET env var (X-Gitlab-Token validation)
+  # token: ~                 # set GITLAB_CAPTURE_TOKEN env var (PAT with api scope — fetch notes + post replies)
+  base_url: "https://gitlab.com"  # override for self-hosted: GITLAB_CAPTURE_BASE_URL
+  # allowed_users: ~         # set GITLAB_CAPTURE_ALLOWED_USERS (comma-separated; empty = all)
+  # allowed_projects: ~      # set GITLAB_CAPTURE_ALLOWED_PROJECTS (comma-separated group/project; empty = all)
 
 # ── Slack Thread Ingest ───────────────────────────────────────────────────────
 slack_ingest:
@@ -211,6 +218,22 @@ zendesk:
   # api_token: ~         # secret — set in config/local.yaml or ZENDESK_API_TOKEN env var
   lookback_days: 180
   # min_rating: ~        # "good" | "bad" | empty (include all) — set ZENDESK_MIN_RATING
+
+# ── Microsoft Teams Ingest ────────────────────────────────────────────────────
+# Requires an Azure Entra (Azure AD) app registration with application
+# permissions: Team.ReadBasic.All, Channel.ReadBasic.All, ChannelMessage.Read.All,
+# Chat.Read.All (optional), Files.Read.All, OnlineMeetingTranscript.Read.All (optional).
+# Tenant admin must grant consent for the app.
+ms_teams:
+  # tenant_id: ~        # secret — set MS_TEAMS_TENANT_ID env var
+  # client_id: ~        # secret — set MS_TEAMS_CLIENT_ID env var
+  # client_secret: ~    # secret — set MS_TEAMS_CLIENT_SECRET env var
+  # teams: ~            # comma-separated team names/IDs to filter — empty = all
+  lookback_days: 90
+  include_chats: false         # 1:1/group chats — high volume, enable with care
+  include_files: true          # channel files from SharePoint
+  include_transcripts: true    # meeting transcripts (requires app access policy)
+  min_replies: 2               # minimum replies for channel thread to be indexed
 
 # ── Intercom Conversation Ingest ───────────────────────────────────────────────
 intercom:

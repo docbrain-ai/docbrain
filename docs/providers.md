@@ -50,14 +50,58 @@ ollama serve
 
 ### AWS Bedrock
 
-For AWS-native deployments. Uses IAM for authentication.
+For AWS-native deployments. Uses the **AWS SDK default credential chain** — no hardcoded keys required in production.
 
 ```env
 LLM_PROVIDER=bedrock
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
 LLM_MODEL_ID=us.anthropic.claude-opus-4-20250514-v1:0
+```
+
+#### AWS Credential Resolution Order
+
+DocBrain uses `aws_config::defaults().load()`, which resolves credentials in this order:
+
+1. **Environment variables** — `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (local dev, CI)
+2. **Shared credentials file** — `~/.aws/credentials` / `aws sso login` (local dev)
+3. **IRSA (EKS)** — IAM Roles for Service Accounts (recommended for Kubernetes)
+4. **EC2 Instance Profile** — attached IAM role (recommended for EC2/ECS)
+5. **ECS Task Role** — `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`
+
+#### Production Best Practice: IRSA (no keys in env)
+
+On EKS, use IRSA so pods authenticate via their ServiceAccount — no `AWS_ACCESS_KEY_ID` needed:
+
+```bash
+helm install docbrain ./helm/docbrain \
+  --set llm.provider=bedrock \
+  --set serviceAccount.create=true \
+  --set "serviceAccount.annotations.eks\.amazonaws\.com/role-arn=arn:aws:iam::123456789:role/docbrain-bedrock"
+```
+
+The IAM role needs these permissions:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "bedrock:InvokeModel",
+    "bedrock:InvokeModelWithResponseStream"
+  ],
+  "Resource": "arn:aws:bedrock:*::foundation-model/*"
+}
+```
+
+Both the server and ingest CronJob pods use the same ServiceAccount, so a single IRSA role covers both.
+
+#### Local Development
+
+For local dev / docker-compose, explicit keys or `~/.aws/credentials` are fine:
+
+```env
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-east-1
 ```
 
 ## Embedding Providers
@@ -102,7 +146,7 @@ You can use different providers for LLM and embeddings. Common combinations:
 | Cost-optimized | OpenAI (gpt-4o-mini) | OpenAI (text-embedding-3-small) |
 | AWS native | Bedrock | Bedrock |
 
-> **Important**: Changing the embedding provider after initial ingestion requires re-indexing all documents, as embedding dimensions may differ between providers.
+> **Important**: Changing the embedding provider/model may change vector dimensions. The server will refuse to start with a dimension mismatch error. Set `FORCE_REINDEX=true` to delete and recreate the indexes, then run ingest to re-embed all documents. See [configuration.md](configuration.md#switching-embedding-models) for details.
 
 ## Model Recommendations
 

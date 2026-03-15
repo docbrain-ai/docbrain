@@ -182,6 +182,12 @@ draftPublish:
 # -- Freshness scoring scheduler
 freshness:
   schedulerIntervalHours: "24"
+  # Max docs to run contradiction LLM checks per freshness pass. Higher = more cost/latency.
+  contradictionChecksPerPass: "10"
+  # Include recent event-based docs (Slack, PRs, Jira) in contradiction pass alongside stalest docs.
+  contradictionIncludeRecentEventDocs: true
+  # Only event-based docs edited within this many days are eligible for contradiction checks.
+  contradictionEventDocMaxAgeDays: 90
 
 # -- Memory consolidation
 memory:

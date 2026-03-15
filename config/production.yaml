@@ -42,6 +42,9 @@ rag:
   cache_threshold: 0.95
   cache_ttl_hours: 24
 
+ingest:
+  image_extraction_enabled: false   # Override with IMAGE_EXTRACTION_ENABLED=true in environment
+
 autopilot:
   enabled: false   # Override with AUTOPILOT_ENABLED=true in environment
 
