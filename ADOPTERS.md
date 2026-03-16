@@ -14,7 +14,7 @@ If you are using DocBrain, please submit a Pull Request to add your organization
 
 | Organization | Use Case | Link |
 | :--- | :--- | :--- |
-| **[Example Org]** | Powering Slack-based AI answers for SRE on-call rotation. | [example.com](https://example.com) |
+| **[D360 Bank](https://d360.com/en)** | Powering Slack-based AI answers for SRE on-call rotation. | - |
 | **[Example Project]** | Internal knowledge layer for a large-scale Kubernetes platform. | - |
 
 ## Seeking Adopters
