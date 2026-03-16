@@ -14,8 +14,9 @@ The fastest path. Runs entirely on your hardware — no API keys, no data leaves
 
 ```bash
 # Install Ollama (https://ollama.ai) and pull the models
-ollama pull llama3.1
-ollama pull nomic-embed-text
+ollama pull command-r:35b       # RAG-optimized model with strong instruction following
+ollama pull qwen2.5:7b          # fast model for intent classification
+ollama pull nomic-embed-text    # embeddings
 
 # Clone and start
 git clone https://github.com/docbrain-ai/docbrain.git
@@ -33,7 +34,8 @@ Then edit `.env` and set:
 ```env
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://host.docker.internal:11434
-LLM_MODEL_ID=llama3.1
+LLM_MODEL_ID=command-r:35b
+FAST_MODEL_ID=qwen2.5:7b
 EMBED_PROVIDER=ollama
 EMBED_MODEL_ID=nomic-embed-text
 ```
@@ -42,7 +44,7 @@ EMBED_MODEL_ID=nomic-embed-text
 docker compose up -d
 ```
 
-> **RAM requirements:** Ollama needs ~8GB for llama3.1 (8B). For best answer quality, use a 32B+ model (`llama3.1:70b` or `qwen2.5:32b`). If your machine has <16GB RAM, use a cloud provider instead (Option 3).
+> **RAM requirements:** `command-r:35b` needs ~24GB RAM. If your machine has <24GB, use `qwen2.5:32b` (26GB) or a cloud provider (Option 3). **Do not use 7B-8B models for answer generation** — they will fabricate answers. Only models with strong instruction-following should be used for RAG. See [Provider Setup](./providers.md#model-selection--critical-for-answer-quality) for details.
 
 ## Option 2: Interactive Setup (Recommended for first-timers)
 
@@ -264,7 +266,8 @@ If ingestion completed but answers are still empty, check:
 - **"model not found":** Run `ollama pull llama3.1` and `ollama pull nomic-embed-text`
 - **"connection refused":** Make sure Ollama is running (`ollama serve`)
 - **On Linux in Docker:** Change `OLLAMA_BASE_URL` from `host.docker.internal` to your machine's local IP
-- **Most answers say "Not covered":** Small models (8B) can't follow grounding instructions reliably. Use a 32B+ model (`qwen2.5:32b` or `llama3.1:70b`) for production quality. Set `FAST_MODEL_ID=llama3.1:8b` to keep intent classification fast.
+- **Most answers say "Not covered":** Small models (8B) can't follow grounding instructions reliably. Use `command-r:35b` (recommended) or `qwen2.5:32b` for production quality. Set `FAST_MODEL_ID=qwen2.5:7b` to keep intent classification fast.
+- **Answers look plausible but are fabricated:** The model is ignoring retrieved documents and generating from training data. This happens with models that have weak instruction-following (including some large models). Switch to `command-r:35b` which is purpose-built for RAG and stays grounded in provided context.
 - **"operation timed out":** Large models (32B+) can take 2-3 minutes per answer. Set `OLLAMA_TIMEOUT_SECS=300` in `.env`.
 
 ### Resetting everything

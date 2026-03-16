@@ -35,21 +35,21 @@ LLM_MODEL_ID=gpt-4o
 ```env
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://host.docker.internal:11434
-LLM_MODEL_ID=llama3.1:70b
+LLM_MODEL_ID=command-r:35b
 ```
 
 **Setup**:
 ```bash
-ollama pull llama3.1:70b
+ollama pull command-r:35b
 ollama serve
 ```
 
 #### Tuning for 70B and other large models
 
-- **Speed up "Understanding" and "Searching"**: If you use a large model (e.g. `llama3.1:70b`), intent classification and query rewriting also use it when `FAST_MODEL_ID` is unset, so those phases can be slow. Set `FAST_MODEL_ID` to a small model (e.g. `llama3.1:8b`) so only the final answer uses 70B; intent and rewrite stay fast:
+- **Speed up "Understanding" and "Searching"**: If you use a large model (e.g. `command-r:35b`), intent classification and query rewriting also use it when `FAST_MODEL_ID` is unset, so those phases can be slow. Set `FAST_MODEL_ID` to a small model (e.g. `qwen2.5:7b`) so only the final answer uses the primary model; intent and rewrite stay fast:
   ```env
-  LLM_MODEL_ID=llama3.1:70b
-  FAST_MODEL_ID=llama3.1:8b
+  LLM_MODEL_ID=command-r:35b
+  FAST_MODEL_ID=qwen2.5:7b
   ```
 - **"Error decoding response body" after 2–3 minutes**: The default HTTP timeout is 120 seconds. If the 70B model takes longer to generate the full response, the connection is cut and you get a decode error. Set `OLLAMA_TIMEOUT_SECS=300` (or `600`):
   ```env
@@ -58,15 +58,21 @@ ollama serve
 
 #### Model Selection — Critical for Answer Quality
 
-DocBrain's RAG pipeline relies on the LLM to stay strictly grounded in retrieved documents and follow structured formatting rules. **Small models (7B-8B) will hallucinate, fabricate facts not in the sources, and produce verbose repetitive answers.** Choose the largest model your hardware supports:
+DocBrain's RAG pipeline relies on the LLM to stay strictly grounded in retrieved documents and follow structured formatting rules. **Only use models with strong instruction-following capabilities.** Models that ignore system prompts or default to training data instead of provided context will produce fabricated answers — even when the correct documents are retrieved.
+
+> **Key insight**: Model size alone does not determine RAG quality. A 35B model purpose-built for RAG (like `command-r:35b`) will outperform a 70B general-purpose model that ignores grounding instructions. **Instruction-following ability is the single most important trait for a DocBrain LLM.**
 
 | Model | Params | RAM Required | Quality | Notes |
 |-------|--------|-------------|---------|-------|
-| `llama3.1:70b` | 70B | 48GB+ | **Good** | Closest to cloud model quality. Recommended for production local deployments. |
-| `qwen2.5:32b` | 32B | 26GB+ | **Good** | Strong instruction follower, competitive with 70B on grounding tasks. |
+| `command-r:35b` | 35B | 24GB+ | **Best** | **Recommended.** Purpose-built for RAG. Excellent instruction following — stays grounded in retrieved docs, cites sources, avoids fabrication. |
+| `qwen2.5:32b` | 32B | 26GB+ | **Good** | Strong instruction follower, competitive on grounding tasks. Good alternative to command-r. |
+| `llama3.1:70b` | 70B | 48GB+ | Decent | Large but weaker at following grounding instructions — can ignore retrieved docs and generate from training data. Use command-r:35b instead unless you specifically need 70B. |
 | `mistral-small:22b` | 22B | 16GB+ | Decent | Good middle ground for moderate hardware. |
 | `phi4:14b` | 14B | 12GB+ | Decent | Better instruction following than larger 8B models. |
+| `qwen2.5:7b` | 7B | 8GB+ | Fast-only | **Recommended as `FAST_MODEL_ID`** for intent classification and query rewriting. Too small for final answer generation. |
 | `llama3.1` (8B) | 8B | 8GB+ | **Poor** | Will hallucinate, pad answers, and ignore grounding rules. Only use for quick testing, not real workloads. |
+
+> **Warning — instruction following matters more than size**: Using models that don't follow grounding instructions (including some large models like `llama3.1:70b`) can produce completely fabricated answers that look plausible but contain zero information from your actual documents. This is worse than a "not found" response because it erodes user trust from day one. Always verify that your chosen model respects the `DOCUMENTATION:` context block and cites sources.
 
 > **Warning**: Using 7B-8B models (like `llama3.1`, `mistral:7b`, `gemma2`) for Q&A will produce unreliable answers. The model will invent facts, ignore source citations, and generate verbose filler. If your hardware can only run 8B models, use a cloud LLM provider (Anthropic, OpenAI, Bedrock) for Q&A and Ollama only for embeddings — this is a fully supported mixed configuration.
 
@@ -181,7 +187,7 @@ Based on testing across DocBrain's core workloads — RAG retrieval, intent clas
 | Priority | LLM | Embeddings | Notes |
 |----------|-----|------------|-------|
 | **Best quality** | `claude-sonnet-4-5-20250929` (Anthropic) | `text-embedding-3-small` (OpenAI) | Top answer accuracy and citation quality |
-| **Best fully local** | `llama3.1:70b` (Ollama) | `mxbai-embed-large` (Ollama) | No data leaves your machine; needs 48GB+ RAM |
+| **Best fully local** | `command-r:35b` (Ollama) | `mxbai-embed-large` (Ollama) | No data leaves your machine; 24GB+ RAM. Purpose-built for RAG. |
 | **Local / mid-range** | `qwen2.5:32b` or `mistral-small:22b` (Ollama) | `mxbai-embed-large` (Ollama) | 16-26GB RAM; good quality for most queries |
 | **Local / low resource** | Cloud LLM (Anthropic/OpenAI) | `nomic-embed-text` (Ollama) | Use cloud for Q&A, Ollama for embeddings only. 8B models produce unreliable answers. |
 | **Cost-optimized cloud** | `gpt-4o-mini` (OpenAI) | `text-embedding-3-small` (OpenAI) | Good for high-volume teams on a budget |
@@ -191,7 +197,7 @@ Based on testing across DocBrain's core workloads — RAG retrieval, intent clas
 
 **Anthropic Claude Sonnet 4.5** produced the most accurate answers on multi-hop questions and handled DocBrain's structured prompt format (context blocks + freshness metadata) without truncation issues. Extended thinking helped on ambiguous procedural queries.
 
-**Ollama `llama3.1:70b`** was the strongest local option — retrieval quality and draft generation were close to cloud models for straightforward factual and procedural queries. `qwen2.5:32b` is a strong alternative if you're RAM-constrained. **The 8B variant (`llama3.1`) is not recommended** — it consistently hallucinated facts not present in source documents, produced verbose repetitive answers, and failed to follow grounding constraints. If your hardware only supports 8B models, use a cloud LLM provider for Q&A and Ollama only for embeddings.
+**Ollama `command-r:35b`** is now the recommended local model. It is purpose-built for RAG workloads — it stays grounded in retrieved documents, cites sources accurately, and follows structured prompt instructions far better than general-purpose models of similar or larger size. `qwen2.5:32b` is a strong alternative. We previously recommended `llama3.1:70b`, but found it frequently defaults to training data instead of retrieved context, producing plausible-sounding but fabricated answers — a worse outcome than "not found" because it erodes user trust. For `FAST_MODEL_ID`, use `qwen2.5:7b` — it handles intent classification and query rewriting well without the hallucination risks of using a small model for final answer generation. **The 8B variant (`llama3.1`) is not recommended** — it consistently hallucinated facts not present in source documents, produced verbose repetitive answers, and failed to follow grounding constraints. If your hardware only supports 8B models, use a cloud LLM provider for Q&A and Ollama only for embeddings.
 
 **Embeddings matter more than you might expect.** `nomic-embed-text` (Ollama) performed well for semantic similarity but lagged on keyword-dense technical content (CLI flags, error codes). If you're on Ollama for LLM but have network access, using `text-embedding-3-small` for embeddings is a practical middle ground.
 
@@ -219,11 +225,9 @@ For fully air-gapped / local deployments:
 # Both LLM and embeddings via Ollama
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://host.docker.internal:11434
-LLM_MODEL_ID=llama3.1:70b
-# Optional: use 8B for intent/rewrite so only the final answer uses 70B (faster "Understanding" phase)
-FAST_MODEL_ID=llama3.1:8b
-# Optional: increase timeout for 70B so long answers don't hit "error decoding response body"
-OLLAMA_TIMEOUT_SECS=300
+LLM_MODEL_ID=command-r:35b
+FAST_MODEL_ID=qwen2.5:7b        # use 7B for intent/rewrite; only final answer uses primary model
+OLLAMA_TIMEOUT_SECS=300          # increase for large models
 
 EMBED_PROVIDER=ollama
 EMBED_MODEL_ID=mxbai-embed-large
@@ -231,8 +235,8 @@ EMBED_MODEL_ID=mxbai-embed-large
 
 ```bash
 # Pull models before starting
-ollama pull llama3.1:70b
-ollama pull llama3.1:8b    # if using FAST_MODEL_ID
+ollama pull command-r:35b
+ollama pull qwen2.5:7b     # for FAST_MODEL_ID
 ollama pull mxbai-embed-large
 ```
 
