@@ -46,6 +46,7 @@ ingest:
   #   spaceKeys: ""
   #   apiVersion: v2          # v2 for Cloud (default), v1 for self-hosted Data Center
   #   pageIds: ""             # comma-separated page IDs (+ all descendants); from any space
+  #   pageLimit: 0            # max pages per space; 0 = unlimited (fetch all subpages)
   # github:
   #   repoUrl: ""
   #   token: ""

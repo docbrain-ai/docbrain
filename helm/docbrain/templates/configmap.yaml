@@ -61,6 +61,9 @@ data:
   {{- if .Values.ingest.confluence.pageIds }}
   CONFLUENCE_PAGE_IDS: {{ .Values.ingest.confluence.pageIds | quote }}
   {{- end }}
+  {{- if .Values.ingest.confluence.pageLimit }}
+  CONFLUENCE_PAGE_LIMIT: {{ .Values.ingest.confluence.pageLimit | quote }}
+  {{- end }}
   {{- end }}
   {{- if .Values.gitlabCapture.enabled }}
   GITLAB_CAPTURE_BASE_URL: {{ .Values.gitlabCapture.baseUrl | default "https://gitlab.com" | quote }}
