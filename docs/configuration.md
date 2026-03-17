@@ -510,3 +510,70 @@ Only change these if you run multiple DocBrain instances sharing the same OpenSe
 | `GITLAB_REDIRECT_URI` | — | Callback URL (e.g. `https://docbrain.example.com/api/v1/auth/gitlab/callback`) |
 
 > **Corporate GitLab:** If your self-hosted GitLab uses an internal CA, set `OIDC_ACCEPT_INVALID_CERTS=true`.
+
+---
+
+## RBAC Role Assignment
+
+Role is computed at login time and stored on the user record. The hierarchy is: `viewer (1) < editor (2) < analyst (3) < admin (4)`. Higher-priority rules win.
+
+| Variable | Helm key | Description |
+|----------|----------|-------------|
+| `OIDC_DEFAULT_ROLE` | `rbac.defaultRole` | Role assigned to new SSO users who match no group rule. Default: `viewer`. |
+| `OIDC_ADMIN_EMAILS` | `rbac.adminEmails` | Comma-separated emails that always receive `admin`. |
+| `OIDC_ADMIN_DOMAIN` | `rbac.adminDomain` | Email domain whose users receive `admin` (e.g. `acme.com`). |
+| `OIDC_ADMIN_GROUPS` | `rbac.adminGroups` | Comma-separated IdP group names → `admin` role. |
+| `OIDC_EDITOR_GROUPS` | `rbac.editorGroups` | Comma-separated IdP group names → `editor` role. |
+| `OIDC_ALLOWED_GROUPS` | `rbac.allowedGroups` | Access gate: only these groups may log in (all others get 403). |
+| `OIDC_ALLOWED_DOMAINS` | `rbac.allowedDomains` | Access gate: only these email domains may log in. |
+
+### What every engineer can see
+
+All authenticated users (including `viewer`) have full access to the intelligence dashboards:
+
+| Page | What it shows |
+|------|---------------|
+| **Velocity** | Documentation ROI — queries deflected, hours saved, cost saved, per-team breakdown |
+| **Predictive** | Predicted documentation gaps from code changes, cascade staleness, seasonal patterns, onboarding risks |
+| **Maintenance** | AI-generated fix proposals with apply/reject workflow |
+| **Stream** | Live knowledge event feed — incident warnings, freshness decay alerts, trending gaps |
+
+These dashboards are visible to every engineer. The insight loop only works if the people who can act on it — the engineers — can actually see it.
+
+**Example — typical multi-team setup:**
+
+```yaml
+rbac:
+  defaultRole: "viewer"
+  adminGroups: "platform-team"
+  editorGroups: "docs-writers"
+```
+
+```bash
+# Equivalent env vars
+OIDC_DEFAULT_ROLE=viewer
+OIDC_ADMIN_GROUPS=platform-team
+OIDC_EDITOR_GROUPS=docs-writers
+```
+
+> **Note:** Role is evaluated at login time. Group changes in your IdP take effect on next login.
+
+---
+
+## Learning Velocity
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VELOCITY_MINUTES_SAVED` | `15` | Estimated minutes saved per deflected query |
+| `VELOCITY_HOURLY_RATE` | `75` | Effective hourly rate (USD) for ROI calculation |
+
+---
+
+## Knowledge Stream
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STREAM_ENABLED` | `false` | Enable background knowledge stream emission |
+| `STREAM_INTERVAL_MINUTES` | `30` | How often the stream background task runs |
+| `STREAM_INCIDENT_WARNING_MIN_USERS` | `3` | Minimum unique users hitting an unanswered question to emit an incident warning |
+| `STREAM_DECAY_THRESHOLD` | `0.5` | Freshness score below which a decay alert is emitted |

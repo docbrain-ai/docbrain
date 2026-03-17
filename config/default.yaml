@@ -51,10 +51,13 @@ rag:
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
 
 rbac:
-  # Default role for new SSO users: viewer (default) | editor | admin
+  # Default role for new SSO users.
+  # Role hierarchy: viewer (1) < editor (2) < analyst (3) < admin (4)
   defaultRole: "viewer"
   # Email domain that always gets admin role (e.g. "acme.com")
   # adminEmails: ~
+  # Comma-separated IdP group names → analyst role (reserved for future use).
+  # analystGroups: ~
 
 # Where to publish AI-generated drafts (optional).
 # When configured, the "Publish" button in the UI and auto-draft loop will push
@@ -241,3 +244,22 @@ intercom:
   lookback_days: 180
   min_messages: 2
   # tags: ~              # comma-separated tag names to filter — empty = all
+
+# ── Learning Velocity ────────────────────────────────────────────────────────
+# Tracks organizational documentation health — gap resolution rate, knowledge
+# half-life, tribal knowledge %, and ROI of documentation investment.
+# Snapshots are taken daily during memory consolidation.
+velocity:
+  minutes_saved_per_query: 15   # VELOCITY_MINUTES_SAVED — estimated eng time saved per answered query
+  hourly_rate: 75               # VELOCITY_HOURLY_RATE — hourly engineer cost (USD) for ROI calculation
+
+# ── Knowledge Stream (proactive push intelligence) ────────────────────────────
+# Detects and pushes: incident early warnings, knowledge decay risks,
+# expertise gaps, and context-aware doc updates.
+# Disabled by default — enable when ready for proactive alerting.
+stream:
+  enabled: false                    # STREAM_ENABLED — opt-in
+  interval_minutes: 30              # STREAM_INTERVAL_MINUTES — scan interval
+  incident_warning_min_users: 2     # STREAM_INCIDENT_WARNING_MIN_USERS
+  # alert_channel: ~                # STREAM_ALERT_CHANNEL — Slack channel for alerts (optional)
+  expertise_gap_days: 90            # STREAM_EXPERTISE_GAP_DAYS — days inactive before gap alert

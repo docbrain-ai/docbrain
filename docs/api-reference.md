@@ -731,7 +731,12 @@ POST /api/v1/admin/keys
 }
 ```
 
-`role`: `viewer`, `editor`, `admin`
+`role`: `viewer`, `editor`, `analyst`, `admin`
+
+- `viewer` — ask questions, browse answers, give feedback, and access all intelligence dashboards
+- `editor` — everything viewer can + manage spaces and captures
+- `analyst` — reserved for future use, currently equivalent to `editor`
+- `admin` — full access including user management, RBAC config, and ingest triggers
 
 `allowed_spaces`: hard-filters all queries and ingestion to the listed spaces. Empty array = no restriction.
 
@@ -771,3 +776,231 @@ Returns an AI-curated reading list for a new team member.
   ]
 }
 ```
+
+---
+
+## Knowledge Graph
+
+### GET /api/v1/graph/entity/{name}
+
+Disambiguate an entity by name and return its subgraph (neighbors and edges).
+
+**Response:**
+```json
+{
+  "ranked": [
+    {
+      "entity": { "id": "uuid", "name": "payments-service", "entity_type": "service" },
+      "score": 0.95,
+      "reason": "direct_connections=2, degree=15"
+    }
+  ],
+  "subgraph": {
+    "nodes": [
+      { "id": "uuid", "name": "payments-service", "entity_type": "service" }
+    ],
+    "edges": [
+      { "from_entity_id": "uuid1", "to_entity_id": "uuid2", "relation_type": "DEPENDS_ON" }
+    ]
+  }
+}
+```
+
+### GET /api/v1/graph/dependencies/{entity_id}
+
+Multi-hop dependency traversal from a given entity.
+
+**Query params:** `depth` (default 2, max 5), `direction` (`downstream` | `upstream` | `both`), `relation_types` (comma-separated, optional)
+
+**Response:**
+```json
+[
+  {
+    "entity": { "id": "uuid", "name": "auth-service", "entity_type": "service" },
+    "depth": 1,
+    "path": ["uuid1", "uuid2"]
+  }
+]
+```
+
+### GET /api/v1/graph/blast-radius/{entity_id}
+
+Determine what is affected if an entity changes or goes down.
+
+**Query params:** `depth` (default 3, max 5)
+
+**Response:**
+```json
+{
+  "entity": { "id": "uuid", "name": "payments-service", "entity_type": "service" },
+  "affected": [{ "entity": { "id": "uuid", "name": "checkout-service", "entity_type": "service" }, "depth": 1, "path": [] }],
+  "by_type": { "service": [{ "id": "uuid", "name": "checkout-service", "entity_type": "service" }] },
+  "by_depth": { "1": [{ "id": "uuid", "name": "checkout-service", "entity_type": "service" }] }
+}
+```
+
+### GET /api/v1/graph/path
+
+Find the shortest path between two entities.
+
+**Query params:** `from` (UUID, required), `to` (UUID, required), `depth` (max hops, default 5)
+
+**Response:** Array of `GraphEdge` objects, or `null` if no path found within depth.
+
+### GET /api/v1/graph/experts/{topic}
+
+Route to domain experts via the entity-to-team-to-person chain.
+
+**Response:**
+```json
+[
+  {
+    "person": { "id": "uuid", "name": "Alice Smith", "entity_type": "person" },
+    "team": { "id": "uuid", "name": "platform-team", "entity_type": "team" },
+    "confidence": 0.85,
+    "route": []
+  }
+]
+```
+
+---
+
+## Learning Velocity
+
+### GET /api/v1/analytics/velocity
+
+Org-wide learning velocity metrics over a configurable time window.
+
+**Query params:** `days` (default 30)
+
+**Response:**
+```json
+{
+  "current_velocity": 2.5,
+  "velocity_trend": "accelerating",
+  "grade": "B",
+  "knowledge_half_life_days": 45,
+  "tribal_knowledge_pct": 0.15,
+  "documentation_roi": {
+    "queries_deflected": 340,
+    "estimated_hours_saved": 85
+  },
+  "weekly_snapshots": [
+    { "week": "2026-03-09", "velocity": 2.3, "docs_created": 4, "gaps_resolved": 2 }
+  ],
+  "per_team": [{ "team": "platform", "velocity": 3.2, "grade": "A" }]
+}
+```
+
+### GET /api/v1/analytics/velocity/teams
+
+Per-team velocity breakdown.
+
+**Query params:** `days` (default 30)
+
+### GET /api/v1/analytics/velocity/roi
+
+Org-wide ROI summary: total queries deflected, hours saved, and cost saved in USD over the selected time window.
+
+**Query params:** `days` (default 30)
+
+**Response:**
+```json
+{
+  "queries_deflected": 412,
+  "hours_saved": 103.0,
+  "cost_saved_usd": 7725.0,
+  "days": 30
+}
+```
+
+---
+
+## Predictive Gap Detection
+
+### POST /api/v1/predictive/code-change
+
+Detect documentation that may be stale after a code change.
+
+**Request:**
+```json
+{
+  "changed_files": ["services/payments/handler.rs"],
+  "pr_description": "Refactored payment flow"
+}
+```
+
+**Response:** Array of `PredictedGap` objects with `doc_id`, `title`, `reason`, `confidence`, `trigger`.
+
+### GET /api/v1/predictive/cascade
+
+Detect cascade staleness — documents that reference recently-updated documents and may now be inconsistent.
+
+### GET /api/v1/predictive/seasonal
+
+Detect seasonal query patterns approaching their predicted peak for proactive refresh.
+
+### GET /api/v1/predictive/onboarding
+
+Detect onboarding gaps — common questions from new hires that are poorly covered or missing from documentation.
+
+---
+
+## Doc Maintenance
+
+### GET /api/v1/maintenance/fixes
+
+List auto-detected fix proposals (contradictions, broken links, version bumps).
+
+**Query params:** `doc_id` (optional), `status` (`pending` | `approved` | `applied` | `rejected`), `limit` (default 50)
+
+### POST /api/v1/maintenance/fixes/{id}/apply
+
+Apply a fix proposal. **Requires authentication.**
+
+**Response:** `200 OK`
+
+### POST /api/v1/maintenance/fixes/{id}/reject
+
+Reject a fix proposal. **Requires authentication.**
+
+**Response:** `200 OK`
+
+### GET /api/v1/maintenance/stats
+
+Aggregate fix proposal statistics.
+
+**Response:**
+```json
+{ "pending": 5, "approved": 2, "applied": 10, "rejected": 1 }
+```
+
+---
+
+## Knowledge Stream
+
+### GET /api/v1/stream/events
+
+List recent stream events (incidents, decay alerts, expertise gaps, doc updates).
+
+**Query params:** `since` (RFC3339), `type` (`incident_warning` | `decay_alert` | `expertise_gap` | `doc_updated`), `limit` (default 50)
+
+### GET /api/v1/stream/events/user/{user_id}
+
+Personalized event stream filtered by the user's active context.
+
+### POST /api/v1/stream/context
+
+Update user context (services and topics) for personalized stream delivery.
+
+**Request:**
+```json
+{
+  "services": ["payments", "auth"],
+  "topics": ["latency", "deployment"]
+}
+```
+
+### GET /api/v1/stream/stats
+
+Event count statistics broken down by time window (24h, 7d, 30d) and event type.

@@ -145,6 +145,9 @@ data:
   {{- if .Values.rbac.adminGroups }}
   OIDC_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
   {{- end }}
+  {{- if .Values.rbac.analystGroups }}
+  OIDC_ANALYST_GROUPS: {{ .Values.rbac.analystGroups | quote }}
+  {{- end }}
   {{- if .Values.rbac.editorGroups }}
   OIDC_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
   {{- end }}
@@ -154,6 +157,16 @@ data:
   {{- if .Values.rbac.allowedDomains }}
   OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
   {{- end }}
+
+  # Learning Velocity
+  VELOCITY_MINUTES_SAVED: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
+  VELOCITY_HOURLY_RATE: {{ .Values.velocity.hourlyRate | default 75 | quote }}
+
+  # Knowledge Stream
+  STREAM_ENABLED: {{ .Values.stream.enabled | default false | quote }}
+  STREAM_INTERVAL_MINUTES: {{ .Values.stream.intervalMinutes | default 30 | quote }}
+  STREAM_INCIDENT_WARNING_MIN_USERS: {{ .Values.stream.incidentWarningMinUsers | default 3 | quote }}
+  STREAM_DECAY_THRESHOLD: {{ .Values.stream.decayThreshold | default 0.5 | quote }}
 
   {{- range $key, $val := .Values.server.env }}
   {{ $key }}: {{ $val | quote }}

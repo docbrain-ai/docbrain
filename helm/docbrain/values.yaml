@@ -254,6 +254,8 @@ rbac:
   adminEmails: ""
   # Comma-separated IdP group / GitHub org names that map to admin role
   adminGroups: ""
+  # Comma-separated IdP group / GitHub org names that map to analyst role (reserved for future use).
+  analystGroups: ""
   # Comma-separated IdP group / GitHub org names that map to editor role
   editorGroups: ""
   # ACCESS GATE — only members of these groups may log in at all.
@@ -299,3 +301,17 @@ serviceAccount:
 # If existingSecret is set, the chart will NOT create a Secret and will use this one instead.
 # The existing secret must contain all required keys (POSTGRES_PASSWORD, etc.)
 existingSecret: ""
+
+# -- Learning Velocity
+# ROI calculation parameters for the learning velocity score.
+velocity:
+  minutesSavedPerQuery: 15    # Estimated minutes saved per deflected query
+  hourlyRate: 75              # Effective hourly rate (USD) for ROI
+
+# -- Knowledge Stream
+# Background task that emits proactive events (incidents, decay alerts, expertise gaps).
+stream:
+  enabled: false              # Set to true to enable stream emission
+  intervalMinutes: 30         # How often the background task runs
+  incidentWarningMinUsers: 3  # Min unique users hitting an unanswered question to emit warning
+  decayThreshold: 0.5         # Freshness score below which a decay alert is emitted

@@ -8,8 +8,9 @@ DocBrain supports three SSO providers for login — **GitHub OAuth**, **GitLab O
 
 | Role | What they can do |
 |------|-----------------|
-| `viewer` | Ask questions, view answers, give feedback. Default for new SSO users. |
+| `viewer` | Ask questions, view answers, give feedback, and access all analytics dashboards (Velocity, Predictive, Maintenance, Stream). Default for new SSO users. |
 | `editor` | Everything viewer can + manage knowledge spaces and captures. |
+| `analyst` | Reserved for future use. Currently equivalent to `editor`. |
 | `admin` | Full access: manage users, API keys, RBAC config, trigger ingests. |
 
 ---
@@ -99,13 +100,13 @@ docbrain login --oidc
 
 Role is computed at login time in this priority order (highest wins):
 
-| Check | Config | Example |
-|-------|--------|---------|
-| 1. Email in admin list | `rbac.adminEmails` | `alice@acme.com,bob@acme.com` |
-| 2. Email domain → admin | `rbac.adminDomain` | `acme.com` |
-| 3. Member of admin group | `rbac.adminGroups` | `platform-team,sre-team` |
-| 4. Member of editor group | `rbac.editorGroups` | `docs-team` |
-| 5. Default | `rbac.defaultRole` | `viewer` (default) |
+| Priority | Check | Config | Example |
+|----------|-------|--------|---------|
+| 1 | Email in admin list | `rbac.adminEmails` | `alice@acme.com,bob@acme.com` |
+| 2 | Email domain → admin | `rbac.adminDomain` | `acme.com` |
+| 3 | Member of admin group | `rbac.adminGroups` | `platform-team,sre-team` |
+| 4 | Member of editor group | `rbac.editorGroups` | `docs-team` |
+| 5 | Default | `rbac.defaultRole` | `viewer` (default) |
 
 **Helm example — auto-promote platform team to admin:**
 ```yaml
