@@ -115,6 +115,7 @@ Add the trainer service to `docker-compose.yml` (commented out by default) and s
 LEARNING_ENABLED=true
 EMBEDDING_PROVIDER=local
 TRAINER_URL=http://trainer:8765
+TRAINER_API_KEY=<generate with: openssl rand -hex 32>
 TRAINER_STORAGE_BACKEND=local   # or s3, gcs, azure
 ```
 
@@ -170,11 +171,11 @@ Check the status of the learning pipeline via the admin API:
 
 ```bash
 # Training run history
-curl -H "X-API-Key: db_sk_..." \
+curl -H "Authorization: Bearer db_sk_..." \
   http://localhost:3000/api/v1/admin/learning/runs
 
 # Active model and its lifecycle state
-curl -H "X-API-Key: db_sk_..." \
+curl -H "Authorization: Bearer db_sk_..." \
   http://localhost:3000/api/v1/admin/learning/model
 
 # Trainer sidecar health

@@ -161,6 +161,7 @@ kubectl rollout status deployment/docbrain-server
 kubectl logs deployment/docbrain-server -f
 
 # Get the bootstrap admin key from the Helm-managed Secret
+# The secret name is <release-name>-initial-admin-secret (e.g. "docbrain" if you used the default release name)
 kubectl get secret docbrain-initial-admin-secret \
   -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
@@ -349,10 +350,18 @@ helm install docbrain ./helm/docbrain \
 
 ### Autopilot (AI gap analysis)
 
+Autopilot is **enabled by default**. To adjust the gap analysis interval (default: 6 hours):
+
 ```bash
 helm upgrade docbrain ./helm/docbrain \
-  --set autopilot.enabled=true \
   --set autopilot.gapAnalysisIntervalHours=24
+```
+
+To disable:
+
+```bash
+helm upgrade docbrain ./helm/docbrain \
+  --set autopilot.enabled=false
 ```
 
 ### Image tags

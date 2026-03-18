@@ -54,6 +54,7 @@ autopilot:
 
 rag:
   cache_ttl_hours: 1
+
 ```
 
 ### YAML Config Structure
@@ -486,7 +487,7 @@ Only change these if you run multiple DocBrain instances sharing the same OpenSe
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DOCBRAIN_SELF_INGEST` | `false` | Auto-ingest DocBrain's own docs so it can answer configuration questions about itself |
+| `DOCBRAIN_SELF_INGEST` | `true` | Auto-ingest DocBrain's own docs so it can answer configuration questions about itself |
 | `DOCBRAIN_DOCS_PATH` | `./docs` | Path to DocBrain's own documentation directory |
 
 ## SSO / OIDC (Enterprise)
@@ -564,7 +565,7 @@ OIDC_EDITOR_GROUPS=docs-writers
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VELOCITY_MINUTES_SAVED` | `15` | Estimated minutes saved per deflected query |
+| `VELOCITY_MINUTES_SAVED_PER_QUERY` | `15` | Estimated minutes saved per deflected query |
 | `VELOCITY_HOURLY_RATE` | `75` | Effective hourly rate (USD) for ROI calculation |
 
 ---
@@ -575,5 +576,5 @@ OIDC_EDITOR_GROUPS=docs-writers
 |----------|---------|-------------|
 | `STREAM_ENABLED` | `false` | Enable background knowledge stream emission |
 | `STREAM_INTERVAL_MINUTES` | `30` | How often the stream background task runs |
-| `STREAM_INCIDENT_WARNING_MIN_USERS` | `3` | Minimum unique users hitting an unanswered question to emit an incident warning |
+| `STREAM_INCIDENT_WARNING_MIN_USERS` | `2` | Minimum unique users hitting an unanswered question to emit an incident warning |
 | `STREAM_DECAY_THRESHOLD` | `0.5` | Freshness score below which a decay alert is emitted |

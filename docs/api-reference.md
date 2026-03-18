@@ -79,7 +79,7 @@ Returns the identity of the current token (API key or session key). Useful for v
 GET /api/v1/health
 ```
 
-Returns `200 OK` with `{"status": "ok"}`. Requires authentication.
+Returns `200 OK` with `{"status": "ok"}`. Does not require authentication — used by load balancers and container health probes.
 
 ---
 

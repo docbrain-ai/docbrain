@@ -22,21 +22,21 @@ The knowledge graph is DocBrain's map of your organization: entities (services, 
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /graph/entity/:name` | Look up an entity by name; returns type, relationships, and metadata |
-| `GET /graph/dependencies/:entity_id` | Traverse downstream dependencies of an entity |
-| `GET /graph/blast-radius/:entity_id` | Compute impact radius — which entities are downstream of this one |
-| `GET /graph/path` | Find the shortest path between two entities (`?from=&to=`) |
-| `GET /graph/experts/:topic` | Return users with demonstrated expertise on a topic |
+| `GET /api/v1/graph/entity/:name` | Look up an entity by name; returns type, relationships, and metadata |
+| `GET /api/v1/graph/dependencies/:entity_id` | Traverse downstream dependencies of an entity |
+| `GET /api/v1/graph/blast-radius/:entity_id` | Compute impact radius — which entities are downstream of this one |
+| `GET /api/v1/graph/path` | Find the shortest path between two entities (`?from=&to=`) |
+| `GET /api/v1/graph/experts/:topic` | Return users with demonstrated expertise on a topic |
 
 ### Configuration
 
-Graph traversal uses the existing knowledge graph stored in Postgres (`entities` and `entity_relations` tables). No additional configuration is required. The traversal depth for blast radius analysis defaults to 3 hops and is not currently configurable via env var — adjust via the API query parameter `?depth=N` (max 6).
+Graph traversal uses the existing knowledge graph stored in Postgres (`entities` and `entity_relations` tables). No additional configuration is required. The traversal depth for blast radius analysis defaults to 3 hops and is not currently configurable via env var — adjust via the API query parameter `?depth=N` (max 5).
 
 ### Example Use Cases
 
-- **Incident scoping:** `GET /graph/blast-radius/auth-service` before a deploy to understand what's downstream.
-- **Onboarding:** `GET /graph/experts/kubernetes` to find who to shadow for a new platform team hire.
-- **Architecture review:** `GET /graph/path?from=payments-api&to=postgres-primary` to understand the dependency chain.
+- **Incident scoping:** `GET /api/v1/graph/blast-radius/auth-service` before a deploy to understand what's downstream.
+- **Onboarding:** `GET /api/v1/graph/experts/kubernetes` to find who to shadow for a new platform team hire.
+- **Architecture review:** `GET /api/v1/graph/path?from=payments-api&to=postgres-primary` to understand the dependency chain.
 
 ---
 

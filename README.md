@@ -69,7 +69,7 @@ DocBrain's intelligence layer goes beyond retrieval with five systems that make 
 ### Knowledge Graph
 BFS/DFS traversal over your entity graph surfaces structural knowledge: "What depends on the auth service?", "Who are the experts on Kubernetes?", "What's the blast radius if Redis goes down?" Graph traversal answers questions that no amount of vector similarity can.
 
-**API:** `GET /graph/entity/:name`, `GET /graph/blast-radius/:entity_id`, `GET /graph/experts/:topic`
+**API:** `GET /api/v1/graph/entity/:name`, `GET /api/v1/graph/blast-radius/:entity_id`, `GET /api/v1/graph/experts/:topic`
 
 ### Documentation Analytics
 Documentation health, quantified. Daily snapshots measure gap resolution rate, knowledge half-life, tribal knowledge %, and ROI in USD. Per-team breakdowns show which teams are investing in knowledge quality and which are accumulating undocumented tribal expertise.
@@ -113,7 +113,7 @@ Safety: training data quality guards reject corpora dominated by a single user. 
 # Enable Tier 2:
 LEARNING_ENABLED=true
 EMBEDDING_PROVIDER=local
-TRAINER_URL=http://docbrain-trainer:8765
+TRAINER_URL=http://trainer:8765
 ```
 
 See [docs/learning.md](docs/learning.md) for full setup and configuration.

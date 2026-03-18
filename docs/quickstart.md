@@ -44,7 +44,7 @@ EMBED_MODEL_ID=nomic-embed-text
 docker compose up -d
 ```
 
-> **RAM requirements:** `command-r:35b` needs ~24GB RAM. If your machine has <24GB, use `qwen2.5:32b` (26GB) or a cloud provider (Option 3). **Do not use 7B-8B models for answer generation** — they will fabricate answers. Only models with strong instruction-following should be used for RAG. See [Provider Setup](./providers.md#model-selection--critical-for-answer-quality) for details.
+> **RAM requirements:** `command-r:35b` needs ~24GB RAM. If your machine has <24GB, use a smaller model such as `llama3.1:8b` for testing, or switch to a cloud provider (Option 3) for production-quality answers. **Do not use 7B-8B models for answer generation in production** — they may fabricate answers. Only models with strong instruction-following should be used for RAG. See [Provider Setup](./providers.md#model-selection--critical-for-answer-quality) for details.
 
 ## Option 2: Interactive Setup (Recommended for first-timers)
 
