@@ -302,8 +302,12 @@ Starts the API server, web UI, PostgreSQL, OpenSearch, and Redis. Schema migrati
 ```bash
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
-  --set llm.anthropicApiKey=sk-ant-...
+  --set llm.anthropicApiKey=sk-ant-... \
+  --set embedding.provider=openai \
+  --set embedding.openaiApiKey=sk-...
 ```
+
+Images default to the chart's `appVersion` (`1.2.0`) — no explicit tag override needed.
 
 See [Kubernetes Guide](docs/kubernetes.md) for production configuration including external databases, SSO, Ingress, Vault integration, and scaling.
 

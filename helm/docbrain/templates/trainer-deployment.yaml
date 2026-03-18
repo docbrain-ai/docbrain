@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
         - name: trainer
-          image: "{{ .Values.trainer.image.repository }}:{{ .Values.trainer.image.tag }}"
+          image: "{{ .Values.trainer.image.repository }}:{{ .Values.trainer.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.trainer.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.trainer.service.port }}

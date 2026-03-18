@@ -370,14 +370,22 @@ helm upgrade docbrain ./helm/docbrain \
 |-----|----------|
 | `edge` | Latest commit from `main`. Unstable — good for local testing. |
 | `latest` | Latest stable release. |
-| `v1.2.0` | Pinned release — recommended for production. |
+| `1.2.0` | Pinned release — recommended for production. |
+
+By default the chart uses `appVersion` (`1.2.0`) for all DocBrain images — no explicit tag override needed. Override only when pinning to a different release:
 
 ```bash
+# Pin to a specific older release
 helm install docbrain ./helm/docbrain \
-  --set server.image.tag=latest \
-  --set server.image.pullPolicy=IfNotPresent \
-  --set web.image.tag=latest \
-  --set web.image.pullPolicy=IfNotPresent
+  --set server.image.tag=1.1.10 \
+  --set web.image.tag=1.1.10
+
+# Use the latest unstable edge build
+helm install docbrain ./helm/docbrain \
+  --set server.image.tag=edge \
+  --set server.image.pullPolicy=Always \
+  --set web.image.tag=edge \
+  --set web.image.pullPolicy=Always
 ```
 
 ---

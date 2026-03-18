@@ -97,7 +97,7 @@ case $llm_choice in
         sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=claude-sonnet-4-5-20250929/' .env
         echo ""
         read -rp "  Anthropic API key: " api_key
-        sed -i.bak "s/^ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=${api_key}/" .env
+        sed -i.bak "s/^# ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=${api_key}/" .env
         ;;
     2)
         sed -i.bak 's/^LLM_PROVIDER=.*/LLM_PROVIDER=openai/' .env
@@ -109,21 +109,24 @@ case $llm_choice in
         ;;
     3)
         sed -i.bak 's/^LLM_PROVIDER=.*/LLM_PROVIDER=ollama/' .env
-        sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=llama3.1/' .env
+        sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=command-r:35b/' .env
         sed -i.bak 's/^# OLLAMA_BASE_URL=.*/OLLAMA_BASE_URL=http:\/\/host.docker.internal:11434/' .env
         sed -i.bak 's/^EMBED_PROVIDER=.*/EMBED_PROVIDER=ollama/' .env
         sed -i.bak 's/^EMBED_MODEL_ID=.*/EMBED_MODEL_ID=nomic-embed-text/' .env
         echo ""
         echo -e "  ${YELLOW}Ensure Ollama is running with the required models:${NC}"
-        echo "    ollama pull llama3.1"
+        echo "    ollama pull command-r:35b"
         echo "    ollama pull nomic-embed-text"
+        echo ""
+        echo -e "  ${YELLOW}Note:${NC} command-r:35b requires ~24 GB RAM. If your machine has less,"
+        echo "  use a cloud provider (Anthropic/OpenAI) or set LLM_MODEL_ID manually."
         ;;
     4)
         sed -i.bak 's/^LLM_PROVIDER=.*/LLM_PROVIDER=bedrock/' .env
         echo ""
         read -rp "  AWS Region [us-east-1]: " aws_region
         aws_region=${aws_region:-us-east-1}
-        sed -i.bak "s/^# AWS_REGION=.*/AWS_REGION=${aws_region}/" .env
+        sed -i.bak "s/^AWS_REGION=.*/AWS_REGION=${aws_region}/" .env
         read -rp "  AWS Access Key ID: " aws_key
         sed -i.bak "s/^# AWS_ACCESS_KEY_ID=.*/AWS_ACCESS_KEY_ID=${aws_key}/" .env
         read -rp "  AWS Secret Access Key: " aws_secret
