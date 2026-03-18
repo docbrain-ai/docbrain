@@ -38,6 +38,10 @@ embeddings:
   provider: "${EMBED_PROVIDER:-}"
   model_id: "${EMBED_MODEL_ID:-}"
 
+learning:
+  enabled: "${LEARNING_ENABLED:-false}"
+  trainer_url: "${TRAINER_URL:-http://localhost:8765}"
+
 rag:
   cache_threshold: 0.95
   cache_ttl_hours: 24
