@@ -34,7 +34,7 @@ spec:
                 name: {{ include "docbrain.fullname" . }}-server
                 port:
                   number: {{ .Values.server.port }}
-          - path: /health
+          - path: /api/v1/health
             pathType: Exact
             backend:
               service:

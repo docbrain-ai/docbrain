@@ -158,14 +158,21 @@ data:
   OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
   {{- end }}
 
+  # Learning pipeline — wires the server to the trainer sidecar when enabled
+  {{- if .Values.learning.enabled }}
+  LEARNING_ENABLED: "true"
+  EMBEDDING_PROVIDER: "local"
+  TRAINER_URL: {{ printf "http://%s-trainer:8765" (include "docbrain.fullname" .) | quote }}
+  {{- end }}
+
   # Documentation Analytics
-  VELOCITY_MINUTES_SAVED: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
+  VELOCITY_MINUTES_SAVED_PER_QUERY: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
   VELOCITY_HOURLY_RATE: {{ .Values.velocity.hourlyRate | default 75 | quote }}
 
   # Knowledge Stream
   STREAM_ENABLED: {{ .Values.stream.enabled | default false | quote }}
   STREAM_INTERVAL_MINUTES: {{ .Values.stream.intervalMinutes | default 30 | quote }}
-  STREAM_INCIDENT_WARNING_MIN_USERS: {{ .Values.stream.incidentWarningMinUsers | default 3 | quote }}
+  STREAM_INCIDENT_WARNING_MIN_USERS: {{ .Values.stream.incidentWarningMinUsers | default 2 | quote }}
   STREAM_DECAY_THRESHOLD: {{ .Values.stream.decayThreshold | default 0.5 | quote }}
 
   {{- range $key, $val := .Values.server.env }}
