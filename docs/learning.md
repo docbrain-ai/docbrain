@@ -113,7 +113,7 @@ Add the trainer service to `docker-compose.yml` (commented out by default) and s
 
 ```bash
 LEARNING_ENABLED=true
-EMBEDDING_PROVIDER=local
+EMBED_PROVIDER=local
 TRAINER_URL=http://trainer:8765
 TRAINER_API_KEY=<generate with: openssl rand -hex 32>
 TRAINER_STORAGE_BACKEND=local   # or s3, gcs, azure

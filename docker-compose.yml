@@ -123,7 +123,7 @@ services:
   # Steps to enable:
   #   1. Uncomment the trainer block below.
   #   2. Set LEARNING_ENABLED=true in your .env.
-  #   3. Set EMBEDDING_PROVIDER=local in your .env.
+  #   3. Set EMBED_PROVIDER=local in your .env.
   #   4. Set TRAINER_API_KEY to a strong random secret (e.g. `openssl rand -hex 32`).
   #      The DocBrain server uses this key when calling the trainer sidecar.
   #      Never expose port 8765 publicly — keep it internal to the Docker network.

@@ -161,7 +161,7 @@ data:
   # Learning pipeline — wires the server to the trainer sidecar when enabled
   {{- if .Values.learning.enabled }}
   LEARNING_ENABLED: "true"
-  EMBEDDING_PROVIDER: "local"
+  EMBED_PROVIDER: "local"
   TRAINER_URL: {{ printf "http://%s-trainer:8765" (include "docbrain.fullname" .) | quote }}
   {{- end }}
 

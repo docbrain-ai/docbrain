@@ -331,7 +331,8 @@ learning:
     azureContainer: ""
     azureConnectionString: ""
   training:
-    trainerUrl: "http://docbrain-trainer:8765"
+    # trainerUrl is auto-computed from the release name — do not override here.
+    # It resolves to http://<release>-trainer:8765 via the ConfigMap template.
     minTriplets: 200
   safety:
     circuitBreakerThreshold: 0.05
