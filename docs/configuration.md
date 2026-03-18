@@ -560,7 +560,7 @@ OIDC_EDITOR_GROUPS=docs-writers
 
 ---
 
-## Learning Velocity
+## Documentation Analytics
 
 | Variable | Default | Description |
 |----------|---------|-------------|

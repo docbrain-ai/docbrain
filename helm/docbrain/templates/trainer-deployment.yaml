@@ -1,0 +1,161 @@
+{{- if .Values.trainer.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "docbrain.fullname" . }}-trainer-models
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trainer
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.trainer.persistence.size }}
+  {{- if .Values.trainer.persistence.storageClass }}
+  storageClassName: {{ .Values.trainer.persistence.storageClass | quote }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "docbrain.fullname" . }}-trainer
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trainer
+spec:
+  replicas: {{ .Values.trainer.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "docbrain.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: trainer
+  template:
+    metadata:
+      labels:
+        {{- include "docbrain.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: trainer
+    spec:
+      containers:
+        - name: trainer
+          image: "{{ .Values.trainer.image.repository }}:{{ .Values.trainer.image.tag }}"
+          imagePullPolicy: {{ .Values.trainer.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.trainer.service.port }}
+              protocol: TCP
+          env:
+            - name: TRAINER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "docbrain.secretName" . }}
+                  key: TRAINER_API_KEY
+                  optional: true
+            - name: TRAINER_BASE_MODEL_NAME
+              value: {{ .Values.trainer.baseModelName | quote }}
+            - name: TRAINER_EPOCHS
+              value: {{ .Values.trainer.epochs | quote }}
+            - name: TRAINER_BATCH_SIZE
+              value: {{ .Values.trainer.batchSize | quote }}
+            - name: TRAINER_MAX_SEQ_LENGTH
+              value: {{ .Values.trainer.maxSeqLength | quote }}
+            - name: TRAINER_WARMUP_STEPS
+              value: {{ .Values.trainer.warmupSteps | quote }}
+            - name: TRAINER_QUANTIZE_ONNX
+              value: {{ .Values.trainer.quantizeOnnx | quote }}
+            - name: TRAINER_ONNX_OPSET
+              value: {{ .Values.trainer.onnxOpset | quote }}
+            - name: TRAINER_STORAGE_BACKEND
+              value: {{ .Values.learning.storage.backend | quote }}
+            - name: TRAINER_MODEL_ROOT
+              value: {{ .Values.learning.storage.localModelRoot | quote }}
+            {{- if eq .Values.learning.storage.backend "s3" }}
+            - name: TRAINER_S3_BUCKET
+              value: {{ .Values.learning.storage.s3Bucket | quote }}
+            - name: TRAINER_S3_PREFIX
+              value: {{ .Values.learning.storage.s3Prefix | quote }}
+            - name: TRAINER_S3_REGION
+              value: {{ .Values.learning.storage.s3Region | quote }}
+            {{- end }}
+            {{- if eq .Values.learning.storage.backend "gcs" }}
+            - name: TRAINER_GCS_BUCKET
+              value: {{ .Values.learning.storage.gcsBucket | quote }}
+            - name: TRAINER_GCS_PREFIX
+              value: {{ .Values.learning.storage.gcsPrefix | quote }}
+            {{- end }}
+            {{- if eq .Values.learning.storage.backend "azure" }}
+            - name: TRAINER_AZURE_CONTAINER
+              value: {{ .Values.learning.storage.azureContainer | quote }}
+            - name: TRAINER_AZURE_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "docbrain.secretName" . }}
+                  key: azureConnectionString
+                  optional: true
+            {{- end }}
+            - name: TRAINER_CIRCUIT_BREAKER_THRESHOLD
+              value: {{ .Values.learning.safety.circuitBreakerThreshold | quote }}
+            - name: TRAINER_MAX_SINGLE_USER_FRACTION
+              value: {{ .Values.learning.safety.maxSingleUserFraction | quote }}
+            - name: TRAINER_POISON_DETECTION_ENABLED
+              value: {{ .Values.learning.safety.poisonDetectionEnabled | quote }}
+            - name: TRAINER_MIN_TRIPLETS
+              value: {{ .Values.learning.training.minTriplets | quote }}
+            - name: DATABASE_URL
+              value: {{ include "docbrain.databaseUrl" . | quote }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.trainer.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.trainer.service.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.trainer.resources | nindent 12 }}
+          volumeMounts:
+            - name: models
+              mountPath: {{ .Values.learning.storage.localModelRoot }}
+      volumes:
+        - name: models
+          {{- if .Values.trainer.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "docbrain.fullname" . }}-trainer-models
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.trainer.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.trainer.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.trainer.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "docbrain.fullname" . }}-trainer
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+    app.kubernetes.io/component: trainer
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.trainer.service.port }}
+      targetPort: {{ .Values.trainer.service.port }}
+      protocol: TCP
+  selector:
+    {{- include "docbrain.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: trainer
+{{- end }}

@@ -38,6 +38,10 @@ services:
     pull_policy: always
     environment:
       - discovery.type=single-node
+      # WARNING: DISABLE_SECURITY_PLUGIN=true is for local development only.
+      # For internet-facing or production deployments, remove this line and
+      # configure OpenSearch TLS + authentication properly.
+      # See: https://opensearch.org/docs/latest/security/
       - DISABLE_SECURITY_PLUGIN=true
       - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
     volumes:
@@ -111,7 +115,63 @@ services:
       PORT: 3001
     restart: unless-stopped
 
+  # ── Embedding fine-tuning sidecar (Tier 2 — disabled by default) ──────────
+  #
+  # Uncomment to enable fine-tuning of the embedding model from user feedback.
+  # Requires at least 2 vCPU / 8 GB RAM on the host. GPU optional.
+  #
+  # Steps to enable:
+  #   1. Uncomment the trainer block below.
+  #   2. Set LEARNING_ENABLED=true in your .env.
+  #   3. Set EMBEDDING_PROVIDER=local in your .env.
+  #   4. Set TRAINER_API_KEY to a strong random secret (e.g. `openssl rand -hex 32`).
+  #      The DocBrain server uses this key when calling the trainer sidecar.
+  #      Never expose port 8765 publicly — keep it internal to the Docker network.
+  #
+  # See docs/learning.md for full setup and configuration reference.
+  #
+  # trainer:
+  #   image: ghcr.io/docbrain-ai/docbrain-trainer:latest
+  #   pull_policy: always
+  #   # Do NOT publish port 8765 externally — the trainer API is internal only.
+  #   # Remove the ports block if you don't need local debugging access.
+  #   ports:
+  #     - "127.0.0.1:8765:8765"   # loopback-only; remove in production
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:-docbrain}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-docbrain}
+  #     # Security — shared secret between the DocBrain server and this sidecar.
+  #     # Generate with: openssl rand -hex 32
+  #     TRAINER_API_KEY: ${TRAINER_API_KEY:?TRAINER_API_KEY must be set}
+  #     TRAINER_BASE_MODEL_NAME: ${TRAINER_BASE_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}
+  #     TRAINER_STORAGE_BACKEND: ${TRAINER_STORAGE_BACKEND:-local}
+  #     TRAINER_LOCAL_MODEL_ROOT: /data/models
+  #     TRAINER_EPOCHS: ${TRAINER_EPOCHS:-3}
+  #     TRAINER_BATCH_SIZE: ${TRAINER_BATCH_SIZE:-16}
+  #     TRAINER_MAX_SEQ_LENGTH: ${TRAINER_MAX_SEQ_LENGTH:-256}
+  #     TRAINER_WARMUP_STEPS: ${TRAINER_WARMUP_STEPS:-100}
+  #     TRAINER_QUANTIZE_ONNX: ${TRAINER_QUANTIZE_ONNX:-false}
+  #     TRAINER_ONNX_OPSET: ${TRAINER_ONNX_OPSET:-17}
+  #     TRAINER_MIN_TRIPLETS: ${TRAINER_MIN_TRIPLETS:-200}
+  #     TRAINER_CIRCUIT_BREAKER_THRESHOLD: ${TRAINER_CIRCUIT_BREAKER_THRESHOLD:-0.05}
+  #     TRAINER_MAX_SINGLE_USER_FRACTION: ${TRAINER_MAX_SINGLE_USER_FRACTION:-0.80}
+  #     TRAINER_POISON_DETECTION_ENABLED: ${TRAINER_POISON_DETECTION_ENABLED:-true}
+  #     # Object storage — configure one of: s3, gcs, azure, or leave as local
+  #     # TRAINER_S3_BUCKET: ${TRAINER_S3_BUCKET:-}
+  #     # TRAINER_S3_PREFIX: ${TRAINER_S3_PREFIX:-docbrain/models}
+  #     # TRAINER_S3_REGION: ${TRAINER_S3_REGION:-us-east-1}
+  #     # TRAINER_GCS_BUCKET: ${TRAINER_GCS_BUCKET:-}
+  #     # TRAINER_GCS_PREFIX: ${TRAINER_GCS_PREFIX:-docbrain/models}
+  #     # TRAINER_AZURE_CONTAINER: ${TRAINER_AZURE_CONTAINER:-}
+  #     # TRAINER_AZURE_CONNECTION_STRING: ${TRAINER_AZURE_CONNECTION_STRING:-}
+  #   volumes:
+  #     - trainer_models:/data/models
+  #   restart: unless-stopped
+
 volumes:
   postgres_data:
   opensearch_data:
   redis_data:
+  # trainer_models:     # Uncomment when trainer service is enabled

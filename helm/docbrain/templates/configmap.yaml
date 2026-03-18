@@ -158,7 +158,7 @@ data:
   OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
   {{- end }}
 
-  # Learning Velocity
+  # Documentation Analytics
   VELOCITY_MINUTES_SAVED: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
   VELOCITY_HOURLY_RATE: {{ .Values.velocity.hourlyRate | default 75 | quote }}
 

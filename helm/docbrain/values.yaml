@@ -302,8 +302,8 @@ serviceAccount:
 # The existing secret must contain all required keys (POSTGRES_PASSWORD, etc.)
 existingSecret: ""
 
-# -- Learning Velocity
-# ROI calculation parameters for the learning velocity score.
+# -- Documentation Analytics
+# ROI calculation parameters for the documentation analytics score.
 velocity:
   minutesSavedPerQuery: 15    # Estimated minutes saved per deflected query
   hourlyRate: 75              # Effective hourly rate (USD) for ROI
@@ -315,3 +315,67 @@ stream:
   intervalMinutes: 30         # How often the background task runs
   incidentWarningMinUsers: 3  # Min unique users hitting an unanswered question to emit warning
   decayThreshold: 0.5         # Freshness score below which a decay alert is emitted
+
+# ── Embedding Fine-Tuning (opt-in, Tier 2) ─────────────────────────────────
+# Disabled by default. See docs/learning.md for setup instructions.
+learning:
+  enabled: false
+  storage:
+    backend: "local"          # local | s3 | gcs | azure
+    localModelRoot: "/data/models"
+    s3Bucket: ""
+    s3Prefix: "docbrain/models"
+    s3Region: "us-east-1"
+    gcsBucket: ""
+    gcsPrefix: "docbrain/models"
+    azureContainer: ""
+    azureConnectionString: ""
+  training:
+    trainerUrl: "http://docbrain-trainer:8765"
+    minTriplets: 200
+  safety:
+    circuitBreakerThreshold: 0.05
+    maxSingleUserFraction: 0.80
+    poisonDetectionEnabled: true
+
+# ── Trainer sidecar ─────────────────────────────────────────────────────────
+# Only deployed when learning.enabled = true.
+# Requires at least 2 vCPU / 8 GB RAM for training runs. GPU optional.
+#
+# Security: set apiKey to a strong random secret shared with the DocBrain server.
+# Generate with: openssl rand -hex 32
+# The trainer Service is ClusterIP-only — it is never exposed outside the cluster.
+trainer:
+  enabled: false
+  # Shared secret for trainer API authentication (X-Trainer-Key header).
+  # Set via --set trainer.apiKey=<secret> or a Kubernetes Secret reference.
+  # Leave empty to disable auth (development only).
+  apiKey: ""
+  image:
+    repository: ghcr.io/docbrain-ai/docbrain-trainer
+    tag: latest
+    pullPolicy: IfNotPresent
+  baseModelName: "sentence-transformers/all-MiniLM-L6-v2"
+  epochs: 3
+  batchSize: 16
+  maxSeqLength: 256
+  warmupSteps: 100
+  quantizeOnnx: false
+  onnxOpset: 17
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "8Gi"
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+  service:
+    port: 8765
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

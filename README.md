@@ -62,6 +62,64 @@ Unlike static search tools, DocBrain maintains a multi-tier memory system that c
 
 ---
 
+## Intelligence Layer
+
+DocBrain's intelligence layer goes beyond retrieval with five systems that make it proactive, self-improving, and organizationally aware:
+
+### Knowledge Graph
+BFS/DFS traversal over your entity graph surfaces structural knowledge: "What depends on the auth service?", "Who are the experts on Kubernetes?", "What's the blast radius if Redis goes down?" Graph traversal answers questions that no amount of vector similarity can.
+
+**API:** `GET /graph/entity/:name`, `GET /graph/blast-radius/:entity_id`, `GET /graph/experts/:topic`
+
+### Documentation Analytics
+Documentation health, quantified. Daily snapshots measure gap resolution rate, knowledge half-life, tribal knowledge %, and ROI in USD. Per-team breakdowns show which teams are investing in knowledge quality and which are accumulating undocumented tribal expertise.
+
+**API:** `GET /api/v1/analytics/velocity`, `GET /api/v1/analytics/velocity/teams`
+
+### Predictive Intelligence
+Gaps before they become incidents. DocBrain detects cascade staleness (updating one doc flags its dependents), forecasts seasonal query spikes, identifies onboarding friction for new hires, and flags documentation likely affected by recent code changes.
+
+**API:** `GET /api/v1/predictive/cascade`, `GET /api/v1/predictive/seasonal`, `GET /api/v1/predictive/onboarding`, `POST /api/v1/predictive/code-change`
+
+### Autonomous Document Maintenance
+Every documentation system accumulates entropy: contradictions between runbooks, links that rot, version numbers that drift. DocBrain generates targeted fix proposals and presents them for one-click review. Human in the loop, but not human in the workflow.
+
+**API:** `GET /api/v1/maintenance/fixes`, `POST /api/v1/maintenance/fixes/:id/apply`
+
+### Knowledge Stream
+Proactive push intelligence. Incident early warnings fire when multiple users cluster on the same topic. Decay risk alerts reach document authors. Expertise gap alerts surface single-point-of-failure knowledge areas before they become incidents.
+
+**API:** `GET /api/v1/stream/events`, `POST /api/v1/stream/context`
+
+See [docs/knowledge-intelligence.md](docs/knowledge-intelligence.md) for full API reference and configuration.
+
+---
+
+## Learning Pipeline (Tier 2, opt-in)
+
+DocBrain can improve its own retrieval quality by fine-tuning its embedding model on your team's feedback. Disabled by default — no infrastructure overhead unless you enable it.
+
+### Progressive Tiers
+
+| Tier | What's Active | Infrastructure Required |
+|------|--------------|------------------------|
+| **Tier 0** | Fixed pre-trained embeddings | Nothing (default) |
+| **Tier 1** | Feedback collection + training data storage | Object storage (S3, GCS, or Azure) |
+| **Tier 2** | Full fine-tuning + ONNX hot-swap | Tier 1 + compute (2 vCPU / 8 GB minimum) |
+
+Safety: training data quality guards reject corpora dominated by a single user. Automatic rollback triggers on quality regression.
+
+```bash
+# Enable Tier 2:
+LEARNING_ENABLED=true
+EMBEDDING_PROVIDER=local
+TRAINER_URL=http://docbrain-trainer:8765
+```
+
+See [docs/learning.md](docs/learning.md) for full setup and configuration.
+
+---
+
 ## Quickstart
 
 ### Prerequisites
@@ -300,6 +358,12 @@ DocBrain is intended to be a self-improving documentation intelligence platform.
 - Real-time knowledge capture from Slack, GitHub, and GitLab
 - Multi-tenant space isolation and RBAC
 - MCP, Slack, CLI, and Web UI interfaces
+- Knowledge Graph with BFS/DFS traversal, blast radius analysis, and expertise routing
+- Documentation Analytics: gap resolution rate, knowledge half-life, tribal knowledge %, ROI tracking
+- Predictive Intelligence: cascade staleness, seasonal patterns, onboarding gaps, code-change-triggered review
+- Autonomous Document Maintenance: AI fix proposals for contradictions, broken links, and version drift
+- Knowledge Stream: proactive incident warnings, decay alerts, expertise gap detection
+- Embedding model fine-tuning pipeline (opt-in Tier 2) with ONNX export and safety gates
 
 ### Out of Scope
 
@@ -322,6 +386,8 @@ DocBrain is designed to work alongside existing tools. The following are explici
 | [Provider Setup](docs/providers.md) | LLM and embedding provider configuration |
 | [Architecture](docs/architecture.md) | System design, data flow, memory, freshness, and Autopilot |
 | [Autopilot](docs/autopilot.md) | Gap detection, draft generation, and the feedback loop |
+| [Knowledge Intelligence](docs/knowledge-intelligence.md) | Knowledge Graph, Documentation Analytics, Predictive Intelligence, Autonomous Maintenance, Knowledge Stream |
+| [Learning Pipeline](docs/learning.md) | Embedding fine-tuning — Tier 0/1/2, trainer sidecar, safety mechanisms |
 | [API Reference](docs/api-reference.md) | REST API with Autopilot endpoints |
 | [RBAC](docs/rbac.md) | Role-based access control |
 | [Slack Integration](docs/slack.md) | Slash commands, feedback buttons, and proactive notifications |

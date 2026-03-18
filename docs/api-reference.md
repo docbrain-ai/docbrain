@@ -733,9 +733,9 @@ POST /api/v1/admin/keys
 
 `role`: `viewer`, `editor`, `analyst`, `admin`
 
-- `viewer` — ask questions, browse answers, give feedback, and access all intelligence dashboards
+- `viewer` — ask questions, browse answers, give feedback, and access all intelligence dashboards (Documentation Analytics, Predictive Gaps, Autonomous Document Maintenance, Knowledge Stream)
 - `editor` — everything viewer can + manage spaces and captures
-- `analyst` — reserved for future use, currently equivalent to `editor`
+- `analyst` — everything editor can; reserved for future role-based scoping, currently equivalent to `editor`
 - `admin` — full access including user management, RBAC config, and ingest triggers
 
 `allowed_spaces`: hard-filters all queries and ingestion to the listed spaces. Empty array = no restriction.
@@ -865,11 +865,11 @@ Route to domain experts via the entity-to-team-to-person chain.
 
 ---
 
-## Learning Velocity
+## Documentation Analytics
 
 ### GET /api/v1/analytics/velocity
 
-Org-wide learning velocity metrics over a configurable time window.
+Org-wide documentation analytics metrics over a configurable time window.
 
 **Query params:** `days` (default 30)
 

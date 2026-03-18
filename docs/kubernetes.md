@@ -160,16 +160,12 @@ kubectl rollout status deployment/docbrain-server
 # Check server logs
 kubectl logs deployment/docbrain-server -f
 
-# Get the bootstrap admin key (printed once at startup)
-kubectl logs deployment/docbrain-server | grep "bootstrap"
-```
-
-The bootstrap admin key lives in its own Secret, separate from operational credentials:
-
-```bash
+# Get the bootstrap admin key from the Helm-managed Secret
 kubectl get secret docbrain-initial-admin-secret \
   -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
+
+The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is **never printed to logs** — always retrieve it from the Secret directly as shown above.
 
 **Bootstrap key lifecycle:**
 

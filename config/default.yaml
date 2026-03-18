@@ -245,7 +245,7 @@ intercom:
   min_messages: 2
   # tags: ~              # comma-separated tag names to filter — empty = all
 
-# ── Learning Velocity ────────────────────────────────────────────────────────
+# ── Documentation Analytics ──────────────────────────────────────────────────
 # Tracks organizational documentation health — gap resolution rate, knowledge
 # half-life, tribal knowledge %, and ROI of documentation investment.
 # Snapshots are taken daily during memory consolidation.
