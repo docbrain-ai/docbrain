@@ -97,9 +97,18 @@ services:
       CONSOLIDATION_INTERVAL_HOURS: ${CONSOLIDATION_INTERVAL_HOURS:-6}
       # Optional: uncomment to use a custom config directory
       # DOCBRAIN_CONFIG_DIR: /etc/docbrain
+      # ── Learning pipeline (Tier 2 — set in .env when trainer is enabled) ──
+      # LEARNING_ENABLED: ${LEARNING_ENABLED:-false}
+      # EMBED_PROVIDER: ${EMBED_PROVIDER:-bedrock}   # set to "local" to use fine-tuned models
+      # LEARNING_TRAINER_URL: http://trainer:8765
+      # LEARNING_BASE_MODEL_ID: ${LEARNING_BASE_MODEL_ID:-sentence-transformers/all-MiniLM-L6-v2}
+      # LEARNING_LOCAL_PATH: /data/models  # must match TRAINER_LOCAL_MODEL_ROOT
+      # LEARNING_STORAGE_BACKEND: ${LEARNING_STORAGE_BACKEND:-local}
     volumes:
       - ./examples/sample-docs:/data/docs:ro
       - ./docs:/app/docs:ro
+      # Uncomment when trainer service is enabled (shared model volume):
+      # - trainer_models:/data/models
     restart: unless-stopped
 
   web:
@@ -121,12 +130,21 @@ services:
   # Requires at least 2 vCPU / 8 GB RAM on the host. GPU optional.
   #
   # Steps to enable:
-  #   1. Uncomment the trainer block below.
+  #   1. Uncomment the trainer block below AND the trainer_models volume at the bottom.
   #   2. Set LEARNING_ENABLED=true in your .env.
-  #   3. Set EMBED_PROVIDER=local in your .env.
+  #   3. Set EMBED_PROVIDER=local in your .env (required to use fine-tuned models).
+  #      If you use a cloud provider (bedrock, openai), models are trained but not served.
   #   4. Set TRAINER_API_KEY to a strong random secret (e.g. `openssl rand -hex 32`).
   #      The DocBrain server uses this key when calling the trainer sidecar.
   #      Never expose port 8765 publicly — keep it internal to the Docker network.
+  #   5. IMPORTANT: LEARNING_LOCAL_PATH (server) and TRAINER_LOCAL_MODEL_ROOT (trainer)
+  #      must point to the same shared volume (trainer_models:/data/models below).
+  #      If they differ, promotions will silently fail to hot-swap the model.
+  #
+  # Base model selection:
+  #   TRAINER_BASE_MODEL_NAME and LEARNING_BASE_MODEL_ID must match.
+  #   Any sentence-transformers HuggingFace model works. Defaults to all-MiniLM-L6-v2.
+  #   Change the default by setting both variables to the same model ID in your .env.
   #
   # See docs/learning.md for full setup and configuration reference.
   #
@@ -145,8 +163,10 @@ services:
   #     # Security — shared secret between the DocBrain server and this sidecar.
   #     # Generate with: openssl rand -hex 32
   #     TRAINER_API_KEY: ${TRAINER_API_KEY:?TRAINER_API_KEY must be set}
+  #     # Base model — must match LEARNING_BASE_MODEL_ID on the server
   #     TRAINER_BASE_MODEL_NAME: ${TRAINER_BASE_MODEL_NAME:-sentence-transformers/all-MiniLM-L6-v2}
   #     TRAINER_STORAGE_BACKEND: ${TRAINER_STORAGE_BACKEND:-local}
+  #     # Path must match LEARNING_LOCAL_PATH on the server (both mount trainer_models volume below)
   #     TRAINER_LOCAL_MODEL_ROOT: /data/models
   #     TRAINER_EPOCHS: ${TRAINER_EPOCHS:-3}
   #     TRAINER_BATCH_SIZE: ${TRAINER_BATCH_SIZE:-16}
