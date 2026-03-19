@@ -100,7 +100,7 @@ All configuration is also available via environment variables, set in `.env` for
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM_PROVIDER` | `bedrock` | Provider: `bedrock`, `anthropic`, `openai`, `ollama` |
+| `LLM_PROVIDER` | `bedrock` | Provider: `bedrock`, `anthropic`, `openai`, `ollama`, `groq`, `openrouter`, `together`, `deepseek`, `mistral`, `xai`, `gemini`, `azure_openai`, `vertex_ai`, `cohere` |
 | `LLM_MODEL_ID` | varies | Model identifier (provider-specific) |
 | `FAST_MODEL_ID` | — | Fast/cheap model for background side-calls: intent classification, query rewriting, entity extraction. Falls back to `LLM_MODEL_ID` if not set. Recommended: Haiku (Bedrock/Anthropic), `gpt-4o-mini` (OpenAI), `qwen2.5:7b` (Ollama). Alias: `HAIKU_MODEL_ID` (deprecated). |
 | `INGEST_LLM_MODEL_ID` | — | Model used **during ingest only** for image extraction. Falls back to `LLM_MODEL_ID` if not set. **Set this to a cheaper model** — image extraction fires for every page with images. Using Opus 4 with `LLM_THINKING_BUDGET` without this override will cause throttling errors during ingest. |
@@ -114,8 +114,23 @@ All configuration is also available via environment variables, set in `.env` for
 | `AWS_REGION` | — | AWS region for Bedrock (e.g. `us-east-1`) |
 | `AWS_ACCESS_KEY_ID` | — | AWS access key (optional — see credential chain below) |
 | `AWS_SECRET_ACCESS_KEY` | — | AWS secret key (optional — see credential chain below) |
+| `GROQ_API_KEY` | — | API key (if `LLM_PROVIDER=groq`) |
+| `OPENROUTER_API_KEY` | — | API key (if `LLM_PROVIDER=openrouter`) |
+| `TOGETHER_API_KEY` | — | API key (if `LLM_PROVIDER=together`) |
+| `DEEPSEEK_API_KEY` | — | API key (if `LLM_PROVIDER=deepseek`) |
+| `MISTRAL_API_KEY` | — | API key (if `LLM_PROVIDER=mistral`) |
+| `XAI_API_KEY` | — | API key (if `LLM_PROVIDER=xai`) |
+| `GEMINI_API_KEY` | — | API key (if `LLM_PROVIDER=gemini`) |
+| `AZURE_OPENAI_API_KEY` | — | API key (if `LLM_PROVIDER=azure_openai`) |
+| `AZURE_OPENAI_ENDPOINT` | — | Resource endpoint (if `LLM_PROVIDER=azure_openai`). e.g. `https://my-resource.openai.azure.com` |
+| `AZURE_OPENAI_API_VERSION` | `2024-02-01` | API version (if `LLM_PROVIDER=azure_openai`) |
+| `VERTEX_PROJECT` | — | GCP project ID (if `LLM_PROVIDER=vertex_ai`). Required. |
+| `VERTEX_REGION` | `us-central1` | GCP region (if `LLM_PROVIDER=vertex_ai`) |
+| `COHERE_API_KEY` | — | API key (if `LLM_PROVIDER=cohere`) |
 
 > **AWS Credential Chain**: Bedrock uses the AWS SDK default credential chain: env vars → `~/.aws/credentials` → IRSA (EKS) → EC2 Instance Profile → ECS Task Role. In production, use IRSA or instance profiles — no keys in env. Set `serviceAccount.create=true` and `serviceAccount.annotations.eks.amazonaws.com/role-arn` in Helm. The IAM role needs `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` permissions. See [providers.md](providers.md#aws-bedrock) for full setup details.
+
+> **GCP Credential Chain**: Vertex AI uses `gcp_auth` which resolves credentials in this order: `GOOGLE_APPLICATION_CREDENTIALS` (service account key file) → Application Default Credentials (`gcloud auth application-default login`) → GKE Workload Identity → GCE/Cloud Run metadata service. In production on GKE, use Workload Identity — no keys needed in the cluster. See [providers.md](providers.md#vertex-ai-gcp) for Workload Identity setup details.
 
 ### Ollama: model selection and tuning
 

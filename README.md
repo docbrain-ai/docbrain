@@ -58,7 +58,7 @@ Unlike static search tools, DocBrain maintains a multi-tier memory system that c
 - **Intent-Adaptive Responses** — Classifies queries (find, how-to, troubleshoot, who-owns, status, explain) and adapts response format accordingly
 - **Image Intelligence** — Vision-capable LLM extraction of architecture diagrams, flowcharts, and screenshots during ingestion
 - **Multi-Team Space Isolation** — Soft boost, per-request filters, and API-key-level hard restrictions for multi-tenant deployments
-- **Multiple LLM Providers** — Anthropic, OpenAI, AWS Bedrock, and Ollama (fully local, air-gapped)
+- **Multiple LLM Providers** — Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Google Gemini, Vertex AI, DeepSeek, Groq, Mistral, xAI, Azure OpenAI, OpenRouter, Together AI, and Cohere
 
 ---
 
@@ -125,7 +125,7 @@ See [docs/learning.md](docs/learning.md) for full setup and configuration.
 ### Prerequisites
 
 - Docker and Docker Compose
-- An LLM API key (Anthropic, OpenAI, AWS Bedrock) or [Ollama](https://ollama.com) for local inference
+- An LLM API key (Anthropic, OpenAI, AWS Bedrock, Gemini, Groq, DeepSeek, and [more](docs/providers.md)) or [Ollama](https://ollama.com) for local inference
 
 ### Run
 
@@ -177,6 +177,16 @@ Environment variables always override config files. See [Configuration Guide](do
 | **Anthropic** | `LLM_PROVIDER=anthropic` — requires `ANTHROPIC_API_KEY` |
 | **OpenAI** | `LLM_PROVIDER=openai` — requires `OPENAI_API_KEY` |
 | **Ollama** | `LLM_PROVIDER=ollama` — 100% local, no data leaves your machine |
+| **Google Gemini** | `LLM_PROVIDER=gemini` — requires `GEMINI_API_KEY` |
+| **Vertex AI** | `LLM_PROVIDER=vertex_ai` — GCP credential chain, no API key needed in production |
+| **DeepSeek** | `LLM_PROVIDER=deepseek` — requires `DEEPSEEK_API_KEY` |
+| **Groq** | `LLM_PROVIDER=groq` — requires `GROQ_API_KEY` |
+| **Mistral** | `LLM_PROVIDER=mistral` — requires `MISTRAL_API_KEY` |
+| **xAI (Grok)** | `LLM_PROVIDER=xai` — requires `XAI_API_KEY` |
+| **Azure OpenAI** | `LLM_PROVIDER=azure_openai` — requires `AZURE_OPENAI_API_KEY` + endpoint |
+| **OpenRouter** | `LLM_PROVIDER=openrouter` — requires `OPENROUTER_API_KEY` |
+| **Together AI** | `LLM_PROVIDER=together` — requires `TOGETHER_API_KEY` |
+| **Cohere** | `LLM_PROVIDER=cohere` — requires `COHERE_API_KEY` |
 
 See [Provider Setup](docs/providers.md) for detailed configuration.
 
@@ -212,6 +222,8 @@ graph TB
         AN["Anthropic"]
         OA["OpenAI"]
         BR["AWS Bedrock"]
+        GM["Gemini / Vertex AI"]
+        DS["DeepSeek · Groq · Mistral<br/>xAI · OpenRouter · Together<br/>Azure OpenAI · Cohere"]
     end
 
     WEB & CLI & MCP & SLACK --> API
@@ -219,9 +231,9 @@ graph TB
     API --> AUTO
     API --> FRESH
     RAG --> PG & OS & RD
-    RAG --> OL & AN & OA & BR
+    RAG --> OL & AN & OA & BR & GM & DS
     AUTO --> PG & OS
-    AUTO --> AN & OA & BR
+    AUTO --> AN & OA & BR & GM & DS
     FRESH --> PG
 ```
 

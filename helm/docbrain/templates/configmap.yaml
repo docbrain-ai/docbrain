@@ -52,6 +52,22 @@ data:
   OLLAMA_TIMEOUT_SECS: {{ .Values.llm.ollamaTimeoutSecs | quote }}
   {{- end }}
   {{- end }}
+  {{- if eq .Values.llm.provider "azure_openai" }}
+  {{- if .Values.llm.azureOpenaiEndpoint }}
+  AZURE_OPENAI_ENDPOINT: {{ .Values.llm.azureOpenaiEndpoint | quote }}
+  {{- end }}
+  {{- if .Values.llm.azureOpenaiApiVersion }}
+  AZURE_OPENAI_API_VERSION: {{ .Values.llm.azureOpenaiApiVersion | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if eq .Values.llm.provider "vertex_ai" }}
+  {{- if .Values.llm.vertexProject }}
+  VERTEX_PROJECT: {{ .Values.llm.vertexProject | quote }}
+  {{- end }}
+  {{- if .Values.llm.vertexRegion }}
+  VERTEX_REGION: {{ .Values.llm.vertexRegion | quote }}
+  {{- end }}
+  {{- end }}
   {{- if .Values.ingest.confluence }}
   CONFLUENCE_BASE_URL: {{ .Values.ingest.confluence.baseUrl | default "" | quote }}
   CONFLUENCE_USER_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}

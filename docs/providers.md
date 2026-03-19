@@ -134,6 +134,167 @@ AWS_SECRET_ACCESS_KEY=...
 AWS_REGION=us-east-1
 ```
 
+### Google Gemini
+
+Fast and capable Google AI models. Uses the Google AI API (no GCP account required — just a Gemini API key).
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=AIza...
+LLM_MODEL_ID=gemini-2.0-flash
+```
+
+**Models**: `gemini-2.0-flash` (recommended, fast), `gemini-2.0-flash-thinking-exp` (reasoning), `gemini-1.5-pro`
+
+### Vertex AI (GCP)
+
+Run Google Gemini and third-party models (Llama, Mistral) on your GCP infrastructure. Authenticated via the GCP credential chain — no API key needed in production when using Workload Identity.
+
+```env
+LLM_PROVIDER=vertex_ai
+VERTEX_PROJECT=my-gcp-project
+VERTEX_REGION=us-central1
+LLM_MODEL_ID=google/gemini-2.0-flash-001
+```
+
+**Models**: `google/gemini-2.0-flash-001`, `google/gemini-2.5-pro-preview-05-06`, `meta/llama-3.3-70b-instruct-maas`, `mistral-nemo@2407`
+
+#### GCP Credential Resolution Order
+
+DocBrain uses `gcp_auth` which resolves credentials in this order:
+
+1. **`GOOGLE_APPLICATION_CREDENTIALS`** → path to a service account JSON key file (local dev, CI)
+2. **Application Default Credentials** — `gcloud auth application-default login` (local dev)
+3. **GKE Workload Identity** — pod-level IAM binding (recommended for Kubernetes)
+4. **GCE Metadata Service** — auto-detected on Compute Engine, Cloud Run, Cloud Functions
+
+#### Production Best Practice: Workload Identity (no keys in cluster)
+
+On GKE, use Workload Identity so pods authenticate via their ServiceAccount:
+
+```bash
+# Create a GCP service account
+gcloud iam service-accounts create docbrain-vertex \
+  --project=my-gcp-project
+
+# Grant Vertex AI User role
+gcloud projects add-iam-policy-binding my-gcp-project \
+  --member="serviceAccount:docbrain-vertex@my-gcp-project.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+# Bind the GCP service account to the Kubernetes service account
+gcloud iam service-accounts add-iam-policy-binding \
+  docbrain-vertex@my-gcp-project.iam.gserviceaccount.com \
+  --role roles/iam.workloadIdentityUser \
+  --member "serviceAccount:my-gcp-project.svc.id.goog[docbrain/docbrain]"
+
+helm install docbrain ./helm/docbrain \
+  --set llm.provider=vertex_ai \
+  --set llm.vertexProject=my-gcp-project \
+  --set llm.vertexRegion=us-central1 \
+  --set llm.modelId=google/gemini-2.0-flash-001 \
+  --set "serviceAccount.annotations.iam\.gke\.io/gcp-service-account=docbrain-vertex@my-gcp-project.iam.gserviceaccount.com"
+```
+
+#### Local Development
+
+```env
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
+```
+Or authenticate with gcloud: `gcloud auth application-default login`
+
+### DeepSeek
+
+Cost-effective API with strong coding and reasoning capabilities.
+
+```env
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-...
+LLM_MODEL_ID=deepseek-chat
+```
+
+**Models**: `deepseek-chat` (DeepSeek V3, recommended), `deepseek-reasoner` (R1, extended reasoning)
+
+### Groq
+
+Extremely fast inference (LPU hardware). Best for latency-sensitive workloads.
+
+```env
+LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_...
+LLM_MODEL_ID=llama-3.3-70b-versatile
+```
+
+**Models**: `llama-3.3-70b-versatile` (recommended), `llama-3.1-8b-instant` (for `FAST_MODEL_ID`), `mixtral-8x7b-32768`
+
+### Mistral
+
+European provider, strong multilingual support and competitive pricing.
+
+```env
+LLM_PROVIDER=mistral
+MISTRAL_API_KEY=...
+LLM_MODEL_ID=mistral-small-latest
+```
+
+**Models**: `mistral-small-latest` (recommended), `mistral-medium-latest`, `codestral-latest` (code)
+
+### xAI (Grok)
+
+```env
+LLM_PROVIDER=xai
+XAI_API_KEY=xai-...
+LLM_MODEL_ID=grok-3
+```
+
+**Models**: `grok-3`, `grok-3-mini` (for `FAST_MODEL_ID`)
+
+### OpenRouter
+
+Single API key across 100+ models (OpenAI, Anthropic, Gemini, Llama, Mistral, and more). Useful for testing different models without managing multiple API keys.
+
+```env
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-...
+LLM_MODEL_ID=anthropic/claude-sonnet-4-5
+```
+
+**Models**: Any model slug from [openrouter.ai/models](https://openrouter.ai/models) — e.g. `openai/gpt-4o`, `meta-llama/llama-3.3-70b-instruct`
+
+### Together AI
+
+Hosting for open-source models with competitive pricing.
+
+```env
+LLM_PROVIDER=together
+TOGETHER_API_KEY=...
+LLM_MODEL_ID=meta-llama/Llama-3.3-70B-Instruct-Turbo
+```
+
+### Azure OpenAI
+
+OpenAI models behind your Azure subscription. Uses `api-key` auth with your Azure endpoint.
+
+```env
+LLM_PROVIDER=azure_openai
+AZURE_OPENAI_API_KEY=...
+AZURE_OPENAI_ENDPOINT=https://my-resource.openai.azure.com
+LLM_MODEL_ID=gpt-4o                    # your deployment name
+# AZURE_OPENAI_API_VERSION=2024-02-01  # default
+```
+
+The `LLM_MODEL_ID` must match your **deployment name** in Azure OpenAI Studio (not the underlying model name).
+
+### Cohere
+
+```env
+LLM_PROVIDER=cohere
+COHERE_API_KEY=...
+LLM_MODEL_ID=command-r-plus
+```
+
+**Models**: `command-r-plus` (recommended, strong RAG), `command-r` (faster/cheaper)
+
 ## Embedding Providers
 
 ### OpenAI Embeddings
@@ -173,8 +334,12 @@ You can use different providers for LLM and embeddings. Common combinations:
 |----------|-----|------------|
 | Best quality | Anthropic | OpenAI |
 | Fully local | Ollama | Ollama |
-| Cost-optimized | OpenAI (gpt-4o-mini) | OpenAI (text-embedding-3-small) |
-| AWS native | Bedrock | Bedrock |
+| Cost-optimized | DeepSeek (`deepseek-chat`) | OpenAI (`text-embedding-3-small`) |
+| Fast inference | Groq | OpenAI |
+| AWS-native | Bedrock | Bedrock |
+| GCP-native | Vertex AI | OpenAI or Bedrock |
+| Enterprise Microsoft | Azure OpenAI | OpenAI |
+| Multi-model testing | OpenRouter | OpenAI |
 
 > **Important**: Changing the embedding provider/model may change vector dimensions. The server will refuse to start with a dimension mismatch error. Set `FORCE_REINDEX=true` to delete and recreate the indexes, then run ingest to re-embed all documents. See [configuration.md](configuration.md#switching-embedding-models) for details.
 
