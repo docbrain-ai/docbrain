@@ -141,10 +141,10 @@ Fast and capable Google AI models. Uses the Google AI API (no GCP account requir
 ```env
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=AIza...
-LLM_MODEL_ID=gemini-2.0-flash
+LLM_MODEL_ID=gemini-2.5-flash
 ```
 
-**Models**: `gemini-2.0-flash` (recommended, fast), `gemini-2.0-flash-thinking-exp` (reasoning), `gemini-1.5-pro`
+**Models**: `gemini-2.5-flash` (recommended, fast), `gemini-2.5-pro` (reasoning), `gemini-3.1-pro-preview` (latest)
 
 ### Vertex AI (GCP)
 
@@ -154,10 +154,10 @@ Run Google Gemini and third-party models (Llama, Mistral) on your GCP infrastruc
 LLM_PROVIDER=vertex_ai
 VERTEX_PROJECT=my-gcp-project
 VERTEX_REGION=us-central1
-LLM_MODEL_ID=google/gemini-2.0-flash-001
+LLM_MODEL_ID=google/gemini-2.5-flash
 ```
 
-**Models**: `google/gemini-2.0-flash-001`, `google/gemini-2.5-pro-preview-05-06`, `meta/llama-3.3-70b-instruct-maas`, `mistral-nemo@2407`
+**Models**: `google/gemini-2.5-flash`, `google/gemini-2.5-pro`, `google/gemini-3.1-pro-preview`, `meta/llama-3.3-70b-instruct-maas`
 
 #### GCP Credential Resolution Order
 
@@ -192,7 +192,7 @@ helm install docbrain ./helm/docbrain \
   --set llm.provider=vertex_ai \
   --set llm.vertexProject=my-gcp-project \
   --set llm.vertexRegion=us-central1 \
-  --set llm.modelId=google/gemini-2.0-flash-001 \
+  --set llm.modelId=google/gemini-2.5-flash \
   --set "serviceAccount.annotations.iam\.gke\.io/gcp-service-account=docbrain-vertex@my-gcp-project.iam.gserviceaccount.com"
 ```
 

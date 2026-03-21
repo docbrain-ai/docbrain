@@ -104,6 +104,8 @@ All configuration is also available via environment variables, set in `.env` for
 | `LLM_MODEL_ID` | varies | Model identifier (provider-specific) |
 | `FAST_MODEL_ID` | — | Fast/cheap model for background side-calls: intent classification, query rewriting, entity extraction. Falls back to `LLM_MODEL_ID` if not set. Recommended: Haiku (Bedrock/Anthropic), `gpt-4o-mini` (OpenAI), `qwen2.5:7b` (Ollama). Alias: `HAIKU_MODEL_ID` (deprecated). |
 | `INGEST_LLM_MODEL_ID` | — | Model used **during ingest only** for image extraction. Falls back to `LLM_MODEL_ID` if not set. **Set this to a cheaper model** — image extraction fires for every page with images. Using Opus 4 with `LLM_THINKING_BUDGET` without this override will cause throttling errors during ingest. |
+| `DRAFT_MODEL_ID` | — | Model used for **autopilot draft generation** (two-phase reasoning + writing). Falls back to `LLM_MODEL_ID` if not set. Use a high-capability model here — drafts benefit from stronger reasoning. |
+| `DRAFT_LLM_PROVIDER` | — | Provider for draft generation. Falls back to `LLM_PROVIDER` if not set. Allows cross-provider drafting — e.g. use Gemini Flash for Q&A but Anthropic Claude for drafts. |
 | `LLM_THINKING_BUDGET` | — | Extended thinking token budget (tokens). Unset or `0` = disabled. Only applies to the primary `LLM_MODEL_ID`, never to `FAST_MODEL_ID` or `INGEST_LLM_MODEL_ID`. |
 | `ANTHROPIC_API_KEY` | — | API key (if `LLM_PROVIDER=anthropic`) |
 | `OPENAI_API_KEY` | — | API key (if `LLM_PROVIDER=openai`) |

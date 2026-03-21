@@ -14,6 +14,10 @@ llm:
   #                        # IMPORTANT: set this to a cheaper model when using Opus 4 + thinkingBudget
   #                        # otherwise image extraction will trigger throttling errors on every page
   #                        # Falls back to modelId if not set
+  # draftModelId: ""       # model for autopilot draft generation (two-phase reasoning + writing)
+  #                        # Falls back to modelId if not set. Use a high-capability model here.
+  # draftProvider: ""      # provider for draft generation. Falls back to llm.provider if not set.
+  #                        # Allows cross-provider drafting (e.g. Gemini for Q&A, Anthropic for drafts)
   # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
   #                        # does NOT apply to fastModelId or ingestModelId
 
@@ -42,7 +46,7 @@ llm:
   # -- xAI / Grok (provider: xai, default model: grok-3)
   # xaiApiKey: ""          # XAI_API_KEY
 
-  # -- Google Gemini (provider: gemini, default model: gemini-2.0-flash)
+  # -- Google Gemini (provider: gemini, default model: gemini-2.5-flash)
   # geminiApiKey: ""       # GEMINI_API_KEY
 
   # -- Azure OpenAI (provider: azure_openai, modelId = deployment name e.g. "gpt-4o")
@@ -50,11 +54,11 @@ llm:
   # azureOpenaiEndpoint: ""   # AZURE_OPENAI_ENDPOINT e.g. https://my-resource.openai.azure.com
   # azureOpenaiApiVersion: "" # AZURE_OPENAI_API_VERSION default: 2024-02-01
 
-  # -- Vertex AI — GCP-hosted models (provider: vertex_ai, default model: google/gemini-2.0-flash-001)
+  # -- Vertex AI — GCP-hosted models (provider: vertex_ai, default model: google/gemini-2.5-flash-001)
   # vertexProject: ""     # VERTEX_PROJECT — GCP project ID (required)
   # vertexRegion: ""      # VERTEX_REGION — GCP region (default: us-central1)
   # Auth: set GOOGLE_APPLICATION_CREDENTIALS in server.env or use Workload Identity (GKE)
-  # Example models: google/gemini-2.0-flash-001, meta/llama-3.3-70b-instruct-maas
+  # Example models: google/gemini-2.5-flash-001, meta/llama-3.3-70b-instruct-maas
 
   # -- Cohere (provider: cohere, default model: command-r-plus)
   # cohereApiKey: ""       # COHERE_API_KEY

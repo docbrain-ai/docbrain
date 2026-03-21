@@ -23,6 +23,12 @@ data:
   {{- if .Values.llm.ingestModelId }}
   INGEST_LLM_MODEL_ID: {{ .Values.llm.ingestModelId | quote }}
   {{- end }}
+  {{- if .Values.llm.draftModelId }}
+  DRAFT_MODEL_ID: {{ .Values.llm.draftModelId | quote }}
+  {{- end }}
+  {{- if .Values.llm.draftProvider }}
+  DRAFT_LLM_PROVIDER: {{ .Values.llm.draftProvider | quote }}
+  {{- end }}
   {{- if .Values.llm.thinkingBudget }}
   LLM_THINKING_BUDGET: {{ .Values.llm.thinkingBudget | quote }}
   {{- end }}
