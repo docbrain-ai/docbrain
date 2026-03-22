@@ -191,6 +191,15 @@ data:
   VELOCITY_MINUTES_SAVED_PER_QUERY: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
   VELOCITY_HOURLY_RATE: {{ .Values.velocity.hourlyRate | default 75 | quote }}
 
+  # Event Bus
+  EVENT_BUS_CAPACITY: {{ .Values.eventBus.capacity | default 4096 | quote }}
+  EVENT_LOG_RETENTION_DAYS: {{ .Values.eventBus.retentionDays | default 90 | quote }}
+
+  # Knowledge Fragments
+  FRAGMENT_AUTO_INDEX_THRESHOLD: {{ .Values.fragments.autoIndexThreshold | default 0.7 | quote }}
+  FRAGMENT_REVIEW_THRESHOLD: {{ .Values.fragments.reviewThreshold | default 0.4 | quote }}
+  FRAGMENT_MAX_CONTENT_LENGTH: {{ .Values.fragments.maxContentLength | default 10000 | quote }}
+
   # Knowledge Stream
   STREAM_ENABLED: {{ .Values.stream.enabled | default false | quote }}
   STREAM_INTERVAL_MINUTES: {{ .Values.stream.intervalMinutes | default 30 | quote }}

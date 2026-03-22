@@ -198,6 +198,17 @@ redis:
   # storageClassName: ""  # leave empty to use cluster default StorageClass
   # externalUrl: ""
 
+# -- Event Bus (internal pub/sub — always enabled)
+eventBus:
+  capacity: 4096              # Broadcast channel buffer size (max: 65536)
+  retentionDays: 90           # Days to keep events in event_log table
+
+# -- Knowledge Fragments (confidence-based knowledge capture)
+fragments:
+  autoIndexThreshold: 0.7     # Min confidence to auto-index fragments into search
+  reviewThreshold: 0.4        # Min confidence for review queue; below = discard
+  maxContentLength: 10000     # Max fragment content length in characters
+
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
 # Enabled by default. Set enabled: false to opt out.
 autopilot:

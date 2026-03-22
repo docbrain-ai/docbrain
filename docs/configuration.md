@@ -595,3 +595,53 @@ OIDC_EDITOR_GROUPS=docs-writers
 | `STREAM_INTERVAL_MINUTES` | `30` | How often the stream background task runs |
 | `STREAM_INCIDENT_WARNING_MIN_USERS` | `2` | Minimum unique users hitting an unanswered question to emit an incident warning |
 | `STREAM_DECAY_THRESHOLD` | `0.5` | Freshness score below which a decay alert is emitted |
+
+## Event Bus
+
+The event bus is internal pub/sub infrastructure — always enabled, no opt-in required. Every significant action (document ingest, gap detection, draft generation, etc.) emits a typed event that subscribers can react to.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EVENT_BUS_CAPACITY` | `4096` | Broadcast channel buffer size. Increase if subscribers lag under high event volume. Max: 65536. |
+| `EVENT_LOG_RETENTION_DAYS` | `90` | Days to retain events in the `event_log` table before purging. |
+
+**Admin API endpoints:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/events` | Query the persistent event log. Supports `?type=gap.detected&since=2026-03-01&limit=100&offset=0`. |
+| `GET` | `/api/v1/events/stream` | SSE stream of real-time events. Max 10 concurrent connections. |
+
+Both endpoints require **admin** role.
+
+## Knowledge Fragments
+
+Knowledge fragments are first-class units of knowledge — smaller than documents, richer than chunks. They capture decisions, facts, caveats, procedures, and context from PRs, commits, IDE annotations, conversations, CI/CD pipelines, and manual entry.
+
+Fragments are routed by confidence score: high-confidence fragments are auto-indexed into search, medium-confidence go to a review queue, and low-confidence are auto-discarded.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FRAGMENT_AUTO_INDEX_THRESHOLD` | `0.7` | Minimum confidence score to auto-index a fragment into OpenSearch. |
+| `FRAGMENT_REVIEW_THRESHOLD` | `0.4` | Minimum confidence for the review queue. Fragments below this are auto-discarded. |
+| `FRAGMENT_MAX_CONTENT_LENGTH` | `10000` | Maximum fragment content length in characters. |
+
+## Style Rules Engine
+
+The style rules engine provides configurable linting for documentation consistency. Rules are always enabled — no opt-in required. Rules are managed via the API (CRUD + YAML import/export) and stored in PostgreSQL.
+
+Rules are scoped either globally (`space = null`) or per-space. When linting, global rules apply to all content, and space-specific rules override global rules with the same `(rule_type, name)` key.
+
+Five default rules are seeded on first migration:
+
+| Rule | Type | Default Severity |
+|------|------|-----------------|
+| `avoid-simple` | terminology | warning |
+| `avoid-just` | terminology | warning |
+| `max-heading-depth` (H4) | formatting | warning |
+| `max-sentence-length` (40 words) | formatting | info |
+| `require-intro` | structure | warning |
+
+**API endpoints:** See [API Reference — Style Rules Engine](api-reference.md#style-rules-engine) for full endpoint documentation.
+
+There are no environment variables for the style rules engine — all limits are compile-time constants. Custom rules are created and managed entirely through the API.

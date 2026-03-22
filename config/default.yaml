@@ -263,3 +263,19 @@ stream:
   incident_warning_min_users: 2     # STREAM_INCIDENT_WARNING_MIN_USERS
   # alert_channel: ~                # STREAM_ALERT_CHANNEL — Slack channel for alerts (optional)
   expertise_gap_days: 90            # STREAM_EXPERTISE_GAP_DAYS — days inactive before gap alert
+
+# ── Event Bus (internal pub/sub) ──────────────────────────────────────────
+# Always enabled — foundational infrastructure for all subsystem communication.
+# Events are broadcast to subscribers (logger, metrics, SSE) in real time.
+event_bus:
+  capacity: 4096                    # EVENT_BUS_CAPACITY — broadcast channel buffer size (max: 65536)
+  retention_days: 90                # EVENT_LOG_RETENTION_DAYS — days to keep events in event_log table
+
+# ── Knowledge Fragments ─────────────────────────────────────────────────────
+# First-class knowledge units with provenance. Captured from PRs, commits,
+# IDE annotations, conversations, CI/CD, and manual entry.
+# Confidence-based routing: auto-index (≥ threshold), review queue, or discard.
+fragments:
+  auto_index_threshold: 0.7         # FRAGMENT_AUTO_INDEX_THRESHOLD — min confidence to auto-index into search
+  review_threshold: 0.4             # FRAGMENT_REVIEW_THRESHOLD — min confidence for review queue (below = discard)
+  max_content_length: 10000         # FRAGMENT_MAX_CONTENT_LENGTH — max fragment content in characters

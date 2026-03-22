@@ -58,6 +58,11 @@ Unlike static search tools, DocBrain maintains a multi-tier memory system that c
 - **Intent-Adaptive Responses** — Classifies queries (find, how-to, troubleshoot, who-owns, status, explain) and adapts response format accordingly
 - **Image Intelligence** — Vision-capable LLM extraction of architecture diagrams, flowcharts, and screenshots during ingestion
 - **Multi-Team Space Isolation** — Soft boost, per-request filters, and API-key-level hard restrictions for multi-tenant deployments
+- **Knowledge Fragments** — First-class knowledge units captured from PRs, commits, IDE annotations, and conversations with confidence-based routing (auto-index, review queue, or discard)
+- **Space Ownership & Governance** — Explicit knowledge ownership with space owners, maintainers, and topic stewards. Auto-assigns gaps to stewards via regex matching. Coverage reporting shows unowned spaces
+- **Content Quality Scoring** — Deterministic structural quality scores (0-100) across 7 dimensions: heading structure, section completeness, code presence, link density, length, readability, and metadata. Content-type-aware templates (runbook, guide, troubleshooting, FAQ, reference) define what "complete" means per document type
+- **Style Rules Engine** — Configurable linting rules for documentation consistency: banned terminology, heading depth limits, sentence length caps, required intro sections, and custom regex patterns. Space-scoped overrides let teams enforce their own standards. YAML import/export for version-controlled rule sets
+- **Event Bus** — Real-time internal pub/sub with persistent event logging, SSE streaming, and per-type metrics for all significant system actions
 - **Multiple LLM Providers** — Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Google Gemini, Vertex AI, DeepSeek, Groq, Mistral, xAI, Azure OpenAI, OpenRouter, Together AI, and Cohere
 
 ---
@@ -85,6 +90,11 @@ Gaps before they become incidents. DocBrain detects cascade staleness (updating 
 Every documentation system accumulates entropy: contradictions between runbooks, links that rot, version numbers that drift. DocBrain generates targeted fix proposals and presents them for one-click review. Human in the loop, but not human in the workflow.
 
 **API:** `GET /api/v1/maintenance/fixes`, `POST /api/v1/maintenance/fixes/:id/apply`
+
+### Content Quality Scoring
+Structural quality analysis that goes beyond freshness. Every document and fragment receives a deterministic 0-100 composite score across 7 dimensions: heading structure, section completeness, code examples, link density, content length, readability, and metadata quality. Content-type templates (runbook, guide, troubleshooting, FAQ, reference) define per-type expectations so a runbook without "Rollback" steps scores lower than a FAQ without code blocks.
+
+**API:** `GET /api/v1/quality/scores`, `GET /api/v1/quality/scores/:doc_id`, `POST /api/v1/quality/rescore`, `GET /api/v1/quality/report`, `GET /api/v1/quality/templates`, `POST /api/v1/quality/lint`, `GET /api/v1/style-rules`
 
 ### Knowledge Stream
 Proactive push intelligence. Incident early warnings fire when multiple users cluster on the same topic. Decay risk alerts reach document authors. Expertise gap alerts surface single-point-of-failure knowledge areas before they become incidents.

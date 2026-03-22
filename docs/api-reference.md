@@ -1004,3 +1004,692 @@ Update user context (services and topics) for personalized stream delivery.
 ### GET /api/v1/stream/stats
 
 Event count statistics broken down by time window (24h, 7d, 30d) and event type.
+
+## Event Bus
+
+### GET /api/v1/events
+
+Query the persistent event log. **Requires admin role.**
+
+**Query params:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `type` | string | — | Filter by event type (e.g. `gap.detected`, `document.ingested`) |
+| `since` | string | — | RFC3339 datetime or `YYYY-MM-DD` — only events after this time |
+| `limit` | integer | `100` | Max results (1–1000) |
+| `offset` | integer | `0` | Pagination offset |
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "uuid",
+      "event_type": "gap.detected",
+      "payload": { "cluster_id": "uuid", "severity": "critical", "label": "...", "query_count": 15, "unique_users": 8 },
+      "emitted_at": "2026-03-21T14:30:00Z",
+      "processed_by": ["event_logger"]
+    }
+  ],
+  "count": 1,
+  "limit": 100,
+  "offset": 0
+}
+```
+
+**Event types:** `document.ingested`, `document.updated`, `document.deleted`, `freshness.changed`, `quality.scored`, `fragment.captured`, `fragment.indexed`, `fragment.promoted`, `gap.detected`, `gap.assigned`, `gap.resolved`, `draft.generated`, `draft.review_requested`, `draft.published`, `draft.rejected`, `query.answered`, `feedback.received`, `sla.breached`, `maintenance.fix_proposed`
+
+### GET /api/v1/events/stream
+
+SSE stream of real-time events. **Requires admin role.** Max 10 concurrent connections.
+
+Each SSE message includes:
+- `event:` — the event type (e.g. `gap.detected`)
+- `id:` — unique event UUID (for `Last-Event-ID` reconnection)
+- `data:` — JSON payload with the full `EventEnvelope` (id, event, emitted_at)
+
+## Knowledge Fragments
+
+### POST /api/v1/fragments
+
+Create a new knowledge fragment. **Requires editor role.**
+
+Fragments are routed by confidence: `>= auto_index_threshold` (default 0.7) → auto-indexed into search; `>= review_threshold` (default 0.4) → queued for review; below → auto-discarded.
+
+**Request body:**
+```json
+{
+  "fragment_type": "decision",
+  "summary": "Switched from Redis pub/sub to PG LISTEN/NOTIFY",
+  "content": "Redis cluster mode doesn't support pub/sub across shards...",
+  "source_type": "pr_merge",
+  "source_ref": "https://github.com/acme/platform/pull/1234",
+  "source_id": "github:acme/platform#1234",
+  "confidence": 0.85,
+  "space": "PLATFORM",
+  "related_doc_ids": ["550e8400-e29b-41d4-a716-446655440000"],
+  "code_location": "src/events/publisher.rs:42"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `fragment_type` | string | yes | `decision`, `fact`, `caveat`, `procedure`, `context` |
+| `summary` | string | yes | Short description |
+| `content` | string | yes | Full content (max `FRAGMENT_MAX_CONTENT_LENGTH`) |
+| `source_type` | string | yes | `pr_merge`, `commit`, `ide_annotation`, `conversation_distill`, `deploy`, `incident`, `manual`, `ci_analyze` |
+| `source_ref` | string | no | URL or reference to the source |
+| `source_id` | string | no | Dedup key (unique per source_type) |
+| `confidence` | float | no | 0.0–1.0, default 0.5 |
+| `space` | string | no | Space for routing/filtering |
+| `related_doc_ids` | UUID[] | no | Related document IDs |
+| `code_location` | string | no | File path and line (e.g. `src/foo.rs:42`) |
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "status": "indexed",
+  "routed_action": "auto_index"
+}
+```
+
+### GET /api/v1/fragments
+
+List fragments with optional filters.
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `status` | string | — | Filter by status: `pending`, `indexed`, `promoted`, `discarded`, `review_queued` |
+| `space` | string | — | Filter by space |
+| `source_type` | string | — | Filter by source type |
+| `limit` | integer | `50` | Max results (1–1000) |
+| `offset` | integer | `0` | Pagination offset |
+
+### GET /api/v1/fragments/:id
+
+Get a single fragment by ID.
+
+### PATCH /api/v1/fragments/:id
+
+Update a fragment. **Requires editor role.** Only provided fields are updated.
+
+### DELETE /api/v1/fragments/:id
+
+Delete a fragment. **Requires admin role.** Also removes from search index.
+
+### GET /api/v1/fragments/review-queue
+
+List fragments with `review_queued` status. **Requires analyst role.** Supports same filters as list.
+
+### POST /api/v1/fragments/:id/approve
+
+Approve a fragment — sets status to `indexed` and embeds/indexes into OpenSearch. **Requires analyst role.**
+
+### POST /api/v1/fragments/:id/discard
+
+Discard a fragment with optional reason. **Requires analyst role.**
+
+**Request body:**
+```json
+{
+  "reason": "Duplicate of existing documentation"
+}
+```
+
+### GET /api/v1/fragments/stats
+
+Fragment statistics — counts by status, source type, and space. Supports `?space=` filter.
+
+---
+
+## Space Ownership & Governance
+
+Explicit knowledge ownership — spaces get owners, maintainers, and contributors. Topics get stewards who are auto-assigned when matching gaps are detected. This is the accountability layer that ensures gaps get resolved and drafts get reviewed.
+
+Governance is configured via API, not environment variables.
+
+### GET /api/v1/governance/spaces
+
+List all spaces with ownership summary (owner/maintainer/contributor counts). **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "spaces": [
+    { "space": "PLATFORM", "owner_count": 1, "maintainer_count": 2, "contributor_count": 5 },
+    { "space": "INFRA", "owner_count": 0, "maintainer_count": 0, "contributor_count": 0 }
+  ]
+}
+```
+
+### GET /api/v1/governance/spaces/:space/owners
+
+List owners, maintainers, and contributors for a specific space. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "owners": [
+    {
+      "id": "uuid",
+      "space": "PLATFORM",
+      "user_id": "uuid",
+      "role": "owner",
+      "notifications_enabled": true,
+      "user_email": "alice@acme.com",
+      "user_display_name": "Alice"
+    }
+  ]
+}
+```
+
+### POST /api/v1/governance/spaces/:space/owners
+
+Add a user as owner, maintainer, or contributor of a space. **Requires admin role.**
+
+**Request body:**
+```json
+{
+  "user_id": "uuid",
+  "role": "owner",
+  "notifications_enabled": true
+}
+```
+
+Valid roles: `owner`, `maintainer`, `contributor`.
+
+**Status codes:** `201` Created, `409` if user already assigned, `400` if user not found.
+
+### DELETE /api/v1/governance/spaces/:space/owners/:user_id
+
+Remove a user from a space's ownership. **Requires admin role.**
+
+**Status codes:** `204` No Content, `404` if not found.
+
+### PATCH /api/v1/governance/spaces/:space/owners/:user_id
+
+Update a space owner's role or notification preference. **Requires admin role.**
+
+**Request body:**
+```json
+{
+  "role": "maintainer",
+  "notifications_enabled": false
+}
+```
+
+At least one field must be provided.
+
+### GET /api/v1/governance/stewards
+
+List all topic stewards with their regex patterns and auto-assign settings. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "stewards": [
+    {
+      "id": "uuid",
+      "topic_pattern": "kubernetes|k8s|eks",
+      "display_name": "Kubernetes Infrastructure",
+      "user_id": "uuid",
+      "auto_assign_gaps": true,
+      "auto_assign_fragments": true,
+      "user_email": "carol@acme.com",
+      "user_display_name": "Carol"
+    }
+  ]
+}
+```
+
+### POST /api/v1/governance/stewards
+
+Create a topic steward. The `topic_pattern` is a regex matched against gap labels and fragment content for auto-assignment. **Requires admin role.**
+
+**Request body:**
+```json
+{
+  "topic_pattern": "kubernetes|k8s|eks",
+  "display_name": "Kubernetes Infrastructure",
+  "user_id": "uuid",
+  "auto_assign_gaps": true,
+  "auto_assign_fragments": true
+}
+```
+
+Pattern validation: max 500 characters, must be valid regex. **Status codes:** `201` Created, `400` invalid pattern or user not found.
+
+### GET /api/v1/governance/stewards/:id
+
+Get a single topic steward by ID. **Requires viewer role.**
+
+### DELETE /api/v1/governance/stewards/:id
+
+Remove a topic steward. **Requires admin role.** Returns `204` or `404`.
+
+### PATCH /api/v1/governance/stewards/:id
+
+Update a topic steward's pattern, display name, or auto-assign settings. **Requires admin role.**
+
+**Request body:**
+```json
+{
+  "topic_pattern": "kubernetes|k8s|eks|aks",
+  "display_name": "Kubernetes (all clouds)"
+}
+```
+
+At least one field must be provided. New patterns are validated before saving.
+
+### GET /api/v1/governance/my-spaces
+
+List spaces the current user owns or maintains. Requires an API key with an associated `user_id`.
+
+### GET /api/v1/governance/my-stewardships
+
+List topics the current user stewards. Requires an API key with an associated `user_id`.
+
+### GET /api/v1/governance/coverage
+
+Ownership coverage report across all spaces. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "total_spaces": 12,
+  "owned_spaces": 9,
+  "coverage_pct": 75.0,
+  "unowned_spaces": ["INFRA", "SECURITY", "ONBOARDING"]
+}
+```
+
+Total spaces are derived from the `documents` table (distinct space values), not from governance tables — ensuring unowned spaces are visible.
+
+---
+
+## Content Quality Scoring
+
+Deterministic structural quality scores for documents and fragments. Each item receives a composite score (0-100) built from 7 sub-scores, with content-type-aware templates defining completeness expectations.
+
+### List Quality Scores
+
+```
+GET /api/v1/quality/scores
+```
+
+Paginated list of quality scores with optional filters. **Requires viewer role.**
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `space` | string | — | Filter by space |
+| `min_score` | float | — | Minimum composite score (0-100) |
+| `max_score` | float | — | Maximum composite score (0-100) |
+| `content_type` | string | — | Filter by content type |
+| `limit` | integer | 50 | Max results (capped at 200) |
+| `offset` | integer | 0 | Pagination offset |
+
+**Response:**
+```json
+{
+  "scores": [
+    {
+      "id": "uuid",
+      "document_id": "uuid",
+      "fragment_id": null,
+      "heading_structure": 15.0,
+      "section_completeness": 20.0,
+      "code_presence": 10.0,
+      "link_density": 7.0,
+      "content_length": 8.0,
+      "readability": 12.0,
+      "metadata_quality": 10.0,
+      "composite_score": 82.0,
+      "scored_at": "2025-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Get Document Score
+
+```
+GET /api/v1/quality/scores/:doc_id
+```
+
+Quality score for a specific document. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "score": {
+    "id": "uuid",
+    "document_id": "uuid",
+    "heading_structure": 15.0,
+    "section_completeness": 20.0,
+    "code_presence": 10.0,
+    "link_density": 7.0,
+    "content_length": 8.0,
+    "readability": 12.0,
+    "metadata_quality": 10.0,
+    "composite_score": 82.0,
+    "scored_at": "2025-01-15T10:30:00Z"
+  },
+  "status": "high"
+}
+```
+
+Status values: `high` (80+), `acceptable` (60+), `needs_improvement` (40+), `poor` (<40).
+
+### Trigger Rescore
+
+```
+POST /api/v1/quality/rescore
+```
+
+Triggers a rescore of all documents. Returns immediately — rescoring happens asynchronously during the next ingest cycle. **Requires admin role.**
+
+**Response:**
+```json
+{
+  "status": "accepted",
+  "documents_to_score": 1234,
+  "message": "Rescoring will happen during the next ingest cycle"
+}
+```
+
+### Quality Report
+
+```
+GET /api/v1/quality/report
+```
+
+Aggregate quality report with per-space breakdown and worst-scoring documents. **Requires analyst role.**
+
+**Response:**
+```json
+{
+  "overall_avg": 72.5,
+  "total_scored": 1234,
+  "by_space": [
+    {
+      "space": "ENGINEERING",
+      "avg_score": 78.3,
+      "document_count": 450,
+      "worst_docs": [
+        {
+          "document_id": "uuid",
+          "title": "Legacy Migration Guide",
+          "composite_score": 23.5
+        }
+      ]
+    }
+  ]
+}
+```
+
+### List Content Type Templates
+
+```
+GET /api/v1/quality/templates
+```
+
+Returns the built-in content type templates that define section completeness expectations. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "templates": [
+    {
+      "content_type": "runbook",
+      "required_sections": ["overview", "prerequisites", "steps", "rollback", "escalation"],
+      "optional_sections": ["monitoring", "troubleshooting"],
+      "min_word_count": 200,
+      "max_word_count": 5000,
+      "expect_code_blocks": true
+    },
+    {
+      "content_type": "guide",
+      "required_sections": ["introduction", "prerequisites", "steps"],
+      "optional_sections": ["examples", "faq", "next steps"],
+      "min_word_count": 300,
+      "max_word_count": 10000,
+      "expect_code_blocks": true
+    }
+  ]
+}
+```
+
+Available content types: `runbook`, `guide`, `troubleshooting`, `faq`, `reference`.
+
+### Sub-Score Breakdown
+
+| Sub-Score | Range | What It Measures |
+|-----------|-------|-----------------|
+| `heading_structure` | 0-20 | Presence of headings, proper hierarchy (H1→H2→H3), no skipped levels |
+| `section_completeness` | 0-25 | Required sections present per content type template |
+| `code_presence` | 0-10 | Code blocks present when expected by content type |
+| `link_density` | 0-10 | Internal/external links for cross-referencing |
+| `content_length` | 0-10 | Word count within template-defined min/max range |
+| `readability` | 0-15 | Sentence length variation, no wall-of-text paragraphs, manageable sentence lengths |
+| `metadata_quality` | 0-10 | Author, source URL, and space metadata present |
+
+---
+
+## Style Rules Engine
+
+Configurable linting rules for documentation consistency. Rules are scoped globally or per-space, with space-specific rules overriding global rules of the same type and name.
+
+### List Style Rules
+
+```
+GET /api/v1/style-rules
+```
+
+**Requires viewer role.**
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `space` | string | — | Filter by space |
+| `rule_type` | string | — | Filter by type: `terminology`, `formatting`, `structure`, `custom_pattern` |
+| `include_inactive` | boolean | `false` | Include inactive rules (admin only) |
+
+**Response:**
+```json
+{
+  "rules": [
+    {
+      "id": "uuid",
+      "space": null,
+      "rule_type": "terminology",
+      "name": "avoid-simple",
+      "description": "Avoid the word 'simple' — it dismisses reader difficulty",
+      "config": { "term": "simple", "suggestion": "straightforward" },
+      "severity": "warning",
+      "is_active": true,
+      "created_at": "2026-03-22T00:00:00Z",
+      "updated_at": "2026-03-22T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Create Style Rule
+
+```
+POST /api/v1/style-rules
+```
+
+**Requires admin role.**
+
+**Request Body:**
+```json
+{
+  "space": null,
+  "rule_type": "terminology",
+  "name": "avoid-simple",
+  "description": "Avoid the word 'simple'",
+  "config": { "term": "simple", "suggestion": "straightforward" },
+  "severity": "warning"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `space` | string | no | Space scope (`null` = global) |
+| `rule_type` | string | yes | `terminology`, `formatting`, `structure`, `custom_pattern` |
+| `name` | string | yes | Unique name (1-200 chars) |
+| `description` | string | no | Human-readable description (max 2000 chars) |
+| `config` | object | yes | Rule-type-specific configuration (see below) |
+| `severity` | string | no | `error`, `warning`, `info` (default: `warning`) |
+
+**Config by rule type:**
+
+| Rule Type | Config Schema |
+|-----------|---------------|
+| `terminology` | `{ "term": "string", "suggestion": "string" }` |
+| `formatting` | `{ "max_heading_depth": number }` or `{ "max_sentence_length": number }` |
+| `structure` | `{ "require_intro": true }` |
+| `custom_pattern` | `{ "pattern": "regex", "message": "string" }` |
+
+**Response:** `201 Created`
+```json
+{
+  "rule": { ... }
+}
+```
+
+**Status codes:** `400` invalid input, `409` duplicate (space + type + name), `422` rule limit reached.
+
+---
+
+### Update Style Rule
+
+```
+PATCH /api/v1/style-rules/:id
+```
+
+**Requires admin role.** Only provided fields are updated.
+
+**Request Body:**
+```json
+{
+  "description": "Updated description",
+  "config": { "term": "simple", "suggestion": "clear" },
+  "severity": "error",
+  "is_active": false
+}
+```
+
+---
+
+### Delete Style Rule
+
+```
+DELETE /api/v1/style-rules/:id
+```
+
+**Requires admin role.** Returns `204 No Content` or `404`.
+
+---
+
+### Import Rules from YAML
+
+```
+POST /api/v1/style-rules/import
+```
+
+**Requires admin role.** Upserts rules from a YAML string (max 100 rules per import). Existing rules with the same (space, type, name) are updated.
+
+**Request Body:**
+```json
+{
+  "yaml": "- rule_type: terminology\n  name: avoid-simple\n  config:\n    term: simple\n    suggestion: straightforward\n  severity: warning\n"
+}
+```
+
+**Response:**
+```json
+{
+  "imported": 3,
+  "rules": [...]
+}
+```
+
+---
+
+### Export Rules to YAML
+
+```
+GET /api/v1/style-rules/export
+```
+
+**Requires admin role.** Returns all rules as a YAML document (`Content-Type: application/x-yaml`).
+
+---
+
+### Lint Content
+
+```
+POST /api/v1/quality/lint
+```
+
+**Requires analyst role.** Runs all active rules against the provided content.
+
+**Request Body:**
+```json
+{
+  "content": "This is a simple guide...",
+  "space": "ENGINEERING"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `content` | string | yes | Text to lint (max 500KB) |
+| `space` | string | no | Space for rule scoping (global + space rules apply) |
+
+**Response:**
+```json
+{
+  "violations": [
+    {
+      "rule_name": "avoid-simple",
+      "rule_type": "terminology",
+      "severity": "warning",
+      "message": "Avoid 'simple' — consider 'straightforward' instead",
+      "line": 1,
+      "column": 11,
+      "span": "simple"
+    }
+  ],
+  "style_score": 95.0,
+  "summary": {
+    "errors": 0,
+    "warnings": 1,
+    "infos": 0,
+    "total": 1
+  },
+  "truncated": false
+}
+```
+
+Style score formula: `max(0, 100 - (errors × 15 + warnings × 5 + infos × 1))`, clamped to [0, 100].
+
+### Limits
+
+| Limit | Value |
+|-------|-------|
+| Max rules per space | 200 |
+| Max total rules | 1000 |
+| Max import batch | 100 |
+| Max lint content | 500 KB |
+| Max violations per lint | 100 |
+| Max regex pattern length | 500 chars |
