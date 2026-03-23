@@ -372,6 +372,16 @@ stream:
   incidentWarningMinUsers: 3  # Min unique users hitting an unanswered question to emit warning
   decayThreshold: 0.5         # Freshness score below which a decay alert is emitted
 
+# -- Webhooks (outbound event delivery)
+# Push DocBrain events to external systems via HTTPS webhooks.
+# Subscriptions are managed via the API (/api/v1/webhooks). These values
+# control delivery behavior — timeouts, retries, and circuit breaker.
+webhooks:
+  deliveryTimeoutSeconds: 10        # HTTP timeout per delivery attempt (1-60)
+  maxRetries: 4                     # Max delivery attempts (1-10)
+  circuitBreakerThreshold: 10       # Consecutive failures before auto-disable (3-100)
+  allowInternal: false              # Allow delivery to private IPs (10.x, 172.16.x, 192.168.x)
+
 # ── Embedding Fine-Tuning (opt-in, Tier 2) ─────────────────────────────────
 # Disabled by default. See docs/learning.md for setup instructions.
 learning:

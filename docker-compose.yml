@@ -97,6 +97,11 @@ services:
       CONSOLIDATION_INTERVAL_HOURS: ${CONSOLIDATION_INTERVAL_HOURS:-6}
       # Optional: uncomment to use a custom config directory
       # DOCBRAIN_CONFIG_DIR: /etc/docbrain
+      # ── Webhooks (outbound event delivery) ──
+      WEBHOOK_DELIVERY_TIMEOUT_SECONDS: ${WEBHOOK_DELIVERY_TIMEOUT_SECONDS:-10}
+      WEBHOOK_MAX_RETRIES: ${WEBHOOK_MAX_RETRIES:-4}
+      WEBHOOK_CIRCUIT_BREAKER_THRESHOLD: ${WEBHOOK_CIRCUIT_BREAKER_THRESHOLD:-10}
+      ALLOW_INTERNAL_WEBHOOKS: ${ALLOW_INTERNAL_WEBHOOKS:-false}
       # ── Learning pipeline (Tier 2 — set in .env when trainer is enabled) ──
       # LEARNING_ENABLED: ${LEARNING_ENABLED:-false}
       # EMBED_PROVIDER: ${EMBED_PROVIDER:-bedrock}   # set to "local" to use fine-tuned models

@@ -626,6 +626,19 @@ Fragments are routed by confidence score: high-confidence fragments are auto-ind
 | `FRAGMENT_REVIEW_THRESHOLD` | `0.4` | Minimum confidence for the review queue. Fragments below this are auto-discarded. |
 | `FRAGMENT_MAX_CONTENT_LENGTH` | `10000` | Maximum fragment content length in characters. |
 
+## Webhooks (Outbound)
+
+Outbound webhook subscriptions let you push DocBrain events to external systems — Slack bots, CI/CD pipelines, PagerDuty, custom dashboards, etc. DocBrain signs every delivery with HMAC-SHA256, retries with exponential backoff, and automatically disables subscriptions that fail repeatedly (circuit breaker).
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WEBHOOK_DELIVERY_TIMEOUT_SECONDS` | `10` | HTTP timeout per webhook delivery attempt (1-60 seconds) |
+| `WEBHOOK_MAX_RETRIES` | `4` | Maximum delivery attempts before giving up (1-10) |
+| `WEBHOOK_CIRCUIT_BREAKER_THRESHOLD` | `10` | Consecutive failures before auto-disabling a subscription (3-100) |
+| `ALLOW_INTERNAL_WEBHOOKS` | `false` | Allow delivery to private/internal IP addresses (10.x, 172.16.x, 192.168.x). **Not recommended for production.** |
+
+See the [API Reference — Webhooks](api-reference.md#webhooks) for endpoint documentation and event types.
+
 ## Style Rules Engine
 
 The style rules engine provides configurable linting for documentation consistency. Rules are always enabled — no opt-in required. Rules are managed via the API (CRUD + YAML import/export) and stored in PostgreSQL.

@@ -42,6 +42,12 @@ DocBrain answers (with confidence score)
                               Page re-ingested on next cycle
 ```
 
+### Review Workflows
+
+When a space has a review workflow configured (via the Governance API), newly generated drafts are automatically assigned to the workflow's first stage instead of going directly to the publish queue. Reviewers with the required space role approve, request changes, or reject at each stage. Once all stages are cleared, the draft advances to `reviewed` status and becomes eligible for publishing.
+
+See the [API Reference](api-reference.md#review-workflows) for workflow configuration and review action endpoints.
+
 ---
 
 ## Gap Types

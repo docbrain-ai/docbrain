@@ -1309,6 +1309,175 @@ Total spaces are derived from the `documents` table (distinct space values), not
 
 ---
 
+## Review Workflows
+
+Configurable multi-stage review pipelines for autopilot drafts. Each space can have a workflow that defines approval stages (e.g., SME Review → Writer Review → Publish Approval). Reviewers approve, request changes, or reject drafts at each stage.
+
+### GET /api/v1/governance/workflows
+
+List all review workflows. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "workflows": [
+    {
+      "id": "uuid",
+      "space": "ENGINEERING",
+      "name": "Standard Review",
+      "stages": [
+        { "name": "sme_review", "required_role": "maintainer", "approvals_needed": 1 },
+        { "name": "writer_review", "required_role": "contributor", "approvals_needed": 1 }
+      ],
+      "is_default": false,
+      "created_at": "2026-03-22T10:00:00Z",
+      "updated_at": "2026-03-22T10:00:00Z"
+    }
+  ]
+}
+```
+
+### POST /api/v1/governance/workflows
+
+Create a review workflow for a space. Each space can have at most one workflow. **Requires admin role.**
+
+**Request body:**
+```json
+{
+  "space": "ENGINEERING",
+  "name": "Standard Review",
+  "stages": [
+    { "name": "sme_review", "required_role": "maintainer", "approvals_needed": 1 },
+    { "name": "writer_review", "required_role": "contributor", "approvals_needed": 1 }
+  ],
+  "is_default": false
+}
+```
+
+**Validation rules:**
+- Maximum 10 stages per workflow
+- Stage names must be unique within a workflow
+- `required_role` must be one of: `owner`, `maintainer`, `contributor`
+- `approvals_needed` must be between 1 and 20
+
+### PATCH /api/v1/governance/workflows/:id
+
+Update a workflow's name, stages, or default flag. **Requires admin role.**
+
+### DELETE /api/v1/governance/workflows/:id
+
+Delete a workflow. Drafts assigned to this workflow retain their current stage but lose the workflow reference (`ON DELETE SET NULL`). **Requires admin role.**
+
+### POST /api/v1/drafts/:id/review
+
+Submit a review action (approve, request changes, or reject) for a draft at its current stage. **Requires editor role.** The reviewer must also hold the stage's `required_role` in the draft's space governance.
+
+**Request body:**
+```json
+{
+  "action": "approve",
+  "note": "Looks good, minor wording tweak suggested."
+}
+```
+
+Valid actions: `approve`, `request_changes`, `reject`.
+
+- **approve**: Counts toward the stage's `approvals_needed` threshold. When the threshold is met, the draft advances to the next stage (or becomes `reviewed` if it was the final stage).
+- **request_changes**: Recorded but does not block approvals. The draft stays at the current stage.
+- **reject**: Immediately sets the draft status to `rejected`.
+
+Each reviewer can submit one action per stage. Submitting again updates the existing action (upsert).
+
+**Response:** `200 OK` with `{"ok": true, "advanced": true}` if the draft advanced to the next stage.
+
+### POST /api/v1/drafts/:id/skip-review
+
+Admin bypass: skip all remaining review stages and move the draft directly to `reviewed` status. **Requires admin role.**
+
+Use this when a draft doesn't need gatekeeping — e.g., trusted content sources, low-risk updates, or time-sensitive documentation.
+
+**Response:** `200 OK` with `{"ok": true, "status": "reviewed"}`
+
+Returns `404` if the draft is not found or not in a reviewable state (must be `status = 'draft'`).
+
+### GET /api/v1/drafts/:id/reviews
+
+List all review actions for a draft. **Requires viewer role.**
+
+### GET /api/v1/drafts/:id/stage
+
+Get the current review stage progress for a draft, including who has reviewed and how many approvals remain.
+
+**Response:**
+```json
+{
+  "draft_id": "uuid",
+  "current_stage": "sme_review",
+  "workflow_id": "uuid",
+  "progress": {
+    "stage_name": "sme_review",
+    "approvals_needed": 2,
+    "approvals_received": 1,
+    "actions": [
+      {
+        "actor_id": "uuid",
+        "action": "approve",
+        "note": "LGTM",
+        "created_at": "2026-03-22T11:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+### POST /api/v1/drafts/:id/comments
+
+Add a review comment to a draft. **Requires editor role.**
+
+**Request body:**
+```json
+{
+  "body": "Consider rephrasing the second paragraph for clarity.",
+  "parent_id": null
+}
+```
+
+Comment body is limited to 10,000 characters. `parent_id` enables threaded replies.
+
+### GET /api/v1/drafts/:id/comments
+
+List all comments on a draft, ordered by creation time. **Requires viewer role.**
+
+### PATCH /api/v1/comments/:id
+
+Update a comment's body. Only the comment author or an admin can edit. **Requires editor role.**
+
+### POST /api/v1/comments/:id/resolve
+
+Mark a comment as resolved. **Requires editor role.**
+
+### GET /api/v1/reviews/my-queue
+
+List drafts awaiting the current user's review, based on their space governance roles. Returns drafts where the user holds the required role for the current stage.
+
+**Response:**
+```json
+{
+  "items": [
+    {
+      "draft_id": "uuid",
+      "title": "Getting Started with Kubernetes",
+      "space": "ENGINEERING",
+      "current_stage": "sme_review",
+      "workflow_name": "Standard Review",
+      "created_at": "2026-03-22T09:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
 ## Content Quality Scoring
 
 Deterministic structural quality scores for documents and fragments. Each item receives a composite score (0-100) built from 7 sub-scores, with content-type-aware templates defining completeness expectations.
@@ -1693,3 +1862,219 @@ Style score formula: `max(0, 100 - (errors × 15 + warnings × 5 + infos × 1))`
 | Max lint content | 500 KB |
 | Max violations per lint | 100 |
 | Max regex pattern length | 500 chars |
+
+---
+
+## Webhooks
+
+Outbound webhook subscriptions for pushing DocBrain events to external systems. All endpoints require **admin** role.
+
+DocBrain signs every delivery with HMAC-SHA256 (`X-DocBrain-Signature` header), retries failed deliveries with exponential backoff, and automatically disables subscriptions after repeated failures (circuit breaker).
+
+### List Webhook Subscriptions
+
+```
+GET /api/v1/webhooks
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Slack Pipeline",
+    "url": "https://hooks.example.com/docbrain",
+    "events": ["document.ingested", "gap.detected"],
+    "headers": { "X-Custom": "value" },
+    "is_active": true,
+    "created_by": "uuid",
+    "failure_count": 0,
+    "last_failure_at": null,
+    "last_success_at": "2026-03-22T10:00:00Z",
+    "disabled_reason": null,
+    "created_at": "2026-03-20T08:00:00Z",
+    "updated_at": "2026-03-22T10:00:00Z"
+  }
+]
+```
+
+> **Note:** The `secret` field is never returned in API responses.
+
+---
+
+### Create Webhook Subscription
+
+```
+POST /api/v1/webhooks
+```
+
+**Request Body:**
+```json
+{
+  "name": "Slack Pipeline",
+  "url": "https://hooks.example.com/docbrain",
+  "secret": "your-secret-at-least-16-chars",
+  "events": ["document.ingested", "gap.detected"],
+  "headers": { "X-Custom": "value" }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Human-readable subscription name |
+| `url` | string | yes | HTTPS endpoint to deliver events to. Must not be a private/internal IP unless `ALLOW_INTERNAL_WEBHOOKS=true`. |
+| `secret` | string | yes | HMAC signing secret (minimum 16 characters) |
+| `events` | string[] | yes | Event types to subscribe to (see list below) |
+| `headers` | object | no | Extra HTTP headers to include in deliveries |
+
+**Response:** `201 Created` with the `WebhookSubscription` object.
+
+**Validation:**
+- `secret` must be at least 16 characters
+- `events` must contain only valid event types
+- `url` must not resolve to a private/internal IP address (unless `ALLOW_INTERNAL_WEBHOOKS=true`)
+
+---
+
+### Update Webhook Subscription
+
+```
+PATCH /api/v1/webhooks/:id
+```
+
+**Request Body:** (all fields optional)
+```json
+{
+  "name": "Updated Name",
+  "url": "https://new-endpoint.example.com/hook",
+  "secret": "new-secret-at-least-16-chars",
+  "events": ["document.ingested"],
+  "headers": { "X-Custom": "new-value" },
+  "is_active": true
+}
+```
+
+**Response:** `200 OK` with the updated `WebhookSubscription` object.
+
+---
+
+### Delete Webhook Subscription
+
+```
+DELETE /api/v1/webhooks/:id
+```
+
+**Response:**
+```json
+{
+  "status": "deleted"
+}
+```
+
+---
+
+### Send Test Event
+
+```
+POST /api/v1/webhooks/:id/test
+```
+
+Sends a `webhook.test` event to the subscription's URL. Useful for verifying connectivity and signature validation.
+
+**Response:**
+```json
+{
+  "success": true,
+  "delivery_id": "uuid",
+  "response_status": 200,
+  "response_body": "OK"
+}
+```
+
+---
+
+### List Delivery Log
+
+```
+GET /api/v1/webhooks/:id/deliveries
+```
+
+Returns recent delivery attempts for a subscription.
+
+**Query Parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | integer | `50` | Max results |
+
+**Response:** Array of `WebhookDelivery` objects with delivery ID, event type, HTTP status, response body, attempt number, and timestamps.
+
+---
+
+### Reset Circuit Breaker
+
+```
+POST /api/v1/webhooks/:id/reset
+```
+
+Resets the failure counter and re-enables a subscription that was auto-disabled by the circuit breaker.
+
+**Response:**
+```json
+{
+  "status": "reset",
+  "is_active": true
+}
+```
+
+---
+
+### Event Types
+
+All event types from the internal event bus are available for webhook subscriptions:
+
+| Event Type | Description |
+|------------|-------------|
+| `document.ingested` | New document indexed |
+| `document.updated` | Existing document re-indexed |
+| `document.deleted` | Document removed |
+| `freshness.changed` | Document freshness status changed |
+| `quality.scored` | Quality score computed or updated |
+| `fragment.captured` | Knowledge fragment captured |
+| `fragment.indexed` | Fragment auto-indexed into search |
+| `fragment.promoted` | Fragment promoted from review queue |
+| `gap.detected` | New gap cluster detected |
+| `gap.assigned` | Gap assigned to a user |
+| `gap.resolved` | Gap marked as resolved |
+| `draft.generated` | AI draft generated for a gap |
+| `draft.review_requested` | Draft sent for review |
+| `draft.published` | Draft published to target system |
+| `draft.rejected` | Draft rejected during review |
+| `query.answered` | User query answered |
+| `feedback.received` | User feedback submitted |
+| `sla.breached` | Documentation SLA breached |
+| `maintenance.fix_proposed` | Automated fix proposal generated |
+
+### Delivery Headers
+
+Every webhook delivery includes these headers:
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | `application/json` |
+| `X-DocBrain-Signature` | HMAC-SHA256 signature: `sha256=<hex-digest>`. Compute `HMAC-SHA256(secret, raw_body)` and compare to verify authenticity. |
+| `X-DocBrain-Event` | Event type (e.g. `document.ingested`) |
+| `X-DocBrain-Delivery` | Unique delivery UUID for idempotency |
+
+### Retry Policy
+
+Failed deliveries (non-2xx response or timeout) are retried with exponential backoff:
+
+| Attempt | Delay |
+|---------|-------|
+| 1 | Immediate |
+| 2 | 60 seconds |
+| 3 | 300 seconds (5 minutes) |
+| 4 | 3600 seconds (1 hour) |
+
+After all retry attempts are exhausted, the failure counter is incremented. When the failure counter reaches `WEBHOOK_CIRCUIT_BREAKER_THRESHOLD` (default: 10) consecutive failures, the subscription is automatically disabled with `disabled_reason: "circuit_breaker"`. Use `POST /api/v1/webhooks/:id/reset` to re-enable.

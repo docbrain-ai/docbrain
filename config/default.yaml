@@ -279,3 +279,13 @@ fragments:
   auto_index_threshold: 0.7         # FRAGMENT_AUTO_INDEX_THRESHOLD — min confidence to auto-index into search
   review_threshold: 0.4             # FRAGMENT_REVIEW_THRESHOLD — min confidence for review queue (below = discard)
   max_content_length: 10000         # FRAGMENT_MAX_CONTENT_LENGTH — max fragment content in characters
+
+# ── Webhooks ──────────────────────────────────────────────────────────────
+# Outbound webhook subscriptions for integrating DocBrain events with
+# external systems (Slack bots, CI/CD, PagerDuty, custom dashboards, etc.).
+# All settings are env-var driven — uncomment the block below for reference.
+# webhooks:
+#   delivery_timeout_seconds: ${WEBHOOK_DELIVERY_TIMEOUT_SECONDS:-10}
+#   max_retries: ${WEBHOOK_MAX_RETRIES:-4}
+#   circuit_breaker_threshold: ${WEBHOOK_CIRCUIT_BREAKER_THRESHOLD:-10}
+#   allow_internal: ${ALLOW_INTERNAL_WEBHOOKS:-false}
