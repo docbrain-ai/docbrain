@@ -1309,6 +1309,119 @@ Total spaces are derived from the `documents` table (distinct space values), not
 
 ---
 
+## Governance SLAs
+
+SLA policies define maximum acceptable times for gap acknowledgment, gap resolution, draft review, and document freshness. Policies can be set per-space or org-wide (default). A periodic background checker detects breaches and emits `SlaBreached` events.
+
+### GET /api/v1/governance/slas
+
+List all SLA policies. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "policies": [
+    {
+      "id": "uuid",
+      "space": null,
+      "gap_acknowledgment_hours": 48,
+      "gap_resolution_days": 14,
+      "draft_review_hours": 72,
+      "freshness_review_days": 30,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+The `space: null` row is the org-wide default (always present). Space-specific overrides appear with their space name.
+
+### PUT /api/v1/governance/slas/default
+
+Upsert the org-wide default SLA policy. **Requires admin role.**
+
+**Request body** (all fields optional — omitted fields keep current values):
+```json
+{
+  "gap_acknowledgment_hours": 48,
+  "gap_resolution_days": 14,
+  "draft_review_hours": 72,
+  "freshness_review_days": 30
+}
+```
+
+**Validation:** Hours must be 1–8760, days must be 1–365.
+
+### PUT /api/v1/governance/slas/:space
+
+Upsert a space-specific SLA policy override. **Requires admin role.** Same request body as above.
+
+### DELETE /api/v1/governance/slas/:space
+
+Delete a space-specific override (space falls back to org default). **Requires admin role.** Returns `204 No Content` on success, `404` if no override exists for the space.
+
+### GET /api/v1/governance/breaches
+
+List SLA breaches with optional filters. **Requires viewer role.**
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `space` | string | — | Filter by space |
+| `sla_type` | string | — | Filter: `acknowledgment`, `resolution`, `review`, `freshness` |
+| `open_only` | bool | `false` | Only show unacknowledged breaches |
+| `limit` | int | `50` | Max results (up to 200) |
+| `offset` | int | `0` | Pagination offset |
+
+**Response:**
+```json
+{
+  "breaches": [
+    {
+      "id": "uuid",
+      "entity_type": "gap",
+      "entity_id": "uuid",
+      "sla_type": "acknowledgment",
+      "space": "ENGINEERING",
+      "owner_id": null,
+      "hours_overdue": 12.5,
+      "acknowledged_at": null,
+      "acknowledged_by": null,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### GET /api/v1/governance/breaches/summary
+
+Aggregate breach statistics for dashboards. **Requires viewer role.**
+
+**Response:**
+```json
+{
+  "total_open": 5,
+  "total_acknowledged": 12,
+  "by_type": [
+    { "sla_type": "acknowledgment", "count": 3 },
+    { "sla_type": "freshness", "count": 2 }
+  ],
+  "by_space": [
+    { "space": "ENGINEERING", "count": 4 },
+    { "space": "(org-wide)", "count": 1 }
+  ]
+}
+```
+
+### POST /api/v1/governance/breaches/:id/acknowledge
+
+Mark a breach as acknowledged. **Requires editor role.** The acknowledging user is recorded. Returns `{ "acknowledged": true }` on success, `404` if the breach doesn't exist or was already acknowledged.
+
+---
+
 ## Review Workflows
 
 Configurable multi-stage review pipelines for autopilot drafts. Each space can have a workflow that defines approval stages (e.g., SME Review → Writer Review → Publish Approval). Reviewers approve, request changes, or reject drafts at each stage.

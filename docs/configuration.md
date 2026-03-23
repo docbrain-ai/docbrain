@@ -662,6 +662,19 @@ Distillation is fire-and-forget: it never affects capture response time. Failure
 | `DISTILLATION_MAX_CONTENT_CHARS` | `8000` | Maximum conversation characters sent to the LLM. Longer conversations are truncated (tail-biased — keeps the most recent messages). |
 | `DISTILLATION_MAX_FRAGMENTS` | `5` | Maximum knowledge fragments extracted per conversation. |
 
+## Governance SLA Checker
+
+The SLA checker runs as a periodic background task that detects breaches across four entity types: gap acknowledgment, gap resolution, draft review, and document freshness. SLA thresholds are stored in the database (per-space overridable via the API) — these settings control the checker's operational behavior.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SLA_CHECKER_INTERVAL_HOURS` | `1` | How often the SLA breach checker runs (hours). |
+| `SLA_CHECKER_QUERY_TIMEOUT_SECS` | `30` | Per-entity-type query timeout in seconds. |
+| `SLA_CHECKER_MAX_CANDIDATES` | `5000` | Maximum candidate entities scanned per type per run. |
+| `SLA_CHECKER_MAX_EVENTS_PER_RUN` | `50` | Maximum `SlaBreached` events emitted per run (prevents webhook flooding). |
+
+See the [API Reference — Governance SLAs](api-reference.md#governance-slas) for endpoint documentation.
+
 ## Webhooks (Outbound)
 
 Outbound webhook subscriptions let you push DocBrain events to external systems — Slack bots, CI/CD pipelines, PagerDuty, custom dashboards, etc. DocBrain signs every delivery with HMAC-SHA256, retries with exponential backoff, and automatically disables subscriptions that fail repeatedly (circuit breaker).

@@ -210,6 +210,12 @@ data:
   DISTILLATION_MAX_CONTENT_CHARS: {{ .Values.fragments.distillation.maxContentChars | default 8000 | quote }}
   DISTILLATION_MAX_FRAGMENTS: {{ .Values.fragments.distillation.maxFragments | default 5 | quote }}
 
+  # Governance SLA Checker
+  SLA_CHECKER_INTERVAL_HOURS: {{ .Values.governance.slaCheckerIntervalHours | default 1 | quote }}
+  SLA_CHECKER_QUERY_TIMEOUT_SECS: {{ .Values.governance.slaCheckerQueryTimeoutSecs | default 30 | quote }}
+  SLA_CHECKER_MAX_CANDIDATES: {{ .Values.governance.slaCheckerMaxCandidates | default 5000 | quote }}
+  SLA_CHECKER_MAX_EVENTS_PER_RUN: {{ .Values.governance.slaCheckerMaxEventsPerRun | default 50 | quote }}
+
   # CI/CD Pipeline Capture
   CI_ANALYZE_ENABLED: {{ .Values.ci.enabled | default true | quote }}
 

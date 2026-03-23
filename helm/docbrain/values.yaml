@@ -388,6 +388,15 @@ stream:
   incidentWarningMinUsers: 3  # Min unique users hitting an unanswered question to emit warning
   decayThreshold: 0.5         # Freshness score below which a decay alert is emitted
 
+# -- Governance SLA Checker
+# Periodic background task that detects SLA breaches across gaps, drafts,
+# and documents. SLA thresholds are managed via the API (per-space overridable).
+governance:
+  slaCheckerIntervalHours: 1           # How often the checker runs (hours)
+  slaCheckerQueryTimeoutSecs: 30       # Per-entity-type query timeout (seconds)
+  slaCheckerMaxCandidates: 5000        # Max candidate entities per type per run
+  slaCheckerMaxEventsPerRun: 50        # Max SlaBreached events emitted per run
+
 # -- Webhooks (outbound event delivery)
 # Push DocBrain events to external systems via HTTPS webhooks.
 # Subscriptions are managed via the API (/api/v1/webhooks). These values
