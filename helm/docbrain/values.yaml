@@ -208,6 +208,15 @@ fragments:
   autoIndexThreshold: 0.7     # Min confidence to auto-index fragments into search
   reviewThreshold: 0.4        # Min confidence for review queue; below = discard
   maxContentLength: 10000     # Max fragment content length in characters
+  distillation:
+    enabled: true               # Enable/disable conversation auto-distillation
+    maxConcurrent: 3            # Max concurrent LLM distillation calls
+    maxContentChars: 8000       # Max conversation chars sent to LLM
+    maxFragments: 5             # Max fragments per conversation
+
+# -- CI/CD Pipeline Capture (automated knowledge extraction from PRs and deployments)
+ci:
+  enabled: true                 # Enable/disable CI capture endpoints
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
 # Enabled by default. Set enabled: false to opt out.
@@ -246,6 +255,13 @@ freshness:
   contradictionIncludeRecentEventDocs: true
   # Only event-based docs edited within this many days are eligible for contradiction checks.
   contradictionEventDocMaxAgeDays: 90
+
+# -- Semantic quality scoring (LLM-assessed)
+semanticQuality:
+  enabled: true
+  intervalHours: "24"
+  budget: "50"
+  structuralThreshold: "40.0"
 
 # -- Memory consolidation
 memory:

@@ -1646,6 +1646,21 @@ Available content types: `runbook`, `guide`, `troubleshooting`, `faq`, `referenc
 | `readability` | 0-15 | Sentence length variation, no wall-of-text paragraphs, manageable sentence lengths |
 | `metadata_quality` | 0-10 | Author, source URL, and space metadata present |
 
+### Semantic Quality (LLM-Assessed)
+
+When semantic quality scoring is enabled, documents are also assessed by an LLM on four dimensions:
+
+| Dimension | Range | Description |
+|-----------|-------|-------------|
+| `accuracy` | 0-25 | Claims grounded in cited sources |
+| `completeness` | 0-25 | Covers all aspects a reader needs |
+| `clarity` | 0-25 | Understandable without external help |
+| `actionability` | 0-25 | Provides concrete steps, commands, and examples |
+
+The semantic score (0-100) is stored in the `semantic_score` field with per-dimension details in `semantic_details`. The `composite_score` becomes a 50/50 blend of structural and semantic scores once both are available.
+
+Semantic scoring runs as a background sweep (configurable interval, default 24h) and only evaluates documents with `structural_total >= 40` to avoid wasting LLM calls on obviously poor content. Newly generated drafts are scored immediately after creation.
+
 ---
 
 ## Style Rules Engine
@@ -2078,3 +2093,143 @@ Failed deliveries (non-2xx response or timeout) are retried with exponential bac
 | 4 | 3600 seconds (1 hour) |
 
 After all retry attempts are exhausted, the failure counter is incremented. When the failure counter reaches `WEBHOOK_CIRCUIT_BREAKER_THRESHOLD` (default: 10) consecutive failures, the subscription is automatically disabled with `disabled_reason: "circuit_breaker"`. Use `POST /api/v1/webhooks/:id/reset` to re-enable.
+
+---
+
+## CI/CD Pipeline Capture
+
+Automated knowledge extraction from merged PRs and deployments. Requires **editor** role.
+
+### POST /api/v1/ci/analyze
+
+Analyze a merged PR and extract knowledge fragments.
+
+**Request body:**
+
+```json
+{
+  "pr_number": 1234,
+  "repo": "acme/platform",
+  "pr_title": "Switch event delivery to PG LISTEN/NOTIFY",
+  "pr_body": "Replaced Redis pub/sub with PostgreSQL...",
+  "diff_stat": "+120 -45",
+  "changed_files": "src/events/publisher.rs,src/events/subscriber.rs",
+  "labels": "architecture,breaking-change",
+  "author": "alice@acme.com"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `pr_number` | integer | yes | Pull request number |
+| `repo` | string | yes | Repository in `owner/name` format |
+| `pr_title` | string | yes | PR title (max 500 chars) |
+| `pr_body` | string | no | PR description (max 50,000 chars) |
+| `diff_stat` | string | no | Git diff stats |
+| `changed_files` | string | no | Comma-separated list of changed files |
+| `labels` | string | no | Comma-separated PR labels |
+| `author` | string | no | PR author email or username |
+
+**Response:**
+
+```json
+{
+  "fragments_created": 2,
+  "fragments": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "fragment_type": "decision",
+      "summary": "Switched event delivery from Redis to PG LISTEN/NOTIFY",
+      "confidence": 0.85,
+      "routed_action": "auto_index"
+    }
+  ],
+  "already_analyzed": false
+}
+```
+
+| Status | Description |
+|--------|-------------|
+| 200 | Analysis complete (check `fragments_created` and `already_analyzed`) |
+| 400 | Validation error (missing required field, field too long) |
+| 403 | Insufficient role (requires editor+) |
+| 503 | CI analysis is disabled (`CI_ANALYZE_ENABLED=false`) |
+
+The endpoint is **idempotent**: re-analyzing the same PR returns `already_analyzed: true` with no new fragments.
+
+### POST /api/v1/ci/deploy-capture
+
+Capture deployment context as a knowledge fragment.
+
+**Request body:**
+
+```json
+{
+  "service": "payment-gateway",
+  "version": "2.4.1",
+  "environment": "production",
+  "changelog": "abc1234 Fixed retry logic\ndef5678 Updated timeout config",
+  "config_diff": "timeout: 30 -> 60"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `service` | string | yes | Service name (max 256 chars) |
+| `version` | string | yes | Version being deployed (max 128 chars) |
+| `environment` | string | yes | Target environment (max 128 chars) |
+| `changelog` | string | no | Git changelog (max 50,000 chars) |
+| `config_diff` | string | no | Configuration changes (max 50,000 chars) |
+
+**Response:**
+
+```json
+{
+  "fragment_id": "550e8400-e29b-41d4-a716-446655440000",
+  "summary": "Deployed payment-gateway v2.4.1 to production with retry logic fix"
+}
+```
+
+| Status | Description |
+|--------|-------------|
+| 200 | Capture complete |
+| 400 | Validation error |
+| 403 | Insufficient role |
+| 503 | CI analysis is disabled |
+
+### GitHub Action Setup
+
+Add this workflow to your repository to automatically capture knowledge from merged PRs:
+
+```yaml
+name: DocBrain Knowledge Capture
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  capture:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Capture knowledge from PR
+        env:
+          DOCBRAIN_API_URL: ${{ secrets.DOCBRAIN_API_URL }}
+          DOCBRAIN_API_KEY: ${{ secrets.DOCBRAIN_API_KEY }}
+        run: |
+          curl -s -X POST "${DOCBRAIN_API_URL}/api/v1/ci/analyze" \
+            -H "Authorization: Bearer ${DOCBRAIN_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --argjson pr_number ${{ github.event.pull_request.number }} \
+              --arg repo '${{ github.repository }}' \
+              --arg pr_title '${{ github.event.pull_request.title }}' \
+              '{pr_number: $pr_number, repo: $repo, pr_title: $pr_title}')"
+```
+
+Required repository secrets:
+- `DOCBRAIN_API_URL` — Your DocBrain server URL
+- `DOCBRAIN_API_KEY` — API key with editor+ role

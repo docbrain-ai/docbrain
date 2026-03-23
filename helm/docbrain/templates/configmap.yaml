@@ -50,6 +50,10 @@ data:
   CONTRADICTION_CHECKS_PER_PASS: {{ .Values.freshness.contradictionChecksPerPass | default "10" | quote }}
   CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS: {{ .Values.freshness.contradictionIncludeRecentEventDocs | default true | quote }}
   CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS: {{ .Values.freshness.contradictionEventDocMaxAgeDays | default 90 | quote }}
+  SEMANTIC_QUALITY_ENABLED: {{ .Values.semanticQuality.enabled | default true | quote }}
+  SEMANTIC_QUALITY_INTERVAL_HOURS: {{ .Values.semanticQuality.intervalHours | default "24" | quote }}
+  SEMANTIC_QUALITY_BUDGET: {{ .Values.semanticQuality.budget | default "50" | quote }}
+  SEMANTIC_QUALITY_STRUCTURAL_THRESHOLD: {{ .Values.semanticQuality.structuralThreshold | default "40.0" | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.memory.consolidationIntervalHours | default "6" | quote }}
 
   {{- if eq .Values.llm.provider "ollama" }}
@@ -199,6 +203,15 @@ data:
   FRAGMENT_AUTO_INDEX_THRESHOLD: {{ .Values.fragments.autoIndexThreshold | default 0.7 | quote }}
   FRAGMENT_REVIEW_THRESHOLD: {{ .Values.fragments.reviewThreshold | default 0.4 | quote }}
   FRAGMENT_MAX_CONTENT_LENGTH: {{ .Values.fragments.maxContentLength | default 10000 | quote }}
+
+  # Conversation Auto-Distillation
+  DISTILLATION_ENABLED: {{ .Values.fragments.distillation.enabled | default true | quote }}
+  DISTILLATION_MAX_CONCURRENT: {{ .Values.fragments.distillation.maxConcurrent | default 3 | quote }}
+  DISTILLATION_MAX_CONTENT_CHARS: {{ .Values.fragments.distillation.maxContentChars | default 8000 | quote }}
+  DISTILLATION_MAX_FRAGMENTS: {{ .Values.fragments.distillation.maxFragments | default 5 | quote }}
+
+  # CI/CD Pipeline Capture
+  CI_ANALYZE_ENABLED: {{ .Values.ci.enabled | default true | quote }}
 
   # Knowledge Stream
   STREAM_ENABLED: {{ .Values.stream.enabled | default false | quote }}

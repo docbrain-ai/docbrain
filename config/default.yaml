@@ -98,6 +98,15 @@ freshness:
   contradiction_include_recent_event_docs: true   # Include recent Slack/PR/Jira docs in contradiction pass
   contradiction_event_doc_max_age_days: 90        # Only event-based docs edited within N days are eligible
 
+# ── Semantic Quality Scoring ───────────────────────────────────────────────
+# LLM-assessed quality on four dimensions: accuracy, completeness, clarity,
+# actionability. Runs as a background sweep on structurally-scored documents.
+semantic_quality:
+  enabled: ${SEMANTIC_QUALITY_ENABLED:-true}
+  interval_hours: ${SEMANTIC_QUALITY_INTERVAL_HOURS:-24}
+  budget_per_sweep: ${SEMANTIC_QUALITY_BUDGET:-50}
+  structural_threshold: ${SEMANTIC_QUALITY_STRUCTURAL_THRESHOLD:-40.0}
+
 memory:
   consolidation_interval_hours: 6
 
@@ -279,6 +288,17 @@ fragments:
   auto_index_threshold: 0.7         # FRAGMENT_AUTO_INDEX_THRESHOLD — min confidence to auto-index into search
   review_threshold: 0.4             # FRAGMENT_REVIEW_THRESHOLD — min confidence for review queue (below = discard)
   max_content_length: 10000         # FRAGMENT_MAX_CONTENT_LENGTH — max fragment content in characters
+  distillation:
+    enabled: ${DISTILLATION_ENABLED:-true}                  # DISTILLATION_ENABLED — enable/disable conversation auto-distillation
+    max_concurrent: ${DISTILLATION_MAX_CONCURRENT:-3}       # DISTILLATION_MAX_CONCURRENT — max concurrent LLM distillation calls
+    max_content_chars: ${DISTILLATION_MAX_CONTENT_CHARS:-8000}  # DISTILLATION_MAX_CONTENT_CHARS — max conversation chars sent to LLM
+    max_fragments: ${DISTILLATION_MAX_FRAGMENTS:-5}         # DISTILLATION_MAX_FRAGMENTS — max fragments per conversation
+
+# ── CI/CD Pipeline Capture ──────────────────────────────────────────────
+# Automated knowledge extraction from merged PRs and deployments.
+# Uses the fast/cheap LLM model for analysis.
+ci:
+  enabled: ${CI_ANALYZE_ENABLED:-true}  # CI_ANALYZE_ENABLED — enable/disable CI capture endpoints
 
 # ── Webhooks ──────────────────────────────────────────────────────────────
 # Outbound webhook subscriptions for integrating DocBrain events with

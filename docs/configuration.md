@@ -444,6 +444,19 @@ When enabled, Autopilot runs on the configured schedule, exposes management endp
 | `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
 
+### Semantic Quality Scoring
+
+LLM-based quality assessment that evaluates documents on four dimensions: accuracy, completeness, clarity, and actionability (each scored 0-25, total 0-100). Runs as a background sweep on documents that have already been structurally scored.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SEMANTIC_QUALITY_ENABLED` | `true` | Enable LLM-based semantic quality scoring |
+| `SEMANTIC_QUALITY_INTERVAL_HOURS` | `24` | How often the semantic scoring sweep runs |
+| `SEMANTIC_QUALITY_BUDGET` | `50` | Maximum documents scored per sweep (controls LLM cost) |
+| `SEMANTIC_QUALITY_STRUCTURAL_THRESHOLD` | `40.0` | Minimum structural score required before a document is eligible for semantic scoring |
+
+The composite quality score blends structural and semantic scores at 50/50 weighting. Documents below the structural threshold are skipped to avoid wasting LLM calls on obviously poor content.
+
 ### Capture Lifecycle
 
 Captured content (GitHub PRs/issues, GitLab MRs, Slack threads) decays with age — unlike incident records (Jira, PagerDuty, Zendesk) which are permanent historical events. A 5-year-old PR discussing a replaced architecture should score low in freshness; a 2-week-old incident thread is always valid.
@@ -625,6 +638,29 @@ Fragments are routed by confidence score: high-confidence fragments are auto-ind
 | `FRAGMENT_AUTO_INDEX_THRESHOLD` | `0.7` | Minimum confidence score to auto-index a fragment into OpenSearch. |
 | `FRAGMENT_REVIEW_THRESHOLD` | `0.4` | Minimum confidence for the review queue. Fragments below this are auto-discarded. |
 | `FRAGMENT_MAX_CONTENT_LENGTH` | `10000` | Maximum fragment content length in characters. |
+
+## CI/CD Pipeline Capture
+
+Automated knowledge extraction from merged PRs and deployments. When enabled, DocBrain provides API endpoints that CI/CD pipelines can call to extract knowledge fragments from pull requests and deployment events. Uses the fast/cheap LLM model to keep costs low at high volume.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CI_ANALYZE_ENABLED` | `true` | Enable or disable the CI/CD capture endpoints (`/api/v1/ci/analyze` and `/api/v1/ci/deploy-capture`). |
+
+See the [API Reference](api-reference.md#cicd-pipeline-capture) for endpoint details and the GitHub Action setup guide.
+
+## Conversation Auto-Distillation
+
+Automatically extracts structured knowledge fragments from captured conversations — Slack threads (via `/docbrain sync`) and GitHub PR discussions (via `@docbrain capture`). After a successful capture, DocBrain runs LLM-powered distillation in the background to identify decisions, facts, caveats, procedures, and context embedded in the conversation.
+
+Distillation is fire-and-forget: it never affects capture response time. Failures are logged and metriced but don't block the capture path.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISTILLATION_ENABLED` | `true` | Enable or disable conversation auto-distillation. |
+| `DISTILLATION_MAX_CONCURRENT` | `3` | Maximum concurrent LLM distillation calls (bounded by semaphore). |
+| `DISTILLATION_MAX_CONTENT_CHARS` | `8000` | Maximum conversation characters sent to the LLM. Longer conversations are truncated (tail-biased — keeps the most recent messages). |
+| `DISTILLATION_MAX_FRAGMENTS` | `5` | Maximum knowledge fragments extracted per conversation. |
 
 ## Webhooks (Outbound)
 
