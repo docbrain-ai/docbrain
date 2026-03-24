@@ -92,6 +92,7 @@ services:
       # Auth session lifetime (30 days default)
       LOGIN_SESSION_TTL_HOURS: ${LOGIN_SESSION_TTL_HOURS:-720}
       # Scheduler intervals (can be overridden in .env)
+      AUTOPILOT_ENABLED: ${AUTOPILOT_ENABLED:-true}
       AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: ${AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS:-6}
       FRESHNESS_SCHEDULER_INTERVAL_HOURS: ${FRESHNESS_SCHEDULER_INTERVAL_HOURS:-24}
       SEMANTIC_QUALITY_ENABLED: ${SEMANTIC_QUALITY_ENABLED:-true}
@@ -112,12 +113,12 @@ services:
       CONNECTOR_REQUEST_TIMEOUT_SECS: ${CONNECTOR_REQUEST_TIMEOUT_SECS:-30}
       CONNECTOR_SYNC_TIMEOUT_SECS: ${CONNECTOR_SYNC_TIMEOUT_SECS:-3600}
       CONNECTOR_CIRCUIT_BREAKER_THRESHOLD: ${CONNECTOR_CIRCUIT_BREAKER_THRESHOLD:-5}
-      CONNECTOR_ALLOW_INTERNAL: ${CONNECTOR_ALLOW_INTERNAL:-false}
+      CONNECTOR_ALLOW_INTERNAL: ${CONNECTOR_ALLOW_INTERNAL:-true}
       # ── Webhooks (outbound event delivery) ──
       WEBHOOK_DELIVERY_TIMEOUT_SECONDS: ${WEBHOOK_DELIVERY_TIMEOUT_SECONDS:-10}
       WEBHOOK_MAX_RETRIES: ${WEBHOOK_MAX_RETRIES:-4}
       WEBHOOK_CIRCUIT_BREAKER_THRESHOLD: ${WEBHOOK_CIRCUIT_BREAKER_THRESHOLD:-10}
-      ALLOW_INTERNAL_WEBHOOKS: ${ALLOW_INTERNAL_WEBHOOKS:-false}
+      ALLOW_INTERNAL_WEBHOOKS: ${ALLOW_INTERNAL_WEBHOOKS:-true}
       # ── Learning pipeline (Tier 2 — set in .env when trainer is enabled) ──
       # LEARNING_ENABLED: ${LEARNING_ENABLED:-false}
       # EMBED_PROVIDER: ${EMBED_PROVIDER:-bedrock}   # set to "local" to use fine-tuned models
@@ -143,6 +144,18 @@ services:
     environment:
       NEXT_PUBLIC_DOCBRAIN_API_URL: http://localhost:${SERVER_PORT:-3000}
       PORT: 3001
+    restart: unless-stopped
+
+  # ── Example connector (serves an internal wiki for demo / testing) ────────
+  # Implements the DocBrain External Connector Protocol:
+  #   GET  /health           → {"status":"ok"}
+  #   POST /documents/list   → paginated document list
+  #   POST /documents/fetch  → full document content
+  # Register via: POST /api/v1/connectors with base_url http://wiki-connector:4000
+  wiki-connector:
+    build: ./examples/connector
+    ports:
+      - "4000:4000"
     restart: unless-stopped
 
   # ── Embedding fine-tuning sidecar (Tier 2 — disabled by default) ──────────
