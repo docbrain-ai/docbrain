@@ -1,0 +1,92 @@
+# DocBrain Style Rules — Acme Platform Engineering Standards
+# Import: POST /api/v1/style-rules/import with {"yaml": "<contents>"}
+# Export: GET /api/v1/style-rules/export
+
+# ── Terminology Rules ────────────────────────────────────────────────────────
+- rule_type: terminology
+  name: no-simple
+  description: "Avoid 'simple' — it dismisses reader difficulty and discourages questions"
+  config:
+    term: "simple"
+    suggestion: "straightforward"
+  severity: warning
+
+- rule_type: terminology
+  name: no-easy
+  description: "Avoid 'easy' — what's easy for experts can be challenging for newcomers"
+  config:
+    term: "easy"
+    suggestion: "quick"
+  severity: warning
+
+- rule_type: terminology
+  name: no-just
+  description: "Avoid 'just' — implies the step is trivial when it may not be"
+  config:
+    term: "just"
+    suggestion: ""
+  severity: info
+
+- rule_type: terminology
+  name: no-obviously
+  description: "Avoid 'obviously' — if it were obvious, the reader wouldn't need the doc"
+  config:
+    term: "obviously"
+    suggestion: ""
+  severity: warning
+
+- rule_type: terminology
+  name: prefer-runbook
+  description: "Use 'runbook' instead of 'playbook' for operational procedures"
+  config:
+    term: "playbook"
+    suggestion: "runbook"
+  severity: info
+
+# ── Formatting Rules ─────────────────────────────────────────────────────────
+- rule_type: formatting
+  name: heading-depth-limit
+  description: "Don't nest headings deeper than H4 — deeper nesting hurts readability"
+  config:
+    max_heading_depth: 4
+  severity: warning
+
+- rule_type: formatting
+  name: sentence-length
+  description: "Keep sentences under 40 words for clarity"
+  config:
+    max_sentence_length: 40
+  severity: info
+
+# ── Structure Rules ──────────────────────────────────────────────────────────
+- rule_type: structure
+  name: require-intro
+  description: "Every document should have an introductory paragraph before the first heading"
+  config:
+    require_intro: true
+  severity: warning
+
+# ── Custom Pattern Rules ─────────────────────────────────────────────────────
+- rule_type: custom_pattern
+  name: no-internal-urls
+  description: "Remove internal URLs before publishing externally"
+  config:
+    pattern: "https?://[a-zA-Z0-9.-]*\\.internal"
+    message: "Internal URL detected — replace with public URL or remove before publishing"
+  severity: error
+
+- rule_type: custom_pattern
+  name: no-todo-without-ticket
+  description: "TODOs must reference a ticket number"
+  config:
+    pattern: "TODO(?!.*[A-Z]+-\\d+)"
+    message: "TODO without ticket reference — add a Jira ticket (e.g., TODO PLAT-1234)"
+  severity: warning
+
+- rule_type: custom_pattern
+  name: no-hardcoded-ip
+  description: "Don't hardcode IP addresses in documentation"
+  config:
+    pattern: "\\b(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\b"
+    message: "Hardcoded IP address detected — use DNS names instead"
+  severity: warning
