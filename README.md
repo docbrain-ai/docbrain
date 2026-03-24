@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Self-improving documentation intelligence for teams.</strong><br/>
-  DocBrain ingests knowledge from every tool your team uses, answers questions with source attribution and confidence scoring, and autonomously identifies documentation gaps — turning every unanswered question into a documented solution.
+  <strong>Knowledge captured at the source. Quality enforced before it ships.</strong><br/>
+  DocBrain captures knowledge the moment it's created — from PRs, conversations, CI pipelines, and IDE annotations — then scores, reviews, and publishes it automatically. No more "we should document that."
 </p>
 
 <p align="center">
@@ -17,191 +17,184 @@
 
 <p align="center">
   <a href="https://docbrainapi.com"><strong>Website</strong></a> &bull;
+  <a href="https://docbrainapi.com/docs"><strong>Docs</strong></a> &bull;
   <a href="#quickstart">Quickstart</a> &bull;
-  <a href="#key-features">Features</a> &bull;
-  <a href="#architecture">Architecture</a> &bull;
-  <a href="#documentation">Docs</a> &bull;
-  <a href="#community">Community</a> &bull;
-  <a href="#contributing">Contributing</a>
+  <a href="#why-docbrain">Why DocBrain</a> &bull;
+  <a href="#features">Features</a> &bull;
+  <a href="#architecture">Architecture</a>
 </p>
 
 ---
 
-> **Project Status:** DocBrain is currently distributed as pre-built Docker images and deployment artifacts (Helm charts, configuration, documentation). Source code is not yet published. CI/CD pipelines, build-from-source instructions, and automated test suites will be added when the source is released. Contributions are currently welcome for documentation, configuration, and bug reports against the published artifacts.
+> **Project Status:** DocBrain is currently distributed as pre-built Docker images and deployment artifacts (Helm charts, configuration, documentation). Source code is not yet published. Contributions are welcome for documentation, configuration, and bug reports.
 
 ---
 
-## Overview
+## The Problem
 
-DocBrain is a RAG-based documentation intelligence platform built in Rust. It connects to 13+ knowledge sources (Confluence, Slack, GitHub, Jira, PagerDuty, Zendesk, Microsoft Teams, and more), provides confidence-scored answers with source attribution, and runs an autonomous **Autopilot** that detects documentation gaps and drafts missing content.
+Every engineering team has the same problem: **knowledge lives in people's heads, Slack threads, PR descriptions, and incident war rooms** — everywhere except the documentation.
 
-Unlike static search tools, DocBrain maintains a multi-tier memory system that compounds over time — every question, answer, and feedback signal makes the next response better.
+The traditional fix? "Let's have a documentation sprint." It never works. People write docs once, they go stale in weeks, and the cycle repeats.
 
-### See It In Action
+## The Fix: Shift-Left Documentation
 
-| | |
-|---|---|
-| [What is DocBrain?](https://youtu.be/S4aSTmevvOQ) — 5-min overview | [Deep Dive Podcast](https://youtu.be/GN4SC6L8YmI) — 20-min deep dive |
-| [MCP Preview](https://youtu.be/9mZLoQnGLl8) — 30-sec IDE demo | [Full Proof Demo](https://youtu.be/yqj5BCVOLHw) — Downvote → Gap → Draft |
+DocBrain flips the model. Instead of asking engineers to write documentation *after* the work is done, it **captures knowledge at the point of creation** and turns it into documentation automatically:
 
----
+```
+Developer merges a PR           → DocBrain extracts decisions, caveats, procedures
+Team discusses in Slack          → DocBrain distills fragments from the conversation
+CI pipeline deploys              → DocBrain captures deployment context and changes
+Engineer annotates in their IDE  → DocBrain links knowledge to the exact code location
 
-## Key Features
-
-- **13+ Knowledge Sources** — Confluence, Slack, Microsoft Teams, GitHub PRs, GitLab MRs, Jira, PagerDuty, OpsGenie, Zendesk, Intercom, local Markdown, and more
-- **Confidence-Scored Answers** — Zero-guess policy: high confidence returns sourced answers, low confidence asks clarifying questions instead of hallucinating
-- **Documentation Autopilot** — Autonomously clusters unanswered questions, detects gaps, and drafts missing documentation using your org's existing voice
-- **4-Tier Memory System** — Working, episodic, semantic, and procedural memory that compounds with every interaction
-- **Document Health Scores** — 5-signal freshness scoring (time decay, engagement, content currency, link health, contradiction detection) with proactive staleness alerts
-- **Cross-Document Reference Graph** — Automatically extracts and links references across documents (GitHub PRs, GitLab MRs, Jira tickets, Confluence pages) for richer context during retrieval
-- **Real-Time Capture** — `/docbrain capture` in Slack threads, `@docbrain capture` on GitHub PRs and GitLab MRs for instant knowledge indexing
-- **Intent-Adaptive Responses** — Classifies queries (find, how-to, troubleshoot, who-owns, status, explain) and adapts response format accordingly
-- **Image Intelligence** — Vision-capable LLM extraction of architecture diagrams, flowcharts, and screenshots during ingestion
-- **Multi-Team Space Isolation** — Soft boost, per-request filters, and API-key-level hard restrictions for multi-tenant deployments
-- **Knowledge Fragments** — First-class knowledge units captured from PRs, commits, IDE annotations, and conversations with confidence-based routing (auto-index, review queue, or discard). Semantic clustering groups related fragments by topic and auto-composes them into documentation drafts when composability criteria are met
-- **CI/CD Pipeline Capture** — Automatic knowledge extraction from merged PRs and deployments via API endpoints and a GitHub Action. LLM-powered analysis extracts decisions, facts, caveats, and procedures with idempotent deduplication
-- **Space Ownership & Governance** — Explicit knowledge ownership with space owners, maintainers, and topic stewards. Auto-assigns gaps to stewards via regex matching. Coverage reporting shows unowned spaces. SLA policies with per-space overrides and automated breach detection for gap acknowledgment, gap resolution, draft review, and document freshness. Unified governance dashboard aggregating ownership coverage, SLA compliance, quality trends, fragment capture rates, velocity, and top contributors into a single pane of glass
-- **Review Workflows** — Configurable multi-stage review pipelines for autopilot drafts. Define approval stages per space (e.g., SME Review → Writer Review → Publish Approval) with role-based reviewer assignment, approve/request-changes/reject actions, threaded comments, and a personal review queue
-- **Content Quality Scoring** — Deterministic structural quality scores (0-100) across 7 dimensions: heading structure, section completeness, code presence, link density, length, readability, and metadata. Content-type-aware templates (runbook, guide, troubleshooting, FAQ, reference) define what "complete" means per document type
-- **Style Rules Engine** — Configurable linting rules for documentation consistency: banned terminology, heading depth limits, sentence length caps, required intro sections, and custom regex patterns. Space-scoped overrides let teams enforce their own standards. YAML import/export for version-controlled rule sets
-- **Event Bus** — Real-time internal pub/sub with persistent event logging, SSE streaming, and per-type metrics for all significant system actions
-- **Published OpenAPI Specification** — Auto-generated OpenAPI 3.1 spec from all API routes with Swagger UI at `/api/docs` for interactive exploration and client code generation
-- **Multiple LLM Providers** — Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Google Gemini, Vertex AI, DeepSeek, Groq, Mistral, xAI, Azure OpenAI, OpenRouter, Together AI, and Cohere
-
----
-
-## Intelligence Layer
-
-DocBrain's intelligence layer goes beyond retrieval with five systems that make it proactive, self-improving, and organizationally aware:
-
-### Knowledge Graph
-BFS/DFS traversal over your entity graph surfaces structural knowledge: "What depends on the auth service?", "Who are the experts on Kubernetes?", "What's the blast radius if Redis goes down?" Graph traversal answers questions that no amount of vector similarity can.
-
-**API:** `GET /api/v1/graph/entity/:name`, `GET /api/v1/graph/blast-radius/:entity_id`, `GET /api/v1/graph/experts/:topic`
-
-### Documentation Analytics
-Documentation health, quantified. Daily snapshots measure gap resolution rate, knowledge half-life, tribal knowledge %, and ROI in USD. Per-team breakdowns show which teams are investing in knowledge quality and which are accumulating undocumented tribal expertise.
-
-**API:** `GET /api/v1/analytics/velocity`, `GET /api/v1/analytics/velocity/teams`
-
-### Predictive Intelligence
-Gaps before they become incidents. DocBrain detects cascade staleness (updating one doc flags its dependents), forecasts seasonal query spikes, identifies onboarding friction for new hires, and flags documentation likely affected by recent code changes.
-
-**API:** `GET /api/v1/predictive/cascade`, `GET /api/v1/predictive/seasonal`, `GET /api/v1/predictive/onboarding`, `POST /api/v1/predictive/code-change`
-
-### Autonomous Document Maintenance
-Every documentation system accumulates entropy: contradictions between runbooks, links that rot, version numbers that drift. DocBrain generates targeted fix proposals and presents them for one-click review. Human in the loop, but not human in the workflow.
-
-**API:** `GET /api/v1/maintenance/fixes`, `POST /api/v1/maintenance/fixes/:id/apply`
-
-### Content Quality Scoring
-Structural quality analysis that goes beyond freshness. Every document and fragment receives a deterministic 0-100 composite score across 7 dimensions: heading structure, section completeness, code examples, link density, content length, readability, and metadata quality. Content-type templates (runbook, guide, troubleshooting, FAQ, reference) define per-type expectations so a runbook without "Rollback" steps scores lower than a FAQ without code blocks.
-
-**API:** `GET /api/v1/quality/scores`, `GET /api/v1/quality/scores/:doc_id`, `POST /api/v1/quality/rescore`, `GET /api/v1/quality/report`, `GET /api/v1/quality/templates`, `POST /api/v1/quality/lint`, `GET /api/v1/style-rules`
-
-### Knowledge Stream
-Proactive push intelligence. Incident early warnings fire when multiple users cluster on the same topic. Decay risk alerts reach document authors. Expertise gap alerts surface single-point-of-failure knowledge areas before they become incidents.
-
-**API:** `GET /api/v1/stream/events`, `POST /api/v1/stream/context`
-
-See [docs/knowledge-intelligence.md](docs/knowledge-intelligence.md) for full API reference and configuration.
-
----
-
-## Learning Pipeline (Tier 2, opt-in)
-
-DocBrain can improve its own retrieval quality by fine-tuning its embedding model on your team's feedback. Disabled by default — no infrastructure overhead unless you enable it.
-
-### Progressive Tiers
-
-| Tier | What's Active | Infrastructure Required |
-|------|--------------|------------------------|
-| **Tier 0** | Fixed pre-trained embeddings | Nothing (default) |
-| **Tier 1** | Feedback collection + training data storage | Object storage (S3, GCS, or Azure) |
-| **Tier 2** | Full fine-tuning + ONNX hot-swap | Tier 1 + compute (2 vCPU / 8 GB minimum) |
-
-Safety: training data quality guards reject corpora dominated by a single user. Automatic rollback triggers on quality regression.
-
-```bash
-# Enable Tier 2:
-LEARNING_ENABLED=true
-EMBEDDING_PROVIDER=local
-TRAINER_URL=http://trainer:8765
+     Fragments accumulate → Quality scored → Clusters detected → Docs composed
+                                                                      ↓
+                              Review workflow → Style checks → Published
 ```
 
-See [docs/learning.md](docs/learning.md) for full setup and configuration.
+**This is what makes DocBrain different.** Other tools index existing docs and answer questions. DocBrain captures the knowledge that was never written down in the first place — and turns it into documentation that meets your team's quality standards.
 
 ---
 
 ## Quickstart
-
-### Prerequisites
-
-- Docker and Docker Compose
-- An LLM API key (Anthropic, OpenAI, AWS Bedrock, Gemini, Groq, DeepSeek, and [more](docs/providers.md)) or [Ollama](https://ollama.com) for local inference
-
-### Run
 
 ```bash
 git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
 ./scripts/setup.sh    # interactive wizard — picks provider, sets keys, starts services
 ```
 
-Or configure manually:
+Or manually:
 
 ```bash
-cp .env.example .env
-# Edit .env — set LLM_PROVIDER and API keys (defaults to AWS Bedrock)
-# For 100% local: set LLM_PROVIDER=ollama (see docs/quickstart.md)
+cp .env.example .env   # set LLM_PROVIDER and API keys
 docker compose up -d
 ```
 
 ```bash
-# Retrieve the auto-generated admin API key
+# Get the auto-generated admin API key
 docker compose exec server cat /app/admin-bootstrap-key.txt
 
-# Ingest included sample docs
-docker compose exec server docbrain-ingest
-
 # Ask a question
-docker compose exec -e DOCBRAIN_API_KEY=<key> server \
-  docbrain-cli ask "How do I deploy to production?"
+curl -H "Authorization: Bearer <key>" \
+     -H "Content-Type: application/json" \
+     -d '{"question":"How do I deploy to production?"}' \
+     http://localhost:3000/api/v1/ask
 ```
 
-Open the Web UI at **http://localhost:3001**.
+Open the Web UI at **http://localhost:3001**. Full setup guide: [docs/quickstart.md](docs/quickstart.md)
 
-### Configuration
+---
 
-DocBrain uses a config-first architecture with three layers:
+## Why DocBrain
 
-| File | Purpose |
+### For Engineers
+- **Zero extra work.** Knowledge is captured from PRs, commits, and conversations you're already having.
+- **Capture from your IDE.** `docbrain_annotate`, `docbrain_suggest_capture`, and `docbrain_commit_capture` via MCP.
+- **Quality gates in CI.** Lint docs with custom style rules, enforce structure, catch stale content before it ships.
+
+### For Engineering Managers
+- **Know what's documented and what isn't.** Coverage dashboards show gaps per team and per space.
+- **SLA enforcement.** Policies that ensure gaps are acknowledged within 24h and resolved within 7 days.
+- **ROI tracking.** See time saved per query, resolution rates, and knowledge half-life per team.
+
+### For Platform Teams
+- **Self-hosted, single binary.** Rust backend, no JVM, no Python dependency hell. Docker, Kubernetes, or bare metal.
+- **14 LLM providers.** Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Gemini, and 9 more.
+- **13+ knowledge sources.** Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, and more.
+- **RBAC, SSO, space isolation.** GitHub/GitLab/OIDC SSO, role-based access, per-space restrictions.
+
+---
+
+## Features
+
+### Shift-Left Knowledge Capture
+
+| Capture Point | How It Works |
 |---|---|
-| `config/default.yaml` | Non-secret defaults — committed, safe to inspect |
-| `config/local.yaml` | Credentials and local overrides — gitignored |
-| `.env` | Infrastructure secrets: `DATABASE_URL`, API keys, `REDIS_URL`, `OPENSEARCH_URL` |
+| **Merged PRs** | `POST /api/v1/ci/analyze` — LLM extracts decisions, facts, caveats, and procedures from diffs and commit messages |
+| **Deployments** | `POST /api/v1/ci/deploy-capture` — Captures deployment context, environment changes, and rollback procedures |
+| **Slack & Teams** | `/docbrain capture` in a thread — distills conversation into knowledge fragments |
+| **IDE (MCP)** | `docbrain_annotate` links knowledge to code locations. `docbrain_commit_capture` captures intent at commit time |
+| **Conversations** | Auto-distillation extracts fragments from Q&A sessions with confidence scoring |
+| **Manual** | `POST /api/v1/fragments` — Teams can submit fragments directly via API |
 
-Environment variables always override config files. See [Configuration Guide](docs/configuration.md) for all options.
+### Knowledge Quality Pipeline
 
-### Choose Your LLM Provider
+Every fragment and document is scored across three layers:
 
-| Provider | Config |
+| Layer | Method | What It Measures |
+|---|---|---|
+| **Structural** | Deterministic (no LLM) | Heading structure, section completeness, code examples, link density, readability |
+| **Style** | Rule engine | Banned terms, heading depth, sentence length, required sections, custom regex |
+| **Semantic** | LLM-assessed (budget-controlled) | Accuracy, clarity, completeness, actionability |
+
+Composite score: `structural x 0.4 + style x 0.3 + semantic x 0.3`
+
+### Fragment Lifecycle
+
+```
+Capture → Confidence routing → Auto-index / Review queue / Discard
+                                       ↓
+                    Semantic clustering (DBSCAN on embeddings)
+                                       ↓
+                    Auto-composition when cluster is ready
+                    (5+ fragments, 2+ sources, 500+ words)
+                                       ↓
+                    Review workflow (configurable stages)
+                                       ↓
+                    Published documentation
+```
+
+### Governance & Accountability
+
+- **Space ownership** — Owners, maintainers, and topic stewards per knowledge space
+- **SLA policies** — Per-space deadlines for gap acknowledgment, resolution, draft review, and freshness
+- **Breach detection** — Automated scanning with event bus notifications when SLAs are violated
+- **Governance dashboard** — Coverage, SLA compliance, quality trends, capture velocity, top contributors
+
+### Review Workflows
+
+Configurable multi-stage review pipelines for documentation drafts:
+- Define stages per space (e.g., SME Review → Writer Review → Publish Approval)
+- Role-based reviewer assignment with approve/request-changes/reject actions
+- Threaded comments and personal review queue
+
+### Intelligent Q&A (RAG)
+
+- **Confidence-scored answers** — High confidence returns sourced answers, low confidence asks clarifying questions
+- **Intent classification** — Adapts response format to query type (find, how-to, troubleshoot, who-owns, explain)
+- **4-tier memory** — Working, episodic, semantic, and procedural memory that compounds over time
+- **Document freshness** — 5-signal scoring with contradiction detection and staleness alerts
+
+### Documentation Autopilot
+
+- Clusters unanswered questions by semantic similarity
+- Detects documentation gaps with severity classification
+- Drafts missing content grounded in existing docs
+- Routes drafts through review workflows before publishing
+
+### Event Bus & Webhooks
+
+- Real-time internal pub/sub with persistent logging and SSE streaming
+- Outbound webhook subscriptions with retry logic and circuit breakers
+- Subscribe to any event type: gap detected, draft created, SLA breached, fragment captured
+
+### Knowledge Graph & Analytics
+
+- Entity relationships with BFS/DFS traversal and blast radius analysis
+- Documentation velocity: gap resolution rate, knowledge half-life, ROI in USD
+- Predictive intelligence: cascade staleness, seasonal patterns, onboarding friction
+
+### Integrations
+
+| Integration | Type |
 |---|---|
-| **AWS Bedrock** | `LLM_PROVIDER=bedrock` — uses existing AWS credentials |
-| **Anthropic** | `LLM_PROVIDER=anthropic` — requires `ANTHROPIC_API_KEY` |
-| **OpenAI** | `LLM_PROVIDER=openai` — requires `OPENAI_API_KEY` |
-| **Ollama** | `LLM_PROVIDER=ollama` — 100% local, no data leaves your machine |
-| **Google Gemini** | `LLM_PROVIDER=gemini` — requires `GEMINI_API_KEY` |
-| **Vertex AI** | `LLM_PROVIDER=vertex_ai` — GCP credential chain, no API key needed in production |
-| **DeepSeek** | `LLM_PROVIDER=deepseek` — requires `DEEPSEEK_API_KEY` |
-| **Groq** | `LLM_PROVIDER=groq` — requires `GROQ_API_KEY` |
-| **Mistral** | `LLM_PROVIDER=mistral` — requires `MISTRAL_API_KEY` |
-| **xAI (Grok)** | `LLM_PROVIDER=xai` — requires `XAI_API_KEY` |
-| **Azure OpenAI** | `LLM_PROVIDER=azure_openai` — requires `AZURE_OPENAI_API_KEY` + endpoint |
-| **OpenRouter** | `LLM_PROVIDER=openrouter` — requires `OPENROUTER_API_KEY` |
-| **Together AI** | `LLM_PROVIDER=together` — requires `TOGETHER_API_KEY` |
-| **Cohere** | `LLM_PROVIDER=cohere` — requires `COHERE_API_KEY` |
-
-See [Provider Setup](docs/providers.md) for detailed configuration.
+| **Slack** | `/docbrain ask`, `/docbrain capture`, `/docbrain incident` |
+| **MCP (IDE)** | 10 tools for Claude Code, Cursor, and any MCP-compatible editor |
+| **CLI** | `docbrain ask`, `docbrain login`, `docbrain capture` |
+| **GitHub** | PR capture via Actions, `@docbrain capture` on discussions |
+| **GitLab** | MR discussion capture, webhook-driven |
+| **HTTP Connector** | Protocol for custom source ingestion |
+| **OpenAPI** | Swagger UI at `/api/docs`, auto-generated spec at `/api/docs/openapi.json` |
 
 ---
 
@@ -209,204 +202,115 @@ See [Provider Setup](docs/providers.md) for detailed configuration.
 
 ```mermaid
 graph TB
-    subgraph "Clients"
-        WEB["Web UI<br/>(Next.js)"]
+    subgraph "Capture Layer"
+        CI["CI/CD Pipelines"]
+        IDE["IDE (MCP)"]
+        SLACK["Slack / Teams"]
+        WEB["Web UI"]
         CLI["CLI"]
-        MCP["MCP Server"]
-        SLACK["Slack Bot"]
+        API_EXT["External APIs"]
     end
 
     subgraph "DocBrain Server (Rust / Axum)"
-        API["REST API + SSE"]
-        AUTH["Auth + RBAC"]
-        RAG["RAG Pipeline"]
-        AUTO["Autopilot Engine"]
-        FRESH["Freshness Scorer"]
+        FRAG["Fragment Router"]
+        QUAL["Quality Pipeline<br/><i>structural + style + semantic</i>"]
+        CLUST["Clustering Engine"]
+        COMP["Composition Engine"]
+        REV["Review Workflows"]
+        RAG["RAG Pipeline<br/><i>intent → search → memory → generate</i>"]
+        AUTO["Autopilot<br/><i>gap detection + draft generation</i>"]
+        GOV["Governance<br/><i>ownership + SLAs + dashboard</i>"]
+        EVT["Event Bus + Webhooks"]
     end
 
     subgraph "Storage"
-        PG["PostgreSQL<br/><i>memory · episodes · entities<br/>rules · gap clusters · drafts</i>"]
-        OS["OpenSearch<br/><i>vector index (k-NN)<br/>keyword index (BM25)</i>"]
-        RD["Redis<br/><i>sessions · cache · rate limits</i>"]
+        PG["PostgreSQL<br/><i>fragments · scores · workflows<br/>SLAs · memory · entities</i>"]
+        OS["OpenSearch<br/><i>vector (k-NN) + keyword (BM25)</i>"]
+        RD["Redis<br/><i>sessions · cache</i>"]
     end
 
     subgraph "LLM Providers"
-        OL["Ollama"]
-        AN["Anthropic"]
-        OA["OpenAI"]
-        BR["AWS Bedrock"]
-        GM["Gemini / Vertex AI"]
-        DS["DeepSeek · Groq · Mistral<br/>xAI · OpenRouter · Together<br/>Azure OpenAI · Cohere"]
+        PROVIDERS["Anthropic · OpenAI · Bedrock<br/>Ollama · Gemini · Vertex AI<br/>DeepSeek · Groq · Mistral · xAI<br/>Azure OpenAI · OpenRouter<br/>Together AI · Cohere"]
     end
 
-    WEB & CLI & MCP & SLACK --> API
-    API --> AUTH --> RAG
-    API --> AUTO
-    API --> FRESH
-    RAG --> PG & OS & RD
-    RAG --> OL & AN & OA & BR & GM & DS
-    AUTO --> PG & OS
-    AUTO --> AN & OA & BR & GM & DS
-    FRESH --> PG
+    CI & IDE & SLACK & WEB & CLI & API_EXT --> FRAG
+    FRAG --> QUAL --> CLUST --> COMP --> REV
+    WEB & CLI & SLACK --> RAG
+    RAG & AUTO & GOV --> PG & OS
+    RAG & AUTO & COMP --> PROVIDERS
+    EVT --> PG
+    GOV --> EVT
 ```
 
 | Component | Technology | Role |
-|-----------|-----------|------|
-| API Server | Rust, Axum, Tower | HTTP/SSE, auth, rate limiting, routing |
-| RAG Pipeline | Custom | Intent classification, hybrid search, memory enrichment, generation |
-| Autopilot | Custom | Gap analysis, semantic clustering, draft generation |
-| Freshness | Custom | 5-signal scoring, contradiction detection, staleness alerts |
+|---|---|---|
+| API Server | Rust, Axum, Tower | HTTP/SSE, auth, RBAC, rate limiting |
+| Quality Pipeline | Custom | Structural + style + semantic scoring |
+| Fragment Engine | Custom | Capture, route, cluster, compose |
+| Review System | Custom | Multi-stage approval workflows |
+| Governance | Custom | Ownership, SLAs, breach detection |
+| RAG Pipeline | Custom | Intent classification, hybrid search, memory, generation |
+| Autopilot | Custom | Gap analysis, clustering, draft generation |
 | Storage | PostgreSQL 17, OpenSearch 2.19, Redis 7 | Metadata, vectors, sessions |
-| Ingest | Custom | 13+ source connectors, heading-aware chunking, image extraction |
-
-Full architecture documentation: [docs/architecture.md](docs/architecture.md)
 
 ---
 
-## How It Works
+## LLM Providers
 
-DocBrain's RAG pipeline adds three layers most implementations skip: **memory**, **freshness awareness**, and **autonomous gap detection**.
+| Provider | Config |
+|---|---|
+| **Anthropic** | `LLM_PROVIDER=anthropic` |
+| **OpenAI** | `LLM_PROVIDER=openai` |
+| **AWS Bedrock** | `LLM_PROVIDER=bedrock` |
+| **Ollama** | `LLM_PROVIDER=ollama` — 100% local, no data leaves your machine |
+| **Google Gemini** | `LLM_PROVIDER=gemini` |
+| **Vertex AI** | `LLM_PROVIDER=vertex_ai` |
+| **DeepSeek** | `LLM_PROVIDER=deepseek` |
+| **Groq** | `LLM_PROVIDER=groq` |
+| **Mistral** | `LLM_PROVIDER=mistral` |
+| **xAI (Grok)** | `LLM_PROVIDER=xai` |
+| **Azure OpenAI** | `LLM_PROVIDER=azure_openai` |
+| **OpenRouter** | `LLM_PROVIDER=openrouter` |
+| **Together AI** | `LLM_PROVIDER=together` |
+| **Cohere** | `LLM_PROVIDER=cohere` |
 
-```mermaid
-graph TB
-    Q["Question"] --> IC["Intent Classification"]
-    IC --> QR["Query Rewriting"]
-    QR --> HS["Hybrid Search<br/><i>k-NN + BM25</i>"]
-    QR --> ML["Memory Lookup<br/><i>episodic · semantic · procedural</i>"]
-    HS --> CA["Context Assembly"]
-    ML --> CA
-    CA --> RE["Reference Enrichment<br/><i>fetch linked doc chunks</i>"]
-    RE --> FS["Freshness Check"]
-    FS --> LLM["LLM Generation<br/><i>streaming, with citations</i>"]
-    LLM --> CF{"Confidence?"}
-    CF -->|"≥ 85%"| R["Answer + Sources"]
-    CF -->|"70–84%"| NF["Not found<br/>(max 2 sentences)"]
-    CF -->|"< 70%"| CQ["Clarifying question"]
-    R & NF & CQ --> EP["Episode Storage"]
-    EP -. "feedback loop" .-> AP["Autopilot"]
-
-    style AP fill:#2563eb,color:#fff
-    style FS fill:#059669,color:#fff
-    style ML fill:#7c3aed,color:#fff
-    style CQ fill:#dc2626,color:#fff
-```
-
-### Memory System
-
-| Tier | Purpose | Example |
-|------|---------|---------|
-| **Working** | Conversation context within a session | "by 'the service' I mean auth-service" |
-| **Episodic** | Past Q&A across all users, with feedback | "this was asked before — validated answer exists" |
-| **Semantic** | Entity graph — services, teams, dependencies | "auth-service depends on Redis, owned by Platform" |
-| **Procedural** | Rules learned from feedback patterns | "for deploy questions, always include the canary step" |
-
-### Documentation Autopilot
-
-Autopilot monitors unanswered questions, negative feedback, and recurring gaps across teams. It clusters these signals semantically, classifies them by documentation type, and drafts missing content grounded in your existing docs.
-
-```
-Users ask → Gap detected → Draft generated → Admin reviews → Published → Re-ingested
-```
-
-See [Autopilot Guide](docs/autopilot.md) for configuration and details.
+See [Provider Setup](docs/providers.md) for detailed configuration.
 
 ---
 
 ## Deployment
 
-### Docker Compose (default)
+### Docker Compose
 
 ```bash
 docker compose up -d
 ```
 
-Starts the API server, web UI, PostgreSQL, OpenSearch, and Redis. Schema migrations run automatically on boot.
+Starts the API server, web UI, PostgreSQL, OpenSearch, and Redis. Migrations run automatically.
 
-### Kubernetes (Helm)
+### Kubernetes
 
 ```bash
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
-  --set llm.anthropicApiKey=sk-ant-... \
-  --set embedding.provider=openai \
-  --set embedding.openaiApiKey=sk-...
+  --set llm.anthropicApiKey=sk-ant-...
 ```
 
-Images default to the chart's `appVersion` (`1.2.0`) — no explicit tag override needed.
-
-See [Kubernetes Guide](docs/kubernetes.md) for production configuration including external databases, SSO, Ingress, Vault integration, and scaling.
+See [Kubernetes Guide](docs/kubernetes.md) for production configuration.
 
 ---
 
-## Integrations
+## Configuration
 
-### MCP (Model Context Protocol)
+DocBrain uses a config-first architecture:
 
-Use DocBrain as a knowledge source in Claude Code, Cursor, or any MCP-compatible editor.
+| File | Purpose |
+|---|---|
+| `config/default.yaml` | Non-secret defaults |
+| `config/local.yaml` | Credentials and local overrides (gitignored) |
+| `.env` | Infrastructure secrets: `DATABASE_URL`, API keys |
 
-```bash
-claude mcp add docbrain \
-  -e DOCBRAIN_API_KEY=db_sk_... \
-  -e DOCBRAIN_SERVER_URL=http://localhost:3000 \
-  -- npx -y docbrain-mcp@latest
-```
-
-**Available tools:** `docbrain_ask`, `docbrain_incident`, `docbrain_freshness`, `docbrain_autopilot_gaps`, `docbrain_autopilot_generate`, `docbrain_autopilot_summary`, `docbrain_feedback`, `docbrain_annotate`, `docbrain_suggest_capture`, `docbrain_commit_capture`
-
-**IDE capture tools** (new):
-- `docbrain_annotate` — Capture knowledge linked to a specific code location with drift detection
-- `docbrain_suggest_capture` — Surface unanswered questions about a file or function
-- `docbrain_commit_capture` — Capture intent and reasoning at commit time
-
-### Slack
-
-```
-/docbrain ask how do we deploy to production?
-/docbrain incident payments service 502 after deploy
-/docbrain capture          ← inside a thread to index it instantly
-```
-
-Full setup guide: [docs/slack.md](docs/slack.md)
-
-### CLI
-
-```bash
-brew install docbrain-ai/tap/docbrain
-docbrain login --server https://docbrain.mycompany.com
-docbrain ask "How do I configure mTLS between services?"
-```
-
----
-
-## Scope
-
-### In Scope
-
-DocBrain is intended to be a self-improving documentation intelligence platform. As such, the project implements:
-
-- Multi-source knowledge ingestion (13+ built-in connectors + HTTP Connector Protocol for custom sources)
-- Confidence-scored retrieval-augmented generation with source attribution
-- Multi-tier persistent memory (working, episodic, semantic, procedural)
-- Autonomous documentation gap detection and draft generation (Autopilot)
-- Document health scoring and staleness alerting
-- Real-time knowledge capture from Slack, GitHub, and GitLab
-- Multi-tenant space isolation and RBAC
-- MCP, Slack, CLI, and Web UI interfaces
-- Knowledge Graph with BFS/DFS traversal, blast radius analysis, and expertise routing
-- Documentation Analytics: gap resolution rate, knowledge half-life, tribal knowledge %, ROI tracking
-- Predictive Intelligence: cascade staleness, seasonal patterns, onboarding gaps, code-change-triggered review
-- Autonomous Document Maintenance: AI fix proposals for contradictions, broken links, and version drift
-- Knowledge Stream: proactive incident warnings, decay alerts, expertise gap detection
-- Embedding model fine-tuning pipeline (opt-in Tier 2) with ONNX export and safety gates
-
-### Out of Scope
-
-DocBrain is designed to work alongside existing tools. The following are explicitly not goals:
-
-- Replacing Confluence, Notion, or other documentation platforms (DocBrain augments them)
-- General-purpose LLM chat or code generation
-- Real-time collaborative document editing
-- Source code analysis or static analysis
+Environment variables always override config files. See [Configuration Guide](docs/configuration.md).
 
 ---
 
@@ -414,20 +318,28 @@ DocBrain is designed to work alongside existing tools. The following are explici
 
 | | |
 |---|---|
-| [Quickstart](docs/quickstart.md) | Running locally or in the cloud in 5 minutes |
-| [Ingestion Guide](docs/ingestion.md) | Connecting all 13+ knowledge sources |
+| [Quickstart](docs/quickstart.md) | Running locally in 5 minutes |
 | [Configuration](docs/configuration.md) | All environment variables and options |
 | [Provider Setup](docs/providers.md) | LLM and embedding provider configuration |
-| [Architecture](docs/architecture.md) | System design, data flow, memory, freshness, and Autopilot |
-| [Autopilot](docs/autopilot.md) | Gap detection, draft generation, and the feedback loop |
-| [Knowledge Intelligence](docs/knowledge-intelligence.md) | Knowledge Graph, Documentation Analytics, Predictive Intelligence, Autonomous Maintenance, Knowledge Stream |
-| [Learning Pipeline](docs/learning.md) | Embedding fine-tuning — Tier 0/1/2, trainer sidecar, safety mechanisms |
-| [API Reference](docs/api-reference.md) | REST API with Autopilot endpoints |
+| [Architecture](docs/architecture.md) | System design, data flow, memory, freshness |
+| [Ingestion Guide](docs/ingestion.md) | Connecting 13+ knowledge sources |
+| [Knowledge Intelligence](docs/knowledge-intelligence.md) | Graph, analytics, predictive intelligence, maintenance |
+| [Autopilot](docs/autopilot.md) | Gap detection, draft generation, feedback loop |
+| [Learning Pipeline](docs/learning.md) | Embedding fine-tuning (opt-in) |
+| [API Reference](docs/api-reference.md) | Full REST API documentation |
 | [RBAC](docs/rbac.md) | Role-based access control |
-| [Slack Integration](docs/slack.md) | Slash commands, feedback buttons, and proactive notifications |
-| [GitLab Capture](docs/gitlab-capture.md) | Real-time MR discussion indexing |
-| [Kubernetes](docs/kubernetes.md) | Helm chart deployment and scaling |
-| [Threat Model](THREAT_MODEL.md) | Security analysis: assets, trust boundaries, mitigations |
+| [Slack Integration](docs/slack.md) | Slash commands and real-time capture |
+| [GitLab Capture](docs/gitlab-capture.md) | MR discussion indexing |
+| [Kubernetes](docs/kubernetes.md) | Helm chart deployment |
+
+---
+
+## See It In Action
+
+| | |
+|---|---|
+| [What is DocBrain?](https://youtu.be/S4aSTmevvOQ) — 5-min overview | [Deep Dive Podcast](https://youtu.be/GN4SC6L8YmI) — 20-min deep dive |
+| [MCP Preview](https://youtu.be/9mZLoQnGLl8) — 30-sec IDE demo | [Full Proof Demo](https://youtu.be/yqj5BCVOLHw) — Downvote → Gap → Draft |
 
 ---
 
@@ -441,30 +353,22 @@ DocBrain is designed to work alongside existing tools. The following are explici
 
 ## Contributing
 
-We welcome contributions from the community. Since source code is not yet published, current contributions focus on documentation, configuration, and feedback. Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Reporting bugs and requesting features
-- Submitting documentation and configuration improvements
-- Pull request process
+We welcome contributions. Since source code is not yet published, current contributions focus on documentation, configuration, and feedback. See [Contributing Guide](CONTRIBUTING.md).
 
 ---
 
 ## Security
 
-To report a security vulnerability, please follow the process outlined in [SECURITY.md](SECURITY.md). Do **not** file a public GitHub issue for security vulnerabilities.
+To report a security vulnerability, see [SECURITY.md](SECURITY.md). Do **not** file a public issue.
 
 ---
 
 ## License
 
-DocBrain is licensed under the [Business Source License 1.1](LICENSE) (BSL 1.1).
-
-- **Production use** is permitted, except offering DocBrain as a hosted/managed service to third parties.
-- **Change date:** The earlier of January 1, 2028, or when the repository reaches 5,000 GitHub stars, at which point the license converts to [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
-- For alternative licensing, contact [licensing@docbrainapi.com](mailto:licensing@docbrainapi.com).
+[Business Source License 1.1](LICENSE) (BSL 1.1). Production use is permitted, except offering DocBrain as a hosted service. Converts to [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) on the earlier of January 1, 2028, or 5,000 GitHub stars. For alternative licensing: [licensing@docbrainapi.com](mailto:licensing@docbrainapi.com).
 
 ---
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@docbrain.ai](mailto:conduct@docbrain.ai).
+[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Report concerns to [conduct@docbrain.ai](mailto:conduct@docbrain.ai).
