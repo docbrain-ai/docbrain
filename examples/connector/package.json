@@ -1,0 +1,12 @@
+{
+  "name": "docbrain-wiki-connector",
+  "version": "1.0.0",
+  "description": "Example DocBrain connector — serves a company wiki as a document source",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
