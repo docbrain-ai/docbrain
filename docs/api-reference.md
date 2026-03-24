@@ -1157,6 +1157,77 @@ Fragment statistics — counts by status, source type, and space. Supports `?spa
 
 ---
 
+### GET /api/v1/fragments/clusters
+
+Discover semantic clusters of related fragments. Uses embedding similarity to group fragments by topic. **Requires analyst role.**
+
+Returns clusters sorted by composability score (highest first). Clusters with `composable: true` meet the composition threshold (5+ fragments, diverse sources, 500+ words).
+
+**Response:**
+```json
+[
+  {
+    "topic": "Redis Cluster Mode Limitations",
+    "fragment_ids": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5"],
+    "source_diversity": 3,
+    "author_diversity": 4,
+    "total_content_words": 1250,
+    "composability_score": 0.85,
+    "sample_summaries": [
+      "Redis cluster mode doesn't support pub/sub across shards",
+      "MULTI/EXEC transactions limited to single slot"
+    ],
+    "composable": true
+  }
+]
+```
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Clusters returned |
+| 403 | Insufficient role (requires analyst) |
+| 409 | Clustering is disabled via configuration |
+
+---
+
+### POST /api/v1/fragments/clusters/compose
+
+Compose a composable cluster into a documentation draft. Checks for existing doc coverage before composing — if a document already covers the topic (>70% similarity), composition is skipped. **Requires admin role.**
+
+**Request Body:**
+```json
+{
+  "cluster": {
+    "topic": "Redis Cluster Mode Limitations",
+    "fragment_ids": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5"],
+    "source_diversity": 3,
+    "author_diversity": 4,
+    "total_content_words": 1250,
+    "composability_score": 0.85,
+    "sample_summaries": ["..."],
+    "composable": true
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "draft_id": "uuid",
+  "title": "Redis Cluster Mode Limitations",
+  "fragment_count": 5
+}
+```
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Draft created successfully |
+| 400 | Cluster not composable or invalid request |
+| 403 | Insufficient role (requires admin) |
+| 409 | Clustering disabled, or existing doc already covers this topic |
+
+---
+
 ## Space Ownership & Governance
 
 Explicit knowledge ownership — spaces get owners, maintainers, and contributors. Topics get stewards who are auto-assigned when matching gaps are detected. This is the accountability layer that ensures gaps get resolved and drafts get reviewed.
@@ -1319,6 +1390,74 @@ Ownership coverage report across all spaces. **Requires viewer role.**
 ```
 
 Total spaces are derived from the `documents` table (distinct space values), not from governance tables — ensuring unowned spaces are visible.
+
+### GET /api/v1/governance/dashboard
+
+Aggregated governance overview combining ownership coverage, SLA compliance, quality scores, fragment stats, review queue, velocity, and top contributors. **Requires analyst role.**
+
+Each section is independently fetched with a 5-second timeout. If a section fails, it returns `null` and the failure is recorded in `errors`. The endpoint always returns 200 with partial data.
+
+**Response:**
+```json
+{
+  "coverage": {
+    "total_spaces": 12,
+    "owned_spaces": 9,
+    "coverage_pct": 75.0,
+    "unowned_spaces": ["INFRA"]
+  },
+  "sla_breaches": {
+    "total_open": 3,
+    "total_acknowledged": 12,
+    "by_type": [{ "sla_type": "gap_acknowledgment", "count": 2 }],
+    "by_space": [{ "space": "INFRA", "count": 2 }]
+  },
+  "quality": {
+    "overall_avg": 68.5,
+    "by_space": [{ "space": "PAYMENTS", "avg_score": 72.3, "doc_count": 15 }],
+    "worst_docs": [{ "document_id": "uuid", "title": "Old Guide", "composite_score": 23.4 }]
+  },
+  "fragments": {
+    "total": 147,
+    "by_status": [{ "status": "approved", "count": 89 }],
+    "by_source_type": [{ "source_type": "pr_merge", "count": 68 }],
+    "by_space": [{ "space": "PAYMENTS", "count": 45 }]
+  },
+  "review_queue": [
+    {
+      "draft_id": "uuid",
+      "draft_title": "Deployment Runbook",
+      "current_stage": "sme_review",
+      "stage_display_name": "SME Review",
+      "workflow_name": "Default",
+      "space": "INFRA",
+      "entered_stage_at": "2024-01-15T10:00:00Z"
+    }
+  ],
+  "velocity": {
+    "current_velocity": 1.2,
+    "velocity_trend": "accelerating",
+    "grade": "B",
+    "weekly_snapshots": [
+      { "week_start": "2024-01-08", "docs_created": 5, "docs_updated": 12, "gaps_opened": 3, "gaps_resolved": 4, "velocity": 1.1 }
+    ]
+  },
+  "top_contributors": [
+    { "author_id": "alice", "author_name": "Alice Smith", "fragment_count": 23, "approved_count": 18 }
+  ],
+  "errors": [],
+  "generated_at": "2024-01-15T12:00:00Z"
+}
+```
+
+Sections that fail to load return `null` with an entry in `errors`:
+```json
+{
+  "errors": [
+    { "section": "velocity", "reason": "timeout" }
+  ]
+}
+```
 
 ---
 

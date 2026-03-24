@@ -210,6 +210,13 @@ data:
   DISTILLATION_MAX_CONTENT_CHARS: {{ .Values.fragments.distillation.maxContentChars | default 8000 | quote }}
   DISTILLATION_MAX_FRAGMENTS: {{ .Values.fragments.distillation.maxFragments | default 5 | quote }}
 
+  # Fragment Clustering
+  FRAGMENT_CLUSTERING_ENABLED: {{ .Values.fragments.clustering.enabled | default true | quote }}
+  FRAGMENT_CLUSTER_THRESHOLD: {{ .Values.fragments.clustering.clusterThreshold | default 0.80 | quote }}
+  FRAGMENT_MIN_CLUSTER_SIZE: {{ .Values.fragments.clustering.minClusterSize | default 3 | quote }}
+  FRAGMENT_MIN_SOURCE_DIVERSITY: {{ .Values.fragments.clustering.minSourceDiversity | default 2 | quote }}
+  FRAGMENT_MAX_PER_CLUSTERING_RUN: {{ .Values.fragments.clustering.maxFragmentsPerRun | default 2000 | quote }}
+
   # Governance SLA Checker
   SLA_CHECKER_INTERVAL_HOURS: {{ .Values.governance.slaCheckerIntervalHours | default 1 | quote }}
   SLA_CHECKER_QUERY_TIMEOUT_SECS: {{ .Values.governance.slaCheckerQueryTimeoutSecs | default 30 | quote }}

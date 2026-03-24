@@ -293,6 +293,12 @@ fragments:
     max_concurrent: ${DISTILLATION_MAX_CONCURRENT:-3}       # DISTILLATION_MAX_CONCURRENT — max concurrent LLM distillation calls
     max_content_chars: ${DISTILLATION_MAX_CONTENT_CHARS:-8000}  # DISTILLATION_MAX_CONTENT_CHARS — max conversation chars sent to LLM
     max_fragments: ${DISTILLATION_MAX_FRAGMENTS:-5}         # DISTILLATION_MAX_FRAGMENTS — max fragments per conversation
+  clustering:
+    enabled: ${FRAGMENT_CLUSTERING_ENABLED:-true}                          # FRAGMENT_CLUSTERING_ENABLED — enable/disable semantic clustering
+    cluster_threshold: ${FRAGMENT_CLUSTER_THRESHOLD:-0.80}                 # FRAGMENT_CLUSTER_THRESHOLD — cosine similarity threshold for clustering
+    min_cluster_size: ${FRAGMENT_MIN_CLUSTER_SIZE:-3}                      # FRAGMENT_MIN_CLUSTER_SIZE — min fragments per cluster
+    min_source_diversity: ${FRAGMENT_MIN_SOURCE_DIVERSITY:-2}              # FRAGMENT_MIN_SOURCE_DIVERSITY — min distinct source types for composability
+    max_fragments_per_run: ${FRAGMENT_MAX_PER_CLUSTERING_RUN:-2000}         # FRAGMENT_MAX_PER_CLUSTERING_RUN — max fragments loaded per clustering run
 
 # ── Governance ───────────────────────────────────────────────────────────
 # SLA thresholds live in the database (per-space overridable).

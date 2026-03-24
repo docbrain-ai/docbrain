@@ -639,6 +639,18 @@ Fragments are routed by confidence score: high-confidence fragments are auto-ind
 | `FRAGMENT_REVIEW_THRESHOLD` | `0.4` | Minimum confidence for the review queue. Fragments below this are auto-discarded. |
 | `FRAGMENT_MAX_CONTENT_LENGTH` | `10000` | Maximum fragment content length in characters. |
 
+## Fragment Clustering & Auto-Composition
+
+Semantic clustering groups related fragments by topic using embedding similarity (DBSCAN-style greedy algorithm). When a cluster meets composability criteria (5+ fragments, diverse sources, 500+ words), it can be auto-composed into a documentation draft via the API.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FRAGMENT_CLUSTERING_ENABLED` | `true` | Enable or disable the fragment clustering endpoint. |
+| `FRAGMENT_CLUSTER_THRESHOLD` | `0.80` | Cosine similarity threshold for grouping fragments (0.60 = loose, 0.90 = strict). |
+| `FRAGMENT_MIN_CLUSTER_SIZE` | `3` | Minimum fragments required to form a cluster. |
+| `FRAGMENT_MIN_SOURCE_DIVERSITY` | `2` | Minimum distinct source types for a cluster to be composable. |
+| `FRAGMENT_MAX_PER_CLUSTERING_RUN` | `2000` | Maximum fragments loaded per clustering run (memory/cost control). |
+
 ## CI/CD Pipeline Capture
 
 Automated knowledge extraction from merged PRs and deployments. When enabled, DocBrain provides API endpoints that CI/CD pipelines can call to extract knowledge fragments from pull requests and deployment events. Uses the fast/cheap LLM model to keep costs low at high volume.

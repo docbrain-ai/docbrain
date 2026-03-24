@@ -213,6 +213,12 @@ fragments:
     maxConcurrent: 3            # Max concurrent LLM distillation calls
     maxContentChars: 8000       # Max conversation chars sent to LLM
     maxFragments: 5             # Max fragments per conversation
+  clustering:
+    enabled: true               # Enable/disable semantic clustering endpoint
+    clusterThreshold: 0.80      # Cosine similarity threshold for grouping fragments
+    minClusterSize: 3           # Min fragments per cluster
+    minSourceDiversity: 2       # Min distinct source types for composability
+    maxFragmentsPerRun: 2000    # Max fragments loaded per clustering run
 
 # -- CI/CD Pipeline Capture (automated knowledge extraction from PRs and deployments)
 ci:
