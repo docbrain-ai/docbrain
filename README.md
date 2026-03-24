@@ -65,6 +65,7 @@ Unlike static search tools, DocBrain maintains a multi-tier memory system that c
 - **Content Quality Scoring** — Deterministic structural quality scores (0-100) across 7 dimensions: heading structure, section completeness, code presence, link density, length, readability, and metadata. Content-type-aware templates (runbook, guide, troubleshooting, FAQ, reference) define what "complete" means per document type
 - **Style Rules Engine** — Configurable linting rules for documentation consistency: banned terminology, heading depth limits, sentence length caps, required intro sections, and custom regex patterns. Space-scoped overrides let teams enforce their own standards. YAML import/export for version-controlled rule sets
 - **Event Bus** — Real-time internal pub/sub with persistent event logging, SSE streaming, and per-type metrics for all significant system actions
+- **Published OpenAPI Specification** — Auto-generated OpenAPI 3.1 spec from all API routes with Swagger UI at `/api/docs` for interactive exploration and client code generation
 - **Multiple LLM Providers** — Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Google Gemini, Vertex AI, DeepSeek, Groq, Mistral, xAI, Azure OpenAI, OpenRouter, Together AI, and Cohere
 
 ---
@@ -350,7 +351,12 @@ claude mcp add docbrain \
   -- npx -y docbrain-mcp@latest
 ```
 
-**Available tools:** `docbrain_ask`, `docbrain_incident`, `docbrain_freshness`, `docbrain_autopilot_gaps`, `docbrain_autopilot_generate`, `docbrain_autopilot_summary`
+**Available tools:** `docbrain_ask`, `docbrain_incident`, `docbrain_freshness`, `docbrain_autopilot_gaps`, `docbrain_autopilot_generate`, `docbrain_autopilot_summary`, `docbrain_feedback`, `docbrain_annotate`, `docbrain_suggest_capture`, `docbrain_commit_capture`
+
+**IDE capture tools** (new):
+- `docbrain_annotate` — Capture knowledge linked to a specific code location with drift detection
+- `docbrain_suggest_capture` — Surface unanswered questions about a file or function
+- `docbrain_commit_capture` — Capture intent and reasoning at commit time
 
 ### Slack
 

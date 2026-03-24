@@ -8,6 +8,19 @@ Most endpoints require authentication via Bearer token or API key:
 Authorization: Bearer db_sk_...
 ```
 
+## OpenAPI Specification
+
+DocBrain auto-generates an OpenAPI 3.1 specification from all API routes. The spec includes request/response schemas, authentication requirements, and error codes for every endpoint.
+
+| Resource | URL |
+|----------|-----|
+| **Swagger UI** | `GET /api/docs` |
+| **OpenAPI JSON** | `GET /api/docs/openapi.json` |
+
+The Swagger UI is publicly accessible (no authentication required) and provides interactive API exploration with "Try it out" functionality. Use the OpenAPI JSON endpoint for client code generation with tools like `openapi-generator`, `oapi-codegen`, or `swagger-codegen`.
+
+The specification is versioned — the `info.version` field tracks the DocBrain release version.
+
 ---
 
 ## Authentication
