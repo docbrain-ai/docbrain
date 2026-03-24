@@ -10,57 +10,55 @@ hide:
 
 DocBrain captures knowledge the moment it's created — from PRs, conversations, CI pipelines, and IDE annotations — then scores, reviews, and publishes it automatically.
 
-<div class="grid cards" markdown>
+---
 
--   :material-rocket-launch:{ .lg .middle } **Quickstart**
+<div class="doc-grid" markdown>
 
-    ---
+<div class="doc-card" markdown>
+### :material-rocket-launch: Quickstart
+Get DocBrain running locally in under 5 minutes.
 
-    Get DocBrain running locally in under 5 minutes.
+[:material-arrow-right: Get started](quickstart.md)
+</div>
 
-    [:octicons-arrow-right-24: Get started](quickstart.md)
+<div class="doc-card" markdown>
+### :material-cog: Configuration
+Environment variables, YAML config, and secrets management.
 
--   :material-cog:{ .lg .middle } **Configuration**
+[:material-arrow-right: Configure](configuration.md)
+</div>
 
-    ---
+<div class="doc-card" markdown>
+### :material-brain: Architecture
+System design, data flow, quality pipeline, and storage.
 
-    Environment variables, YAML config, and secrets management.
+[:material-arrow-right: Learn more](architecture.md)
+</div>
 
-    [:octicons-arrow-right-24: Configure](configuration.md)
+<div class="doc-card" markdown>
+### :material-api: API Reference
+Full REST API documentation with request/response schemas.
 
--   :material-brain:{ .lg .middle } **Architecture**
+[:material-arrow-right: API docs](api-reference.md)
+</div>
 
-    ---
+<div class="doc-card" markdown>
+### :material-kubernetes: Kubernetes
+Helm chart deployment for production environments.
 
-    System design, data flow, quality pipeline, and storage.
+[:material-arrow-right: Deploy](kubernetes.md)
+</div>
 
-    [:octicons-arrow-right-24: Learn more](architecture.md)
+<div class="doc-card" markdown>
+### :material-shield-lock: RBAC & SSO
+GitHub, GitLab, and OIDC SSO with role-based access control.
 
--   :material-api:{ .lg .middle } **API Reference**
-
-    ---
-
-    Full REST API documentation with request/response schemas.
-
-    [:octicons-arrow-right-24: API docs](api-reference.md)
-
--   :material-kubernetes:{ .lg .middle } **Kubernetes**
-
-    ---
-
-    Helm chart deployment for production environments.
-
-    [:octicons-arrow-right-24: Deploy](kubernetes.md)
-
--   :material-shield-lock:{ .lg .middle } **RBAC & SSO**
-
-    ---
-
-    GitHub, GitLab, and OIDC SSO with role-based access control.
-
-    [:octicons-arrow-right-24: Security](rbac.md)
+[:material-arrow-right: Security](rbac.md)
+</div>
 
 </div>
+
+---
 
 ## What makes DocBrain different?
 

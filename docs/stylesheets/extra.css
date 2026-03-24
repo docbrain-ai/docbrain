@@ -1,15 +1,50 @@
 /* DocBrain docs custom styles */
 
 /* Card grid for landing page */
-.md-typeset .grid.cards > ul > li {
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 960px) {
+  .doc-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .doc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.doc-card {
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 0.5rem;
+  padding: 1.2rem 1.4rem;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.md-typeset .grid.cards > ul > li:hover {
+.doc-card:hover {
   border-color: var(--md-accent-fg-color);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.doc-card h3 {
+  margin-top: 0 !important;
+  font-size: 0.95rem !important;
+}
+
+.doc-card p {
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc-card a {
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 /* Better code block styling */
