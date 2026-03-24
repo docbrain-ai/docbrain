@@ -100,6 +100,8 @@ Open the Web UI at **http://localhost:3001**. Full setup guide: [docs/quickstart
 - **Self-hosted, single binary.** Rust backend, no JVM, no Python dependency hell. Docker, Kubernetes, or bare metal.
 - **14 LLM providers.** Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Gemini, and 9 more.
 - **13+ knowledge sources.** Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, and more.
+- **Connector SDK.** Build connectors for any source — Notion, Google Docs, internal wikis — in any language. Stateless HTTP protocol, DocBrain handles scheduling and retries.
+- **Full OpenAPI spec.** Swagger UI at `/api/docs`. Auto-generated OpenAPI 3.1 spec. Build your own integrations.
 - **RBAC, SSO, space isolation.** GitHub/GitLab/OIDC SSO, role-based access, per-space restrictions.
 
 ---
@@ -172,11 +174,40 @@ Configurable multi-stage review pipelines for documentation drafts:
 - Drafts missing content grounded in existing docs
 - Routes drafts through review workflows before publishing
 
+### Connector SDK — Plug In Any Source
+
+Build a connector for any knowledge source in any language. DocBrain handles scheduling, retries, and ingestion — your connector just serves HTTP:
+
+```
+GET  /health          → { "status": "ok", "connector_name": "notion" }
+POST /fetch           → Return documents as JSON (with cursor-based pagination)
+POST /fetch-by-ids    → Return specific documents by ID
+```
+
+Register it in DocBrain, set a sync schedule, and every document flows through the same quality pipeline as built-in sources. [Connector Protocol Docs →](docs/ingestion.md)
+
+### MCP IDE Capture
+
+10 tools for Claude Code, Cursor, and any MCP-compatible editor:
+
+- `docbrain_annotate` — Link knowledge to exact code locations
+- `docbrain_suggest_capture` — AI suggests what to capture from your current context
+- `docbrain_commit_capture` — Capture intent and decisions at commit time
+- `docbrain_ask` — Query your knowledge base without leaving the IDE
+
 ### Event Bus & Webhooks
 
 - Real-time internal pub/sub with persistent logging and SSE streaming
 - Outbound webhook subscriptions with retry logic and circuit breakers
 - Subscribe to any event type: gap detected, draft created, SLA breached, fragment captured
+- HMAC-SHA256 signed payloads, exponential backoff, circuit breakers
+
+### OpenAPI & Developer Experience
+
+- **Swagger UI** at `/api/docs` — interactive API explorer
+- **OpenAPI 3.1 spec** at `/api/docs/openapi.json` — auto-generate clients in any language
+- **CLI** — `docbrain ask`, `docbrain capture`, `docbrain login`
+- 60+ API endpoints, fully documented with request/response schemas
 
 ### Knowledge Graph & Analytics
 
