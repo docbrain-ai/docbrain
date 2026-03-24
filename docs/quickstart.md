@@ -280,10 +280,34 @@ docker compose up -d      # start fresh
 docker compose exec server docbrain-ingest   # re-ingest
 ```
 
+## Explore the Web UI
+
+Open **http://localhost:3001** and log in with your API key. Here's what you'll find:
+
+| Page | What It Does |
+|---|---|
+| **Home** | Dashboard with gap forecast, capture trends, and knowledge health metrics |
+| **Ask** | Chat interface — ask questions with streaming answers, source citations, and feedback |
+| **Autopilot** | See detected documentation gaps, AI-generated drafts, and review pipeline |
+| **Captures** | CI captures, conversation distillation, fragment review queue, and clustering |
+| **Governance** | Space ownership, SLA compliance, quality trends, and review workflows |
+| **Quality** | Document scores, style rule management, and on-demand linting tool |
+| **Events** | Real-time event stream and webhook management |
+| **Predictive** | Cascade staleness, seasonal patterns, onboarding gaps, code change analysis |
+
+### Quick wins after first setup
+
+1. **Ask a question** — Go to the Ask page and query your ingested docs. Give thumbs up/down on answers to train the system.
+2. **Set up capture** — If you use GitHub PRs, add `POST /api/v1/ci/analyze` to a GitHub Action. Every merged PR will have its decisions, caveats, and procedures extracted automatically.
+3. **Create style rules** — Go to Quality → Style Rules and add your team's terminology preferences. Every new document and draft will be linted automatically.
+4. **Set up governance** — Go to Governance → Rules & Owners and assign space owners. Set SLA policies to ensure documentation gaps don't linger.
+
 ## Next Steps
 
-- [Ingestion Guide](./ingestion.md) — connect Confluence, GitHub, or local files
-- [Configuration Reference](./configuration.md) — all environment variables
+- [Ingestion Guide](./ingestion.md) — connect Confluence, GitHub, Slack, Jira, and more
+- [Governance](./governance.md) — set up space ownership, SLAs, and breach detection
+- [Review Workflows](./reviews.md) — configure multi-stage approval pipelines
+- [Configuration Reference](./configuration.md) — all environment variables and options
 - [Provider Setup](./providers.md) — switch LLM or embedding providers
 - [Kubernetes Deployment](./kubernetes.md) — deploy to production
 - [API Reference](./api-reference.md) — build integrations

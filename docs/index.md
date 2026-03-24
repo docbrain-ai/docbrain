@@ -6,9 +6,9 @@ hide:
 
 # DocBrain Documentation
 
-**Capture knowledge at the source. Ship docs that stay accurate.**
+**Stop writing docs after the fact. Capture knowledge where it happens.**
 
-DocBrain captures knowledge the moment it's created — from PRs, conversations, CI pipelines, and IDE annotations — then scores, reviews, and publishes it automatically.
+DocBrain intercepts knowledge at the moment of creation — from PRs, Slack threads, CI pipelines, and IDE sessions — then scores, reviews, and publishes it before anyone has to ask "where's the doc for this?"
 
 ---
 
@@ -83,6 +83,8 @@ Engineer annotates in their IDE  → DocBrain links knowledge to the exact code 
 | [Configuration](configuration.md) | All environment variables and options |
 | [LLM Providers](providers.md) | 14 supported providers including fully-local Ollama |
 | [Ingestion](ingestion.md) | Connecting 13+ knowledge sources |
+| [Governance](governance.md) | Space ownership, SLAs, breach detection, dashboards |
+| [Review Workflows](reviews.md) | Multi-stage approval pipelines for documentation |
 | [Knowledge Intelligence](knowledge-intelligence.md) | Graph, analytics, predictive intelligence |
 | [Autopilot](autopilot.md) | Gap detection and draft generation |
 | [Slack](slack.md) | Slash commands and real-time capture |

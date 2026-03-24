@@ -51,6 +51,8 @@ nav:
     - Architecture: architecture.md
     - Knowledge Intelligence: knowledge-intelligence.md
     - Autopilot: autopilot.md
+    - Governance: governance.md
+    - Review Workflows: reviews.md
     - Learning Pipeline: learning.md
   - Integrations:
     - Ingestion Guide: ingestion.md
