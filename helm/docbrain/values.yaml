@@ -397,6 +397,22 @@ governance:
   slaCheckerMaxCandidates: 5000        # Max candidate entities per type per run
   slaCheckerMaxEventsPerRun: 50        # Max SlaBreached events emitted per run
 
+# -- External Connectors (HTTP Connector Protocol)
+# Stateless HTTP servers that implement GET /health, POST /documents/list,
+# POST /documents/fetch. DocBrain calls them on a cron schedule to ingest documents.
+# Connectors are managed via the API (/api/v1/connectors).
+connectors:
+  enabled: true                       # Enable/disable the connector scheduler
+  maxConcurrentSyncs: 3               # Max connectors syncing simultaneously (1-20)
+  maxPagesPerSync: 200                # Max list pages fetched per sync
+  maxDocumentsPerSync: 5000           # Max documents ingested per sync
+  fetchBatchSize: 50                  # Documents fetched per batch (1-200)
+  requestTimeoutSecs: 30              # HTTP timeout for connector requests (5-300)
+  syncTimeoutSecs: 3600               # Overall sync timeout (60-7200)
+  maxResponseBytes: 10485760          # Max response body size (10MB)
+  circuitBreakerThreshold: 5          # Consecutive failures before auto-disable
+  allowInternal: false                # Allow connector URLs on private/internal IPs
+
 # -- Webhooks (outbound event delivery)
 # Push DocBrain events to external systems via HTTPS webhooks.
 # Subscriptions are managed via the API (/api/v1/webhooks). These values

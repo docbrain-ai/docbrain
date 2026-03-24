@@ -378,7 +378,7 @@ docbrain ask "How do I configure mTLS between services?"
 
 DocBrain is intended to be a self-improving documentation intelligence platform. As such, the project implements:
 
-- Multi-source knowledge ingestion (13+ connectors)
+- Multi-source knowledge ingestion (13+ built-in connectors + HTTP Connector Protocol for custom sources)
 - Confidence-scored retrieval-augmented generation with source attribution
 - Multi-tier persistent memory (working, episodic, semantic, procedural)
 - Autonomous documentation gap detection and draft generation (Autopilot)

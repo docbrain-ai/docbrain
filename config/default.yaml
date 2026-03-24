@@ -309,6 +309,21 @@ governance:
 ci:
   enabled: ${CI_ANALYZE_ENABLED:-true}  # CI_ANALYZE_ENABLED — enable/disable CI capture endpoints
 
+# ── External Connectors ──────────────────────────────────────────────────
+# Stateless HTTP servers that implement GET /health, POST /documents/list,
+# POST /documents/fetch. DocBrain calls them on a cron schedule.
+connectors:
+  enabled: ${CONNECTOR_ENABLED:-true}                                 # Enable/disable the connector scheduler
+  max_concurrent_syncs: ${CONNECTOR_MAX_CONCURRENT_SYNCS:-3}          # Max connectors syncing simultaneously
+  max_pages_per_sync: ${CONNECTOR_MAX_PAGES_PER_SYNC:-200}            # Max list pages fetched per sync
+  max_documents_per_sync: ${CONNECTOR_MAX_DOCUMENTS_PER_SYNC:-5000}   # Max documents ingested per sync
+  fetch_batch_size: ${CONNECTOR_FETCH_BATCH_SIZE:-50}                 # Documents fetched per batch
+  request_timeout_secs: ${CONNECTOR_REQUEST_TIMEOUT_SECS:-30}         # HTTP timeout for connector requests
+  sync_timeout_secs: ${CONNECTOR_SYNC_TIMEOUT_SECS:-3600}             # Overall sync timeout
+  max_response_bytes: ${CONNECTOR_MAX_RESPONSE_BYTES:-10485760}       # Max response body size (10MB)
+  circuit_breaker_threshold: ${CONNECTOR_CIRCUIT_BREAKER_THRESHOLD:-5} # Consecutive failures before auto-disable
+  allow_internal: ${CONNECTOR_ALLOW_INTERNAL:-false}                   # Allow connector URLs on private/internal IPs
+
 # ── Webhooks ──────────────────────────────────────────────────────────────
 # Outbound webhook subscriptions for integrating DocBrain events with
 # external systems (Slack bots, CI/CD, PagerDuty, custom dashboards, etc.).

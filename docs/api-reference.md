@@ -2209,6 +2209,243 @@ After all retry attempts are exhausted, the failure counter is incremented. When
 
 ---
 
+## External Connectors
+
+External connectors are stateless HTTP servers that implement a simple REST contract. DocBrain calls them on a cron schedule to ingest documents. All management endpoints require **admin** role. Status endpoint requires **viewer+** role.
+
+### List Connectors
+
+```
+GET /api/v1/connectors
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "internal-wiki",
+    "display_name": "Internal Wiki",
+    "base_url": "https://wiki-connector.example.com",
+    "source_type": "wiki",
+    "schedule_cron": "0 */6 * * *",
+    "space": "engineering",
+    "is_active": true,
+    "last_sync_at": "2026-03-24T06:00:00Z",
+    "last_sync_docs": 42,
+    "last_error": null,
+    "consecutive_failures": 0,
+    "created_at": "2026-03-20T08:00:00Z",
+    "updated_at": "2026-03-24T06:00:00Z"
+  }
+]
+```
+
+> **Note:** The `auth_header` field is never returned in API responses.
+
+---
+
+### Create Connector
+
+```
+POST /api/v1/connectors
+```
+
+**Request Body:**
+```json
+{
+  "name": "internal-wiki",
+  "display_name": "Internal Wiki",
+  "base_url": "https://wiki-connector.example.com",
+  "auth_header": "Bearer your-token",
+  "source_type": "wiki",
+  "schedule_cron": "0 */6 * * *",
+  "space": "engineering"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Unique machine name (1-100 chars) |
+| `display_name` | string | yes | Human-readable name (1-100 chars) |
+| `base_url` | string | yes | Connector HTTP endpoint (1-2048 chars, must start with `http://` or `https://`) |
+| `auth_header` | string | no | Authorization header value (e.g. `Bearer token`) |
+| `source_type` | string | yes | Document source type (1-20 chars, must be unique across connectors) |
+| `schedule_cron` | string | no | Standard 5-field cron expression (default: `0 */6 * * *` = every 6 hours) |
+| `space` | string | no | Target space for ingested documents |
+
+**Response:** `201 Created` with the connector object.
+
+**Validation:**
+- `base_url` must not resolve to a private/internal IP address (unless `CONNECTOR_ALLOW_INTERNAL=true`)
+- `schedule_cron` must be a valid cron expression
+- `source_type` must be unique — returns `409 Conflict` if already registered
+
+---
+
+### Update Connector
+
+```
+PATCH /api/v1/connectors/:id
+```
+
+**Request Body:** (all fields optional)
+```json
+{
+  "display_name": "Updated Wiki",
+  "base_url": "https://new-url.example.com",
+  "auth_header": "Bearer new-token",
+  "source_type": "wiki",
+  "schedule_cron": "0 */12 * * *",
+  "space": "docs",
+  "is_active": true
+}
+```
+
+**Response:** `200 OK` with the updated connector object. Returns `404` if not found.
+
+---
+
+### Delete Connector
+
+```
+DELETE /api/v1/connectors/:id
+```
+
+**Response:** `200 OK` with `{"deleted": true}`. Returns `404` if not found.
+
+---
+
+### Trigger Manual Sync
+
+```
+POST /api/v1/connectors/:id/sync
+```
+
+Triggers an immediate sync for the connector, bypassing the cron schedule and circuit breaker. Returns an error if a sync is already in progress for this connector.
+
+**Response:**
+```json
+{
+  "docs_synced": 15
+}
+```
+
+| Status | Meaning |
+|--------|---------|
+| 200 | Sync completed successfully |
+| 404 | Connector not found |
+| 409 | Sync already in progress |
+
+---
+
+### Connector Status
+
+```
+GET /api/v1/connectors/:id/status
+```
+
+Returns sync health information for a connector. Requires **viewer+** role.
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "name": "internal-wiki",
+  "is_active": true,
+  "last_sync_at": "2026-03-24T06:00:00Z",
+  "last_sync_docs": 42,
+  "last_error": null,
+  "consecutive_failures": 0
+}
+```
+
+---
+
+### Test Connector Health
+
+```
+POST /api/v1/connectors/:id/test
+```
+
+Runs a health check against the connector's `/health` endpoint without triggering a sync.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "version": "1.0.0"
+}
+```
+
+If the health check fails:
+```json
+{
+  "status": "error",
+  "error": "Connection refused"
+}
+```
+
+---
+
+### Connector Protocol
+
+External connectors must implement three endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Returns `{"status": "ok"}` and optionally `{"version": "..."}` |
+| `/documents/list` | POST | Lists available documents (paginated, supports incremental sync via `since`) |
+| `/documents/fetch` | POST | Returns full document content for a list of source IDs |
+
+**List Request:**
+```json
+{
+  "since": "2026-03-20T00:00:00Z",
+  "page": 1,
+  "page_size": 50
+}
+```
+
+**List Response:**
+```json
+{
+  "documents": [
+    { "source_id": "doc-123", "title": "Getting Started", "updated_at": "2026-03-24T10:00:00Z" }
+  ],
+  "has_more": false,
+  "total": 1
+}
+```
+
+**Fetch Request:**
+```json
+{
+  "source_ids": ["doc-123", "doc-456"]
+}
+```
+
+**Fetch Response:**
+```json
+{
+  "documents": [
+    {
+      "source_id": "doc-123",
+      "title": "Getting Started",
+      "content": "# Getting Started\n\nWelcome to...",
+      "content_type": "markdown",
+      "url": "https://wiki.example.com/getting-started",
+      "author": "Jane Doe",
+      "updated_at": "2026-03-24T10:00:00Z",
+      "metadata": {},
+      "references": []
+    }
+  ]
+}
+```
+
+---
+
 ## CI/CD Pipeline Capture
 
 Automated knowledge extraction from merged PRs and deployments. Requires **editor** role.

@@ -675,6 +675,27 @@ The SLA checker runs as a periodic background task that detects breaches across 
 
 See the [API Reference — Governance SLAs](api-reference.md#governance-slas) for endpoint documentation.
 
+## External Connectors (HTTP Connector Protocol)
+
+External connectors are stateless HTTP servers that implement a simple REST contract (`GET /health`, `POST /documents/list`, `POST /documents/fetch`). DocBrain calls them on a configurable cron schedule to ingest documents from external systems. Connectors are registered and managed via the admin API.
+
+The connector scheduler runs as a background task, polling every 60 seconds for connectors whose cron schedule is due. A circuit breaker automatically disables connectors after repeated failures.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CONNECTOR_ENABLED` | `true` | Enable/disable the connector scheduler |
+| `CONNECTOR_MAX_CONCURRENT_SYNCS` | `3` | Max connectors syncing simultaneously (1-20) |
+| `CONNECTOR_MAX_PAGES_PER_SYNC` | `200` | Max list pages fetched per sync |
+| `CONNECTOR_MAX_DOCUMENTS_PER_SYNC` | `5000` | Max documents ingested per sync |
+| `CONNECTOR_FETCH_BATCH_SIZE` | `50` | Documents fetched per batch (1-200) |
+| `CONNECTOR_REQUEST_TIMEOUT_SECS` | `30` | HTTP timeout for individual connector requests (5-300 seconds) |
+| `CONNECTOR_SYNC_TIMEOUT_SECS` | `3600` | Overall sync timeout per connector (60-7200 seconds) |
+| `CONNECTOR_MAX_RESPONSE_BYTES` | `10485760` | Max response body size from connector (10 MB) |
+| `CONNECTOR_CIRCUIT_BREAKER_THRESHOLD` | `5` | Consecutive failures before auto-disabling a connector |
+| `CONNECTOR_ALLOW_INTERNAL` | `false` | Allow connector URLs on private/internal IP addresses. **Not recommended for production.** |
+
+See the [API Reference — Connectors](api-reference.md#external-connectors) for endpoint documentation and the connector protocol spec.
+
 ## Webhooks (Outbound)
 
 Outbound webhook subscriptions let you push DocBrain events to external systems — Slack bots, CI/CD pipelines, PagerDuty, custom dashboards, etc. DocBrain signs every delivery with HMAC-SHA256, retries with exponential backoff, and automatically disables subscriptions that fail repeatedly (circuit breaker).
