@@ -1,0 +1,105 @@
+site_name: DocBrain Docs
+site_url: https://docbrainapi.com/docs
+site_description: Shift-left documentation platform — capture knowledge at the source, score quality automatically, publish docs that stay accurate.
+repo_url: https://github.com/docbrain-ai/docbrain
+repo_name: docbrain-ai/docbrain
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/book-open-variant
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Quickstart: quickstart.md
+    - Configuration: configuration.md
+    - LLM Providers: providers.md
+  - Core Concepts:
+    - Architecture: architecture.md
+    - Knowledge Intelligence: knowledge-intelligence.md
+    - Autopilot: autopilot.md
+    - Learning Pipeline: learning.md
+  - Integrations:
+    - Ingestion Guide: ingestion.md
+    - Slack: slack.md
+    - GitLab Capture: gitlab-capture.md
+    - Confluence Webhook: confluence-webhook.md
+  - Deployment:
+    - Kubernetes: kubernetes.md
+    - RBAC & SSO: rbac.md
+  - Reference:
+    - API Reference: api-reference.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
+  - pymdownx.critic
+  - pymdownx.keys
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/docbrain-ai/docbrain
+    - icon: fontawesome/brands/youtube
+      link: https://www.youtube.com/@docbrain-ai
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+copyright: Copyright &copy; 2024-2026 DocBrain AI

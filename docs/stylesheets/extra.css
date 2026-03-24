@@ -1,0 +1,24 @@
+/* DocBrain docs custom styles */
+
+/* Card grid for landing page */
+.md-typeset .grid.cards > ul > li {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Better code block styling */
+.md-typeset pre > code {
+  font-size: 0.82rem;
+}
+
+/* Slightly larger body text for readability */
+.md-typeset {
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
