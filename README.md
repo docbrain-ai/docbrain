@@ -131,6 +131,52 @@ Every fragment and document is scored across three layers:
 
 Composite score: `structural x 0.4 + style x 0.3 + semantic x 0.3`
 
+### Custom Quality Rules — Your Style Guide, Enforced Automatically
+
+Every team has a style guide. Nobody follows it. DocBrain enforces it on every document and draft — automatically:
+
+```yaml
+# Export your rules as YAML, version-control them, import across spaces
+- rule_type: terminology
+  name: no-simple
+  description: "Don't assume expertise — avoid 'simple' and 'easy'"
+  config:
+    wrong: "simple"
+    right: "straightforward"
+    match_whole_word: true
+  severity: warning
+
+- rule_type: formatting
+  name: short-sentences
+  description: "Keep sentences under 40 words for readability"
+  config:
+    max_words: 40
+  severity: info
+
+- rule_type: structure
+  name: require-intro
+  description: "Every doc needs an introduction before the first heading"
+  config:
+    min_words_before_first_heading: 10
+  severity: warning
+
+- rule_type: custom_pattern
+  name: no-internal-urls
+  description: "Don't leak internal URLs in public docs"
+  config:
+    pattern: "https?://internal\\."
+    message: "Remove internal URL before publishing"
+  severity: error
+```
+
+**Four rule types:** `terminology` (banned/preferred terms), `formatting` (heading depth, sentence length), `structure` (required sections, intro paragraphs), and `custom_pattern` (regex for anything else).
+
+**Per-space scoping:** Different rules for API docs vs. runbooks vs. onboarding guides.
+
+**YAML import/export:** Version-control your rules. `GET /api/v1/style-rules/export` → commit to git → `POST /api/v1/style-rules/import` on deploy.
+
+**Lint any text on demand:** `POST /api/v1/quality/lint` with raw text → get violations with line numbers, severity, and fix suggestions. Wire it into CI to block PRs that break your style guide.
+
 ### Fragment Lifecycle
 
 ```
