@@ -62,11 +62,37 @@ rbac:
 # Where to publish AI-generated drafts (optional).
 # When configured, the "Publish" button in the UI and auto-draft loop will push
 # docs directly to the target system and trigger re-ingest automatically.
+# Supports multi-target publishing: Confluence (default), GitHub (PR-based), GitLab (MR-based).
+# Per-space routing is managed via the publish_targets DB table (API: /api/v1/publish-targets).
 draft_publish:
-  target: "none"           # "confluence" | "none"
+  target: "none"           # "confluence" | "github" | "gitlab" | "none"
   # confluence_space_key: ~      # Space key to create pages in (e.g. "SAAS")
   # confluence_parent_page_id: ~ # Optional parent page ID
   auto_ingest_after_publish: true   # Re-ingest the created page so DocBrain learns from it
+
+# ── GitHub Draft Publishing (optional) ──────────────────────────────────────
+# Publish AI-generated drafts as GitHub Pull Requests with markdown files.
+# Set draft_publish.target to "github" or use per-space routing via the API.
+github_publish:
+  # token: ~               # secret — set GITHUB_PUBLISH_TOKEN env var (requires repo scope)
+  # repo: ~                # owner/repo format e.g. acme/docs — set GITHUB_PUBLISH_REPO env var
+  branch: "main"           # GITHUB_PUBLISH_BRANCH — target branch for PRs
+  docs_path: "docs"        # GITHUB_PUBLISH_DOCS_PATH — directory in repo for doc files
+  pr_labels: "docbrain,auto-generated"  # GITHUB_PUBLISH_PR_LABELS — comma-separated PR labels
+  create_pr: true          # GITHUB_PUBLISH_CREATE_PR — create PR (true) or direct commit (false)
+  # api_url: ~             # GITHUB_PUBLISH_API_URL — override for GitHub Enterprise
+
+# ── GitLab Draft Publishing (optional) ──────────────────────────────────────
+# Publish AI-generated drafts as GitLab Merge Requests with markdown files.
+# Set draft_publish.target to "gitlab" or use per-space routing via the API.
+gitlab_publish:
+  # token: ~               # secret — set GITLAB_PUBLISH_TOKEN env var (requires api scope)
+  # project_id: ~          # numeric project ID — set GITLAB_PUBLISH_PROJECT_ID env var
+  # base_url: ~            # GITLAB_PUBLISH_BASE_URL — default: https://gitlab.com
+  branch: "main"           # GITLAB_PUBLISH_BRANCH — target branch for MRs
+  docs_path: "docs"        # GITLAB_PUBLISH_DOCS_PATH — directory in project for doc files
+  mr_labels: "docbrain,auto-generated"  # GITLAB_PUBLISH_MR_LABELS — comma-separated MR labels
+  create_mr: true          # GITLAB_PUBLISH_CREATE_MR — create MR (true) or direct commit (false)
 
 autopilot:
   enabled: false          # Opt-in. Set AUTOPILOT_ENABLED=true to enable.

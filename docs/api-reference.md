@@ -639,6 +639,122 @@ Valid statuses: `approved`, `published`, `rejected`
 
 ---
 
+### Publish Draft
+
+```
+POST /api/v1/autopilot/drafts/{draft_id}/publish?target=github
+```
+
+Publishes an approved draft to the configured target system. Creates a page (Confluence), PR (GitHub), or MR (GitLab) with the draft content.
+
+**Query Parameters:**
+- `target` (optional) — Override the publish target: `confluence`, `github`, `gitlab`. If omitted, uses per-space routing (DB) → default config target.
+
+**Response:**
+```json
+{
+  "draft_id": "uuid",
+  "status": "published",
+  "target": "github",
+  "url": "https://github.com/acme/docs/pull/42"
+}
+```
+
+**Auth:** Editor role or above.
+
+---
+
+## Publish Targets
+
+Manage per-space publish target routing. Admin-only endpoints.
+
+### List Publish Targets
+
+```
+GET /api/v1/publish-targets
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "space": "PLATFORM",
+    "target_type": "github",
+    "config": {"repo": "acme/platform-docs", "token_env": "GITHUB_PUBLISH_TOKEN"},
+    "priority": 10,
+    "created_at": "2026-03-25T00:00:00Z",
+    "updated_at": "2026-03-25T00:00:00Z"
+  }
+]
+```
+
+---
+
+### Create Publish Target
+
+```
+POST /api/v1/publish-targets
+```
+
+**Request Body:**
+```json
+{
+  "space": "PLATFORM",
+  "target_type": "github",
+  "config": {
+    "repo": "acme/platform-docs",
+    "token_env": "GITHUB_PUBLISH_TOKEN",
+    "branch": "main",
+    "docs_path": "docs"
+  },
+  "priority": 10
+}
+```
+
+- `space` — Space key to route (omit or `null` for default/fallback target)
+- `target_type` — `confluence`, `github`, or `gitlab`
+- `config` — JSONB target configuration. **Must use `token_env` (env var name) instead of raw secrets.** Fields containing `token`, `api_token`, or `secret` are rejected.
+- `priority` — Higher priority targets are chosen first (default: 0)
+
+**Response:** `201 Created` with the created target.
+
+**Errors:**
+- `400` — Invalid target type or raw secrets in config
+- `409` — A target for this space + type already exists
+
+---
+
+### Update Publish Target
+
+```
+PUT /api/v1/publish-targets/{id}
+```
+
+Partial update — only provided fields are changed.
+
+**Request Body:**
+```json
+{
+  "config": {"repo": "acme/new-docs-repo", "token_env": "GITHUB_PUBLISH_TOKEN"},
+  "priority": 20
+}
+```
+
+**Response:** `200 OK` with the updated target.
+
+---
+
+### Delete Publish Target
+
+```
+DELETE /api/v1/publish-targets/{id}
+```
+
+**Response:** `204 No Content`
+
+---
+
 ### Weekly Digest Preview
 
 ```

@@ -97,6 +97,31 @@ ingest:
   #   token: ""
   #   branch: main
 
+# -- Draft Publishing (multi-target)
+# Publish AI-generated drafts to Confluence, GitHub (PR), or GitLab (MR).
+# Per-space routing is managed via the API: /api/v1/publish-targets
+draftPublish:
+  target: "none"           # "confluence" | "github" | "gitlab" | "none"
+  autoIngestAfterPublish: true
+  # -- GitHub publishing (when target=github)
+  github:
+    # token: ""            # GITHUB_PUBLISH_TOKEN — GitHub PAT with repo scope (stored in Secret)
+    # repo: ""             # GITHUB_PUBLISH_REPO — owner/repo e.g. acme/docs
+    branch: "main"
+    docsPath: "docs"
+    prLabels: "docbrain,auto-generated"
+    createPr: true
+    # apiUrl: ""           # GITHUB_PUBLISH_API_URL — override for GitHub Enterprise
+  # -- GitLab publishing (when target=gitlab)
+  gitlab:
+    # token: ""            # GITLAB_PUBLISH_TOKEN — GitLab PAT with api scope (stored in Secret)
+    # projectId: ""        # GITLAB_PUBLISH_PROJECT_ID — numeric project ID
+    # baseUrl: ""          # GITLAB_PUBLISH_BASE_URL — default: https://gitlab.com
+    branch: "main"
+    docsPath: "docs"
+    mrLabels: "docbrain,auto-generated"
+    createMr: true
+
 # -- GitLab MR real-time capture webhook
 # Enables POST /api/v1/gitlab/events for `@docbrain capture` on merge requests.
 # See docs/gitlab-capture.md for GitLab-side webhook setup instructions.

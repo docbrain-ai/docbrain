@@ -31,15 +31,15 @@ DocBrain answers (with confidence score)
                               └───────────┬────────────┘
                                           │
                               ┌───────────▼────────────┐
-                              │  Publisher              │
-                              │  - UPDATE existing page │
-                              │    (poor_coverage gaps) │
-                              │  - CREATE new page      │
-                              │    (missing_doc gaps)   │
+                              │  Publisher (multi-target)│
+                              │  Confluence: UPDATE/CREATE│
+                              │  GitHub: PR with markdown │
+                              │  GitLab: MR with markdown │
+                              │  Per-space routing via DB │
                               └───────────┬────────────┘
                                           │
                               Gap cluster marked resolved
-                              Page re-ingested on next cycle
+                              Doc re-ingested on next cycle
 ```
 
 ### Review Workflows
@@ -238,9 +238,13 @@ gitlab:
 
 ---
 
-## Draft Publishing to Confluence
+## Draft Publishing
 
-### Cloud (v2 API)
+DocBrain supports publishing drafts to multiple targets: **Confluence**, **GitHub** (PR-based), and **GitLab** (MR-based). You can set a global default and override per space using the Publish Targets API.
+
+### Confluence (default)
+
+#### Cloud (v2 API)
 
 ```bash
 CONFLUENCE_BASE_URL=https://your-org.atlassian.net/wiki
@@ -252,7 +256,7 @@ DRAFT_PUBLISH_CONFLUENCE_SPACE_KEY=ENG
 DRAFT_PUBLISH_AUTO_INGEST=true
 ```
 
-### Data Center (v1 API)
+#### Data Center (v1 API)
 
 ```bash
 CONFLUENCE_BASE_URL=https://confluence.internal/wiki
@@ -262,10 +266,70 @@ DRAFT_PUBLISH_TARGET=confluence
 DRAFT_PUBLISH_CONFLUENCE_SPACE_KEY=ENG
 ```
 
-### How UPDATE vs CREATE works
+#### How UPDATE vs CREATE works
 
 - **`poor_coverage` gaps**: DocBrain finds the most-retrieved document for that cluster and stores its URL in `existing_doc_url`. On publish, it GETs the current page version, increments it, and PUTs the AI-enhanced content back. The footer reads _"AI-Enhanced Documentation"_.
 - **`missing_doc` gaps**: No existing doc is identified. DocBrain CREATEs a new page under the configured parent. The footer reads _"AI-Generated Documentation"_.
+
+### GitHub (PR-based)
+
+Publishes drafts as markdown files in a GitHub repository via Pull Requests. Each draft becomes a `.md` file with YAML frontmatter (title, date, gap cluster, generated_by). Ideal for teams practicing docs-as-code.
+
+```bash
+DRAFT_PUBLISH_TARGET=github
+GITHUB_PUBLISH_TOKEN=ghp_...        # GitHub PAT with repo scope
+GITHUB_PUBLISH_REPO=acme/docs       # owner/repo
+GITHUB_PUBLISH_BRANCH=main          # base branch for PRs
+GITHUB_PUBLISH_DOCS_PATH=docs       # directory in repo
+GITHUB_PUBLISH_CREATE_PR=true       # true = PR for review, false = direct commit
+```
+
+When `CREATE_PR=true`, DocBrain creates a feature branch (`docbrain/<slug>`), commits the markdown file, and opens a PR with configurable labels. The PR body includes the gap cluster context and a link back to the draft in DocBrain.
+
+### GitLab (MR-based)
+
+Publishes drafts as markdown files in a GitLab project via Merge Requests. Same markdown format as GitHub.
+
+```bash
+DRAFT_PUBLISH_TARGET=gitlab
+GITLAB_PUBLISH_TOKEN=glpat-...      # GitLab PAT with api scope
+GITLAB_PUBLISH_PROJECT_ID=12345     # numeric project ID
+GITLAB_PUBLISH_BASE_URL=https://gitlab.com  # or self-hosted
+GITLAB_PUBLISH_BRANCH=main
+GITLAB_PUBLISH_DOCS_PATH=docs
+GITLAB_PUBLISH_CREATE_MR=true
+```
+
+### Per-Space Routing
+
+You can route different spaces to different targets. For example, keep Confluence as the default but publish the `PLATFORM` space to GitHub:
+
+```bash
+# Set default target
+DRAFT_PUBLISH_TARGET=confluence
+
+# Create a per-space override via the API
+curl -X POST https://docbrain.example.com/api/v1/publish-targets \
+  -H "Authorization: Bearer db_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "space": "PLATFORM",
+    "target_type": "github",
+    "config": {
+      "repo": "acme/platform-docs",
+      "token_env": "GITHUB_PUBLISH_TOKEN",
+      "branch": "main",
+      "docs_path": "docs"
+    },
+    "priority": 10
+  }'
+```
+
+**Resolution order:** Space-specific DB target (highest priority first) → default config target → disabled.
+
+**Security:** The `config` JSONB field must use `token_env` (the name of an environment variable) instead of raw tokens. The API rejects any config containing `token`, `api_token`, or `secret` fields directly.
+
+See the [API Reference](api-reference.md#publish-targets) for full CRUD endpoints and the [Configuration Reference](configuration.md#draft-publishing) for all env vars.
 
 ---
 

@@ -435,6 +435,56 @@ When enabled, Autopilot runs on the configured schedule, exposes management endp
 
 > **Small teams / dev environments:** Set `AUTOPILOT_CRITICAL_USERS=1`, `AUTOPILOT_CRITICAL_SIGNALS=3`, `AUTOPILOT_CRITICAL_THRESHOLD=0.3` to see critical gaps with minimal signal. See [autopilot.md](autopilot.md) for a full tuning guide.
 
+## Draft Publishing
+
+Controls where AI-generated drafts are published. Supports Confluence (default), GitHub (PR-based), and GitLab (MR-based). Use per-space routing via the Publish Targets API to override the default target for specific spaces.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DRAFT_PUBLISH_TARGET` | `none` | Default publish target: `confluence`, `github`, `gitlab`, or `none` |
+| `DRAFT_PUBLISH_AUTO_INGEST` | `true` | Re-ingest published docs so DocBrain learns from its own output |
+
+### GitHub Publishing
+
+Publish drafts as Pull Requests containing markdown files with YAML frontmatter. Requires a GitHub token with `repo` scope.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_PUBLISH_TOKEN` | — | GitHub personal access token with `repo` scope (secret) |
+| `GITHUB_PUBLISH_REPO` | — | Target repository in `owner/repo` format (e.g. `acme/docs`) |
+| `GITHUB_PUBLISH_BRANCH` | `main` | Base branch for PRs |
+| `GITHUB_PUBLISH_DOCS_PATH` | `docs` | Directory in repo where doc files are placed |
+| `GITHUB_PUBLISH_PR_LABELS` | `docbrain,auto-generated` | Comma-separated labels applied to PRs |
+| `GITHUB_PUBLISH_CREATE_PR` | `true` | `true` = create a PR for review; `false` = commit directly to branch |
+| `GITHUB_PUBLISH_API_URL` | `https://api.github.com` | Override for GitHub Enterprise Server |
+
+### GitLab Publishing
+
+Publish drafts as Merge Requests containing markdown files. Requires a GitLab token with `api` scope.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITLAB_PUBLISH_TOKEN` | — | GitLab personal access token with `api` scope (secret) |
+| `GITLAB_PUBLISH_PROJECT_ID` | — | Numeric project ID (find in Settings → General) |
+| `GITLAB_PUBLISH_BASE_URL` | `https://gitlab.com` | Override for self-hosted GitLab instances |
+| `GITLAB_PUBLISH_BRANCH` | `main` | Base branch for MRs |
+| `GITLAB_PUBLISH_DOCS_PATH` | `docs` | Directory in project where doc files are placed |
+| `GITLAB_PUBLISH_MR_LABELS` | `docbrain,auto-generated` | Comma-separated labels applied to MRs |
+| `GITLAB_PUBLISH_CREATE_MR` | `true` | `true` = create an MR for review; `false` = commit directly to branch |
+
+### Per-Space Routing
+
+Use the Publish Targets API (`/api/v1/publish-targets`) to route specific spaces to different targets. For example, keep Confluence as the default but publish the `PLATFORM` space to GitHub:
+
+```bash
+# Create a GitHub target for the PLATFORM space
+curl -X POST /api/v1/publish-targets \
+  -H "Authorization: Bearer db_sk_..." \
+  -d '{"space": "PLATFORM", "target_type": "github", "config": {"token_env": "GITHUB_PUBLISH_TOKEN", "repo": "acme/platform-docs"}, "priority": 10}'
+```
+
+When publishing, DocBrain resolves the target in priority order: space-specific DB target → default config target → Confluence fallback. Config stored in the `publish_targets` table uses `token_env` (env var name) instead of raw secrets for security.
+
 ## Freshness Scoring
 
 | Variable | Default | Description |

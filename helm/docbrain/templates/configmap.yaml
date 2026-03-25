@@ -135,6 +135,34 @@ data:
   {{- if and .Values.draftPublish .Values.draftPublish.confluenceParentPageId }}
   DRAFT_PUBLISH_PARENT_PAGE_ID: {{ .Values.draftPublish.confluenceParentPageId | quote }}
   {{- end }}
+  {{- if and .Values.draftPublish .Values.draftPublish.github }}
+  {{- with .Values.draftPublish.github }}
+  {{- if .repo }}
+  GITHUB_PUBLISH_REPO: {{ .repo | quote }}
+  {{- end }}
+  GITHUB_PUBLISH_BRANCH: {{ .branch | default "main" | quote }}
+  GITHUB_PUBLISH_DOCS_PATH: {{ .docsPath | default "docs" | quote }}
+  GITHUB_PUBLISH_PR_LABELS: {{ .prLabels | default "docbrain,auto-generated" | quote }}
+  GITHUB_PUBLISH_CREATE_PR: {{ .createPr | default true | quote }}
+  {{- if .apiUrl }}
+  GITHUB_PUBLISH_API_URL: {{ .apiUrl | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if and .Values.draftPublish .Values.draftPublish.gitlab }}
+  {{- with .Values.draftPublish.gitlab }}
+  {{- if .projectId }}
+  GITLAB_PUBLISH_PROJECT_ID: {{ .projectId | quote }}
+  {{- end }}
+  {{- if .baseUrl }}
+  GITLAB_PUBLISH_BASE_URL: {{ .baseUrl | quote }}
+  {{- end }}
+  GITLAB_PUBLISH_BRANCH: {{ .branch | default "main" | quote }}
+  GITLAB_PUBLISH_DOCS_PATH: {{ .docsPath | default "docs" | quote }}
+  GITLAB_PUBLISH_MR_LABELS: {{ .mrLabels | default "docbrain,auto-generated" | quote }}
+  GITLAB_PUBLISH_CREATE_MR: {{ .createMr | default true | quote }}
+  {{- end }}
+  {{- end }}
 
   # OAuth / SSO providers
   # OIDC_WEB_UI_URL tells the backend where to redirect the browser after any OAuth
