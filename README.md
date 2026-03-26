@@ -22,7 +22,8 @@
   <a href="#the-problem">The Problem</a> &bull;
   <a href="#how-docbrain-fixes-it">How It Works</a> &bull;
   <a href="#features">Features</a> &bull;
-  <a href="#architecture">Architecture</a>
+  <a href="#architecture">Architecture</a> &bull;
+  <a href="#security-architecture">Security</a>
 </p>
 
 ---
@@ -427,6 +428,107 @@ graph TB
 | Autopilot | Gap analysis, severity scoring | Autonomous gap detection and draft generation |
 | Predictive | Graph analysis, pattern detection | Cascade staleness, seasonal, onboarding |
 | Storage | PostgreSQL 17, OpenSearch 2.19, Redis 7 | Metadata, vectors, sessions |
+
+---
+
+## Security Architecture
+
+DocBrain runs entirely in your infrastructure. No data leaves your network unless you configure an external LLM provider.
+
+```
+                    YOUR NETWORK BOUNDARY
+ ┌──────────────────────────────────────────────────────────────────┐
+ │                                                                  │
+ │  ┌─────────────┐     TLS + Bearer Token     ┌────────────────┐  │
+ │  │ Users       │ ──────────────────────────▶ │ DocBrain       │  │
+ │  │ (Browser,   │                             │ Server         │  │
+ │  │  CLI, Slack,│ ◀────── JSON / SSE ──────── │ (Rust/Axum)    │  │
+ │  │  MCP IDE)   │                             │                │  │
+ │  └─────────────┘                             │ • RBAC (4 roles│  │
+ │                                              │ • Argon2 keys  │  │
+ │                                              │ • Rate limiting│  │
+ │                                              │ • Audit logging│  │
+ │                                              └──┬──┬──┬──┬────┘  │
+ │                                                 │  │  │  │       │
+ │              ┌──────────────────────────────────┘  │  │  │       │
+ │              ▼                 ▼                    ▼  │  │       │
+ │  ┌───────────────┐ ┌──────────────────┐ ┌────────────┐│  │       │
+ │  │ PostgreSQL    │ │ OpenSearch       │ │ Redis      ││  │       │
+ │  │               │ │                  │ │            ││  │       │
+ │  │ • Users/keys  │ │ • Document       │ │ • Sessions ││  │       │
+ │  │ • Episodes    │ │   chunks +       │ │ • Rate     ││  │       │
+ │  │ • Fragments   │ │   embeddings     │ │   counters ││  │       │
+ │  │ • Gap clusters│ │ • BM25 + k-NN    │ │ • Working  ││  │       │
+ │  │ • Audit log   │ │   hybrid search  │ │   memory   ││  │       │
+ │  └───────────────┘ └──────────────────┘ └────────────┘│  │       │
+ │                                                        │  │       │
+ │  All storage is self-hosted. No credentials leave.     │  │       │
+ │                                                        │  │       │
+ │  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│─ │─ ─ ┐ │
+ │    OPTION A: LLM stays inside your network             │  │     │ │
+ │  │                                        ┌────────────┘  │     │ │
+ │                                           ▼               │     │ │
+ │  │                               ┌──────────────────┐     │     │ │
+ │                                  │ Ollama           │     │     │ │
+ │  │                               │ (local model)    │     │     │ │
+ │                                  │ Nothing leaves.  │     │     │ │
+ │  │                               └──────────────────┘     │     │ │
+ │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │─ ─ ┘ │
+ └───────────────────────────────────────────────────────────│──────┘
+                                                             │
+          OPTION B: LLM in your cloud account ───────────────│──────
+                                                             │
+              ┌──────────────────────────────────────────────┘
+              ▼
+ ┌────────────────────────┐    Only query text + relevant chunk
+ │ AWS Bedrock            │    context is sent. Your cloud account,
+ │ Azure OpenAI           │    your data policies, your encryption
+ │ Google Vertex AI       │    keys. No data shared with third
+ └────────────────────────┘    parties.
+
+          OPTION C: Third-party LLM API ─────────────────────────────
+              │
+              ▼
+ ┌────────────────────────┐    Query text + relevant chunk context
+ │ Anthropic API          │    sent via TLS. Subject to provider's
+ │ OpenAI API             │    data policies. No bulk export —
+ │ Groq / Mistral / etc.  │    only per-request context.
+ └────────────────────────┘
+```
+
+**The LLM is required** — it powers RAG, intent classification, quality scoring, and draft generation. You choose where it runs:
+
+| Option | Data leaves your network? | Best for |
+|---|---|---|
+| **Ollama** (local) | No. Zero egress. | Air-gapped, regulated, maximum control |
+| **Bedrock / Azure / Vertex** | Stays in your cloud account | Enterprise — your KMS, your VPC, your audit trail |
+| **Anthropic / OpenAI / etc.** | Query + chunk context sent via TLS | Fastest setup, best model quality |
+
+**What data goes where:**
+
+| Data | Stays in your infra | Sent to LLM |
+|---|---|---|
+| Documents, embeddings, indexes | Yes (PostgreSQL + OpenSearch) | No |
+| User queries | Yes (episodes table) | Yes — needed for answer generation |
+| API keys, passwords | Yes (Argon2 hashed) | No |
+| Chunk context for answers | Yes (OpenSearch) | Yes — relevant chunks only, not full corpus |
+| Analytics, gap clusters, feedback | Yes (PostgreSQL) | No |
+
+**Security controls:**
+
+| Control | Implementation |
+|---|---|
+| Authentication | API keys with Argon2 hashing, OIDC/SSO (GitHub, GitLab, generic OIDC) |
+| Authorization | 4-tier RBAC (Viewer → Editor → Analyst → Admin) enforced on every endpoint |
+| Space isolation | Per-key `allowed_spaces` hard-filters search results — users only see their team's docs |
+| Rate limiting | Per-key RPM limits with sliding window |
+| Secrets | Keys shown once at creation, stored as hashes. Bootstrap key written to file with 0600 permissions |
+| Audit | All admin actions logged with user, action, timestamp, and target |
+| SQL injection | Compile-time verified parameterized queries (sqlx) — no string interpolation |
+| Prompt injection | XML delimiter sanitization on all untrusted content entering LLM context |
+| Webhook verification | HMAC-SHA256 signed payloads for inbound webhooks (Confluence, GitHub, GitLab) |
+
+For the full threat model with 10 analyzed attack vectors and an operator security checklist, see [THREAT_MODEL.md](THREAT_MODEL.md).
 
 ---
 
