@@ -439,7 +439,7 @@ DocBrain runs entirely in your infrastructure. No data leaves your network unles
                     YOUR NETWORK BOUNDARY
  ┌──────────────────────────────────────────────────────────────────┐
  │                                                                  │
- │  ┌─────────────┐     TLS + Bearer Token     ┌────────────────┐  │
+ │  ┌─────────────┐     TLS + Bearer Token     ┌────────────────-┐  │
  │  │ Users       │ ──────────────────────────▶ │ DocBrain       │  │
  │  │ (Browser,   │                             │ Server         │  │
  │  │  CLI, Slack,│ ◀────── JSON / SSE ──────── │ (Rust/Axum)    │  │
@@ -451,7 +451,7 @@ DocBrain runs entirely in your infrastructure. No data leaves your network unles
  │                                              └──┬──┬──┬──┬────┘  │
  │                                                 │  │  │  │       │
  │              ┌──────────────────────────────────┘  │  │  │       │
- │              ▼                 ▼                    ▼  │  │       │
+ │              ▼                 ▼                   ▼  │  │       │
  │  ┌───────────────┐ ┌──────────────────┐ ┌────────────┐│  │       │
  │  │ PostgreSQL    │ │ OpenSearch       │ │ Redis      ││  │       │
  │  │               │ │                  │ │            ││  │       │
@@ -461,19 +461,19 @@ DocBrain runs entirely in your infrastructure. No data leaves your network unles
  │  │ • Gap clusters│ │ • BM25 + k-NN    │ │ • Working  ││  │       │
  │  │ • Audit log   │ │   hybrid search  │ │   memory   ││  │       │
  │  └───────────────┘ └──────────────────┘ └────────────┘│  │       │
- │                                                        │  │       │
- │  All storage is self-hosted. No credentials leave.     │  │       │
- │                                                        │  │       │
- │  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│─ │─ ─ ┐ │
- │    OPTION A: LLM stays inside your network             │  │     │ │
- │  │                                        ┌────────────┘  │     │ │
- │                                           ▼               │     │ │
- │  │                               ┌──────────────────┐     │     │ │
- │                                  │ Ollama           │     │     │ │
- │  │                               │ (local model)    │     │     │ │
- │                                  │ Nothing leaves.  │     │     │ │
- │  │                               └──────────────────┘     │     │ │
- │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │─ ─ ┘ │
+ │                                                       │  │       │
+ │  All storage is self-hosted. No credentials leave.    │  │       │
+ │                                                       │  │       │
+ │  ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ - -│  │       │
+ │    OPTION A: LLM stays inside your network            │  │       │
+ │  │                                        ┌───────────┘  │       │
+ │                                           ▼              │       │
+ │  │                               ┌──────────────────┐    │       │
+ │                                  │ Ollama           │    │       │
+ │  │                               │ (local model)    │    │       │
+ │                                  │ Nothing leaves.  │    │       │
+ │  │                               └──────────────────┘    │       │
+ │  └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │─  ┘ 
  └───────────────────────────────────────────────────────────│──────┘
                                                              │
           OPTION B: LLM in your cloud account ───────────────│──────
