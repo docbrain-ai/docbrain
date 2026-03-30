@@ -259,7 +259,7 @@ data:
   CONNECTOR_FETCH_BATCH_SIZE: {{ .Values.connectors.fetchBatchSize | default 50 | quote }}
   CONNECTOR_REQUEST_TIMEOUT_SECS: {{ .Values.connectors.requestTimeoutSecs | default 30 | quote }}
   CONNECTOR_SYNC_TIMEOUT_SECS: {{ .Values.connectors.syncTimeoutSecs | default 3600 | quote }}
-  CONNECTOR_MAX_RESPONSE_BYTES: {{ .Values.connectors.maxResponseBytes | default 10485760 | quote }}
+  CONNECTOR_MAX_RESPONSE_BYTES: {{ .Values.connectors.maxResponseBytes | default 10485760 | int64 | quote }}
   CONNECTOR_CIRCUIT_BREAKER_THRESHOLD: {{ .Values.connectors.circuitBreakerThreshold | default 5 | quote }}
   CONNECTOR_ALLOW_INTERNAL: {{ .Values.connectors.allowInternal | default false | quote }}
 
