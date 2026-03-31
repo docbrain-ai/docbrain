@@ -158,7 +158,7 @@ The core of DocBrain. Every integration point captures knowledge where it's crea
 |---|---|
 | **Merged PRs** | `POST /api/v1/ci/analyze` — LLM extracts decisions, facts, caveats, and procedures from diffs and commit messages. Hook it into GitHub Actions or GitLab CI. |
 | **Deployments** | `POST /api/v1/ci/deploy-capture` — Captures deployment context, environment changes, and rollback procedures. |
-| **Slack & Teams** | `/docbrain capture` in a thread — distills the conversation into knowledge fragments with confidence scoring. |
+| **Slack & Teams** | Capture threads via message shortcut, `@DocBrain capture` mention, or `/docbrain capture` — distills conversations into knowledge fragments with confidence scoring. |
 | **IDE (MCP)** | `docbrain_annotate` links knowledge to exact code locations. `docbrain_commit_capture` captures intent at commit time. 10 MCP tools total. |
 | **Conversations** | Auto-distillation extracts fragments from Q&A sessions. When someone asks a question and gets a good answer, that answer becomes a fragment automatically. |
 | **Manual** | `POST /api/v1/fragments` — Teams can submit fragments directly. CLI: `docbrain capture`. |
@@ -359,7 +359,7 @@ DocBrain ships with a full web application — not a thin wrapper, but a complet
 
 | Integration | Type |
 |---|---|
-| **Slack** | `/docbrain ask`, `/docbrain capture`, `/docbrain incident` |
+| **Slack** | `/docbrain ask`, `/docbrain incident`, thread capture (shortcut or `@DocBrain capture`) |
 | **MCP (IDE)** | 10 tools for Claude Code, Cursor, and any MCP-compatible editor |
 | **CLI** | `docbrain ask`, `docbrain login`, `docbrain capture`, `docbrain freshness` |
 | **GitHub** | PR capture via Actions or webhooks, discussion capture |
@@ -607,7 +607,7 @@ Environment variables always override config files. See [Configuration Guide](do
 | [Learning Pipeline](docs/learning.md) | Embedding fine-tuning (opt-in) |
 | [API Reference](docs/api-reference.md) | Full REST API documentation |
 | [RBAC](docs/rbac.md) | Role-based access control and SSO |
-| [Slack Integration](docs/slack.md) | Slash commands and real-time capture |
+| [Slack Integration](docs/slack.md) | Slash commands, message shortcuts, and thread capture |
 | [GitLab Capture](docs/gitlab-capture.md) | MR discussion indexing |
 | [Kubernetes](docs/kubernetes.md) | Helm chart deployment |
 

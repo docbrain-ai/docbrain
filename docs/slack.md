@@ -53,6 +53,37 @@ https://<your-domain>/slack/interactions
 
 3. Click **Save Changes**.
 
+## Step 3b: Add Message Shortcut
+
+This allows users to capture Slack threads via a right-click shortcut — useful because Slack blocks slash commands inside threads.
+
+1. In the left sidebar, click **Interactivity & Shortcuts** → **Shortcuts** → **Create New Shortcut**.
+2. Select **On messages**.
+3. Fill in:
+
+| Field | Value |
+|-------|-------|
+| Name | `Capture to DocBrain` |
+| Callback ID | `docbrain_capture` |
+| Short Description | `Index this thread into DocBrain` |
+
+4. Click **Save**.
+
+## Step 3c: Enable Event Subscriptions (optional)
+
+This enables `@DocBrain capture` mentions as an alternative way to trigger thread capture.
+
+1. In the left sidebar, click **Event Subscriptions** → toggle **On**.
+2. Set the **Request URL** to:
+
+```
+https://<your-domain>/slack/events
+```
+
+3. Under **Subscribe to bot events**, add `app_mention`.
+4. Go to **OAuth & Permissions** → **Bot Token Scopes** and add `app_mentions:read` and `channels:history` (if not already present).
+5. Click **Save Changes**.
+
 ## Step 4: Add OAuth Scopes
 
 1. In the left sidebar, click **OAuth & Permissions**.
@@ -63,6 +94,8 @@ https://<your-domain>/slack/interactions
 | `commands` | Handle `/docbrain` slash commands |
 | `chat:write` | Post answers and notifications |
 | `users:read.email` | Look up doc authors by email for stale-doc DMs |
+| `app_mentions:read` | Handle `@DocBrain capture` mentions in threads |
+| `channels:history` | Read thread messages for capture |
 
 3. Click **Install to Workspace** (or **Reinstall** if already installed).
 4. Copy the **Bot User OAuth Token** (`xoxb-...`) — you'll need this in the next step.
@@ -110,6 +143,16 @@ You should see the list of available commands. Then try a real query:
 You'll see a "Searching documentation..." acknowledgement, followed by the full answer with sources and feedback buttons.
 
 ## Usage Examples
+
+### Capture a thread
+
+Slack blocks slash commands in threads, so `/docbrain capture` only works as a top-level command. Use one of these alternatives to capture a thread:
+
+**Message shortcut (recommended):** Right-click any message in a thread → **Shortcuts** → **Capture to DocBrain**
+
+**Bot mention:** Type `@DocBrain capture` in a thread (requires Event Subscriptions — see Step 3c)
+
+**Slash command (top-level only):** `/docbrain capture` works outside of threads but is blocked by Slack inside threads.
 
 ### Ask a question
 

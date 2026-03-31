@@ -87,6 +87,6 @@ Engineer annotates in their IDE  → DocBrain links knowledge to the exact code 
 | [Review Workflows](reviews.md) | Multi-stage approval pipelines for documentation |
 | [Knowledge Intelligence](knowledge-intelligence.md) | Graph, analytics, predictive intelligence |
 | [Autopilot](autopilot.md) | Gap detection and draft generation |
-| [Slack](slack.md) | Slash commands and real-time capture |
+| [Slack](slack.md) | Slash commands, message shortcuts, and thread capture |
 | [Kubernetes](kubernetes.md) | Helm chart production deployment |
 | [API Reference](api-reference.md) | Full REST API documentation |

@@ -432,7 +432,7 @@ DocBrain supports on-demand capture from GitHub PRs/issues, GitLab MRs, and Slac
 |----------|---------|----------------|-------|
 | GitHub | Comment `@docbrain capture` on any PR or issue | PR/issue description + all comments | Posts a reply comment confirming capture |
 | GitLab | Comment `@docbrain capture` on any MR | MR title, description, all human discussion notes | Posts a reply note confirming capture |
-| Slack | Run `/docbrain capture` inside a thread | All thread messages, user names resolved | Posts a message in the thread confirming capture |
+| Slack | Message shortcut, `@DocBrain capture` mention, or `/docbrain capture` | All thread messages, user names resolved | Posts a message in the thread confirming capture |
 
 Capture is separate from `/docbrain ask` (Slack) or `@docbrain ask` (GitHub/GitLab) — those are Q&A commands that answer questions from the knowledge base.
 
@@ -561,18 +561,22 @@ This MR will feed Autopilot's next gap analysis run.
 
 ## Slack Thread Capture
 
-Run `/docbrain capture` inside any Slack thread to immediately index the conversation.
+Capture any Slack thread into DocBrain using one of three methods:
 
-**Note:** `/docbrain capture` only ingests the thread. Use `/docbrain ask <question>` separately to query the knowledge base.
+- **Message shortcut (recommended):** Right-click a message in the thread → **Shortcuts** → **Capture to DocBrain**
+- **Bot mention:** Type `@DocBrain capture` in the thread (requires Event Subscriptions with `app_mention`)
+- **Slash command:** `/docbrain capture` — works outside threads, but **Slack blocks slash commands inside threads**, so use the shortcut or @mention instead
+
+**Note:** Capture only ingests the thread. Use `/docbrain ask <question>` separately to query the knowledge base.
 
 ### Setup
 
-Ensure the Slack bot is installed and `SLACK_BOT_TOKEN` is configured. The bot needs `channels:history` and `users:read` OAuth scopes.
+Ensure the Slack bot is installed and `SLACK_BOT_TOKEN` is configured. The bot needs `channels:history` and `users:read` OAuth scopes. For @mention support, also enable Event Subscriptions and add the `app_mentions:read` scope. See the [Slack integration guide](slack.md) for full setup steps.
 
 ### Usage
 
 1. Open a Slack thread with a substantive discussion
-2. Run `/docbrain capture` inside the thread (not on a top-level message)
+2. Use the **message shortcut** (right-click → Shortcuts → Capture to DocBrain), type **`@DocBrain capture`** in the thread, or run **`/docbrain capture`** (outside threads only)
 3. DocBrain fetches all messages, resolves user names, and indexes the conversation
 
 Within ~15 seconds, DocBrain posts back in the thread:
@@ -583,7 +587,7 @@ It's now searchable and will be used by Autopilot's next gap analysis.
 
 ### Access Control
 
-By default, any user in any channel can run `/docbrain capture`. Restrict access with:
+By default, any user in any channel can trigger capture (via shortcut, @mention, or slash command). Restrict access with:
 
 ```env
 SLACK_CAPTURE_ALLOWED_CHANNELS=platform-team,infra-review  # channel names (no #) or IDs
@@ -623,7 +627,7 @@ Unlike incident records (Jira, PagerDuty, Zendesk), which are permanent historic
 
 - The freshness scorer uses the **original content creation date** (when the PR/MR was opened, when the Slack thread started) as the age baseline — not the time DocBrain captured it.
 - Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one, which reduces its weight in RAG retrieval and Autopilot gap analysis.
-- **Re-capturing the same thread** (running `/docbrain capture` again on the same PR or Slack thread) updates the content but preserves the original creation date as the age baseline.
+- **Re-capturing the same thread** (via message shortcut, `@DocBrain capture`, or `@docbrain capture` on a PR) updates the content but preserves the original creation date as the age baseline.
 
 This ensures that outdated design decisions, replaced architectures, or deprecated processes are progressively de-emphasized in answers as they age — without ever being deleted (the historical record is preserved for explicit search).
 

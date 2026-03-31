@@ -713,7 +713,7 @@ See the [API Reference](api-reference.md#cicd-pipeline-capture) for endpoint det
 
 ## Conversation Auto-Distillation
 
-Automatically extracts structured knowledge fragments from captured conversations — Slack threads (via `/docbrain sync`) and GitHub PR discussions (via `@docbrain capture`). After a successful capture, DocBrain runs LLM-powered distillation in the background to identify decisions, facts, caveats, procedures, and context embedded in the conversation.
+Automatically extracts structured knowledge fragments from captured conversations — Slack threads (via message shortcut, `@DocBrain capture`, or `/docbrain capture`) and GitHub PR discussions (via `@docbrain capture`). After a successful capture, DocBrain runs LLM-powered distillation in the background to identify decisions, facts, caveats, procedures, and context embedded in the conversation.
 
 Distillation is fire-and-forget: it never affects capture response time. Failures are logged and metriced but don't block the capture path.
 
