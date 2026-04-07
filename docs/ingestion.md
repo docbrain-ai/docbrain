@@ -707,6 +707,7 @@ Documents from different sources coexist in the same index and are searched toge
 
 ## Next Steps
 
+- [External Connectors](./connectors.md) — build a connector for any knowledge source (ServiceNow, Notion, SharePoint, custom databases, etc.)
 - [Configuration Reference](./configuration.md) — all ingestion-related environment variables
 - [Provider Setup](./providers.md) — configure embedding providers for ingestion
 - [Architecture](./architecture.md) — how the ingestion pipeline works under the hood

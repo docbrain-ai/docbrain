@@ -312,15 +312,15 @@ See [Knowledge Intelligence Guide](docs/knowledge-intelligence.md) for details.
 
 ### Connector SDK — Plug In Any Source
 
-Build a connector for any knowledge source in any language. DocBrain handles scheduling, retries, and ingestion — your connector just serves HTTP:
+Build a connector for any knowledge source in any language. DocBrain handles scheduling, retries, circuit breaking, and ingestion — your connector just serves three HTTP endpoints:
 
 ```
-GET  /health          → { "status": "ok", "connector_name": "notion" }
-POST /fetch           → Return documents as JSON (with cursor-based pagination)
-POST /fetch-by-ids    → Return specific documents by ID
+GET  /health           → { "status": "ok", "connector_name": "notion" }
+POST /documents/list   → Return document IDs (paginated, incremental via "since")
+POST /documents/fetch  → Return full document content for given source IDs
 ```
 
-Register it in DocBrain, set a sync schedule, and every document flows through the same quality pipeline as built-in sources. [Connector Protocol Docs →](docs/ingestion.md)
+Register it in DocBrain, set a cron schedule, and every document flows through the same quality pipeline as built-in sources. Includes SSRF protection, circuit breaker (auto-disable after 5 failures), and incremental sync. [Connector Protocol Docs →](docs/connectors.md)
 
 ### MCP IDE Capture
 
@@ -600,6 +600,7 @@ Environment variables always override config files. See [Configuration Guide](do
 | [Provider Setup](docs/providers.md) | LLM and embedding provider configuration |
 | [Architecture](docs/architecture.md) | System design, data flow, memory, freshness |
 | [Ingestion Guide](docs/ingestion.md) | Connecting 13+ knowledge sources |
+| [External Connectors](docs/connectors.md) | Build custom connectors for any knowledge source |
 | [Governance](docs/governance.md) | Ownership, SLAs, breach detection, dashboards |
 | [Review Workflows](docs/reviews.md) | Multi-stage approval pipelines |
 | [Knowledge Intelligence](docs/knowledge-intelligence.md) | Graph, analytics, predictive intelligence |

@@ -56,6 +56,7 @@ nav:
     - Learning Pipeline: learning.md
   - Integrations:
     - Ingestion Guide: ingestion.md
+    - External Connectors: connectors.md
     - Slack: slack.md
     - GitLab Capture: gitlab-capture.md
     - Confluence Webhook: confluence-webhook.md

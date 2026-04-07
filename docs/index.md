@@ -83,6 +83,7 @@ Engineer annotates in their IDE  → DocBrain links knowledge to the exact code 
 | [Configuration](configuration.md) | All environment variables and options |
 | [LLM Providers](providers.md) | 14 supported providers including fully-local Ollama |
 | [Ingestion](ingestion.md) | Connecting 13+ knowledge sources |
+| [External Connectors](connectors.md) | Build custom connectors for any knowledge source |
 | [Governance](governance.md) | Space ownership, SLAs, breach detection, dashboards |
 | [Review Workflows](reviews.md) | Multi-stage approval pipelines for documentation |
 | [Knowledge Intelligence](knowledge-intelligence.md) | Graph, analytics, predictive intelligence |
