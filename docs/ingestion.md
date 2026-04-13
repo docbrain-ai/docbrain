@@ -17,17 +17,26 @@ After ingestion, you can immediately start asking questions. DocBrain cites sour
 
 ## Quick Reference
 
-Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
+Configure sources in `config/local.yaml` (gitignored) under the top-level
+`sources:` block. Put only infrastructure secrets in `.env`. A sub-source is
+enabled simply by being present in YAML — there is **no separate
+`INGEST_SOURCES` env var**, and every list of targets must be non-empty.
 
-| Source | `ingest_sources` value | What You Need |
-|--------|------------------------|---------------|
-| Local files | `local` | A directory of `.md` or `.txt` files |
-| Confluence | `confluence` | Atlassian URL, email, API token, space keys |
-| GitHub | `github` | Repository URL, optional token for private repos |
-| GitHub PRs | `github_pr` | GitHub token, owner/repo |
-| GitLab MRs | `gitlab_mr` | GitLab token, project path |
-| Slack threads | `slack_thread` | Slack bot token, channel IDs |
-| Jira | `jira` | Jira URL, email, API token, project keys |
+| Provider | Sub-source | What You Need |
+|----------|------------|---------------|
+| Local files | `sources.local.path` | A directory of `.md` or `.txt` files |
+| Confluence | `confluence.*` (flat, legacy) | Atlassian URL, email, API token, space keys |
+| GitHub code | `sources.github.code` | GitHub token, list of `owner/repo[:branch]` |
+| GitHub PRs | `sources.github.pull_requests` | GitHub token, list of `owner/repo` |
+| GitLab MRs | `sources.gitlab.merge_requests` | GitLab token, list of `group/project` |
+| Slack threads | `sources.slack.threads` | Slack bot token, list of channel names |
+| Jira | `sources.jira` | Jira URL, email, API token, list of project keys |
+| Linear | `sources.linear` | Linear API key, list of team keys |
+| PagerDuty | `sources.pagerduty` | PagerDuty API token, list of service IDs |
+| OpsGenie | `sources.opsgenie` | OpsGenie API key, list of team names |
+| Zendesk | `sources.zendesk` | Zendesk subdomain, email, API token |
+| Intercom | `sources.intercom` | Intercom access token |
+| MS Teams | `sources.ms_teams` | Azure tenant/client/secret, list of team names |
 
 ---
 
@@ -41,11 +50,12 @@ Add to `config/local.yaml`:
 
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: local
+sources:
+  local:
+    path: /data/docs
 ```
 
-And set the path in `.env` (it's a filesystem path, not a secret, but it's deployment-specific):
+Or set the path via `.env`:
 
 ```env
 LOCAL_DOCS_PATH=/data/docs
@@ -115,9 +125,6 @@ Common examples: `ENG`, `DOCS`, `OPS`, `PLATFORM`
 
 ```yaml
 # config/local.yaml — never committed (gitignored)
-ingest:
-  ingest_sources: confluence
-
 confluence:
   base_url: https://yourcompany.atlassian.net/wiki
   user_email: you@yourcompany.com
@@ -217,33 +224,33 @@ The API token inherits the Confluence permissions of the user account. DocBrain 
 
 ## Option 3: GitHub Repository
 
-Ingest documentation from a GitHub repository. DocBrain clones the repo, finds Markdown and text files, and indexes them.
+Ingest documentation from one or more GitHub repositories. DocBrain clones each
+repo, finds Markdown and text files, and indexes them. Each repo may optionally
+pin a specific branch via the `:branch` suffix — otherwise the default branch
+is used.
 
 ### Setup
 
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: github
-
-github:
-  repo_url: https://github.com/your-org/your-docs-repo
-  branch: main
+sources:
+  github:
+    token: ${GITHUB_TOKEN}                 # repo:read scope
+    code:
+      repos:
+        - your-org/your-docs-repo          # default branch
+        - your-org/runbooks:develop        # pinned branch
 ```
 
-**For private repositories**, add a personal access token:
+Each entry in `repos` is an `owner/repo[:branch]` selector. The list must be
+non-empty — an empty list is a startup error.
 
-```yaml
-github:
-  token: ghp_your_token_here
-```
-
-### Creating a GitHub Token (for private repos)
+### Creating a GitHub Token
 
 1. Go to [https://github.com/settings/tokens](https://github.com/settings/tokens)
 2. Click **Generate new token (classic)**
 3. Select scope: `repo` (for private repos) or `public_repo` (for public repos only)
-4. Copy the token
+4. Copy the token and either export it as `GITHUB_TOKEN` or put it directly in `sources.github.token`
 
 ### Run Ingestion
 
@@ -671,28 +678,41 @@ docker compose exec server docbrain-ingest
 
 ## Multiple Sources
 
-DocBrain supports ingesting from multiple sources simultaneously. Set `ingest_sources` in `config/local.yaml` to a comma-separated list of sources, and configure credentials for each:
+DocBrain supports ingesting from multiple providers simultaneously. Simply
+declare each under `sources:` — enablement is structural (a sub-source runs
+if its block is present in YAML). There is no `INGEST_SOURCES` env var.
 
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: confluence,github_pr,jira
-
 confluence:
   base_url: https://acme.atlassian.net/wiki
   user_email: you@acme.com
   api_token: ATATT3x...
   space_keys: DOCS,ENG
 
-github_pr:
-  token: ghp_...
-  repo: acme/platform
+sources:
+  github:
+    token: ${GITHUB_TOKEN}
+    pull_requests:
+      repos:
+        - acme/platform
+        - acme/docs
+      lookback_days: 365
 
-jira_ingest:
-  base_url: https://acme.atlassian.net
-  user_email: you@acme.com
-  api_token: your-jira-token
-  projects: ENG,OPS
+  jira:
+    base_url: https://acme.atlassian.net
+    user_email: you@acme.com
+    api_token: ${JIRA_API_TOKEN}
+    projects:
+      - ENG
+      - OPS
+
+  slack:
+    token: ${SLACK_INGEST_TOKEN}
+    threads:
+      channels:
+        - "#incident-response"
+        - "#eng-platform"
 ```
 
 Then run a single ingestion pass to pull from all sources:

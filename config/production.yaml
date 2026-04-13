@@ -66,6 +66,8 @@ auth:
 # See docs/confluence-webhook.md for Confluence-side setup instructions.
 # CONFLUENCE_WEBHOOK_SECRET, CONFLUENCE_BASE_URL, CONFLUENCE_API_TOKEN come from env vars.
 
-# github_pr / slack_ingest / jira_ingest secrets come from env vars directly.
-# The env_override! mappings in config.rs pick them up automatically.
-# See .env.example for GITHUB_PR_*, SLACK_INGEST_*, JIRA_* variable names.
+# Ingestion source credentials (GITHUB_TOKEN, GITLAB_TOKEN, SLACK_INGEST_TOKEN,
+# JIRA_API_TOKEN, LINEAR_API_KEY, etc.) come from env vars directly.
+# The env_override! mappings in config.rs set them under sources.<provider>.*
+# at load time. See .env.example for the full list of variable names, and
+# docs/configuration.md for the nested `sources:` block shape.

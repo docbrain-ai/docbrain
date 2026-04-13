@@ -136,17 +136,53 @@ For Confluence Data Center (self-hosted):
 
 #### Multiple sources
 
-```bash
-helm install docbrain ./helm/docbrain \
-  --set llm.provider=anthropic \
-  --set llm.anthropicApiKey=sk-ant-... \
-  --set ingest.sources="confluence,local" \
-  --set ingest.confluence.baseUrl=https://yourcompany.atlassian.net \
-  --set ingest.confluence.email=user@yourcompany.com \
-  --set ingest.confluence.apiToken=ATATT...
+Ingestion sources with more than one target (GitHub, GitLab, Slack, Jira,
+Linear, etc.) need YAML-shaped configuration because their resource lists
+can't be expressed in a single env var. Put them under the `ingest.sources`
+subtree in a values override file:
+
+```yaml
+# my-values.yaml
+llm:
+  provider: anthropic
+  anthropicApiKey: sk-ant-...
+
+ingest:
+  confluence:                 # legacy flat shape — kept for Confluence
+    baseUrl: https://yourcompany.atlassian.net
+    email: user@yourcompany.com
+    apiToken: ATATT...
+  sources:                    # rendered into a ConfigMap + mounted at /app/config/local.yaml
+    local:
+      path: /data/docs
+    github:
+      token: ${GITHUB_TOKEN}   # from Kubernetes secret env var
+      pull_requests:
+        repos:
+          - acme/platform
+          - acme/docs
+        lookback_days: 365
+    jira:
+      base_url: https://yourcompany.atlassian.net
+      user_email: bot@yourcompany.com
+      api_token: ${JIRA_API_TOKEN}
+      projects:
+        - ENG
+        - PLAT
 ```
 
-Supported source names: `local`, `confluence`, `github`, `github_pr`, `slack_thread`, `jira`, `linear`, `pagerduty`, `opsgenie`, `zendesk`, `intercom`, `gitlab_mr`.
+```bash
+helm install docbrain ./helm/docbrain -f my-values.yaml
+```
+
+Every resource list (`repos`, `projects`, `channels`, `teams`, …) must be
+non-empty — an empty list is a startup error. See
+[configuration.md](./configuration.md) for the full `sources:` shape and
+selector grammar.
+
+Supported sub-source names (these end up as the `source_type` on ingested
+documents): `local`, `confluence`, `github`, `github_pr`, `slack_thread`,
+`jira`, `linear`, `pagerduty`, `opsgenie`, `zendesk`, `intercom`, `gitlab_mr`.
 
 ### 4. Verify the install
 

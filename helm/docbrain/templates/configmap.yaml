@@ -34,8 +34,18 @@ data:
   {{- end }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
-  INGEST_SOURCES: {{ .Values.ingest.sources | quote }}
+  # Ingestion sources live under the nested `sources:` block in config/*.yaml.
+  # See docs/configuration.md for the full shape. Env var INGEST_SOURCES is no
+  # longer used — enablement is derived from whether a sub-source is present
+  # in YAML. Only scalar paths and credentials can be set via env.
+  #
+  # LOCAL_DOCS_PATH is ONLY emitted when the customer has explicitly opted
+  # into local ingest by adding `local:` under `ingest.sources`. Otherwise
+  # it would silently populate `sources.local.path` via the env_override
+  # mapping and enable local ingest against a non-existent directory.
+  {{- if and .Values.ingest.sources (kindIs "map" .Values.ingest.sources) (hasKey .Values.ingest.sources "local") .Values.ingest.localDocsPath }}
   LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
+  {{- end }}
   INGEST_RUN_ON_STARTUP: {{ .Values.ingest.runOnStartup | default false | quote }}
   OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
   REDIS_URL: {{ include "docbrain.redisUrl" . | quote }}
@@ -108,10 +118,9 @@ data:
   CONFLUENCE_USER_EMAIL: {{ .Values.confluenceWebhook.email | default "" | quote }}
   CONFLUENCE_API_VERSION: {{ .Values.confluenceWebhook.apiVersion | default "v2" | quote }}
   {{- end }}
-  {{- if .Values.ingest.github }}
-  GITHUB_REPO_URL: {{ .Values.ingest.github.repoUrl | default "" | quote }}
-  GITHUB_BRANCH: {{ .Values.ingest.github.branch | default "main" | quote }}
-  {{- end }}
+  # GitHub, GitLab, Slack, Jira, Linear, etc. are configured in the nested
+  # `sources:` YAML block (see docs/configuration.md). Their credentials can
+  # be injected via Secret — see the secret.yaml template and values.yaml.
   {{- if ne .Values.autopilot.enabled false }}
   AUTOPILOT_ENABLED: "true"
   {{- else }}

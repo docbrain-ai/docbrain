@@ -1,4 +1,4 @@
-{{- if and (contains "local" .Values.ingest.sources) .Values.ingest.localDocsPath }}
+{{- if .Values.ingest.localDocsPath }}
 ---
 # PersistentVolumeClaim for local docs mounted into the ingest job and server.
 # Sized and storage-classed via ingest.docsStorage and ingest.storageClassName.

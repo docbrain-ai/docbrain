@@ -73,17 +73,31 @@ embedding:
   modelId: text-embedding-3-small
   # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
 
-# -- Ingestion source: confluence | local | github
+# -- Ingestion configuration
+#
+# Detailed ingestion sources (github, gitlab, slack, jira, linear, pagerduty,
+# opsgenie, zendesk, intercom, ms_teams) live under the nested `sources:`
+# block in config/default.yaml and config/production.yaml baked into the
+# container image. Customers override them by mounting a ConfigMap containing
+# a local.yaml file, or by setting scalar secret env vars via a Secret.
+#
+# See https://github.com/sailpoint-oss/docbrain-public/blob/main/docs/configuration.md
+# for the full nested shape and the selector grammar.
 ingest:
-  sources: local  # comma-separated: local, confluence, github, github_pr, slack_thread, jira, etc.
   schedule: "0 */6 * * *"   # every 6 hours
-  localDocsPath: /data/docs
-  # Size of the PersistentVolumeClaim created for local docs (ingest.sources includes "local").
+  # localDocsPath is only used when local ingest is explicitly enabled via
+  # `ingest.sources.local.*`. Leave unset unless you're mounting a docs
+  # volume. Setting it by default would silently enable local ingest against
+  # a non-existent path via the LOCAL_DOCS_PATH env_override in config.rs.
+  # localDocsPath: /data/docs
+  # Size of the PersistentVolumeClaim created for local docs when
+  # sources.local.path is set in config YAML.
   docsStorage: 5Gi
   # storageClassName: ""   # leave empty to use the cluster default StorageClass
   # Run ingest once at server startup before the first scheduled CronJob run.
   # Ensures data is indexed immediately after install or upgrade. Default: true.
   runOnStartup: true
+  # Legacy flat Confluence block (kept until Confluence is nested under sources).
   # confluence:
   #   baseUrl: ""
   #   email: ""
@@ -92,10 +106,45 @@ ingest:
   #   apiVersion: v2          # v2 for Cloud (default), v1 for self-hosted Data Center
   #   pageIds: ""             # comma-separated page IDs (+ all descendants); from any space
   #   pageLimit: 0            # max pages per space; 0 = unlimited (fetch all subpages)
-  # github:
-  #   repoUrl: ""
-  #   token: ""
-  #   branch: main
+
+  # ── Nested ingestion sources ───────────────────────────────────────────
+  #
+  # This `sources:` subtree is rendered verbatim into a ConfigMap mounted at
+  # `/app/config/local.yaml` inside the server and ingest containers. The
+  # DocBrain config loader reads `local.yaml` last, so its values override
+  # anything baked into `default.yaml` / `production.yaml`.
+  #
+  # Enablement is structural: include a sub-source block (e.g. `github.code`
+  # or `jira`) to enable it. Every list-of-targets field (repos, projects,
+  # channels, teams, …) must be non-empty — an empty list is a startup error.
+  #
+  # Secrets should come from Kubernetes secrets via env vars (see `sources`
+  # section in .env.example / docs/configuration.md for the variable names).
+  # Use ${VAR} substitution in this block to reference env vars at load time.
+  #
+  # Example — enable GitHub PR ingest for a fixed repo list:
+  #
+  # sources:
+  #   github:
+  #     token: ${GITHUB_TOKEN}
+  #     pull_requests:
+  #       repos:
+  #         - acme/platform
+  #         - acme/docs
+  #       lookback_days: 365
+  #       min_comments: 1
+  #   slack:
+  #     token: ${SLACK_INGEST_TOKEN}
+  #     threads:
+  #       channels:
+  #         - "#incident-response"
+  #         - "#eng-platform"
+  #       min_replies: 3
+  #       lookback_days: 90
+  #
+  # When `sources` is empty (the default), no extra ConfigMap is created and
+  # only the baked-in defaults run (self-ingest and any env-var-only shape).
+  sources: {}
 
 # -- Draft Publishing (multi-target)
 # Publish AI-generated drafts to Confluence, GitHub (PR), or GitLab (MR).

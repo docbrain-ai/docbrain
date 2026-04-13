@@ -33,19 +33,27 @@ Set `APP_ENV=production` for the production profile (this is the default in the 
 # config/local.yaml — never committed (gitignored)
 # Configure ingest sources and personal overrides here.
 
-ingest:
-  ingest_sources: confluence,github_pr
-
 confluence:
   base_url: https://acme.atlassian.net/wiki
   user_email: you@acme.com
   api_token: ATATT3x...
   space_keys: DOCS,ENG
 
-github_pr:
-  token: ghp_...
-  repo: acme/platform
-  lookback_days: 180
+sources:
+  github:
+    token: ghp_...
+    pull_requests:
+      repos:
+        - acme/platform
+        - acme/docs
+      lookback_days: 180
+  jira:
+    base_url: https://acme.atlassian.net
+    user_email: you@acme.com
+    api_token: ATATT3x...
+    projects:
+      - ENG
+      - PLAT
 
 # Local tuning overrides (optional)
 autopilot:
@@ -54,7 +62,6 @@ autopilot:
 
 rag:
   cache_ttl_hours: 1
-
 ```
 
 ### YAML Config Structure
@@ -176,15 +183,24 @@ Configure sources in `config/local.yaml` (gitignored). Put only infrastructure s
 
 | Setting (`config/local.yaml` key) | Env var equivalent | Default | Description |
 |---|---|---|---|
-| `ingest.ingest_sources` | `INGEST_SOURCES` | `local` | Comma-separated list of active sources: `local`, `confluence`, `github`, `github_pr`, `gitlab_mr`, `slack_thread`, `jira` |
 | `ingest.self_ingest` | `DOCBRAIN_SELF_INGEST` | `true` | Auto-ingest DocBrain's own docs |
 | `ingest.image_extraction_enabled` | `IMAGE_EXTRACTION_ENABLED` | `true` | Extract and describe images using vision LLM |
 
+Source enablement is structural — a sub-source runs when its block is present
+under `sources:` in YAML. There is no separate list or enable flag.
+
 ### Local Files
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion (set in `.env` or as env var) |
+```yaml
+# config/local.yaml
+sources:
+  local:
+    path: /data/docs
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `sources.local.path` | `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion |
 
 ### Confluence
 
@@ -209,112 +225,175 @@ confluence:
 | `confluence.tls_verify` | `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
 | `confluence.webhook_secret` | `CONFLUENCE_WEBHOOK_SECRET` | — | HMAC secret for real-time webhook sync (set as env var) |
 
-### GitHub Repository
+## Ingestion sources — nested umbrella configuration
+
+All ingestion sources now live under a single top-level `sources:` block. Each
+provider has one umbrella entry (`github`, `gitlab`, `slack`, `jira`, `linear`,
+…) with its credentials at the top and optional sub-sources nested inside.
+A sub-source is **enabled** when its block is present in YAML — there is no
+separate `INGEST_SOURCES` env var, and no per-source enable flag.
+
+**Resource lists are always explicit.** Every list-of-targets field (repos,
+projects, channels, teams, …) must contain at least one entry. An empty list
+is a startup error — DocBrain never silently falls back to "ingest everything
+the token can see."
+
+### Selector grammar (GitHub & GitLab)
+
+Repositories are specified with a small selector grammar:
+
+| Syntax | Meaning |
+|--------|---------|
+| `acme/platform` | Exact repository, use the repo's default branch |
+| `acme/platform:develop` | Exact repository, pinned to the `develop` branch |
+| `acme/*` | All repositories in the `acme` organisation (default branches) |
+| `acme/infra-*` | All `acme` repositories whose name starts with `infra-` |
+| `acme/*:main` | **Rejected at startup** — wildcards must use default branches |
+
+> **Wildcards:** Parsing is supported today but **runtime expansion against the
+> GitHub/GitLab APIs is a follow-up** and rejected at startup for now with a
+> clear error. List repositories explicitly until wildcard resolution lands.
+
+### GitHub (code + pull requests)
 
 ```yaml
 # config/local.yaml
-github:
-  repo_url: https://github.com/your-org/your-docs
-  token: ghp_...    # only for private repos
-  branch: main
+sources:
+  github:
+    token: ${GITHUB_TOKEN}                 # repo:read scope
+    api_url: https://api.github.com         # override for GitHub Enterprise
+    code:                                  # optional — ingest markdown from repos
+      repos:
+        - acme/platform
+        - acme/docs:develop                 # pinned branch
+    pull_requests:                         # optional — ingest PR discussions
+      repos:
+        - acme/platform
+        - acme/backend
+      lookback_days: 365
+      min_comments: 1
+      labels: []                            # empty = index all PRs
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `github.repo_url` | `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |
-| `github.token` | `GITHUB_TOKEN` | — | Personal access token (optional for public repos) |
-| `github.branch` | `GITHUB_BRANCH` | `main` | Branch to ingest from |
+| `sources.github.token` | `GITHUB_TOKEN` | — | GitHub personal access token with `repo:read` scope |
+| `sources.github.api_url` | `GITHUB_API_URL` | `https://api.github.com` | API host override for GitHub Enterprise |
+| `sources.github.code.repos` | — | — | **Required when `code` is set.** Non-empty list of `owner/repo[:branch]` selectors |
+| `sources.github.pull_requests.repos` | — | — | **Required when `pull_requests` is set.** Non-empty list of `owner/repo` selectors |
+| `sources.github.pull_requests.lookback_days` | — | `365` | How far back to fetch merged PRs |
+| `sources.github.pull_requests.min_comments` | — | `1` | Minimum total review/issue comments on a PR to be indexed |
+| `sources.github.pull_requests.labels` | — | `[]` | Label filter — empty list indexes all PRs |
 
-### GitHub Pull Requests
-
-Ingest PR titles, descriptions, and review discussions as searchable knowledge.
+### GitLab (merge requests)
 
 ```yaml
 # config/local.yaml
-github_pr:
-  token: ghp_...
-  repo: acme/platform
-  lookback_days: 365
-  min_comments: 1
+sources:
+  gitlab:
+    token: ${GITLAB_TOKEN}                 # api scope
+    base_url: https://gitlab.com            # override for self-hosted
+    tls_verify: true                        # false for self-signed certs
+    merge_requests:
+      projects:
+        - acme/platform
+        - acme/infra
+      lookback_days: 365
+      min_notes: 1
+      labels: []
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `github_pr.token` | `GITHUB_PR_TOKEN` | — | GitHub personal access token (secret — set in `config/local.yaml`) |
-| `github_pr.repo` | `GITHUB_PR_REPO` | — | Owner/repo (e.g. `acme/platform`) — set in `config/local.yaml` |
-| `github_pr.lookback_days` | `GITHUB_PR_LOOKBACK_DAYS` | `365` | How far back to fetch PRs |
-| `github_pr.min_comments` | `GITHUB_PR_MIN_COMMENTS` | `1` | Minimum comments for a PR to be ingested |
-| `github_pr.labels` | `GITHUB_PR_LABELS` | — | Comma-separated label filter (optional) |
-| `github_pr.api_url` | `GITHUB_PR_API_URL` | — | Override for GitHub Enterprise (optional) |
+| `sources.gitlab.token` | `GITLAB_TOKEN` | — | GitLab personal or project access token with `api` scope |
+| `sources.gitlab.base_url` | `GITLAB_BASE_URL` | `https://gitlab.com` | Instance URL for self-hosted GitLab |
+| `sources.gitlab.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
+| `sources.gitlab.merge_requests.projects` | — | — | **Required.** Non-empty list of `group/project` paths |
+| `sources.gitlab.merge_requests.lookback_days` | — | `365` | How far back to fetch merged MRs |
+| `sources.gitlab.merge_requests.min_notes` | — | `1` | Minimum discussion notes on an MR to be indexed |
+| `sources.gitlab.merge_requests.labels` | — | `[]` | Label filter — empty list indexes all MRs |
 
-### GitLab Merge Requests
-
-Ingest MR titles, descriptions, and discussion threads.
+### Slack (threads)
 
 ```yaml
 # config/local.yaml
-gitlab_mr:
-  token: glpat-...
-  project_ids: acme/platform,acme/infra
-  lookback_days: 365
+sources:
+  slack:
+    token: ${SLACK_INGEST_TOKEN}           # bot token: channels:history, channels:read, users:read
+    threads:
+      channels:                             # Slack channel names (not IDs)
+        - "#incident-response"
+        - "#eng-platform"
+      min_replies: 3
+      reactions:
+        - white_check_mark
+        - bookmark
+      lookback_days: 90
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `gitlab_mr.token` | `GITLAB_TOKEN` | — | GitLab personal access token (secret — set in `config/local.yaml`) |
-| `gitlab_mr.base_url` | `GITLAB_BASE_URL` | `https://gitlab.com` | GitLab instance URL |
-| `gitlab_mr.project_ids` | `GITLAB_PROJECT_IDS` | — | Comma-separated namespace/repo paths — set in `config/local.yaml` |
-| `gitlab_mr.lookback_days` | `GITLAB_MR_LOOKBACK_DAYS` | `365` | How far back to fetch MRs |
-| `gitlab_mr.min_notes` | `GITLAB_MR_MIN_NOTES` | `1` | Minimum notes/comments for an MR to be ingested |
-| `gitlab_mr.labels` | `GITLAB_MR_LABELS` | — | Comma-separated label filter (optional) |
-| `gitlab_mr.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs (batch ingest) |
-| `gitlabCapture.tlsInsecure` | `GITLAB_CAPTURE_TLS_INSECURE` | `false` | Set to `true` for self-signed certs (real-time capture) |
+| `sources.slack.token` | `SLACK_INGEST_TOKEN` | — | Bot token for ingestion (separate from `SLACK_BOT_TOKEN` used by @mentions) |
+| `sources.slack.threads.channels` | — | — | **Required.** Non-empty list of channel names (leading `#` optional). The bot must be invited to every channel. |
+| `sources.slack.threads.min_replies` | — | `3` | Minimum replies for a thread to be indexed |
+| `sources.slack.threads.reactions` | — | `[white_check_mark, bookmark]` | Reactions that override the reply-count threshold |
+| `sources.slack.threads.lookback_days` | — | `90` | How far back to scan for threads |
 
-### Slack Threads
-
-Ingest high-signal Slack threads (by reaction count or reply threshold).
+### Jira (issues)
 
 ```yaml
 # config/local.yaml
-slack_ingest:
-  token: xoxb-...
-  channels: C01234567,C09876543
-  min_replies: 3
-  reactions: "white_check_mark,bookmark"
-  lookback_days: 90
+sources:
+  jira:
+    base_url: https://yourcompany.atlassian.net
+    user_email: ${JIRA_USER_EMAIL}
+    api_token: ${JIRA_API_TOKEN}
+    projects:                               # required — no silent "all projects" fallback
+      - ENG
+      - PLAT
+    # jql_filter: "resolution = Fixed"     # optional extra JQL clause
+    lookback_days: 365
+    issue_types:
+      - Bug
+      - Story
+      - Task
+      - Epic
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `slack_ingest.token` | `SLACK_INGEST_TOKEN` | — | Slack bot token (secret — set in `config/local.yaml`) |
-| `slack_ingest.channels` | `SLACK_INGEST_CHANNELS` | — | Comma-separated channel IDs — set in `config/local.yaml` |
-| `slack_ingest.min_replies` | `SLACK_MIN_REPLIES` | `3` | Minimum thread replies to be ingested |
-| `slack_ingest.reactions` | `SLACK_INGEST_REACTIONS` | `white_check_mark,bookmark` | Comma-separated reaction names that flag a thread for ingest |
-| `slack_ingest.lookback_days` | `SLACK_LOOKBACK_DAYS` | `90` | How far back to scan channels |
+| `sources.jira.base_url` | `JIRA_BASE_URL` | — | Jira instance URL |
+| `sources.jira.user_email` | `JIRA_USER_EMAIL` | — | Service-account email for Basic auth |
+| `sources.jira.api_token` | `JIRA_API_TOKEN` | — | Atlassian API token |
+| `sources.jira.projects` | — | — | **Required.** Non-empty list of project keys (e.g. `ENG`, `PLAT`) |
+| `sources.jira.jql_filter` | `JIRA_JQL_FILTER` | — | Additional JQL clause appended to the default query |
+| `sources.jira.lookback_days` | `JIRA_LOOKBACK_DAYS` | `365` | How far back to fetch resolved issues |
+| `sources.jira.issue_types` | — | `[Bug, Story, Task, Epic]` | Issue types to include |
 
-### Jira
-
-Ingest Jira issues (bugs, stories, tasks, epics) as searchable knowledge.
+### Linear (issues)
 
 ```yaml
 # config/local.yaml
-jira_ingest:
-  base_url: https://yourcompany.atlassian.net
-  user_email: you@yourcompany.com
-  api_token: your-token
-  projects: ENG,OPS
-  lookback_days: 365
+sources:
+  linear:
+    api_key: ${LINEAR_API_KEY}
+    teams:                                  # required — no silent "all teams" fallback
+      - ENG
+      - OPS
+    lookback_days: 365
+    states:
+      - Done
+      - Cancelled
+      - Duplicate
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `jira_ingest.base_url` | `JIRA_BASE_URL` | — | Jira instance URL — set in `config/local.yaml` |
-| `jira_ingest.user_email` | `JIRA_USER_EMAIL` | — | Jira account email — set in `config/local.yaml` |
-| `jira_ingest.api_token` | `JIRA_API_TOKEN` | — | Jira API token (secret — set in `config/local.yaml`) |
-| `jira_ingest.projects` | `JIRA_PROJECTS` | — | Comma-separated project keys — set in `config/local.yaml` |
-| `jira_ingest.jql_filter` | `JIRA_JQL_FILTER` | — | Additional JQL filter (optional) |
-| `jira_ingest.lookback_days` | `JIRA_LOOKBACK_DAYS` | `365` | How far back to fetch issues |
-| `jira_ingest.issue_types` | `JIRA_ISSUE_TYPES` | `Bug,Story,Task,Epic` | Comma-separated issue types to ingest |
+| `sources.linear.api_key` | `LINEAR_API_KEY` | — | Linear personal API key |
+| `sources.linear.teams` | — | — | **Required.** Non-empty list of team keys |
+| `sources.linear.lookback_days` | `LINEAR_LOOKBACK_DAYS` | `365` | How far back to fetch completed/cancelled issues |
+| `sources.linear.states` | — | `[Done, Cancelled, Duplicate]` | Issue states to include |
+
 
 ## Rate Limiting
 
