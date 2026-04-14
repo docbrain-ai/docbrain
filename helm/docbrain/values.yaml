@@ -98,6 +98,7 @@ rag:
   # rerankTitleEnrich: true     # pass title+heading+space to reranker (recommended)
   # entityCacheTtlSecs: 300     # entity → space cache TTL
   # maxRewrites: 2              # query rewrites per ask (0 to disable)
+  # maxChunksPerDoc: 2          # Phase 2 chunk-flood fix — per-retriever cap
   # traceDetail: false          # log per-chunk rerank scores in final top-k
 
 # -- Semantic reranker (stage 3 of the retrieval pipeline)

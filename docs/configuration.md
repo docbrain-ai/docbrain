@@ -284,6 +284,7 @@ rag:
 | — | `RAG_RERANK_TITLE_ENRICH` | `true` | Pass chunk title + heading + source/space to the reranker alongside the content body. Title is the single strongest relevance signal and used to be discarded. Set to `false` to send content only (legacy behavior). |
 | `rag.entity_cache_ttl_secs` | `RAG_ENTITY_CACHE_TTL_SECS` | `300` | TTL for the entity → space resolution cache. New spaces added to the index become discoverable within this window. |
 | `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
+| `rag.max_chunks_per_doc_in_retriever` | `RAG_MAX_CHUNKS_PER_DOC` | `2` | **Chunk-flood fix.** Max chunks per document that any single retriever may contribute to RRF. Before this knob, BM25 could return 100 chunks of one dominant document, crowding out the real answer. Cap at 2 preserves the top chunk as the RRF anchor plus one more for context. Dedup is per-retriever; different retrievers can still independently vote for the same doc. Set to a large number to effectively disable. |
 
 ### Observability
 

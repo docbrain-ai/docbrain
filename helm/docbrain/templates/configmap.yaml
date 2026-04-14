@@ -85,6 +85,9 @@ data:
   {{- if .maxRewrites }}
   RAG_MAX_REWRITES: {{ .maxRewrites | quote }}
   {{- end }}
+  {{- if .maxChunksPerDoc }}
+  RAG_MAX_CHUNKS_PER_DOC: {{ .maxChunksPerDoc | quote }}
+  {{- end }}
   {{- if .traceDetail }}
   RAG_TRACE_DETAIL: {{ .traceDetail | quote }}
   {{- end }}
