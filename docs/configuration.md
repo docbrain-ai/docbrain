@@ -293,13 +293,26 @@ trace a single query's path through retrieval without attaching a
 debugger:
 
 ```
-INFO stage="rag.staged.query_understanding" rewrites=2 entities=3 mapped_spaces=1
-INFO stage="rag.staged.candidate_generation" retrievers=6 unique_chunks=187 pool_size=200
+INFO stage="rag.staged.query_understanding" rewrites=2 entities=12 mapped_spaces=7
+INFO stage="rag.staged.kg_doc_retriever" kg_entities=12 kg_doc_ids=47 hits=18
+INFO stage="rag.staged.candidate_generation" retrievers=12 unique_chunks=348 pool_size=200
 INFO stage="rag.staged.rrf_fusion" fused=200 rrf_k=60
-INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.83
-INFO stage="rag.staged.diversity_select" candidates_in=200 selected=10 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
-INFO stage="rag.staged.complete" final_count=10 elapsed_ms=457
+INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.86
+INFO stage="rag.staged.freshness_pre_diversity" multipliers_fetched=264 reranked_count=200
+INFO stage="rag.staged.diversity_select" candidates_in=200 selected=3 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
+INFO stage="rag.staged.complete" final_count=3 elapsed_ms=6446
 ```
+
+Stage meanings (in order):
+
+- **query_understanding** — classify intent, extract entities, build rewrites, resolve entities to spaces.
+- **kg_doc_retriever** — only fires when the knowledge graph has `source_doc_ids` edges for resolved entities. Pulls every chunk of those docs directly, bypassing BM25/vector.
+- **candidate_generation** — all retrievers finished. `unique_chunks` is total across the 6–12 retrievers after per-retriever chunk-flood dedup (see `rag.max_chunks_per_doc_in_retriever`).
+- **rrf_fusion** — Reciprocal Rank Fusion collapses the retriever outputs into one scored list.
+- **rerank** — cross-encoder scores every chunk against the query. `top_score` in `[0, 1]` is the calibrated highest-ranked hit. Title + heading + space are included in the rerank input when `RAG_RERANK_TITLE_ENRICH=true` (default).
+- **freshness_pre_diversity** — fetches stale/fresh multipliers from Postgres and applies them BEFORE the retrieval floor (Phase 1.3, gated on `RAG_FRESHNESS_PRE_DIVERSITY=true`). Stale docs are dropped by the floor instead of being silently demoted post-hoc.
+- **diversity_select** — enforces per-source + per-document caps and the retrieval floor. `selected` is the final top-k count.
+- **complete** — total wall clock, final_count sent to the LLM.
 
 Set `RAG_TRACE_DETAIL=true` to additionally log every chunk in the
 final top-k with its reranker score, space, and document_id. Turn

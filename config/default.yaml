@@ -50,6 +50,26 @@ rag:
   cache_ttl_hours: 24     # Cache max age in hours
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
 
+  # ── Staged retrieval pipeline tuning ─────────────────────────────────
+  # Every field below has a sensible default baked into the code; uncomment
+  # only to override. Also configurable via the environment variables listed
+  # in .env.example and docs/configuration.md.
+  #
+  # top_k: 10                         # Chunks sent to the LLM
+  # bm25_boost: 1.0                   # BM25 vs vector weight in hybrid
+  # candidate_pool_size: 200          # Pool fed to the reranker
+  # rrf_k: 60                         # RRF damping constant (canonical paper)
+  # max_per_source: 3                 # Per-source cap in final top-k
+  # max_per_document: 2               # Per-document cap in final top-k
+  # min_relevance_score: 0.30         # Retrieval floor (drop from diversity)
+  # display_floor: 0.30               # Display floor (drop from sources array)
+  # confidence_gate: 0.30             # Hide all sources if confidence < this
+  # strong_answer_floor: 0.50         # High-confidence answer threshold
+  # freshness_window_days: 7          # Freshness retriever window (0 to disable)
+  # entity_cache_ttl_secs: 300        # Entity → space cache TTL
+  # max_rewrites: 2                   # Query rewrites per ask (0 to disable)
+  # max_chunks_per_doc_in_retriever: 2  # Phase 2 chunk-flood fix — per-retriever cap
+
 rbac:
   # Default role for new SSO users.
   # Role hierarchy: viewer (1) < editor (2) < analyst (3) < admin (4)
