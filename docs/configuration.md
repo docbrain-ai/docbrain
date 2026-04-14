@@ -175,6 +175,141 @@ To migrate:
 |----------|---------|-------------|
 | `FORCE_REINDEX` | `false` | Delete and recreate OpenSearch indexes when embedding dimensions change. Set once during migration, then remove. |
 
+## Retrieval Pipeline
+
+DocBrain runs queries through a five-stage retrieval pipeline when a
+reranker is configured:
+
+1. **Query understanding** — rewrites + entity → space mapping
+2. **Candidate generation** — parallel retrievers (BM25, vector,
+   entity-exact, freshness, procedural, semantic) fused with
+   Reciprocal Rank Fusion (RRF)
+3. **Semantic reranking** — a cross-encoder (e.g. Cohere Rerank on
+   Bedrock) scores every (query, candidate) pair on a calibrated
+   `[0.0, 1.0]` scale
+4. **Diversity + coverage** — per-source and per-document caps so one
+   dominant source can't crowd out the LLM's context window
+5. **Grounding floor** — chunks below a configurable relevance floor
+   are dropped before the LLM sees them, preventing confident
+   hallucination on noise
+
+### Why it matters
+
+Without a reranker, BM25 scoring systematically buries small specialised
+sources under corpus-dominant ones: a single captured PR with 11 chunks
+is structurally out-ranked by a 4000-page Confluence space that happens
+to mention the same keywords. The cross-encoder reranker scores each
+`(query, chunk)` pair directly, independent of corpus size, so a
+precise answer in a small source can outrank a tangentially relevant
+chunk in a huge one.
+
+**The pipeline is opt-in.** Set `rerank.provider = "none"` (the default)
+and DocBrain runs the legacy single-hybrid-search path with
+byte-identical behaviour to before the feature existed. Set it to any
+configured provider to activate the five-stage pipeline. Rollback is a
+single env var flip — no code change, no rebuild, no data migration.
+
+### Reranker (`rerank.*`)
+
+```yaml
+# config/local.yaml — activate via Bedrock (most deployments)
+rerank:
+  provider: bedrock
+  model_id: cohere.rerank-v3-5:0      # provider default if unset
+  top_n: 200                          # candidates scored per query
+  batch_size: 100                     # docs per reranker call
+  timeout_secs: 10                    # per-call timeout
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `rerank.provider` | `RAG_RERANK_PROVIDER` | `none` | Reranker provider: `none`, `bedrock`, `cohere`, `voyage`, `jina`, `ollama`. `none` disables the five-stage pipeline entirely. |
+| `rerank.model_id` | `RAG_RERANK_MODEL_ID` | varies | Provider-specific model. Bedrock: `cohere.rerank-v3-5:0`. Cohere direct: `rerank-english-v3.0`. Voyage: `rerank-2`. Jina: `jina-reranker-v2-base-multilingual`. Ollama: local model tag. |
+| `rerank.top_n` | `RAG_RERANK_TOP_N` | `200` | How many candidates the reranker scores per query. Should match `rag.candidate_pool_size`. Larger = higher recall at the top, but latency and cost scale roughly linearly. |
+| `rerank.batch_size` | `RAG_RERANK_BATCH_SIZE` | `100` | Docs per reranker API call. When the candidate pool exceeds this, the reranker splits into multiple batches and merges results. |
+| `rerank.timeout_secs` | `RAG_RERANK_TIMEOUT_SECS` | `10` | Per-request timeout. Short because the reranker sits on the hot path of every `/api/v1/ask` request — a slow reranker degrades every query. On timeout the pipeline falls back to RRF-only ranking. |
+| `rerank.cohere_api_key` | `COHERE_RERANK_API_KEY` | — | Required when `provider = "cohere"`. |
+| `rerank.voyage_api_key` | `VOYAGE_API_KEY` | — | Required when `provider = "voyage"`. |
+| `rerank.jina_api_key` | `JINA_API_KEY` | — | Required when `provider = "jina"`. |
+| `rerank.ollama_base_url` | `RAG_RERANK_OLLAMA_BASE_URL` | `llm.ollama_base_url` | Ollama endpoint for local reranking. Falls back to the main Ollama URL if unset. |
+
+**Status**: `none` and `bedrock` are fully implemented. `cohere`,
+`voyage`, `jina`, and `ollama` ship in a follow-up — setting them today
+returns a clear startup error. To enable reranking on AWS deployments,
+use `bedrock`.
+
+### Pipeline knobs (`rag.*`)
+
+Every pipeline parameter is configurable — nothing is hardcoded. These
+defaults are the canonical-paper / standard-practice values; tune them
+only when you have query latency or quality data to justify a change.
+
+```yaml
+rag:
+  cache_threshold: 0.95                # existing cache knob
+  cache_ttl_hours: 24                   # existing cache knob
+  top_k: 10                             # final chunks sent to the LLM
+  bm25_boost: 1.0                       # BM25 vs vector weight in hybrid
+
+  # New knobs for the five-stage pipeline:
+  candidate_pool_size: 200              # pool size fed to reranker
+  rrf_k: 60                             # RRF damping constant
+  max_per_source: 3                     # per-source cap in final top_k
+  max_per_document: 2                   # per-document cap in final top_k
+  min_relevance_score: 0.30             # floor on reranker score
+  strong_answer_floor: 0.50             # confidence gate for high-conf answer
+  freshness_window_days: 7              # freshness retriever window
+  freshness_source_types:               # which source types count as "fresh"
+    - github_capture
+    - gitlab_capture
+    - slack_capture
+    - ms_teams_capture
+  entity_cache_ttl_secs: 300            # entity → space cache TTL
+  max_rewrites: 2                       # query rewrites per ask
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `rag.candidate_pool_size` | `RAG_CANDIDATE_POOL_SIZE` | `200` | How many candidates the candidate generator produces for the reranker. Larger = better recall, more reranker cost. |
+| `rag.rrf_k` | `RAG_RRF_K` | `60` | Reciprocal Rank Fusion damping constant. 60 is the canonical paper default. Larger = more democratic across retrievers; smaller = concentrates weight at top ranks. |
+| `rag.max_per_source` | `RAG_MAX_PER_SOURCE` | `3` | Max chunks from any single source in the final top-k. Prevents a dominant source from monopolising the LLM context. Set to `top_k` to disable. |
+| `rag.max_per_document` | `RAG_MAX_PER_DOCUMENT` | `2` | Max chunks from any single document in the final top-k. Prevents one long document from crowding out other relevant docs. Set to `top_k` to disable. |
+| `rag.min_relevance_score` | `RAG_MIN_RELEVANCE_SCORE` | `0.30` | Reranker score floor for inclusion in the final top-k. Below this, chunks are dropped even if it means returning fewer than `top_k` results. Set to `0.0` to disable. |
+| `rag.strong_answer_floor` | `RAG_STRONG_ANSWER_FLOOR` | `0.50` | Top-1 reranker score required before the answer is emitted with high confidence. Below this, the answer is marked low-confidence. Below `min_relevance_score`, the query short-circuits to "insufficient information" without calling the LLM. |
+| `rag.freshness_window_days` | `RAG_FRESHNESS_WINDOW_DAYS` | `7` | Days back for the freshness retriever. Recent chunks in this window get a guaranteed slot in the candidate pool regardless of raw BM25/vector rank. Set to `0` to disable. |
+| `rag.freshness_source_types` | — (YAML only) | capture types | Which `source_type` values count for the freshness retriever. Default is the four capture types. Env vars can't represent lists — configure in YAML. |
+| `rag.entity_cache_ttl_secs` | `RAG_ENTITY_CACHE_TTL_SECS` | `300` | TTL for the entity → space resolution cache. New spaces added to the index become discoverable within this window. |
+| `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
+
+### Observability
+
+Every stage of the pipeline emits a structured log line so you can
+trace a single query's path through retrieval without attaching a
+debugger:
+
+```
+INFO stage="rag.staged.query_understanding" rewrites=2 entities=3 mapped_spaces=1
+INFO stage="rag.staged.candidate_generation" retrievers=6 unique_chunks=187 pool_size=200
+INFO stage="rag.staged.rrf_fusion" fused=200 rrf_k=60
+INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.83
+INFO stage="rag.staged.diversity_select" candidates_in=200 selected=10 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
+INFO stage="rag.staged.complete" final_count=10 elapsed_ms=457
+```
+
+Set `RAG_TRACE_DETAIL=true` to additionally log every chunk in the
+final top-k with its reranker score, space, and document_id. Turn
+this on when diagnosing "why didn't chunk X surface?" — the logs will
+show whether it was dropped at retrieval, reranking, or diversity
+selection.
+
+### Rolling back
+
+If the staged pipeline ever causes a problem in production, roll back
+by setting `RAG_RERANK_PROVIDER=none` in the runtime environment and
+restarting the server. No code change, no rebuild, no data migration
+— the legacy single-hybrid-search path is byte-identical to before
+this feature shipped.
+
 ## Document Ingestion
 
 Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.

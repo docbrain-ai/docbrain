@@ -73,6 +73,50 @@ embedding:
   modelId: text-embedding-3-small
   # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
 
+# -- Retrieval pipeline tuning (optional)
+#
+# DocBrain runs queries through a five-stage retrieval pipeline when a
+# reranker is configured. Defaults are chosen from the canonical RRF
+# paper / standard practice; tune only when you have latency/quality
+# data to justify a change.
+#
+# See https://github.com/sailpoint-oss/docbrain-public/blob/main/docs/configuration.md#retrieval-pipeline
+# for the full field reference.
+rag:
+  # topK: 10                    # final chunks sent to the LLM
+  # bm25Boost: 1.0              # BM25 vs vector weight in hybrid
+  # candidatePoolSize: 200      # pool size fed to reranker
+  # rrfK: 60                    # Reciprocal Rank Fusion damping constant
+  # maxPerSource: 3             # per-source cap in final top-k
+  # maxPerDocument: 2           # per-document cap in final top-k
+  # minRelevanceScore: 0.30     # reranker-score floor for inclusion
+  # strongAnswerFloor: 0.50     # high-confidence answer threshold
+  # freshnessWindowDays: 7      # freshness retriever window (0 to disable)
+  # entityCacheTtlSecs: 300     # entity → space cache TTL
+  # maxRewrites: 2              # query rewrites per ask (0 to disable)
+  # traceDetail: false          # log per-chunk rerank scores in final top-k
+
+# -- Semantic reranker (stage 3 of the retrieval pipeline)
+#
+# `provider: none` (default) disables the five-stage pipeline and runs
+# the legacy single-hybrid-search path byte-identically to before the
+# feature existed. Rollback = flip this back to `none`; no rebuild.
+#
+# `bedrock` runs Cohere Rerank v3.5 via AWS Bedrock (Cohere API is
+# mirrored verbatim). Requires IRSA / AWS credentials with
+# `bedrock:InvokeModel` on the chosen model. Other providers
+# (cohere, voyage, jina, ollama) ship in a follow-up.
+rerank:
+  provider: none                # none | bedrock | cohere | voyage | jina | ollama
+  # modelId: cohere.rerank-v3-5:0   # provider default if unset
+  # topN: 200                   # candidates scored per query (match rag.candidatePoolSize)
+  # batchSize: 100              # docs per reranker API call
+  # timeoutSecs: 10             # per-request timeout (hot-path, keep tight)
+  # cohereApiKey: ""            # required when provider=cohere
+  # voyageApiKey: ""            # required when provider=voyage
+  # jinaApiKey: ""              # required when provider=jina
+  # ollamaBaseUrl: ""           # defaults to llm.ollamaBaseUrl
+
 # -- Ingestion configuration
 #
 # Detailed ingestion sources (github, gitlab, slack, jira, linear, pagerduty,

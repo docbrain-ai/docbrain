@@ -34,6 +34,74 @@ data:
   {{- end }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
+
+  # ── Retrieval pipeline tuning ─────────────────────────────────────
+  # Every knob is emitted only when explicitly set in values.yaml, so
+  # the app's own defaults (from config/default.yaml) apply when a
+  # customer hasn't opted in.
+  {{- with .Values.rag }}
+  {{- if .topK }}
+  RAG_TOP_K: {{ .topK | quote }}
+  {{- end }}
+  {{- if .bm25Boost }}
+  RAG_BM25_BOOST: {{ .bm25Boost | quote }}
+  {{- end }}
+  {{- if .candidatePoolSize }}
+  RAG_CANDIDATE_POOL_SIZE: {{ .candidatePoolSize | quote }}
+  {{- end }}
+  {{- if .rrfK }}
+  RAG_RRF_K: {{ .rrfK | quote }}
+  {{- end }}
+  {{- if .maxPerSource }}
+  RAG_MAX_PER_SOURCE: {{ .maxPerSource | quote }}
+  {{- end }}
+  {{- if .maxPerDocument }}
+  RAG_MAX_PER_DOCUMENT: {{ .maxPerDocument | quote }}
+  {{- end }}
+  {{- if .minRelevanceScore }}
+  RAG_MIN_RELEVANCE_SCORE: {{ .minRelevanceScore | quote }}
+  {{- end }}
+  {{- if .strongAnswerFloor }}
+  RAG_STRONG_ANSWER_FLOOR: {{ .strongAnswerFloor | quote }}
+  {{- end }}
+  {{- if .freshnessWindowDays }}
+  RAG_FRESHNESS_WINDOW_DAYS: {{ .freshnessWindowDays | quote }}
+  {{- end }}
+  {{- if .entityCacheTtlSecs }}
+  RAG_ENTITY_CACHE_TTL_SECS: {{ .entityCacheTtlSecs | quote }}
+  {{- end }}
+  {{- if .maxRewrites }}
+  RAG_MAX_REWRITES: {{ .maxRewrites | quote }}
+  {{- end }}
+  {{- if .traceDetail }}
+  RAG_TRACE_DETAIL: {{ .traceDetail | quote }}
+  {{- end }}
+  {{- end }}
+
+  # ── Reranker (stage 3 of retrieval pipeline) ────────────────────
+  # Default `provider: none` disables the five-stage pipeline. Flip
+  # to `bedrock` to activate on AWS deployments.
+  {{- with .Values.rerank }}
+  {{- if .provider }}
+  RAG_RERANK_PROVIDER: {{ .provider | quote }}
+  {{- end }}
+  {{- if .modelId }}
+  RAG_RERANK_MODEL_ID: {{ .modelId | quote }}
+  {{- end }}
+  {{- if .topN }}
+  RAG_RERANK_TOP_N: {{ .topN | quote }}
+  {{- end }}
+  {{- if .batchSize }}
+  RAG_RERANK_BATCH_SIZE: {{ .batchSize | quote }}
+  {{- end }}
+  {{- if .timeoutSecs }}
+  RAG_RERANK_TIMEOUT_SECS: {{ .timeoutSecs | quote }}
+  {{- end }}
+  {{- if .ollamaBaseUrl }}
+  RAG_RERANK_OLLAMA_BASE_URL: {{ .ollamaBaseUrl | quote }}
+  {{- end }}
+  {{- end }}
+
   # Ingestion sources live under the nested `sources:` block in config/*.yaml.
   # See docs/configuration.md for the full shape. Env var INGEST_SOURCES is no
   # longer used — enablement is derived from whether a sub-source is present
