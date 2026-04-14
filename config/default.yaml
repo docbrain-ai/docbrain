@@ -74,6 +74,51 @@ rag:
   # (env only, default true). Not a RagConfig struct field because it's a
   # behavior flag, not a numeric tunable.
 
+# ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
+#
+# The reranker takes the candidate pool from stage 2 and rescores each
+# (query, chunk) pair with a cross-encoder, producing calibrated scores in
+# [0, 1] that drive the downstream grounding floors.
+#
+# DocBrain ships with plug-and-play support for every major hosted rerank
+# API through a single HTTP client parameterised by a "dialect". Built-in
+# dialects: cohere, voyage, jina, mixedbread, pinecone. Unknown APIs can be
+# wired via `provider: custom` with the custom_* fields below — no rebuild
+# required.
+#
+# See docs/rerank-providers.md for the full provider matrix and the
+# "how to add a new provider in 2 minutes" recipe.
+rerank:
+  provider: "none"        # none | bedrock | cohere | voyage | jina | mixedbread | pinecone | ollama | custom
+  # model_id: ~           # Provider-specific default applies when unset.
+  top_n: 200              # Max candidates handed to the reranker per call.
+  batch_size: 100         # Split larger pools into batches of this size.
+  timeout_secs: 10        # Per-request timeout on the critical path.
+  #
+  # Provider API keys (set via env vars in production — never commit secrets):
+  # cohere_api_key: ~     # COHERE_RERANK_API_KEY
+  # voyage_api_key: ~     # VOYAGE_API_KEY
+  # jina_api_key: ~       # JINA_API_KEY
+  # mixedbread_api_key: ~ # MIXEDBREAD_API_KEY
+  # pinecone_api_key: ~   # PINECONE_API_KEY
+  #
+  # Ollama (local, no key):
+  # ollama_base_url: "http://localhost:11434"  # RAG_RERANK_OLLAMA_BASE_URL
+  #
+  # ── provider: "custom" — plug-and-play for any Cohere-family rerank API ──
+  # Set `provider: custom` and fill these fields to wire a new rerank
+  # provider without a rebuild. Defaults match Cohere's request/response
+  # shape; override any field whose JSON key differs.
+  #
+  # custom_base_url: "https://api.example.test/v1/rerank"   # RAG_RERANK_CUSTOM_BASE_URL   (required)
+  # custom_api_key_env: "EXAMPLE_RERANK_API_KEY"            # RAG_RERANK_CUSTOM_API_KEY_ENV (required)
+  # custom_auth_style: "bearer_token"                       # RAG_RERANK_CUSTOM_AUTH_STYLE  (or "custom_header")
+  # custom_auth_header_name: "Api-Key"                      # RAG_RERANK_CUSTOM_AUTH_HEADER_NAME (only when custom_header)
+  # custom_documents_field: "documents"                     # RAG_RERANK_CUSTOM_DOCUMENTS_FIELD
+  # custom_top_n_field:    "top_n"                          # RAG_RERANK_CUSTOM_TOP_N_FIELD
+  # custom_results_field:  "results"                        # RAG_RERANK_CUSTOM_RESULTS_FIELD
+  # custom_score_field:    "relevance_score"                # RAG_RERANK_CUSTOM_SCORE_FIELD
+
 rbac:
   # Default role for new SSO users.
   # Role hierarchy: viewer (1) < editor (2) < analyst (3) < admin (4)

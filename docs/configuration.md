@@ -211,11 +211,15 @@ single env var flip — no code change, no rebuild, no data migration.
 
 ### Reranker (`rerank.*`)
 
+Stage 3 of retrieval rescores the candidate pool with a cross-encoder, producing calibrated `[0, 1]` scores that drive the grounding floors. DocBrain supports every major hosted rerank API through a single dialect-driven HTTP client — adding a new provider is typically a config change, not a code change.
+
+**Built-in providers:** `bedrock`, `cohere`, `voyage`, `jina`, `mixedbread`, `pinecone`, `ollama`. Plus `custom` for any other Cohere-family API without a rebuild.
+
 ```yaml
-# config/local.yaml — activate via Bedrock (most deployments)
+# config/local.yaml — any hosted provider, one env var away
 rerank:
-  provider: bedrock
-  model_id: cohere.rerank-v3-5:0      # provider default if unset
+  provider: cohere                    # or: bedrock | voyage | jina | mixedbread | pinecone | ollama | custom
+  # model_id: rerank-v3.5             # provider default applies when unset
   top_n: 200                          # candidates scored per query
   batch_size: 100                     # docs per reranker call
   timeout_secs: 10                    # per-call timeout
@@ -223,20 +227,39 @@ rerank:
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `rerank.provider` | `RAG_RERANK_PROVIDER` | `none` | Reranker provider: `none`, `bedrock`, `cohere`, `voyage`, `jina`, `ollama`. `none` disables the five-stage pipeline entirely. |
-| `rerank.model_id` | `RAG_RERANK_MODEL_ID` | varies | Provider-specific model. Bedrock: `cohere.rerank-v3-5:0`. Cohere direct: `rerank-english-v3.0`. Voyage: `rerank-2`. Jina: `jina-reranker-v2-base-multilingual`. Ollama: local model tag. |
-| `rerank.top_n` | `RAG_RERANK_TOP_N` | `200` | How many candidates the reranker scores per query. Should match `rag.candidate_pool_size`. Larger = higher recall at the top, but latency and cost scale roughly linearly. |
-| `rerank.batch_size` | `RAG_RERANK_BATCH_SIZE` | `100` | Docs per reranker API call. When the candidate pool exceeds this, the reranker splits into multiple batches and merges results. |
-| `rerank.timeout_secs` | `RAG_RERANK_TIMEOUT_SECS` | `10` | Per-request timeout. Short because the reranker sits on the hot path of every `/api/v1/ask` request — a slow reranker degrades every query. On timeout the pipeline falls back to RRF-only ranking. |
+| `rerank.provider` | `RAG_RERANK_PROVIDER` | `none` | `none` \| `bedrock` \| `cohere` \| `voyage` \| `jina` \| `mixedbread` \| `pinecone` \| `ollama` \| `custom` |
+| `rerank.model_id` | `RAG_RERANK_MODEL_ID` | varies | Provider-specific model. Built-in defaults: Bedrock `cohere.rerank-v3-5:0`, Cohere `rerank-v3.5`, Voyage `rerank-2`, Jina `jina-reranker-v2-base-multilingual`, Mixedbread `mxbai-rerank-large-v1`, Pinecone `bge-reranker-v2-m3`, Ollama `nomic-embed-text`. |
+| `rerank.top_n` | `RAG_RERANK_TOP_N` | `200` | How many candidates the reranker scores per query. Should match `rag.candidate_pool_size`. |
+| `rerank.batch_size` | `RAG_RERANK_BATCH_SIZE` | `100` | Docs per reranker API call. Larger pools split into multiple batches. Clamped to `[1, 1000]`. |
+| `rerank.timeout_secs` | `RAG_RERANK_TIMEOUT_SECS` | `10` | Per-request timeout. Tight because the reranker sits on the hot path of every `/api/v1/ask` request. On failure the pipeline falls back to RRF-only ranking. |
 | `rerank.cohere_api_key` | `COHERE_RERANK_API_KEY` | — | Required when `provider = "cohere"`. |
 | `rerank.voyage_api_key` | `VOYAGE_API_KEY` | — | Required when `provider = "voyage"`. |
 | `rerank.jina_api_key` | `JINA_API_KEY` | — | Required when `provider = "jina"`. |
-| `rerank.ollama_base_url` | `RAG_RERANK_OLLAMA_BASE_URL` | `llm.ollama_base_url` | Ollama endpoint for local reranking. Falls back to the main Ollama URL if unset. |
+| `rerank.mixedbread_api_key` | `MIXEDBREAD_API_KEY` | — | Required when `provider = "mixedbread"`. |
+| `rerank.pinecone_api_key` | `PINECONE_API_KEY` | — | Required when `provider = "pinecone"`. Uses `Api-Key` header, not Bearer. |
+| `rerank.ollama_base_url` | `RAG_RERANK_OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama endpoint for local reranking. Ollama is a bi-encoder approximation — see notes below. |
 
-**Status**: `none` and `bedrock` are fully implemented. `cohere`,
-`voyage`, `jina`, and `ollama` ship in a follow-up — setting them today
-returns a clear startup error. To enable reranking on AWS deployments,
-use `bedrock`.
+#### Custom provider — plug-and-play for any rerank API
+
+Set `provider = "custom"` and fill the fields below to wire a new rerank API without rebuilding DocBrain. Defaults match Cohere's request/response shape; override any JSON key that differs.
+
+| Key | Env var | Required | Default | Description |
+|-----|---------|----------|---------|-------------|
+| `rerank.custom_base_url` | `RAG_RERANK_CUSTOM_BASE_URL` | ✅ | — | Full POST URL, e.g. `https://rerank.mycorp.internal/v1/rerank` |
+| `rerank.custom_api_key_env` | `RAG_RERANK_CUSTOM_API_KEY_ENV` | ✅ | — | Name of another env var that holds the API key (the key is never persisted in config.yaml) |
+| `rerank.model_id` | `RAG_RERANK_MODEL_ID` | ✅ | — | Model id to send in the request body |
+| `rerank.custom_auth_style` | `RAG_RERANK_CUSTOM_AUTH_STYLE` |  | `bearer_token` | `bearer_token` or `custom_header` |
+| `rerank.custom_auth_header_name` | `RAG_RERANK_CUSTOM_AUTH_HEADER_NAME` | only with `custom_header` | — | Header name, e.g. `Api-Key` |
+| `rerank.custom_documents_field` | `RAG_RERANK_CUSTOM_DOCUMENTS_FIELD` |  | `documents` | Request JSON key for the documents array |
+| `rerank.custom_top_n_field` | `RAG_RERANK_CUSTOM_TOP_N_FIELD` |  | `top_n` | Request JSON key for the top-N limit |
+| `rerank.custom_results_field` | `RAG_RERANK_CUSTOM_RESULTS_FIELD` |  | `results` | Response JSON key for the results array |
+| `rerank.custom_score_field` | `RAG_RERANK_CUSTOM_SCORE_FIELD` |  | `relevance_score` | Response JSON key for the score |
+
+**See [rerank-providers.md](rerank-providers.md)** for the provider matrix, per-provider quick-starts, and the "add a new provider in 2 minutes" walkthrough.
+
+**Ollama caveat**: Ollama has no first-class rerank endpoint. DocBrain approximates rerank by cosine-similarity over query + document embeddings from any Ollama embedding model — a **bi-encoder**, not a cross-encoder. Quality is meaningfully lower than hosted providers; it exists for local development and air-gapped deployments. For true cross-encoder quality locally, run `bge-reranker` or `mxbai-rerank` behind a small HTTP wrapper and use `provider: custom`.
+
+**Fail-loud**: a missing API key or an incomplete `custom_*` block fails at server startup with a message naming both the config field and its env var. There is no silent fallback to `none`.
 
 ### Pipeline knobs (`rag.*`)
 

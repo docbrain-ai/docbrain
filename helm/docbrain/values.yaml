@@ -105,23 +105,41 @@ rag:
 # -- Semantic reranker (stage 3 of the retrieval pipeline)
 #
 # `provider: none` (default) disables the five-stage pipeline and runs
-# the legacy single-hybrid-search path byte-identically to before the
-# feature existed. Rollback = flip this back to `none`; no rebuild.
+# the legacy single-hybrid-search path. Rollback = flip back to `none`.
 #
-# `bedrock` runs Cohere Rerank v3.5 via AWS Bedrock (Cohere API is
-# mirrored verbatim). Requires IRSA / AWS credentials with
-# `bedrock:InvokeModel` on the chosen model. Other providers
-# (cohere, voyage, jina, ollama) ship in a follow-up.
+# DocBrain supports every major hosted rerank API through a single
+# dialect-driven HTTP client. Built-in dialects: bedrock, cohere, voyage,
+# jina, mixedbread, pinecone, ollama. Plus a `custom` dialect that can
+# wire any new rerank API from values alone — no rebuild required.
+#
+# See docs/rerank-providers.md for the provider matrix and examples.
 rerank:
-  provider: none                # none | bedrock | cohere | voyage | jina | ollama
-  # modelId: cohere.rerank-v3-5:0   # provider default if unset
+  provider: none                # none | bedrock | cohere | voyage | jina | mixedbread | pinecone | ollama | custom
+  # modelId: rerank-v3.5        # provider default applies when unset
   # topN: 200                   # candidates scored per query (match rag.candidatePoolSize)
   # batchSize: 100              # docs per reranker API call
   # timeoutSecs: 10             # per-request timeout (hot-path, keep tight)
+  #
+  # Hosted provider credentials — set via Kubernetes secrets in production.
   # cohereApiKey: ""            # required when provider=cohere
   # voyageApiKey: ""            # required when provider=voyage
   # jinaApiKey: ""              # required when provider=jina
+  # mixedbreadApiKey: ""        # required when provider=mixedbread
+  # pineconeApiKey: ""          # required when provider=pinecone (sent as Api-Key header)
   # ollamaBaseUrl: ""           # defaults to llm.ollamaBaseUrl
+  #
+  # Custom dialect — wire any Cohere-family rerank API without rebuilding.
+  # Defaults match Cohere's request/response shape; override any JSON key
+  # that differs. The API key is read from the env var named by
+  # customApiKeyEnv — the secret is never stored in values.yaml.
+  # customBaseUrl: "https://rerank.mycorp.internal/v1/rerank"
+  # customApiKeyEnv: "MYCORP_RERANK_KEY"
+  # customAuthStyle: "bearer_token"     # or: custom_header
+  # customAuthHeaderName: "Api-Key"     # only when customAuthStyle=custom_header
+  # customDocumentsField: "documents"
+  # customTopNField: "top_n"
+  # customResultsField: "results"
+  # customScoreField: "relevance_score"
 
 # -- Ingestion configuration
 #
