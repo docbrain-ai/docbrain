@@ -89,10 +89,31 @@ rag:
   # rrfK: 60                    # Reciprocal Rank Fusion damping constant
   # maxPerSource: 3             # per-source cap in final top-k
   # maxPerDocument: 2           # per-document cap in final top-k
-  # minRelevanceScore: 0.30     # retrieval floor — below this, drop from diversity
-  # displayFloor: 0.30          # display floor — below this, drop from sources array
-  # confidenceGate: 0.30        # confidence gate — hide all sources if confidence < this
-  # strongAnswerFloor: 0.50     # high-confidence answer threshold
+  #
+  # ── Grounding floors — calibrated for a real cross-encoder reranker ──
+  #
+  # These four values are the single biggest quality lever in DocBrain.
+  # They all gate on the reranker's calibrated [0, 1] relevance score,
+  # and the recommended defaults below match where Cohere Rerank v3.5
+  # (and similarly tuned cross-encoders like Voyage rerank-2 and Jina
+  # reranker-v2) separate "actually answers the question" from "shares
+  # a few keywords but is not on-topic".
+  #
+  # Lowering them improves RECALL (more answers get surfaced) at the
+  # cost of PRECISION (more noisy citations, more hallucination risk
+  # from weakly-grounded evidence). Raising them improves precision
+  # at the cost of recall (more "insufficient information" answers).
+  #
+  # If `rerank.provider = "none"` these floors gate on raw BM25/vector
+  # scores which are NOT calibrated to [0,1] — in that mode, prefer
+  # `0.0` and rely on `top_k` to bound results instead. See
+  # docs/rerank-providers.md § "Tuning the grounding floors" for the
+  # full explanation.
+  #
+  minRelevanceScore: 0.40       # retrieval floor — chunks below this are dropped from diversity selection entirely. Lowering lets weaker evidence reach the LLM and raises hallucination risk.
+  displayFloor: 0.50            # display floor — chunks below this are never shown as a source even if the LLM used them. Lowering shows more citations per answer but includes tangentially-related docs that erode user trust.
+  confidenceGate: 0.40          # confidence gate — when the answer's overall confidence is below this, DocBrain hides all sources (the answer is shown as "based on general knowledge"). Lowering shows sources on lower-confidence answers; raising forces the UI to go source-less more often.
+  strongAnswerFloor: 0.55       # strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer. Below minRelevanceScore the query short-circuits to "insufficient information" and never calls the LLM at all.
   # freshnessWindowDays: 7      # freshness retriever window (0 to disable)
   # freshnessPreDiversity: true # apply freshness BEFORE diversity (recommended)
   # rerankTitleEnrich: true     # pass title+heading+space to reranker (recommended)

@@ -184,12 +184,32 @@ rerank:
 
 ## Tuning
 
+### Reranker-specific knobs
+
 | Knob | Tradeoff |
 |---|---|
 | `RAG_RERANK_TOP_N` | Higher = better recall at the top, linear cost/latency growth. Should match `rag.candidate_pool_size`. |
 | `RAG_RERANK_BATCH_SIZE` | Lower = more HTTP calls but smaller per-call latency spikes. Clamped to `[1, 1000]`. |
 | `RAG_RERANK_TIMEOUT_SECS` | Tight — rerank is on the critical path of every query. Failure falls back to the RRF-only ranking from stage 2. |
-| `rag.min_relevance_score` | The grounding floor. Chunks below this score are dropped before the LLM sees them. Raise to improve precision, lower to improve recall. |
+
+### Tuning the grounding floors
+
+The reranker's score only matters insofar as it gates the four **grounding floors** in `rag.*`. These are the biggest quality lever in the whole pipeline and the most common source of "why is this irrelevant doc cited?" complaints. See the detailed [Grounding floors — what lowering actually costs](configuration.md#grounding-floors--what-lowering-actually-costs) section in the main configuration reference for the full story.
+
+**TL;DR — the recommended defaults for a cross-encoder reranker:**
+
+| Floor | Recommended default | Meaning | What lowering costs |
+|---|---|---|---|
+| `rag.min_relevance_score` | `0.40` | Chunks below this never reach the LLM | **Hallucination risk** — the LLM sees weaker evidence and writes confident answers from chunks that only tangentially match |
+| `rag.display_floor` | `0.50` | Chunks below this are never shown as citations | **User trust** — tangentially-related docs appear in the sources list and erode credibility |
+| `rag.confidence_gate` | `0.40` | Below this, sources are hidden entirely (answer shown as "general knowledge") | Sources render on low-confidence answers that may mislead users |
+| `rag.strong_answer_floor` | `0.55` | Below this, the answer carries a "low confidence" disclaimer | The UI stops warning users about borderline matches |
+
+**Calibration note.** A cross-encoder's `[0, 1]` score is **not** a percentage. For Cohere Rerank v3.5, Voyage rerank-2, and similar models, `> 0.70` means "directly answers the question", `0.50–0.70` is "strong supporting evidence", `0.40–0.50` is "topically related", `0.30–0.40` is "shares keywords but usually noise". The defaults draw the lines at "topically related" for retrieval and "strong evidence" for citation display.
+
+**If `rerank.provider = "none"`:** these floors gate on raw BM25/vector scores which are **not** calibrated to `[0, 1]`. Set all four to `0.0` in that mode and rely on `top_k` to bound results. A real reranker is what makes these floors work at all — which is why the plug-and-play providers in this doc exist.
+
+**Debugging a noisy citation.** Run `docbrain trace-query "your question"` and look at the `rerank` stage log line. If the offending citation is scoring `0.30–0.45`, raising `display_floor` will fix it. If it's scoring `> 0.50`, the reranker genuinely thinks it's relevant and the problem is upstream (candidate pool, query decomposition, or title-enrichment metadata leak).
 
 ## Operational notes
 

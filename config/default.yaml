@@ -61,10 +61,26 @@ rag:
   # rrf_k: 60                         # RRF damping constant (canonical paper)
   # max_per_source: 3                 # Per-source cap in final top-k
   # max_per_document: 2               # Per-document cap in final top-k
-  # min_relevance_score: 0.30         # Retrieval floor (drop from diversity)
-  # display_floor: 0.30               # Display floor (drop from sources array)
-  # confidence_gate: 0.30             # Hide all sources if confidence < this
-  # strong_answer_floor: 0.50         # High-confidence answer threshold
+  #
+  # ── Grounding floors — calibrated for a real cross-encoder reranker ──
+  #
+  # These four values are the single biggest quality lever in the RAG
+  # pipeline. They all gate on the reranker's calibrated [0, 1] score.
+  # Recommended defaults below match where Cohere Rerank v3.5 and
+  # similarly tuned cross-encoders separate "actually answers the
+  # question" from "shares a few keywords but is not on-topic".
+  #
+  # Lowering → more recall, noisier citations, higher hallucination risk.
+  # Raising  → more precision, more "insufficient information" answers.
+  #
+  # If `rerank.provider = "none"` these gate on raw BM25/vector scores
+  # which are NOT calibrated — set them to 0.0 in that mode. See
+  # docs/rerank-providers.md § "Tuning the grounding floors" for the
+  # full explanation.
+  min_relevance_score: 0.40           # Retrieval floor — chunks below this never reach diversity selection or the LLM. Lowering sends weaker evidence to the LLM (hallucination risk).
+  display_floor: 0.50                 # Display floor — chunks below this are never shown as citations. Lowering surfaces more tangential sources (user trust cost).
+  confidence_gate: 0.40                # Confidence gate — below this, sources are hidden and the answer is shown as "general knowledge". Lowering shows sources on lower-confidence answers.
+  strong_answer_floor: 0.55           # Strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer.
   # freshness_window_days: 7          # Freshness retriever window (0 to disable)
   # entity_cache_ttl_secs: 300        # Entity → space cache TTL
   # max_rewrites: 2                   # Query rewrites per ask (0 to disable)

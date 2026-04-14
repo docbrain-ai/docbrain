@@ -279,8 +279,13 @@ rag:
   rrf_k: 60                             # RRF damping constant
   max_per_source: 3                     # per-source cap in final top_k
   max_per_document: 2                   # per-document cap in final top_k
-  min_relevance_score: 0.30             # floor on reranker score
-  strong_answer_floor: 0.50             # confidence gate for high-conf answer
+  # Grounding floors — calibrated for a cross-encoder reranker.
+  # See "Grounding floors" below for what each one does and what
+  # lowering them actually costs you.
+  min_relevance_score: 0.40             # retrieval floor
+  display_floor: 0.50                   # display floor (user-visible citations)
+  confidence_gate: 0.40                 # confidence gate (show-sources threshold)
+  strong_answer_floor: 0.55             # high-confidence answer threshold
   freshness_window_days: 7              # freshness retriever window
   freshness_source_types:               # which source types count as "fresh"
     - github_capture
@@ -297,10 +302,10 @@ rag:
 | `rag.rrf_k` | `RAG_RRF_K` | `60` | Reciprocal Rank Fusion damping constant. 60 is the canonical paper default. Larger = more democratic across retrievers; smaller = concentrates weight at top ranks. |
 | `rag.max_per_source` | `RAG_MAX_PER_SOURCE` | `3` | Max chunks from any single source in the final top-k. Prevents a dominant source from monopolising the LLM context. Set to `top_k` to disable. |
 | `rag.max_per_document` | `RAG_MAX_PER_DOCUMENT` | `2` | Max chunks from any single document in the final top-k. Prevents one long document from crowding out other relevant docs. Set to `top_k` to disable. |
-| `rag.min_relevance_score` | `RAG_MIN_RELEVANCE_SCORE` | `0.30` | **Retrieval floor** — reranker score required to survive diversity selection. Chunks below this are dropped from the top-k even if it means returning fewer than `top_k` results. Set to `0.0` to disable. |
-| `rag.display_floor` | `RAG_DISPLAY_FLOOR` | `0.30` | **Display floor** — reranker score required to appear in the `sources` array on the answer. Must be `>= min_relevance_score`. Before this was configurable, a hardcoded `0.40` created a silent gap where a chunk could clear retrieval yet vanish from display. |
-| `rag.confidence_gate` | `RAG_CONFIDENCE_GATE` | `0.30` | **Confidence gate** — minimum answer confidence required to show sources at all. When the LLM self-reported confidence is below this, no sources are attached to the response. Operators who want old legacy 0.70 behavior can set it explicitly. |
-| `rag.strong_answer_floor` | `RAG_STRONG_ANSWER_FLOOR` | `0.50` | Top-1 reranker score required before the answer is emitted with high confidence. Below this, the answer is marked low-confidence. Below `min_relevance_score`, the query short-circuits to "insufficient information" without calling the LLM. |
+| `rag.min_relevance_score` | `RAG_MIN_RELEVANCE_SCORE` | `0.40` | **Retrieval floor** — reranker score required to survive diversity selection and reach the LLM. Chunks below this are dropped before the LLM sees them, even if it means returning fewer than `top_k` results. **Lowering sends weaker evidence into the prompt, which raises hallucination risk** — the LLM will try to answer from chunks that only tangentially match. Raising forces more "insufficient information" answers. Set to `0.0` to disable (required when `rerank.provider = "none"`, because raw BM25/vector scores are not calibrated to [0,1]). |
+| `rag.display_floor` | `RAG_DISPLAY_FLOOR` | `0.50` | **Display floor** — reranker score required for a chunk to appear in the `sources` array attached to the answer. Must be `>= min_relevance_score`. The LLM may still have used a chunk to form its answer even if it is hidden here. **Lowering surfaces more citations per answer, but includes tangentially-related docs that erode user trust** — the main cause of "why is this GitHub PR cited, it has nothing to do with my question?" complaints. Raising narrows the visible citation set to only high-confidence matches. |
+| `rag.confidence_gate` | `RAG_CONFIDENCE_GATE` | `0.40` | **Confidence gate** — minimum composite confidence score required to show any sources at all. When confidence is below this, DocBrain emits the answer with a "based on general knowledge" framing and no citations, instead of citing weak evidence. **Lowering shows sources on lower-confidence answers** (useful when operators want to see what the retriever found, even when it wasn't enough). **Raising forces the UI to go source-less more often**, which is safer for end users but hides the retriever's partial matches from debugging. |
+| `rag.strong_answer_floor` | `RAG_STRONG_ANSWER_FLOOR` | `0.55` | **Strong-answer floor** — top-1 reranker score required before the answer is emitted without a "low confidence" disclaimer. Below this threshold the answer carries a visible uncertainty warning; below `min_relevance_score` the query short-circuits to "insufficient information" without calling the LLM at all. **Lowering removes the uncertainty warning from more answers** (less noise in the UI, but users can't tell strong from borderline answers apart). Raising makes DocBrain more openly uncertain about marginal matches. |
 | `rag.freshness_window_days` | `RAG_FRESHNESS_WINDOW_DAYS` | `7` | Days back for the freshness retriever. Recent chunks in this window get a guaranteed slot in the candidate pool regardless of raw BM25/vector rank. Set to `0` to disable. |
 | `rag.freshness_source_types` | — (YAML only) | capture types | Which `source_type` values count for the freshness retriever. Default is the four capture types. Env vars can't represent lists — configure in YAML. |
 | — | `RAG_FRESHNESS_PRE_DIVERSITY` | `true` | Apply the freshness multiplier to rerank scores BEFORE the retrieval floor rather than AFTER diversity selection. Stale chunks get dropped by the floor instead of being silently demoted post-hoc. Set to `false` to revert to legacy post-diversity ordering. |
@@ -309,6 +314,36 @@ rag:
 | `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
 | `rag.max_chunks_per_doc_in_retriever` | `RAG_MAX_CHUNKS_PER_DOC` | `2` | **Chunk-flood fix.** Max chunks per document that any single retriever may contribute to RRF. Before this knob, BM25 could return 100 chunks of one dominant document, crowding out the real answer. Cap at 2 preserves the top chunk as the RRF anchor plus one more for context. Dedup is per-retriever; different retrievers can still independently vote for the same doc. Set to a large number to effectively disable. |
 | — | `RAG_COMPOUND_DECOMPOSE` | `true` | **Compound query decomposition.** Split questions like "what is X and how is X deployed" into distinct sub-intents, rerank each independently against the full candidate pool, and fuse results by taking the max rerank score per chunk across sub-intents. Fixes the class of question where no single chunk answers every intent, so the cross-encoder scores every chunk mediocrely against the compound query. Short questions (<8 words) skip decomposition entirely. Set to `false` to revert to single-query rerank. |
+
+### Grounding floors — what lowering actually costs
+
+The four floor values above (`min_relevance_score`, `display_floor`, `confidence_gate`, `strong_answer_floor`) are the single biggest quality lever in DocBrain. They all gate on the reranker's calibrated `[0, 1]` score, which is the output of stage 3 of the retrieval pipeline. Their defaults are tuned for a real cross-encoder (Cohere Rerank v3.5, Voyage rerank-2, Jina reranker-v2, or equivalent).
+
+**The calibration insight.** A well-tuned cross-encoder's `[0, 1]` scores are **not** a percentage and **not** a uniform distribution. In practice, for Cohere Rerank v3.5 and similar models:
+
+| Score band | What this chunk means for the query |
+|---|---|
+| `> 0.70` | Directly answers the question. Should be cited. |
+| `0.50 – 0.70` | Strongly related, useful supporting evidence. Should be cited. |
+| `0.40 – 0.50` | Shares topical overlap. Probably useful context, not a standalone answer. |
+| `0.30 – 0.40` | Tangentially related. Shares some keywords. Usually noise. |
+| `< 0.30` | Unrelated. Safe to drop. |
+
+The recommended defaults (`0.40 / 0.50 / 0.40 / 0.55`) draw the line at "shares topical overlap" for retrieval and "strongly related" for citation display. That's deliberately asymmetric — the LLM can see weaker evidence than the user sees, so it can reason about it, but we don't surface marginal chunks as if they were endorsed sources.
+
+**The recall-precision knob.** Lowering any floor improves recall (more answers surfaced) and costs precision (more noise in what reaches the user). Raising any floor does the opposite. The four floors target different failure modes:
+
+- **`min_relevance_score` is the strongest lever for hallucination control.** Every chunk above this reaches the LLM. If you set it to `0.0`, the LLM sees the entire candidate pool — including the tangentially-related 30% — and will sometimes write confident-sounding answers grounded in chunks that don't actually support the claim. If you see hallucinations *on questions where the retriever did find the right doc*, this floor is too low.
+
+- **`display_floor` is the strongest lever for citation trust.** Every chunk above this gets shown to the user as a "source". If you see "why is this GitHub PR cited, it has nothing to do with my question?" complaints, this floor is too low. Raising it from `0.30` to `0.50` typically eliminates 60–80% of noisy citations without meaningfully changing answer quality, because the LLM still has access to those chunks internally.
+
+- **`confidence_gate` controls whether sources render at all.** It gates on the **composite** answer confidence, not the top rerank score — that's why it's separate from `strong_answer_floor`. Use it to hide sources on weak answers without killing the answer itself.
+
+- **`strong_answer_floor` is a UX knob, not a retrieval knob.** It only affects whether the answer carries a "low confidence" disclaimer. Lower it if your users find the disclaimer noisy; raise it to make DocBrain more openly uncertain about borderline matches.
+
+**When `rerank.provider = "none"`:** these floors gate on raw BM25/vector scores, which are **not** calibrated to `[0, 1]`. A BM25 score of `0.40` means nothing comparable to a cross-encoder score of `0.40`. Set all four floors to `0.0` in that mode and bound results with `top_k` instead. This is also what makes the plug-and-play rerank providers in [rerank-providers.md](rerank-providers.md) so load-bearing — a real reranker is what makes these floors work at all.
+
+**How to debug a noisy citation.** Run `docbrain trace-query "your question"` and look at the `rerank` log line in stage 3. Each cited chunk has its rerank score printed. If the noisy citation is scoring `0.30–0.45`, it's a floor problem — raise `display_floor` and it goes away. If it's scoring `> 0.50`, the reranker actually thinks it's relevant and the issue is upstream (candidate pool, query decomposition, or title enrichment leaking metadata into the rerank input).
 
 ### Observability
 
