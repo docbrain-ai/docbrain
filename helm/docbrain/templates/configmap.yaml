@@ -88,6 +88,9 @@ data:
   {{- if .maxChunksPerDoc }}
   RAG_MAX_CHUNKS_PER_DOC: {{ .maxChunksPerDoc | quote }}
   {{- end }}
+  {{- if hasKey . "compoundDecompose" }}
+  RAG_COMPOUND_DECOMPOSE: {{ .compoundDecompose | quote }}
+  {{- end }}
   {{- if .traceDetail }}
   RAG_TRACE_DETAIL: {{ .traceDetail | quote }}
   {{- end }}

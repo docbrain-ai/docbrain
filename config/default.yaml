@@ -69,6 +69,10 @@ rag:
   # entity_cache_ttl_secs: 300        # Entity → space cache TTL
   # max_rewrites: 2                   # Query rewrites per ask (0 to disable)
   # max_chunks_per_doc_in_retriever: 2  # Phase 2 chunk-flood fix — per-retriever cap
+  #
+  # Compound query decomposition (Phase 5) is gated on RAG_COMPOUND_DECOMPOSE
+  # (env only, default true). Not a RagConfig struct field because it's a
+  # behavior flag, not a numeric tunable.
 
 rbac:
   # Default role for new SSO users.

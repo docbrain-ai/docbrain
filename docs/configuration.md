@@ -285,6 +285,7 @@ rag:
 | `rag.entity_cache_ttl_secs` | `RAG_ENTITY_CACHE_TTL_SECS` | `300` | TTL for the entity → space resolution cache. New spaces added to the index become discoverable within this window. |
 | `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
 | `rag.max_chunks_per_doc_in_retriever` | `RAG_MAX_CHUNKS_PER_DOC` | `2` | **Chunk-flood fix.** Max chunks per document that any single retriever may contribute to RRF. Before this knob, BM25 could return 100 chunks of one dominant document, crowding out the real answer. Cap at 2 preserves the top chunk as the RRF anchor plus one more for context. Dedup is per-retriever; different retrievers can still independently vote for the same doc. Set to a large number to effectively disable. |
+| — | `RAG_COMPOUND_DECOMPOSE` | `true` | **Compound query decomposition.** Split questions like "what is X and how is X deployed" into distinct sub-intents, rerank each independently against the full candidate pool, and fuse results by taking the max rerank score per chunk across sub-intents. Fixes the class of question where no single chunk answers every intent, so the cross-encoder scores every chunk mediocrely against the compound query. Short questions (<8 words) skip decomposition entirely. Set to `false` to revert to single-query rerank. |
 
 ### Observability
 
@@ -293,23 +294,26 @@ trace a single query's path through retrieval without attaching a
 debugger:
 
 ```
-INFO stage="rag.staged.query_understanding" rewrites=2 entities=12 mapped_spaces=7
+INFO stage="rag.staged.query_understanding" rewrites=2 sub_queries=2 entities=12 mapped_spaces=7
 INFO stage="rag.staged.kg_doc_retriever" kg_entities=12 kg_doc_ids=47 hits=18
 INFO stage="rag.staged.candidate_generation" retrievers=12 unique_chunks=348 pool_size=200
 INFO stage="rag.staged.rrf_fusion" fused=200 rrf_k=60
-INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.86
+INFO stage="rag.staged.rerank_sub_query" sub_query="what is sp-brain" top_score=0.82
+INFO stage="rag.staged.rerank_sub_query" sub_query="how is sp-brain deployed" top_score=0.79
+INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.82 sub_queries=2 fusion="max_per_chunk"
 INFO stage="rag.staged.freshness_pre_diversity" multipliers_fetched=264 reranked_count=200
-INFO stage="rag.staged.diversity_select" candidates_in=200 selected=3 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
-INFO stage="rag.staged.complete" final_count=3 elapsed_ms=6446
+INFO stage="rag.staged.diversity_select" candidates_in=200 selected=5 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
+INFO stage="rag.staged.complete" final_count=5 elapsed_ms=7812
 ```
 
 Stage meanings (in order):
 
-- **query_understanding** — classify intent, extract entities, build rewrites, resolve entities to spaces.
+- **query_understanding** — classify intent, extract entities, build rewrites, decompose compound questions into sub-intents, resolve entities to spaces. `sub_queries` is the number of distinct sub-intents the decomposer produced (1 = no decomposition).
 - **kg_doc_retriever** — only fires when the knowledge graph has `source_doc_ids` edges for resolved entities. Pulls every chunk of those docs directly, bypassing BM25/vector.
 - **candidate_generation** — all retrievers finished. `unique_chunks` is total across the 6–12 retrievers after per-retriever chunk-flood dedup (see `rag.max_chunks_per_doc_in_retriever`).
 - **rrf_fusion** — Reciprocal Rank Fusion collapses the retriever outputs into one scored list.
-- **rerank** — cross-encoder scores every chunk against the query. `top_score` in `[0, 1]` is the calibrated highest-ranked hit. Title + heading + space are included in the rerank input when `RAG_RERANK_TITLE_ENRICH=true` (default).
+- **rerank_sub_query** — per-sub-query log line emitted in compound-query mode only. Shows the top score that each distinct sub-intent produced against the shared candidate pool.
+- **rerank** — cross-encoder scores every chunk against the query. `top_score` in `[0, 1]` is the calibrated highest-ranked hit. Title + heading + space are included in the rerank input when `RAG_RERANK_TITLE_ENRICH=true` (default). When `sub_queries>1`, carries `fusion="max_per_chunk"` indicating each chunk's final score is its best against any sub-intent.
 - **freshness_pre_diversity** — fetches stale/fresh multipliers from Postgres and applies them BEFORE the retrieval floor (Phase 1.3, gated on `RAG_FRESHNESS_PRE_DIVERSITY=true`). Stale docs are dropped by the floor instead of being silently demoted post-hoc.
 - **diversity_select** — enforces per-source + per-document caps and the retrieval floor. `selected` is the final top-k count.
 - **complete** — total wall clock, final_count sent to the LLM.
