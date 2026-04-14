@@ -324,6 +324,76 @@ this on when diagnosing "why didn't chunk X surface?" — the logs will
 show whether it was dropped at retrieval, reranking, or diversity
 selection.
 
+### Admin trace endpoint — `?trace=true`
+
+Phase 3 adds a structured pipeline trace that admin users can request
+per-query instead of grepping logs. POST `/api/v1/ask` with
+`{ "question": "...", "stream": false, "trace": true }` and an admin
+API key. The response carries an extra `pipeline_trace` field:
+
+```json
+{
+  "answer": "...",
+  "sources": [...],
+  "confidence": 0.6,
+  "pipeline_trace": {
+    "query_id": "7c3a8f9b-...",
+    "question": "how is sp-brain deployed in our env?",
+    "retrievers_fired": ["literal", "rewrite_0", "entity_space_0", "kg_docs"],
+    "pool_size": 200,
+    "rerank_provider": "bedrock",
+    "sub_queries": ["what is sp-brain", "how is sp-brain deployed in our env"],
+    "stage_durations": {
+      "query_understanding": 12,
+      "kg_doc_retriever": 450,
+      "candidate_generation": 1024,
+      "rerank": 2870,
+      "freshness_pre_diversity": 3,
+      "diversity_select": 1,
+      "total": 4360
+    },
+    "chunks": {
+      "2217247499_2": {
+        "chunk_id": "2217247499_2",
+        "document_id": "2217247499",
+        "title": "RFC - k8s deployments - A self-service approach of using helm charts",
+        "space": "65673",
+        "per_retriever_rank": [["kg_docs", 0], ["rewrite_0", 23]],
+        "rrf_score": 0.234,
+        "rerank_score": 0.72,
+        "freshness_multiplier": 0.94,
+        "post_freshness_score": 0.677,
+        "passed_retrieval_floor": true,
+        "passed_diversity": true,
+        "final_rank": 0,
+        "dropped_at": null
+      }
+    }
+  }
+}
+```
+
+Non-admin callers with `trace: true` get `pipeline_trace: null` (or
+no field, serde skip). No error — the existence of the feature is
+hidden from non-admins.
+
+The admin CLI wraps this endpoint:
+
+```
+docbrain trace-query "how is sp-brain deployed?"
+```
+
+Renders the trace as a table: query info, retrievers fired, per-stage
+timings, final top-k chunks with titles and scores. Add `--json` to
+dump the raw trace JSON for scripting.
+
+Use this whenever you need to answer "why didn't chunk X surface?"
+instead of SSH'ing into the pod and running log-grep pipelines. The
+per-stage `dropped_at` field on each chunk names the exact stage that
+killed it: `rrf_not_in_pool`, `rerank_below_floor`,
+`diversity_source_cap`, `diversity_document_cap`, `diversity_top_k_filled`,
+`freshness_penalty`.
+
 ### Rolling back
 
 If the staged pipeline ever causes a problem in production, roll back
