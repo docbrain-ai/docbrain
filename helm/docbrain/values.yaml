@@ -89,9 +89,13 @@ rag:
   # rrfK: 60                    # Reciprocal Rank Fusion damping constant
   # maxPerSource: 3             # per-source cap in final top-k
   # maxPerDocument: 2           # per-document cap in final top-k
-  # minRelevanceScore: 0.30     # reranker-score floor for inclusion
+  # minRelevanceScore: 0.30     # retrieval floor — below this, drop from diversity
+  # displayFloor: 0.30          # display floor — below this, drop from sources array
+  # confidenceGate: 0.30        # confidence gate — hide all sources if confidence < this
   # strongAnswerFloor: 0.50     # high-confidence answer threshold
   # freshnessWindowDays: 7      # freshness retriever window (0 to disable)
+  # freshnessPreDiversity: true # apply freshness BEFORE diversity (recommended)
+  # rerankTitleEnrich: true     # pass title+heading+space to reranker (recommended)
   # entityCacheTtlSecs: 300     # entity → space cache TTL
   # maxRewrites: 2              # query rewrites per ask (0 to disable)
   # traceDetail: false          # log per-chunk rerank scores in final top-k

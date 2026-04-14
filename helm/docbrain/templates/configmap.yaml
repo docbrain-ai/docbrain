@@ -61,11 +61,23 @@ data:
   {{- if .minRelevanceScore }}
   RAG_MIN_RELEVANCE_SCORE: {{ .minRelevanceScore | quote }}
   {{- end }}
+  {{- if .displayFloor }}
+  RAG_DISPLAY_FLOOR: {{ .displayFloor | quote }}
+  {{- end }}
+  {{- if .confidenceGate }}
+  RAG_CONFIDENCE_GATE: {{ .confidenceGate | quote }}
+  {{- end }}
   {{- if .strongAnswerFloor }}
   RAG_STRONG_ANSWER_FLOOR: {{ .strongAnswerFloor | quote }}
   {{- end }}
   {{- if .freshnessWindowDays }}
   RAG_FRESHNESS_WINDOW_DAYS: {{ .freshnessWindowDays | quote }}
+  {{- end }}
+  {{- if hasKey . "freshnessPreDiversity" }}
+  RAG_FRESHNESS_PRE_DIVERSITY: {{ .freshnessPreDiversity | quote }}
+  {{- end }}
+  {{- if hasKey . "rerankTitleEnrich" }}
+  RAG_RERANK_TITLE_ENRICH: {{ .rerankTitleEnrich | quote }}
   {{- end }}
   {{- if .entityCacheTtlSecs }}
   RAG_ENTITY_CACHE_TTL_SECS: {{ .entityCacheTtlSecs | quote }}
