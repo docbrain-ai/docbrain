@@ -47,6 +47,7 @@ nav:
     - Quickstart: quickstart.md
     - Configuration: configuration.md
     - LLM Providers: providers.md
+    - Rerank Providers: rerank-providers.md
   - Core Concepts:
     - Architecture: architecture.md
     - Knowledge Intelligence: knowledge-intelligence.md

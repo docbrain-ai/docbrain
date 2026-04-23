@@ -627,7 +627,7 @@ Environment variables always override config files. See [Configuration Guide](do
 
 - **GitHub Issues:** [Bug reports and feature requests](https://github.com/docbrain-ai/docbrain/issues)
 - **GitHub Discussions:** [Questions and community conversation](https://github.com/docbrain-ai/docbrain/discussions)
-- **Email:** [hello@docbrain.ai](mailto:hello@docbrain.ai)
+- **Email:** [hello@docbrainapi.com](mailto:hello@docbrainapi.com)
 
 ---
 
@@ -651,4 +651,4 @@ To report a security vulnerability, see [SECURITY.md](SECURITY.md). Do **not** f
 
 ## Code of Conduct
 
-[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Report concerns to [conduct@docbrain.ai](mailto:conduct@docbrain.ai).
+[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Report concerns to [hello@docbrainapi.com](mailto:hello@docbrainapi.com).
