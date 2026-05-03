@@ -469,3 +469,25 @@ connectors:
 #   max_retries: ${WEBHOOK_MAX_RETRIES:-4}
 #   circuit_breaker_threshold: ${WEBHOOK_CIRCUIT_BREAKER_THRESHOLD:-10}
 #   allow_internal: ${ALLOW_INTERNAL_WEBHOOKS:-false}
+
+# ── Source-System ACL Mirroring (RFC-001) ────────────────────────────────
+# Query-time enforcement of per-document ACLs derived from source systems
+# (Confluence restrictions, Slack channel membership, GitHub repo access,
+# Jira issue security levels, etc.).
+#
+# Default mode is `off` → preserves pre-RFC-001 behaviour exactly.
+# Operators flip to `warn` first to validate ACL coverage on a real corpus
+# (logs would-have-denied chunk_ids without changing user-visible results),
+# then to `enforce` once per-connector AclProvider impls have populated
+# the chunk index with `acl_principals` data.
+#
+# See docs/rfcs/RFC-001-source-system-acl-mirroring.md for the design.
+acl:
+  mode: "${ACL_MODE:-off}"                                            # off | warn | enforce
+  unknown_policy: "${ACL_UNKNOWN_POLICY:-deny}"                       # deny | allow — for chunks lacking acl_principals data
+  recall_overfetch: ${ACL_RECALL_OVERFETCH:-1.0}                      # OpenSearch top_k multiplier when filter is active (1.0 = no overfetch)
+  user_principal_max_age_secs: ${ACL_USER_PRINCIPAL_MAX_AGE_SECS:-3600} # Drop user principals older than this. 0 = no fence.
+  # bootstrap_principal_set: kept at the conservative default
+  # ["public:system:public", "world:system:world"]. Operators who need
+  # broader access for cron jobs should register a service-account user
+  # rather than extend this list.

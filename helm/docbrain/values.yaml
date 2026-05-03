@@ -482,6 +482,29 @@ oidc:
   # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
   #                     # The backend redirects here after OAuth completes.
 
+# -- Source-System ACL Mirroring (RFC-001)
+# Controls query-time enforcement of per-document ACLs derived from source
+# systems (Confluence restrictions, Slack channel membership, GitHub repo
+# access, Jira issue security levels, etc.).
+#
+# Default mode is `off` → preserves pre-RFC-001 behaviour exactly.
+# Operators flip to `warn` first to validate ACL coverage on a real corpus
+# (logs would-have-denied chunk_ids without changing user-visible results),
+# then to `enforce` once per-connector AclProvider impls have populated the
+# chunk index with `acl_principals` data.
+#
+# See docs/rfcs/RFC-001-source-system-acl-mirroring.md for the design.
+acl:
+  # off | warn | enforce
+  mode: "off"
+  # deny | allow — what to do with chunks lacking acl_principals data when
+  # mode=enforce. Default deny is fail-closed.
+  unknownPolicy: "deny"
+  # OpenSearch top_k multiplier when ACL filter is active. 1.0 = no overfetch.
+  recallOverfetch: 1.0
+  # Drop persisted user principals older than this. 0 = no fence.
+  userPrincipalMaxAgeSecs: 3600
+
 # -- RBAC / SSO access control
 # Controls who is allowed to log in and what role they receive.
 # If allowedGroups and allowedDomains are both empty, all authenticated users are permitted.

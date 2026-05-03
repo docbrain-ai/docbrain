@@ -308,6 +308,12 @@ data:
   OIDC_REDIRECT_URI: {{ .Values.oidc.redirectUri | default "" | quote }}
   {{- end }}
 
+  # Source-System ACL Mirroring (RFC-001)
+  ACL_MODE: {{ .Values.acl.mode | default "off" | quote }}
+  ACL_UNKNOWN_POLICY: {{ .Values.acl.unknownPolicy | default "deny" | quote }}
+  ACL_RECALL_OVERFETCH: {{ .Values.acl.recallOverfetch | default 1.0 | quote }}
+  ACL_USER_PRINCIPAL_MAX_AGE_SECS: {{ .Values.acl.userPrincipalMaxAgeSecs | default 3600 | quote }}
+
   # RBAC / SSO access control — emitted unconditionally so the server always
   # has these available regardless of which SSO provider is active.
   OIDC_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | default "viewer" | quote }}
