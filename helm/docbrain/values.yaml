@@ -522,6 +522,23 @@ acl:
       #     ENG: public
       #     HR: admin_only
       spaceOverrides: {}
+    # GitHub (M1.5.1): repo visibility-derived ACL.
+    #   public repo  → World sentinel
+    #   internal     → Group(github, '<org>:members')
+    #   private      → enumerated User + Team principals
+    github:
+      mode: "off"
+    # Slack (M1.5.2): channel-membership ACL.
+    #   public channel  → workspace-wide group principal
+    #   private channel → enumerated User principals
+    #   shared / DMs    → admin-only fallback
+    slack:
+      mode: "off"
+    # Jira (M1.5.3): issue security level + project fallback.
+    #   security level set → Role(jira, '<project>:security:<level>')
+    #   no security        → Project(jira, '<project>')
+    jira:
+      mode: "off"
 
 # -- RBAC / SSO access control
 # Controls who is allowed to log in and what role they receive.
