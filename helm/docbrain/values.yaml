@@ -505,6 +505,24 @@ acl:
   # Drop persisted user principals older than this. 0 = no fence.
   userPrincipalMaxAgeSecs: 3600
 
+  # -- Per-source ingest policy (M1.4)
+  # Controls what each connector does when ingesting documents:
+  #   off        — don't extract ACL data; chunks have empty acl_principals
+  #                (treated by query-time filter per acl.unknownPolicy)
+  #   public     — synthesise Public sentinel; any authenticated user reads
+  #   admin_only — synthesise admin role; only Admin role can read
+  #   mirror     — call source-system API to extract real per-doc ACL
+  sources:
+    confluence:
+      # Source-level mode applied to all spaces unless overridden below.
+      mode: "off"
+      # Per-space overrides (case-insensitive). Map space key → mode string.
+      # Example:
+      #   spaceOverrides:
+      #     ENG: public
+      #     HR: admin_only
+      spaceOverrides: {}
+
 # -- RBAC / SSO access control
 # Controls who is allowed to log in and what role they receive.
 # If allowedGroups and allowedDomains are both empty, all authenticated users are permitted.

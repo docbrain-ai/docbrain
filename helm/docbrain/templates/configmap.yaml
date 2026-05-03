@@ -313,6 +313,11 @@ data:
   ACL_UNKNOWN_POLICY: {{ .Values.acl.unknownPolicy | default "deny" | quote }}
   ACL_RECALL_OVERFETCH: {{ .Values.acl.recallOverfetch | default 1.0 | quote }}
   ACL_USER_PRINCIPAL_MAX_AGE_SECS: {{ .Values.acl.userPrincipalMaxAgeSecs | default 3600 | quote }}
+  # Per-source ingest policy (M1.4) — drives the ConfluenceAclProvider.
+  ACL_CONFLUENCE_MODE: {{ .Values.acl.sources.confluence.mode | default "off" | quote }}
+  {{- range $space, $mode := .Values.acl.sources.confluence.spaceOverrides }}
+  ACL_CONFLUENCE_SPACE_{{ $space | upper }}: {{ $mode | quote }}
+  {{- end }}
 
   # RBAC / SSO access control — emitted unconditionally so the server always
   # has these available regardless of which SSO provider is active.
