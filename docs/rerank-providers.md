@@ -124,7 +124,7 @@ Authorization: Bearer secret-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 Content-Type: application/json
 
 {
-  "query": "how is sp-brain deployed",
+  "query": "how is payments-svc deployed",
   "documents": ["chunk 1 text...", "chunk 2 text...", "..."],
   "model": "mycorp-rerank-v1"
 }

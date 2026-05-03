@@ -80,7 +80,7 @@ embedding:
 # paper / standard practice; tune only when you have latency/quality
 # data to justify a change.
 #
-# See https://github.com/sailpoint-oss/docbrain-public/blob/main/docs/configuration.md#retrieval-pipeline
+# See https://github.com/docbrain-ai/docbrain/blob/main/docs/configuration.md#retrieval-pipeline
 # for the full field reference.
 rag:
   # topK: 10                    # final chunks sent to the LLM
@@ -170,7 +170,7 @@ rerank:
 # container image. Customers override them by mounting a ConfigMap containing
 # a local.yaml file, or by setting scalar secret env vars via a Secret.
 #
-# See https://github.com/sailpoint-oss/docbrain-public/blob/main/docs/configuration.md
+# See https://github.com/docbrain-ai/docbrain/blob/main/docs/configuration.md
 # for the full nested shape and the selector grammar.
 ingest:
   schedule: "0 */6 * * *"   # every 6 hours

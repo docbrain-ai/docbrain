@@ -126,7 +126,7 @@ Content-Type: application/json
   "documents": [
     {
       "source_id": "KB0020524",
-      "title": "2026 Holidays at SailPoint",
+      "title": "2026 Company Holidays",
       "version": 1712150400,
       "last_modified": "2024-04-03T16:00:00Z"
     },
@@ -182,9 +182,9 @@ Content-Type: application/json
   "documents": [
     {
       "source_id": "KB0020524",
-      "title": "2026 Holidays at SailPoint",
+      "title": "2026 Company Holidays",
       "content": "# 2026 Company Holidays\n\nThe following dates are company-wide holidays for 2026:\n\n- **January 1** — New Year's Day\n- **January 19** — Martin Luther King Jr. Day\n...",
-      "source_url": "https://docs.sailpoint.com/esc/en/hr-knowledge/2026-holidays",
+      "source_url": "https://docs.example.com/esc/en/hr-knowledge/2026-holidays",
       "metadata": {
         "category": "hr",
         "author": "HR Team",
@@ -192,7 +192,7 @@ Content-Type: application/json
       },
       "references": [
         {
-          "url": "https://docs.sailpoint.com/esc/en/hr-knowledge/pto-policy",
+          "url": "https://docs.example.com/esc/en/hr-knowledge/pto-policy",
           "title": "PTO Policy",
           "ref_type": "related"
         }

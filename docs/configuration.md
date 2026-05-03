@@ -356,8 +356,8 @@ INFO stage="rag.staged.query_understanding" rewrites=2 sub_queries=2 entities=12
 INFO stage="rag.staged.kg_doc_retriever" kg_entities=12 kg_doc_ids=47 hits=18
 INFO stage="rag.staged.candidate_generation" retrievers=12 unique_chunks=348 pool_size=200
 INFO stage="rag.staged.rrf_fusion" fused=200 rrf_k=60
-INFO stage="rag.staged.rerank_sub_query" sub_query="what is sp-brain" top_score=0.82
-INFO stage="rag.staged.rerank_sub_query" sub_query="how is sp-brain deployed" top_score=0.79
+INFO stage="rag.staged.rerank_sub_query" sub_query="what is payments-svc" top_score=0.82
+INFO stage="rag.staged.rerank_sub_query" sub_query="how is payments-svc deployed" top_score=0.79
 INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.82 sub_queries=2 fusion="max_per_chunk"
 INFO stage="rag.staged.freshness_pre_diversity" multipliers_fetched=264 reranked_count=200
 INFO stage="rag.staged.diversity_select" candidates_in=200 selected=5 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
@@ -396,11 +396,11 @@ API key. The response carries an extra `pipeline_trace` field:
   "confidence": 0.6,
   "pipeline_trace": {
     "query_id": "7c3a8f9b-...",
-    "question": "how is sp-brain deployed in our env?",
+    "question": "how is payments-svc deployed in our env?",
     "retrievers_fired": ["literal", "rewrite_0", "entity_space_0", "kg_docs"],
     "pool_size": 200,
     "rerank_provider": "bedrock",
-    "sub_queries": ["what is sp-brain", "how is sp-brain deployed in our env"],
+    "sub_queries": ["what is payments-svc", "how is payments-svc deployed in our env"],
     "stage_durations": {
       "query_understanding": 12,
       "kg_doc_retriever": 450,
@@ -438,7 +438,7 @@ hidden from non-admins.
 The admin CLI wraps this endpoint:
 
 ```
-docbrain trace-query "how is sp-brain deployed?"
+docbrain trace-query "how is payments-svc deployed?"
 ```
 
 Renders the trace as a table: query info, retrievers fired, per-stage
