@@ -313,6 +313,11 @@ data:
   ACL_UNKNOWN_POLICY: {{ .Values.acl.unknownPolicy | default "deny" | quote }}
   ACL_RECALL_OVERFETCH: {{ .Values.acl.recallOverfetch | default 1.0 | quote }}
   ACL_USER_PRINCIPAL_MAX_AGE_SECS: {{ .Values.acl.userPrincipalMaxAgeSecs | default 3600 | quote }}
+  # Denial UX (RFC-002)
+  ACL_DENIAL_MODE: {{ .Values.acl.denial.mode | default "disclosed_no_count" | quote }}
+  ACL_DENIAL_REFERRAL: {{ .Values.acl.denial.referral | default "your administrator" | quote }}
+  ACL_DENIAL_AUDIT: {{ .Values.acl.denial.audit | default false | quote }}
+  ACL_DENIAL_AUDIT_RAW_QUERY: {{ .Values.acl.denial.auditRawQuery | default false | quote }}
   # Per-source ingest policy (M1.4 / M1.5) — drives the *AclProvider impls.
   ACL_CONFLUENCE_MODE: {{ .Values.acl.sources.confluence.mode | default "off" | quote }}
   {{- range $space, $mode := .Values.acl.sources.confluence.spaceOverrides }}

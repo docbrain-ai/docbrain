@@ -487,6 +487,12 @@ acl:
   unknown_policy: "${ACL_UNKNOWN_POLICY:-deny}"                       # deny | allow — for chunks lacking acl_principals data
   recall_overfetch: ${ACL_RECALL_OVERFETCH:-1.0}                      # OpenSearch top_k multiplier when filter is active (1.0 = no overfetch)
   user_principal_max_age_secs: ${ACL_USER_PRINCIPAL_MAX_AGE_SECS:-3600} # Drop user principals older than this. 0 = no fence.
+  # Denial UX (RFC-002) — controls how denials are communicated to users.
+  denial:
+    mode: "${ACL_DENIAL_MODE:-disclosed_no_count}"                    # silent | disclosed_no_count | disclosed
+    referral: "${ACL_DENIAL_REFERRAL:-your administrator}"            # operator-provided referral string surfaced in denial messages
+    audit: ${ACL_DENIAL_AUDIT:-false}                                 # persist every denial to acl_audit_log (HIPAA/FedRAMP/SOC2)
+    audit_raw_query: ${ACL_DENIAL_AUDIT_RAW_QUERY:-false}             # persist raw query text (default: SHA256-hashed)
   # bootstrap_principal_set: kept at the conservative default
   # ["public:system:public", "world:system:world"]. Operators who need
   # broader access for cron jobs should register a service-account user

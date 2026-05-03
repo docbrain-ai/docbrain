@@ -505,6 +505,26 @@ acl:
   # Drop persisted user principals older than this. 0 = no fence.
   userPrincipalMaxAgeSecs: 3600
 
+  # -- Denial UX (RFC-002)
+  # Controls how the system communicates a denial back to the user.
+  # See https://github.com/docbrain-ai/docbrain/blob/main/docs/rfcs/RFC-002-acl-denial-ux.md
+  denial:
+    # Global default mode. silent | disclosed_no_count | disclosed
+    #   silent              — no leak ('I don't have information'). Required for MNPI.
+    #   disclosed_no_count  — DEFAULT. Tells the user the filter is on, no specifics leak.
+    #   disclosed           — full transparency: includes count + referral string.
+    mode: "disclosed_no_count"
+    # Operator-provided referral string. Substituted into messages where
+    # <referral> placeholder appears.
+    referral: "your administrator"
+    # Audit log — when true, every full or partial denial is persisted to
+    # acl_audit_log table. Required for HIPAA / FedRAMP / SOC2.
+    audit: false
+    # When true, audit_log persists raw query text. Default false (queries
+    # are SHA256-hashed). Operators in regulated contexts should keep this
+    # off — queries can themselves be MNPI ("what's the Q3 earnings number?").
+    auditRawQuery: false
+
   # -- Per-source ingest policy (M1.4)
   # Controls what each connector does when ingesting documents:
   #   off        — don't extract ACL data; chunks have empty acl_principals
