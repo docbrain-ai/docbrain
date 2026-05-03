@@ -491,3 +491,27 @@ acl:
   # ["public:system:public", "world:system:world"]. Operators who need
   # broader access for cron jobs should register a service-account user
   # rather than extend this list.
+  #
+  # Per-source policy (M1.4+ AclProvider impls consult this at ingest time):
+  # sources:
+  #   confluence:
+  #     mode: mirror              # off | mirror | public | admin_only
+  #     space_overrides:          # per-space override (case-insensitive)
+  #       ENG: public
+  #       HR: admin_only
+  #   slack:
+  #     mode: mirror
+  #     channel_overrides:
+  #       "#general": public
+  #   github:
+  #     mode: mirror
+  #     visibility_policy:        # GitHub visibility-derived policy
+  #       public: public
+  #       internal: public        # GH Enterprise: internal == "all org members"
+  #       private: mirror         # mirror collaborators + teams
+  #     repo_overrides:
+  #       "acme/secrets": admin_only
+  #   jira:
+  #     mode: mirror
+  #     project_overrides: {}
+  # Defaults to all sources at mode=off (opted-out of ACL system entirely).
