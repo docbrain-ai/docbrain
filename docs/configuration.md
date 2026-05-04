@@ -858,6 +858,20 @@ When publishing, DocBrain resolves the target in priority order: space-specific 
 | `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
 
+### Lifecycle Exclusion (archived/historical documents)
+
+Documents that are intentionally frozen — archived project pages, historical decision records, reference material — should not be evaluated for freshness. DocBrain auto-detects these from source-system metadata at ingest and skips them in scoring.
+
+**How it works.** During Confluence ingestion DocBrain reads each page's labels and (for Confluence Cloud) page status. If any match the rules below, the doc's `lifecycle_status` becomes `archived` and the freshness scorer skips it entirely. Manual overrides via `PATCH /api/v1/documents/:id/lifecycle` are sticky — they survive future syncs.
+
+| YAML key (under `freshness.exclusion_rules`) | Default | Description |
+|----------------------------------------------|---------|-------------|
+| `archived_labels` | `[archived, historical, obsolete, deprecated, frozen, reference]` | Source labels (case-insensitive). Confluence page labels match here. |
+| `archived_page_statuses` | `[archived, trashed]` | Confluence Cloud page-status values that mark a doc as archived. |
+| `archived_title_patterns` | `['^Archived ', '^\[ARCHIVED\]', '\(archived\)$']` | Regex patterns matched against doc title — safety net for un-labeled legacy docs. |
+
+These rules are list-valued and configured in YAML only (env vars can't represent lists). To exclude a doc on demand without changing source-system labels, use the lifecycle API.
+
 ### Semantic Quality Scoring
 
 LLM-based quality assessment that evaluates documents on four dimensions: accuracy, completeness, clarity, and actionability (each scored 0-25, total 0-100). Runs as a background sweep on documents that have already been structurally scored.

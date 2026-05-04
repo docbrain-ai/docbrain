@@ -185,23 +185,20 @@ POST /api/v1/feedback
 
 ```
 GET /api/v1/freshness?space=DOCS
+GET /api/v1/freshness?tags=architecture,api
+GET /api/v1/freshness?archived=true
 ```
 
-**Query Parameters:**
+**Query Parameters** (mutually exclusive — `archived` > `tags` > `space`):
 - `space` (optional) — Filter by document space
+- `tags` (optional) — Comma-separated source labels. Returns docs whose `source_labels` overlap any value (e.g. `?tags=architecture,api`)
+- `archived` (optional) — When `true`, returns docs whose `lifecycle_status` is non-active (archived / reference / deprecated). Used to populate the "Archived" tab in the UI.
 
 **Response:**
 ```json
 {
   "space": "DOCS",
-  "summary": {
-    "total_docs": 142,
-    "fresh": 98,
-    "review": 27,
-    "stale": 12,
-    "outdated": 5,
-    "avg_score": 76.3
-  },
+  "summary": { "total_docs": 142, "fresh": 98, "review": 27, "stale": 12, "outdated": 5, "avg_score": 76.3 },
   "documents": [
     {
       "document_id": "123",
@@ -210,7 +207,8 @@ GET /api/v1/freshness?space=DOCS
       "source_url": "https://...",
       "total_score": 45.2,
       "status": "stale",
-      "freshness_badge": "🟡 Review",
+      "source_labels": ["api", "v2"],
+      "lifecycle_status": "active",
       "time_decay_score": 30,
       "engagement_score": 50,
       "content_currency_score": 40,
@@ -219,6 +217,41 @@ GET /api/v1/freshness?space=DOCS
     }
   ]
 }
+```
+
+---
+
+### Mark a Document Archived (Lifecycle Override)
+
+Manually set a document's lifecycle status. Sticky — survives future syncs even if the source-system label changes. Requires admin.
+
+```
+PATCH /api/v1/documents/{id}/lifecycle
+Content-Type: application/json
+
+{ "status": "archived" }
+```
+
+`status` must be one of: `active`, `archived`, `reference`, `deprecated`. Setting `active` re-enables freshness scoring for the doc and triggers a rescore.
+
+**Response:**
+```json
+{ "id": "uuid", "lifecycle_status": "archived", "lifecycle_source": "manual" }
+```
+
+---
+
+### Backfill Lifecycle Across the Corpus
+
+Re-derive `lifecycle_status` for every auto-managed doc from current `source_labels` and `freshness.exclusion_rules` config. Run after editing exclusion rules. Manual overrides are preserved. Requires admin.
+
+```
+POST /api/v1/freshness/backfill-lifecycle
+```
+
+**Response:**
+```json
+{ "changed": 8043, "total_auto_managed": 8874 }
 ```
 
 ---
