@@ -313,19 +313,25 @@ data:
   ACL_UNKNOWN_POLICY: {{ .Values.acl.unknownPolicy | default "deny" | quote }}
   ACL_RECALL_OVERFETCH: {{ .Values.acl.recallOverfetch | default 1.0 | quote }}
   ACL_USER_PRINCIPAL_MAX_AGE_SECS: {{ .Values.acl.userPrincipalMaxAgeSecs | default 3600 | quote }}
-  # Denial UX (RFC-002)
-  ACL_DENIAL_MODE: {{ .Values.acl.denial.mode | default "disclosed_no_count" | quote }}
-  ACL_DENIAL_REFERRAL: {{ .Values.acl.denial.referral | default "your administrator" | quote }}
-  ACL_DENIAL_AUDIT: {{ .Values.acl.denial.audit | default false | quote }}
-  ACL_DENIAL_AUDIT_RAW_QUERY: {{ .Values.acl.denial.auditRawQuery | default false | quote }}
+  # Denial UX (RFC-002) — guarded against missing acl.denial block in older values files.
+  {{- $denial := .Values.acl.denial | default dict }}
+  ACL_DENIAL_MODE: {{ $denial.mode | default "disclosed_no_count" | quote }}
+  ACL_DENIAL_REFERRAL: {{ $denial.referral | default "your administrator" | quote }}
+  ACL_DENIAL_AUDIT: {{ $denial.audit | default false | quote }}
+  ACL_DENIAL_AUDIT_RAW_QUERY: {{ $denial.auditRawQuery | default false | quote }}
   # Per-source ingest policy (M1.4 / M1.5) — drives the *AclProvider impls.
-  ACL_CONFLUENCE_MODE: {{ .Values.acl.sources.confluence.mode | default "off" | quote }}
-  {{- range $space, $mode := .Values.acl.sources.confluence.spaceOverrides }}
+  {{- $sources := .Values.acl.sources | default dict }}
+  {{- $confluence := $sources.confluence | default dict }}
+  {{- $github := $sources.github | default dict }}
+  {{- $slack := $sources.slack | default dict }}
+  {{- $jira := $sources.jira | default dict }}
+  ACL_CONFLUENCE_MODE: {{ $confluence.mode | default "off" | quote }}
+  {{- range $space, $mode := $confluence.spaceOverrides }}
   ACL_CONFLUENCE_SPACE_{{ $space | upper }}: {{ $mode | quote }}
   {{- end }}
-  ACL_GITHUB_MODE: {{ .Values.acl.sources.github.mode | default "off" | quote }}
-  ACL_SLACK_MODE:  {{ .Values.acl.sources.slack.mode | default "off" | quote }}
-  ACL_JIRA_MODE:   {{ .Values.acl.sources.jira.mode | default "off" | quote }}
+  ACL_GITHUB_MODE: {{ $github.mode | default "off" | quote }}
+  ACL_SLACK_MODE:  {{ $slack.mode | default "off" | quote }}
+  ACL_JIRA_MODE:   {{ $jira.mode | default "off" | quote }}
 
   # RBAC / SSO access control — emitted unconditionally so the server always
   # has these available regardless of which SSO provider is active.
