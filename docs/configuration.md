@@ -1005,6 +1005,77 @@ OIDC_EDITOR_GROUPS=docs-writers
 
 ---
 
+## ACL
+
+Mirrors source-system permissions (Confluence space restrictions, Slack private channels, GitHub repo visibility, Jira issue security levels) at query time. A user only sees retrieval results for documents they can read in the source.
+
+For the conceptual guide, modes, denial UX, audit log, and threat model, see **[Access Control (ACL)](access-control.md)**. The reference below is the env-var / YAML surface only.
+
+### Top-level
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ACL_MODE` | `off` | `off` (no filtering), `warn` (log denials, return all), `enforce` (filter + redact) |
+| `ACL_RECALL_OVERFETCH` | `2.0` | Recall multiplier — pull this much extra from the index so post-filter results still hit `top_k` |
+| `ACL_UNKNOWN_POLICY` | `deny` | What to do with chunks that have no ACL data: `deny` (fail-closed) or `allow` (legacy / migration mode) |
+
+### Per-source policy (`acl.sources.*`)
+
+Each connector slot accepts `mirror` (default — use real source ACLs), `public` (everyone in the workspace can see all docs from this source), or `admin_only`.
+
+```yaml
+acl:
+  sources:
+    confluence: mirror
+    slack: mirror
+    github: mirror
+    jira: mirror
+    gitlab: public        # if your GitLab MRs are intentionally workspace-wide
+    ms_teams: admin_only  # restrict until ACL provider lands
+    linear: mirror
+```
+
+Per-namespace overrides (per Confluence space, per Slack channel, etc.) live under `acl.denial.source_overrides.<source>.{space,channel,repo,project}_overrides`.
+
+### Denial UX (`acl.denial.*`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ACL_DENIAL_MODE` | `disclosed_no_count` | `silent` (no hint), `disclosed_no_count` (acknowledge, hide count), `disclosed` (full count + breakdown) |
+| `ACL_DENIAL_REFERRAL` | _unset_ | Optional URL shown in denial messages (e.g. your access-request portal) |
+| `ACL_DENIAL_PARTIAL_DENIAL` | `true` | Surface `access` metadata even when *some* results were returned |
+| `ACL_AUDIT_ENABLED` | `false` | Write denial events to `acl_audit_log` (required for HIPAA / FedRAMP / SOC2 trails) |
+| `ACL_AUDIT_RAW_QUERY` | `false` | Store the raw user query (default: SHA256 hash only — queries can carry MNPI / PII) |
+
+Per-role overrides (admin sees full disclosure, employee sees no count) and per-source overrides are YAML-only:
+
+```yaml
+acl:
+  denial:
+    mode: disclosed_no_count
+    role_overrides:
+      admin: disclosed
+    source_overrides:
+      confluence:
+        mode: disclosed
+      slack:
+        mode: silent
+```
+
+> Strictest-wins: if any one denied source resolves to `silent`, the whole response goes silent. This prevents side-channel leaks where a user learns *which* source restricted them.
+
+### Diagnostics
+
+```bash
+# What does ACL think this user can see?
+GET /api/v1/me/acl
+
+# Coverage report — how many indexed chunks have ACL principals attached?
+SELECT source_type, COUNT(*) FROM document_acl GROUP BY source_type;
+```
+
+---
+
 ## Documentation Analytics
 
 | Variable | Default | Description |
