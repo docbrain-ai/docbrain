@@ -37,9 +37,12 @@ jobs:
       fail-fast: false
       matrix:
         image:
+          # Customer-facing runtime images only. The trainer image is an
+          # internal fine-tuning utility — it's published privately and
+          # scanned in the core repo's build pipeline rather than here.
+          # Customers running DocBrain don't run the trainer in production.
           - docbrain
           - docbrain-web
-          - docbrain-trainer
         tag:
           - latest
           - edge
