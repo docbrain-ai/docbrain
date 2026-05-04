@@ -425,6 +425,52 @@ freshness:
   # Only event-based docs edited within this many days are eligible for contradiction checks.
   contradictionEventDocMaxAgeDays: 90
 
+  # -- Lifecycle exclusion rules — exclude docs from freshness scoring based
+  # on source-system metadata (Confluence labels, page status, title patterns).
+  #
+  # When set, overrides the defaults baked into the container image
+  # (config/default.yaml) via a mounted local.yaml overlay. NO image rebuild
+  # required — change values.yaml and run `helm upgrade`.
+  #
+  # Common use case: "skip every doc tagged 'retrospective' in Confluence"
+  # → add `retrospective` to archived_labels below, helm upgrade, then click
+  # "Reclassify lifecycle" in the UI (or POST /api/v1/freshness/backfill-lifecycle).
+  #
+  # Defaults shipped in the image:
+  #   archived_labels: [archived, historical, obsolete, deprecated, frozen, reference]
+  #   archived_page_statuses: [archived, trashed]
+  #   archived_title_patterns: ['^Archived ', '^\[ARCHIVED\]', '\(archived\)$']
+  #
+  # Manual overrides via PATCH /api/v1/documents/{id}/lifecycle are sticky
+  # — they survive future syncs even if the source-system label changes.
+  #
+  # exclusionRules:
+  #   archived_labels:
+  #     - archived
+  #     - historical
+  #     - retrospective    # exclude retros from scoring
+  #   archived_page_statuses:
+  #     - archived
+  #     - trashed
+  #   archived_title_patterns:
+  #     - '^Archived '
+  #     - '^\[ARCHIVED\]'
+
+  # -- Event-based source types — sources whose docs are permanent historical
+  # records (incident threads, merged PRs, support tickets). For these,
+  # time_decay = 100 (don't penalise age) and LLM/link/contradiction passes
+  # are skipped. Use to register custom permanent-record source types.
+  #
+  # Defaults shipped in the image:
+  #   slack_thread, github_pr, github, gitlab_mr, jira, linear, pagerduty,
+  #   opsgenie, zendesk, intercom, fireflies
+  #
+  # eventBasedSpaces:
+  #   - slack_thread
+  #   - github_pr
+  #   - jira
+  #   - my_custom_incident_source
+
 # -- Semantic quality scoring (LLM-assessed)
 semanticQuality:
   enabled: true

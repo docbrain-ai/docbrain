@@ -99,15 +99,18 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 30
             failureThreshold: 3
-          {{- $hasSources := and .Values.ingest.sources (gt (len .Values.ingest.sources) 0) }}
-          {{- if or .Values.ingest.localDocsPath $hasSources }}
+          {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
+          {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
+          {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
+          {{- $hasLocalOverlay := or $hasSources $hasExclusion $hasEventSpaces }}
+          {{- if or .Values.ingest.localDocsPath $hasLocalOverlay }}
           volumeMounts:
             {{- if .Values.ingest.localDocsPath }}
             - name: docs
               mountPath: {{ .Values.ingest.localDocsPath }}
               readOnly: true
             {{- end }}
-            {{- if $hasSources }}
+            {{- if $hasLocalOverlay }}
             - name: sources-config
               mountPath: /app/config/local.yaml
               subPath: local.yaml
@@ -116,15 +119,18 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
-      {{- $hasSources := and .Values.ingest.sources (gt (len .Values.ingest.sources) 0) }}
-      {{- if or .Values.ingest.localDocsPath $hasSources }}
+      {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
+      {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
+      {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
+      {{- $hasLocalOverlay := or $hasSources $hasExclusion $hasEventSpaces }}
+      {{- if or .Values.ingest.localDocsPath $hasLocalOverlay }}
       volumes:
         {{- if .Values.ingest.localDocsPath }}
         - name: docs
           persistentVolumeClaim:
             claimName: {{ include "docbrain.fullname" . }}-docs
         {{- end }}
-        {{- if $hasSources }}
+        {{- if $hasLocalOverlay }}
         - name: sources-config
           configMap:
             name: {{ include "docbrain.fullname" . }}-sources

@@ -870,19 +870,79 @@ This was a hardcoded list until v1.4; it's now configurable so operators can reg
 
 Override in `default.yaml` (or via the helm value `freshness.eventBasedSpaces`) to add custom source types.
 
-### Lifecycle Exclusion (archived/historical documents)
+### Excluding Documents from Freshness Reports
 
-Documents that are intentionally frozen — archived project pages, historical decision records, reference material — should not be evaluated for freshness. DocBrain auto-detects these from source-system metadata at ingest and skips them in scoring.
+Documents that are intentionally frozen — archived project pages, retros, historical decision records, reference material — should not be evaluated for freshness. Old isn't the same as wrong. DocBrain detects these from source-system metadata at ingest and skips them in the scorer.
 
-**How it works.** During Confluence ingestion DocBrain reads each page's labels and (for Confluence Cloud) page status. If any match the rules below, the doc's `lifecycle_status` becomes `archived` and the freshness scorer skips it entirely. Manual overrides via `PATCH /api/v1/documents/:id/lifecycle` are sticky — they survive future syncs.
+The **Freshness page** in the UI shows excluded counts via "View excluded (N)" in the page header. Excluded docs don't appear in the Total / Outdated / Stale / Review / Fresh rollups — they're not noise in the freshness view.
 
-| YAML key (under `freshness.exclusion_rules`) | Default | Description |
-|----------------------------------------------|---------|-------------|
-| `archived_labels` | `[archived, historical, obsolete, deprecated, frozen, reference]` | Source labels (case-insensitive). Confluence page labels match here. |
-| `archived_page_statuses` | `[archived, trashed]` | Confluence Cloud page-status values that mark a doc as archived. |
-| `archived_title_patterns` | `['^Archived ', '^\[ARCHIVED\]', '\(archived\)$']` | Regex patterns matched against doc title — safety net for un-labeled legacy docs. |
+#### Quick recipe — exclude every doc tagged `retrospective` in Confluence
 
-These rules are list-valued and configured in YAML only (env vars can't represent lists). To exclude a doc on demand without changing source-system labels, use the lifecycle API.
+**Helm-managed deployments** (recommended — no image rebuild):
+
+```yaml
+# values.yaml
+freshness:
+  exclusionRules:
+    archived_labels:
+      - archived          # defaults
+      - historical
+      - obsolete
+      - deprecated
+      - frozen
+      - reference
+      - retrospective     # ← your addition
+```
+
+```sh
+helm upgrade <release> <chart> -f values.yaml
+```
+
+Then in the DocBrain UI:
+1. **Freshness → Reclassify lifecycle** (or `POST /api/v1/freshness/backfill-lifecycle`) — re-derives every auto-managed doc against the new rules. Existing retrospective-tagged docs become archived in seconds.
+2. **Freshness → Rescore All** — refreshes the rollup numbers.
+
+Future docs with the tag get caught automatically at ingest. No further action needed.
+
+**Direct config edits** (when not using helm): edit `config/default.yaml`, restart the server pod. Same rule.
+
+**Per-doc override** (just one specific document, not the whole tag):
+
+```sh
+curl -X PATCH https://your.docbrain.example/api/v1/documents/{doc_id}/lifecycle \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "archived"}'
+```
+
+Or use the row action menu in the UI: **⋯ → Mark archived**. Manual overrides are sticky — they survive future syncs even if the source-system label changes back.
+
+#### How detection works
+
+During Confluence ingestion DocBrain reads each page's labels and (for Confluence Cloud) page status. The lifecycle classifier matches against three independent signal sources — any match marks the doc archived:
+
+| YAML key (under `freshness.exclusion_rules`) | Helm value | Default | What it matches |
+|----------------------------------------------|------------|---------|-----------------|
+| `archived_labels` | `freshness.exclusionRules.archived_labels` | `[archived, historical, obsolete, deprecated, frozen, reference]` | Source labels, case-insensitive. Confluence page labels match here. |
+| `archived_page_statuses` | `freshness.exclusionRules.archived_page_statuses` | `[archived, trashed]` | Confluence Cloud `status` field. |
+| `archived_title_patterns` | `freshness.exclusionRules.archived_title_patterns` | `['^Archived ', '^\[ARCHIVED\]', '\(archived\)$']` | Regex against doc title — safety net for un-labeled legacy docs. |
+
+These rules are list-shaped and configured in YAML only (env vars can't represent lists).
+
+#### Which lifecycle status to use
+
+The `PATCH /lifecycle` API and the row action menu accept four values. They all exclude the doc from scoring; pick the one that matches intent so your audit trail stays meaningful:
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Default. Scored normally. Use this to un-archive a doc. |
+| `archived` | Frozen historical record. Old by design. |
+| `reference` | Evergreen content (style guides, glossaries). Don't nag, don't decay. |
+| `deprecated` | Should eventually be deleted, but kept for now. |
+
+#### Reviewing what's been excluded
+
+Click **View excluded (N)** in the Freshness page header. The modal groups docs by lifecycle status (archived / reference / deprecated), shows the source labels that triggered the classification, and exposes a **Mark active** button per row to un-archive a doc directly. Search filters by title, space, or tag.
 
 ### Semantic Quality Scoring
 

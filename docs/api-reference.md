@@ -192,7 +192,7 @@ GET /api/v1/freshness?archived=true
 **Query Parameters** (mutually exclusive — `archived` > `tags` > `space`):
 - `space` (optional) — Filter by document space
 - `tags` (optional) — Comma-separated source labels. Returns docs whose `source_labels` overlap any value (e.g. `?tags=architecture,api`)
-- `archived` (optional) — When `true`, returns docs whose `lifecycle_status` is non-active (archived / reference / deprecated). Used to populate the "Archived" tab in the UI.
+- `archived` (optional) — When `true`, returns docs whose `lifecycle_status` is non-active (archived / reference / deprecated). Used to populate the "View excluded (N)" modal in the UI.
 
 **Response:**
 ```json

@@ -286,7 +286,7 @@ Default off — opt-in source by source. See [Access Control (ACL)](docs/access-
 - **Intent classification** — Adapts response format to query type: find, how-to, troubleshoot, who-owns, explain. Each gets a different answer structure.
 - **Hybrid search** — OpenSearch with both vector (k-NN) and keyword (BM25) retrieval, combined for precision.
 - **4-tier memory** — Working, episodic, semantic, and procedural memory that compounds over time. The system gets smarter with use.
-- **Document freshness** — 5-signal scoring (time decay, engagement, content currency, link health, contradiction detection) with staleness alerts.
+- **Document freshness** — 5-signal scoring (time decay, engagement, content currency, link health, contradiction detection) with staleness alerts. Auto-detects archived / historical / reference docs from Confluence labels and excludes them from scoring — old isn't the same as wrong. See [exclusion rules](docs/configuration.md#excluding-documents-from-freshness-reports).
 
 ### Documentation Autopilot
 
