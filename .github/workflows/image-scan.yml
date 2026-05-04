@@ -1,0 +1,99 @@
+name: Container Image Scan
+
+# Scans the published DocBrain container images on ghcr.io for known CVEs
+# and publishes the results to this repo's GitHub Security tab.
+#
+# This workflow does NOT build images — the build pipeline lives in the
+# core repo. We pull the already-published images and re-scan them on a
+# weekly schedule so newly disclosed CVEs in already-shipped images
+# surface even when no new build is happening.
+#
+# Operator-visible URL (for compliance evidence):
+#   https://github.com/docbrain-ai/docbrain/security/code-scanning
+#
+# Acceptances are documented per-CVE in .trivyignore at the repo root.
+
+on:
+  schedule:
+    # Weekly Monday 08:00 UTC — same cadence as the Rust dependency audit.
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+  # Re-run when the allowlist changes so reviewers see the effect immediately.
+  push:
+    branches: [main]
+    paths:
+      - '.trivyignore'
+      - '.github/workflows/image-scan.yml'
+
+jobs:
+  scan:
+    name: trivy ${{ matrix.tag }} ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # required to upload SARIF to the Security tab
+      packages: read          # required to pull from ghcr.io
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - docbrain
+          - docbrain-web
+          - docbrain-trainer
+        tag:
+          - latest
+          - edge
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate to ghcr so we can pull the published images. If the
+      # GHCR packages are public, this step is a no-op; if private, the
+      # workflow's GITHUB_TOKEN (with packages: read) gets us read access
+      # to packages published in the same org.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute SARIF category
+        id: cat
+        run: |
+          # Each image+tag pair becomes its own category so the Security tab
+          # shows them as separate rows rather than merging findings.
+          echo "category=trivy-${{ matrix.image }}-${{ matrix.tag }}" >> $GITHUB_OUTPUT
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/docbrain-ai/${{ matrix.image }}:${{ matrix.tag }}
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          # Never fail the workflow — this is reporting, not gating.
+          # The build-time gate lives in the core repo's build-and-push.yml.
+          exit-code: '0'
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy.sarif
+          category: ${{ steps.cat.outputs.category }}
+
+      # Also produce a human-readable table so the workflow run log itself
+      # is useful (the SARIF upload is for the Security tab; the table
+      # is for someone clicking through to see "what did this run find?").
+      - name: Trivy scan — human-readable summary
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/docbrain-ai/${{ matrix.image }}:${{ matrix.tag }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          exit-code: '0'
