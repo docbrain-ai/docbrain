@@ -252,6 +252,34 @@ Configurable multi-stage review pipelines for documentation drafts:
 
 See [Review Workflows Guide](docs/reviews.md) for configuration and API details.
 
+### Source-System Access Control (ACL)
+
+DocBrain enforces source-system permissions at query time. Restrict a Confluence page to your Finance team and DocBrain respects it; lock down a private Slack channel and DocBrain won't surface its content to users outside that channel.
+
+- **Per-source extraction** — Confluence page restrictions, GitHub repo visibility + collaborators, Slack channel membership, Jira issue security levels. Each source's real permission model is mirrored, not flattened.
+- **Three enforcement modes** — `off` (default, fully backwards-compatible), `warn` (logs would-have-denied chunks for coverage validation), `enforce` (drops denied chunks before they reach the LLM).
+- **Side-channel mitigations** — when the filter wipes out results, the answer text, confidence score, and source list are all sanitized so the response doesn't leak the existence of denied content via context-derived synthesis.
+- **Three denial UX modes** — `silent` (MNPI-safe, generic message), `disclosed_no_count` (default — tells the user the filter is on, no specifics leak), `disclosed` (full transparency for open-collaboration orgs).
+- **Per-source / per-role overrides** with strictest-wins resolution — mixing public + restricted content in one query never weakens the response.
+- **Audit log** for HIPAA / FedRAMP / SOC2 compliance — every full or partial denial persisted with policy provenance.
+- **Structured `access` metadata** in every API response so any client (web UI, Slack bot, CLI, custom integration) can render denials appropriately.
+
+```yaml
+acl:
+  mode: enforce
+  sources:
+    confluence: { mode: mirror }
+    github:     { mode: mirror }
+    slack:      { mode: mirror }
+    jira:       { mode: mirror }
+  denial:
+    mode: disclosed_no_count       # silent | disclosed_no_count | disclosed
+    referral: "your administrator"
+    audit: false                   # flip true for compliance contexts
+```
+
+Default off — opt-in source by source. See [Access Control (ACL)](docs/access-control.md) for the full guide.
+
 ### Intelligent Q&A (RAG)
 
 - **Confidence-scored answers** — High confidence returns sourced answers with citations. Low confidence asks clarifying questions instead of guessing.

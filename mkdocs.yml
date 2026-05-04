@@ -64,6 +64,7 @@ nav:
   - Deployment:
     - Kubernetes: kubernetes.md
     - RBAC & SSO: rbac.md
+    - Access Control (ACL): access-control.md
   - Reference:
     - API Reference: api-reference.md
 
