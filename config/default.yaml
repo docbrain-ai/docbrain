@@ -209,6 +209,24 @@ freshness:
   contradiction_include_recent_event_docs: true   # Include recent Slack/PR/Jira docs in contradiction pass
   contradiction_event_doc_max_age_days: 90        # Only event-based docs edited within N days are eligible
 
+  # ── Event-based source types ───────────────────────────────────────────
+  # Sources whose docs are permanent historical records (incident threads,
+  # merged PRs, support tickets). For these, time_decay is always 100 and
+  # LLM/link/contradiction passes are skipped. Capture sources are NOT here
+  # — design discussions DO go stale as systems evolve.
+  event_based_spaces:
+    - slack_thread
+    - github_pr
+    - github
+    - gitlab_mr
+    - jira
+    - linear
+    - pagerduty
+    - opsgenie
+    - zendesk
+    - intercom
+    - fireflies
+
   # ── Lifecycle exclusion rules ──────────────────────────────────────────
   # Docs matching any rule are auto-marked 'archived' at ingest and skipped
   # by the freshness scorer. Manual overrides via API are sticky.

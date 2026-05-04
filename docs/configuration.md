@@ -858,6 +858,18 @@ When publishing, DocBrain resolves the target in priority order: space-specific 
 | `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
 
+### Event-Based Source Types
+
+Source types whose documents are permanent historical records — incident threads, merged PRs, support tickets — never go stale and shouldn't be evaluated for content currency or contradictions. The scorer pins their `time_decay = 100` and skips LLM/link/contradiction passes.
+
+This was a hardcoded list until v1.4; it's now configurable so operators can register custom permanent-record source types (e.g. a homegrown incident system) without rebuilding the image.
+
+| YAML key (under `freshness`) | Default | Description |
+|------------------------------|---------|-------------|
+| `event_based_spaces` | `[slack_thread, github_pr, github, gitlab_mr, jira, linear, pagerduty, opsgenie, zendesk, intercom, fireflies]` | List of `documents.space` values treated as permanent historical records. Capture sources (`slack_capture`, `github_capture`, `gitlab_capture`) are intentionally NOT in the default — design discussions DO go stale. |
+
+Override in `default.yaml` (or via the helm value `freshness.eventBasedSpaces`) to add custom source types.
+
 ### Lifecycle Exclusion (archived/historical documents)
 
 Documents that are intentionally frozen — archived project pages, historical decision records, reference material — should not be evaluated for freshness. DocBrain auto-detects these from source-system metadata at ingest and skips them in scoring.
