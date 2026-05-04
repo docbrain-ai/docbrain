@@ -11,18 +11,20 @@ name: Container Image Scan
 # Operator-visible URL (for compliance evidence):
 #   https://github.com/docbrain-ai/docbrain/security/code-scanning
 #
-# Acceptances are documented per-CVE in .trivyignore at the repo root.
+# We do NOT carry a .trivyignore — both runtime images are hardened
+# (Debian apt-upgrade for the Rust server, npm-stripped from the Next.js
+# web runtime) so the baseline is genuinely 0 CRITICAL / 0 HIGH. New
+# CVEs surface as actionable findings, not silent allowlist entries.
 
 on:
   schedule:
     # Weekly Monday 08:00 UTC — same cadence as the Rust dependency audit.
     - cron: '0 8 * * 1'
   workflow_dispatch:
-  # Re-run when the allowlist changes so reviewers see the effect immediately.
+  # Re-run when the workflow itself changes so reviewers see the effect.
   push:
     branches: [main]
     paths:
-      - '.trivyignore'
       - '.github/workflows/image-scan.yml'
 
 jobs:
@@ -76,7 +78,6 @@ jobs:
           output: trivy.sarif
           severity: CRITICAL,HIGH,MEDIUM
           ignore-unfixed: true
-          trivyignores: .trivyignore
           # Never fail the workflow — this is reporting, not gating.
           # The build-time gate lives in the core repo's build-and-push.yml.
           exit-code: '0'
@@ -98,5 +99,4 @@ jobs:
           format: table
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          trivyignores: .trivyignore
           exit-code: '0'
