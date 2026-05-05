@@ -441,7 +441,7 @@ DocBrain supports on-demand capture from GitHub PRs/issues, GitLab MRs, and Slac
 | GitLab | Comment `@docbrain capture` on any MR | MR title, description, all human discussion notes | Posts a reply note confirming capture |
 | Slack | Message shortcut, `@DocBrain capture` mention, or `/docbrain capture` | All thread messages, user names resolved | Posts a message in the thread confirming capture |
 
-Capture is separate from `/docbrain ask` (Slack) or `@docbrain ask` (GitHub/GitLab) — those are Q&A commands that answer questions from the knowledge base.
+Capture is separate from the Q&A commands. To ask a question, just mention DocBrain — `@DocBrain <your question>` in Slack, or `@docbrain <your question>` on a GitHub PR / GitLab MR. The bot replies with an answer drawn from your indexed knowledge base. (You can also still type `@DocBrain ask <question>` in Slack — both forms work.)
 
 ---
 
