@@ -115,7 +115,11 @@ rag:
   confidenceGate: 0.40          # confidence gate — when the answer's overall confidence is below this, DocBrain hides all sources (the answer is shown as "based on general knowledge"). Lowering shows sources on lower-confidence answers; raising forces the UI to go source-less more often.
   strongAnswerFloor: 0.55       # strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer. Below minRelevanceScore the query short-circuits to "insufficient information" and never calls the LLM at all.
   # freshnessWindowDays: 7      # freshness retriever window (0 to disable)
-  # freshnessPreDiversity: true # apply freshness BEFORE diversity (recommended)
+  # freshnessPreDiversity removed: legacy multiplier path conflated relevance
+  # with freshness — old-but-relevant docs got score-multiplied below the
+  # retrieval floor even when they were the top rerank match. Freshness is
+  # now display metadata, not a retrieval gate. Setting this to `true`
+  # re-enables the deprecated path and is NOT recommended.
   # rerankTitleEnrich: true     # pass title+heading+space to reranker (recommended)
   # entityCacheTtlSecs: 300     # entity → space cache TTL
   # maxRewrites: 2              # query rewrites per ask (0 to disable)
