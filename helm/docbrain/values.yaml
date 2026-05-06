@@ -186,6 +186,23 @@ ingest:
   # Run ingest once at server startup before the first scheduled CronJob run.
   # Ensures data is indexed immediately after install or upgrade. Default: true.
   runOnStartup: true
+
+  # -- Image extraction during Confluence ingest.
+  # When true, embedded images on pages are described via the configured LLM
+  # (vision-capable model required: Bedrock Claude, Anthropic Claude, or
+  # OpenAI GPT-4-vision) and the descriptions are spliced into the chunked
+  # markdown so retrieval can hit on diagrams, screenshots, and architecture
+  # sketches.
+  #
+  # Default: false. Off because:
+  #   1. It costs LLM calls per image — operators should opt in deliberately.
+  #   2. Some deployments use non-vision LLMs (small Ollama models) where
+  #      this would error on every image.
+  #
+  # Set to true only when your LLM is vision-capable AND you have budget
+  # for the additional per-image inference calls.
+  imageExtractionEnabled: false
+
   # Legacy flat Confluence block (kept until Confluence is nested under sources).
   # confluence:
   #   baseUrl: ""
