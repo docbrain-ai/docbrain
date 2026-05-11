@@ -1,0 +1,18 @@
+{{- if .Values.mcpTools.enabled }}
+# MCP tool manifests — one YAML file per installed manifest.
+# Source-of-truth files live in helm/docbrain/files/mcp-manifests/ and are
+# mirrored from config/mcp-manifests/ at chart-package time. The server reads
+# the MCP_MANIFEST_DIR env var (set in configmap.yaml) to locate this directory
+# at startup and registers every parseable manifest.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "docbrain.fullname" . }}-mcp-manifests
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+data:
+{{- range $path, $_ := .Files.Glob "files/mcp-manifests/*.yaml" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}
