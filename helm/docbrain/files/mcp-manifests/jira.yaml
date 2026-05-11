@@ -1,0 +1,84 @@
+# Atlassian Jira — DocBrain MCP manifest
+#
+# This manifest defines the Jira tool catalog DocBrain exposes to the
+# answer-time orchestrator. Two tools: get_issue (status lookup by key)
+# and search (JQL → issue list). Both run against Atlassian-hosted MCP
+# server reachable at api.atlassian.com/ex/jira/<cloud_id>/mcp.
+#
+# Auth modes: service_account (org-wide token) OR oauth (per-user grant).
+# OAuth scopes include offline_access so Atlassian issues refresh tokens
+# — without it tokens expire ~1h after connection and users have to
+# reconnect manually.
+
+manifest_version: 1
+id: jira
+display_name: "Atlassian Jira"
+description: "Live Jira ticket status, comments, and JQL search."
+category: "issue-tracking"
+icon: "jira.svg"
+
+server:
+  transport: http_sse
+  endpoint: "https://api.atlassian.com/ex/jira/${JIRA_CLOUD_ID}/mcp"
+  protocol_version: "2024-11-05"
+
+auth:
+  modes:
+    - service_account
+    - oauth
+  service_account:
+    secret_refs:
+      - JIRA_API_TOKEN
+    header_template: "Bearer ${JIRA_API_TOKEN}"
+  oauth:
+    provider: atlassian
+    authorize_url: "https://auth.atlassian.com/authorize"
+    token_url: "https://auth.atlassian.com/oauth/token"
+    scopes:
+      - "read:jira-work"
+      - "read:jira-user"
+      - "offline_access"     # Plan 4 / Task 4.8 — required for refresh tokens
+    client_id_secret_ref: ATLASSIAN_OAUTH_CLIENT_ID
+    client_secret_ref: ATLASSIAN_OAUTH_CLIENT_SECRET
+    use_pkce: true
+
+tools:
+  - name: jira.get_issue
+    description: "Fetch status, summary, assignee, and comments for a Jira ticket by key (e.g. PROJ-123)."
+    args_schema:
+      type: object
+      properties:
+        key:
+          type: string
+          pattern: "^[A-Z][A-Z0-9]+-\\d+$"
+      required: [key]
+    output_size_cap_bytes: 4096
+    latency_budget_ms: 2000
+
+  - name: jira.search
+    description: "Search Jira tickets via JQL. Returns up to 25 matching keys with status and assignee."
+    args_schema:
+      type: object
+      properties:
+        jql:
+          type: string
+          maxLength: 500
+        max_results:
+          type: integer
+          minimum: 1
+          maximum: 25
+          default: 10
+      required: [jql]
+    output_size_cap_bytes: 4096
+    latency_budget_ms: 3000
+
+egress:
+  hosts:
+    - "*.atlassian.com"
+    - "*.atlassian.net"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90

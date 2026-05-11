@@ -18,55 +18,10 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: server
-      annotations:
-        # Issue #10: Rolling restart on ConfigMap or Secret changes
-        {{- include "docbrain.configChecksum" . | nindent 8 }}
-        {{- with .Values.server.vaultAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
     spec:
-      {{- if .Values.serviceAccount.create }}
-      serviceAccountName: {{ include "docbrain.serviceAccountName" . }}
-      {{- end }}
-      # Issue #9: Wait for all dependencies before starting the server.
-      # Prevents race conditions when all pods start simultaneously.
-      initContainers:
-        {{- if .Values.postgresql.internal }}
-        - name: wait-for-postgres
-          image: {{ .Values.postgresql.image }}
-          command:
-            - sh
-            - -c
-            - |
-              until pg_isready -h {{ include "docbrain.fullname" . }}-postgres -p 5432 -U docbrain; do
-                echo "waiting for postgres..."; sleep 2;
-              done
-        {{- end }}
-        {{- if .Values.opensearch.internal }}
-        - name: wait-for-opensearch
-          image: {{ .Values.opensearch.image }}
-          command:
-            - sh
-            - -c
-            - |
-              until (echo > /dev/tcp/{{ include "docbrain.fullname" . }}-opensearch/9200) 2>/dev/null; do
-                echo "waiting for opensearch..."; sleep 2;
-              done
-        {{- end }}
-        {{- if .Values.redis.internal }}
-        - name: wait-for-redis
-          image: {{ .Values.redis.image }}
-          command:
-            - sh
-            - -c
-            - |
-              until redis-cli -h {{ include "docbrain.fullname" . }}-redis -p 6379 ping | grep -q PONG; do
-                echo "waiting for redis..."; sleep 2;
-              done
-        {{- end }}
       containers:
         - name: server
-          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.server.port }}
@@ -76,64 +31,47 @@ spec:
                 name: {{ include "docbrain.fullname" . }}-config
             - secretRef:
                 name: {{ include "docbrain.secretName" . }}
-            {{- if and (not .Values.existingSecret) (.Values.bootstrapKey.enabled) }}
-            - secretRef:
-                name: {{ include "docbrain.fullname" . }}-initial-admin-secret
-            {{- end }}
           env:
             - name: DATABASE_URL
               value: {{ include "docbrain.databaseUrl" . | quote }}
-          # Issue #6: /api/v1/health is on the public (unauthenticated) router.
-          # The old path /health returned 401 because it was behind auth middleware.
           readinessProbe:
             httpGet:
               path: /api/v1/health
               port: {{ .Values.server.port }}
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 10
-            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /api/v1/health
               port: {{ .Values.server.port }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 30
-            failureThreshold: 3
-          {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
-          {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
-          {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
-          {{- $hasLocalOverlay := or $hasSources $hasExclusion $hasEventSpaces }}
-          {{- if or .Values.ingest.localDocsPath $hasLocalOverlay }}
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          {{- if or (and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled) .Values.mcpTools.enabled }}
           volumeMounts:
-            {{- if .Values.ingest.localDocsPath }}
-            - name: docs
-              mountPath: {{ .Values.ingest.localDocsPath }}
-              readOnly: true
+            {{- if and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled }}
+            - name: trainer-models
+              mountPath: {{ .Values.learning.storage.localModelRoot }}
+              readOnly: false
             {{- end }}
-            {{- if $hasLocalOverlay }}
-            - name: sources-config
-              mountPath: /app/config/local.yaml
-              subPath: local.yaml
+            {{- if .Values.mcpTools.enabled }}
+            - name: mcp-manifests
+              mountPath: /etc/docbrain/mcp-manifests
               readOnly: true
             {{- end }}
           {{- end }}
-          resources:
-            {{- toYaml .Values.server.resources | nindent 12 }}
-      {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
-      {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
-      {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
-      {{- $hasLocalOverlay := or $hasSources $hasExclusion $hasEventSpaces }}
-      {{- if or .Values.ingest.localDocsPath $hasLocalOverlay }}
+      {{- if or (and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled) .Values.mcpTools.enabled }}
       volumes:
-        {{- if .Values.ingest.localDocsPath }}
-        - name: docs
+        {{- if and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled }}
+        - name: trainer-models
           persistentVolumeClaim:
-            claimName: {{ include "docbrain.fullname" . }}-docs
+            claimName: {{ include "docbrain.fullname" . }}-trainer-models
         {{- end }}
-        {{- if $hasLocalOverlay }}
-        - name: sources-config
+        {{- if .Values.mcpTools.enabled }}
+        - name: mcp-manifests
           configMap:
-            name: {{ include "docbrain.fullname" . }}-sources
+            name: {{ include "docbrain.fullname" . }}-mcp-manifests
         {{- end }}
       {{- end }}
 ---
