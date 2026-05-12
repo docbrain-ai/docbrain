@@ -424,6 +424,35 @@ rbac:
 # -- Secret (created from values, or use existing)
 existingSecret: ""
 
+# -- Kubernetes ServiceAccount.
+# When create: true, helm creates a dedicated SA for docbrain pods. When
+# false, pods use the namespace's default SA. The serviceaccount.yaml
+# template and the serviceAccountName references in web-deployment.yaml +
+# ingest-cronjob.yaml branch on this. Most operators want create: true so
+# IAM roles for service accounts (IRSA on EKS, workload identity on GKE)
+# can be bound to a known name.
+serviceAccount:
+  # Create a dedicated ServiceAccount for docbrain pods.
+  create: true
+  # Name of the ServiceAccount. Auto-generated from release name when empty.
+  name: ""
+  # Annotations applied to the ServiceAccount (e.g. IRSA role ARN on EKS).
+  # Example:
+  #   annotations:
+  #     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/docbrain
+  annotations: {}
+
+# -- Bootstrap admin key.
+# When enabled: true, helm renders a Secret (<release>-initial-admin-secret)
+# containing a randomly generated API key with admin role. The server picks
+# it up at boot and inserts/preserves the row in api_keys. Retrieve with:
+#   kubectl get secret <release>-initial-admin-secret \
+#     -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
+# Disable after creating a proper admin user — the bootstrap key remains
+# active in the database until revoked via API or this flag flips false.
+bootstrapKey:
+  enabled: true
+
 # ── MCP tool platform (Plan 4) ────────────────────────────────────────────
 # Enables answer-time tool dispatch through external MCP servers
 # (Jira, GitHub, Sentry, etc.). Off by default — flip enabled=true once
