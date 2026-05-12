@@ -451,11 +451,23 @@ mcpTools:
       # Atlassian workspace cloud ID — substituted into the manifest's
       # server.endpoint URL at dispatch time (${JIRA_CLOUD_ID}).
       cloudId: ""
+      # Used by the jira_rest manifest's shim for direct REST API calls.
+      # Shared with ingest / enrichment when those features are enabled.
+      baseUrl: ""
+      userEmail: ""
 
   # 256-bit master key for at-rest encryption of mcp_oauth_tokens.
   # Generate with: openssl rand -hex 32
   # MUST be set whenever any manifest declares oauth in auth.modes.
   encryptionKey: ""
+
+  # Shared secret for the internal MCP shim (jira_rest manifest). The
+  # orchestrator → shim hop uses this as a bearer token. Set explicitly
+  # in production so the value is stable across pod restarts — leaving
+  # it empty causes the server to auto-generate per boot, which
+  # invalidates any in-flight MCP session on rolling deploys.
+  # Generate with: openssl rand -hex 32
+  internalShimSecret: ""
 
 # ── Learning pipeline (opt-in, Tier 2 feature) ─────────────────────────────
 learning:

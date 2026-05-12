@@ -75,6 +75,10 @@ tools:
       e.g. "what's blocking PROJ-123?", "who is assigned to AITOOLINTG-35?", "what tickets reference
       this Confluence page?". For a bare ticket key lookup, also pass `objectType: "JiraWorkItem"` and
       the ticket key (e.g. "AITOOLINTG-35") as objectIdentifier.
+
+      Performance: prefer `detailLevel: summary` (counts + metadata, ~1-2s) for ticket status / assignee /
+      simple lookups. Only pass `detailLevel: full` when the user is asking about deep relationship content
+      (bodies, comments, attachments) — full traversal regularly takes 3-5s and may approach the 7s budget.
     args_schema:
       type: object
       properties:
@@ -122,10 +126,12 @@ tools:
     # gives enough headroom for ~20 linked entities. Still under the
     # 16KiB hard ceiling.
     output_size_cap_bytes: 8192
-    # Graph traversals are slower than direct REST lookups; 4s keeps us
-    # within the orchestrator's wall-clock budget (Plan 4 Task 4.2) while
-    # tolerating real-world Atlassian latency.
-    latency_budget_ms: 4000
+    # Graph traversals are genuinely slow. Live verification (2026-05-12)
+    # showed `detailLevel: full` taking 5.3s; OAuth refresh adds another
+    # 0.5-1s when access tokens are near expiry. Budget = 7s (under the
+    # 8s orchestrator ceiling), gives Atlassian + refresh margin without
+    # making /ask feel hung.
+    latency_budget_ms: 7000
 
   - name: jira.get_teamwork_graph_object
     upstream_name: getTeamworkGraphObject
@@ -146,7 +152,9 @@ tools:
     arg_defaults:
       cloudId: "${JIRA_CLOUD_ID}"
     output_size_cap_bytes: 8192
-    latency_budget_ms: 4000
+    # Hydrating up to 25 ARIs in one batch can take longer than a single
+    # context traversal. 7s budget matches the context tool.
+    latency_budget_ms: 7000
 
 egress:
   hosts:
