@@ -759,6 +759,49 @@ Image extraction requires a vision-capable LLM. Supported providers: **Bedrock**
 | `LOGIN_SESSION_TTL_HOURS` | `720` | Session lifetime after email/password login (default: 720 hours = 30 days). Set to `0` for no expiry. |
 | `MAX_QUERY_LENGTH` | `4000` | Maximum characters allowed for question and description inputs |
 
+## MCP Tool Platform
+
+Master switch for the live-tool orchestrator. When disabled (the
+default), the synthesis path is byte-identical to the pre-MCP path: no orchestrator
+round-trip, no fast-LLM dispatch, no measurable overhead. Flip to `true`
+once `MCP_OAUTH_ENCRYPTION_KEY` and `MCP_MANIFEST_DIR` are configured to
+enable live tool fan-out at answer time.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_TOOLS_ENABLED` | `false` | Master switch. `true` = orchestrator runs after retrieval, injects live-tool blocks into the synthesis prompt. Requires `MCP_OAUTH_ENCRYPTION_KEY` + `MCP_MANIFEST_DIR` to also be configured (else falls back to disabled). |
+| `MCP_OAUTH_ENCRYPTION_KEY` | — | Base64-encoded 32-byte key for at-rest encryption of per-user OAuth tokens stored in the `mcp_oauth_tokens` table. Required when `MCP_TOOLS_ENABLED=true`. |
+| `MCP_MANIFEST_DIR` | — | Directory containing MCP tool manifests (YAML). In the Helm chart this is mounted from the `docbrain-mcp-manifests` ConfigMap. |
+| `DOCBRAIN_INTERNAL_MCP_SECRET` | — | Bearer secret for the in-process `/internal/mcp/*` shim routes (e.g. `jira-rest`). The server checks this header on every internal shim call. Set via Helm `mcpTools.internalShimSecret`. |
+| `DOCBRAIN_SERVER_PORT` | `3000` | Port the `docbrain-server` listens on. Used by manifests that interpolate `${DOCBRAIN_SERVER_PORT}` into the shim endpoint URL. |
+
+YAML equivalent:
+
+```yaml
+mcp_tools:
+  enabled: false
+```
+
+### Helm values
+
+The chart exposes these under `mcpTools.*` in `values.yaml`:
+
+| Helm value | Maps to env | Notes |
+|---|---|---|
+| `mcpTools.enabled` | `MCP_TOOLS_ENABLED` | Master switch. |
+| `mcpTools.encryptionKey` | `MCP_OAUTH_ENCRYPTION_KEY` | Required when enabled. |
+| `mcpTools.internalShimSecret` | `DOCBRAIN_INTERNAL_MCP_SECRET` | Required when any `internal:` manifest is loaded. |
+| `mcpTools.manifestDir` | `MCP_MANIFEST_DIR` | Defaults to the mounted ConfigMap path. |
+| `mcpTools.serviceAccount.jira.apiToken` | — | Service-account fallback token used by the `jira-rest` shim. |
+| `mcpTools.serviceAccount.jira.cloudId` | — | Atlassian cloud-id for the shim's REST base URL. |
+| `mcpTools.oauth.atlassian.clientId` | — | OAuth client ID for per-user Atlassian token exchange. |
+| `mcpTools.oauth.atlassian.clientSecret` | — | OAuth client secret. |
+
+Two reference manifests ship in the chart:
+
+- **`jira`** — Teamwork Graph / Atlassian Remote MCP. External; depends on Atlassian's hosted MCP server.
+- **`jira-rest`** — Internal shim served at `/internal/mcp/jira-rest`, backed by the Atlassian REST v3 API. Preferred path; more reliable than the hosted MCP.
+
 ## Slack Integration (Optional)
 
 | Variable | Default | Description |

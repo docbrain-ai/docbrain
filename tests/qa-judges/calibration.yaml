@@ -1,0 +1,55 @@
+# Calibration suite — 5 fixed (question, answer, rubric, expected_verdict) tuples.
+# Used by crates/docbrain-core/tests/qa_judge_calibration.rs to validate the
+# judge is sane before running production batches. Drift in the judge model
+# would otherwise silently invalidate every batch run.
+#
+# Pattern: each tuple is a CONTROLLED grading scenario where we know the
+# correct verdict by construction. The judge must agree.
+
+cases:
+  - id: pass_simple
+    question: "Who owns the docbrain repo?"
+    answer: "The docbrain repo is owned by the platform engineering team. The primary maintainer is Bhanu Sharma."
+    expected_facts:
+      - "platform engineering team owns it"
+      - "Bhanu Sharma is the primary maintainer"
+    forbidden_claims: []
+    expected_verdict: pass
+
+  - id: pass_paraphrase
+    question: "What is the deployment pipeline?"
+    answer: "Code merged to main triggers a CI build that produces a container image, which is rolled out via ArgoCD sync waves."
+    expected_facts:
+      - "main branch triggers CI"
+      - "ArgoCD performs the deployment"
+    forbidden_claims:
+      - "manual deployment"
+    expected_verdict: pass
+
+  - id: partial_missing_fact
+    question: "What is the status of AITOOLINTG-35 and who is assigned?"
+    answer: "AITOOLINTG-35 is currently In Progress."
+    expected_facts:
+      - "status is In Progress"
+      - "assignee is Hayden"
+    forbidden_claims: []
+    expected_verdict: partial
+
+  - id: fail_forbidden_claim
+    question: "Is the helm migration done?"
+    answer: "Yes, the helm migration is complete and was finished by Devin."
+    expected_facts:
+      - "helm migration is in progress"
+    forbidden_claims:
+      - "migration is complete"
+      - "Devin worked on it"
+    expected_verdict: fail
+
+  - id: fail_empty_answer
+    question: "What is blocking the helm migration this week?"
+    answer: "I don't have information on that."
+    expected_facts:
+      - "AITOOLINTG-35 is the blocker"
+      - "Hayden is the assignee"
+    forbidden_claims: []
+    expected_verdict: fail
