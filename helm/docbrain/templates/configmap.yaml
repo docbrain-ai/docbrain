@@ -242,6 +242,18 @@ data:
   {{- if .Values.mcpTools.enabled }}
   MCP_TOOLS_ENABLED: "true"
   MCP_MANIFEST_DIR: "/etc/docbrain/mcp-manifests"
+  # OAuth callback + web-UI redirect base. Atlassian (and any IdP) sends the
+  # user's browser back to {publicBaseUrl}/api/v1/oauth/mcp/callback/<manifest>;
+  # the callback handler then redirects to {webBaseUrl}/integrations?connected=<id>.
+  # MUST be set when MCP OAuth is in use behind an ingress — defaults to
+  # localhost otherwise, which makes Atlassian-redirect callbacks unreachable.
+  {{- if .Values.server.publicBaseUrl }}
+  DOCBRAIN_PUBLIC_BASE_URL: {{ .Values.server.publicBaseUrl | quote }}
+  {{- end }}
+  {{- if .Values.server.webBaseUrl }}
+  DOCBRAIN_WEB_BASE_URL: {{ .Values.server.webBaseUrl | quote }}
+  {{- end }}
+  DOCBRAIN_SERVER_PORT: {{ .Values.server.port | quote }}
   {{- else }}
   MCP_TOOLS_ENABLED: "false"
   {{- end }}
