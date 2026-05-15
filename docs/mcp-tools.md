@@ -339,6 +339,75 @@ That's the entire flow. No Rust code, no migrations, no deployment beyond the ro
 
 ---
 
+## Admin-installed manifests (runtime install, no redeploy)
+
+In addition to manifests committed to git under `config/mcp-manifests/`, an admin can install a manifest at **runtime** through the admin API. This is useful for customer-bespoke internal MCPs — a private status page, an internal Jira-clone, a proprietary observability tool — that shouldn't live in a public manifest repo and shouldn't require a DocBrain release to add.
+
+Runtime-installed manifests use the same orchestrator, the same gateway, the same audit log, and the same OAuth flow as git-tracked manifests. The only differences:
+
+- **Source attribution.** Audit rows stamp `manifest_source = 'tier2'` (vs `'tier1'` for git) and `manifest_version` (the install version number). Compliance teams can reconstruct exactly which manifest schema was active for any historical dispatch.
+- **Versioned with rollback.** Every install increments a per-manifest version. To roll back after a bad install, the admin POSTs the prior version number to the `/activate` endpoint — a one-row UPDATE, atomic, audit-clean.
+- **Per-secret storage choice.** Each secret is either **inline** (admin pastes the value, server encrypts it with AES-256-GCM into `mcp_manifest_secrets.ciphertext`) or **env** (admin references a pre-mounted env var by name). Inline mode requires `DOCBRAIN_MCP_SECRET_KEY` set at boot; env mode works without it.
+- **Precedence policy.** When the same `manifest_id` exists in both sources, a `manifest_resolution_policy` DB row picks the winner. Default is `['tier1', 'tier2']` (git wins). For incident response, an operator can pin a manifest_id to a single source without uninstalling.
+
+### Install a manifest
+
+`POST /api/v1/admin/mcp/manifests` accepts either a `yaml` body (paste) or a `url` reference (server-side fetch, HTTPS-only, host-allowlisted, no redirects, 5s timeout, 64KB cap). Secrets are submitted alongside the manifest:
+
+```bash
+curl -X POST https://docbrain.example.com/api/v1/admin/mcp/manifests \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "yaml": "<manifest body>",
+    "secrets": [
+      {"key": "api_token", "mode": "inline", "value": "<bearer>"}
+    ],
+    "description": "Internal status page MCP"
+  }'
+```
+
+Returns `{"manifest_id": "<id>", "version": 1}`. The manifest is dispatchable within ~1 second (a `LISTEN/NOTIFY` channel wakes the resolver).
+
+### Rollback after a bad install
+
+```bash
+# List versions
+curl https://.../api/v1/admin/mcp/manifests/<id>/versions \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Activate a prior version
+curl -X POST https://.../api/v1/admin/mcp/manifests/<id>/activate \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"version": 3}'
+```
+
+### Manifest detail (no secret values exposed)
+
+```bash
+curl https://.../api/v1/admin/mcp/manifests/<id> \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Returns `{manifest_id, active_version, secrets: [{key, mode, env_var_name?, rotated_at?}]}`. Ciphertext is never included in the response.
+
+### Configuration
+
+The two settings relevant to admin install live under `tier2:` in `config/default.yaml`:
+
+```yaml
+tier2:
+  fetch_allowed_hosts: []      # empty = URL install disabled; paste only
+  max_manifest_bytes: 65536    # 64 KB hard cap for URL fetches
+```
+
+The optional master encryption key is sourced from the `DOCBRAIN_MCP_SECRET_KEY` env var (base64-encoded 32 bytes). Without it, inline-mode secrets fail closed with 503 — env-mode secrets and Tier 1 manifests continue to work.
+
+!!! note "Day-to-day operator commands"
+    Full operational procedures — secret rotation, incident-time source pinning, audit-replay queries — live in the operator runbook shipped with the source tree.
+
+---
+
 ## Limitations and known issues
 
 ### Atlassian Remote MCP rollout is early-stage
