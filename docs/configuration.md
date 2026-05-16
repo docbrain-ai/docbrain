@@ -802,6 +802,57 @@ Two reference manifests ship in the chart:
 - **`jira`** — Teamwork Graph / Atlassian Remote MCP. External; depends on Atlassian's hosted MCP server.
 - **`jira-rest`** — Internal shim served at `/internal/mcp/jira-rest`, backed by the Atlassian REST v3 API. Preferred path; more reliable than the hosted MCP.
 
+### Dynamic tool discovery
+
+For MCP servers that publish a `tools/list` endpoint, DocBrain can auto-populate
+the tool catalog instead of requiring every tool to be hand-declared in the
+manifest. Add a `tool_discovery` block:
+
+```yaml
+id: my_mcp
+display_name: My MCP
+# ... rest of manifest ...
+tools: []                           # may be empty when discovery is dynamic
+tool_discovery:
+  mode: dynamic                     # default: static — explicit "dynamic" enables auto-discovery
+  refresh_seconds: 3600             # poll interval; must be 0 (boot-only) or >= 60
+  per_tool_defaults:
+    output_size_cap_bytes: 16384    # <= 16384 ceiling
+    latency_budget_ms: 7000         # <= 8000 ceiling
+```
+
+**Read-only invariant (D1).** DocBrain only registers tools where the upstream
+declares `annotations.readOnlyHint == true`. Tools without the hint, or marked
+`false`, are silently dropped at probe time. DocBrain does not dispatch write
+operations via MCP; this is a platform-wide invariant enforced at three gates:
+the probe-time filter, the required `read_only` field on every static tool, and
+a final assertion in `eligibility_for_user`.
+
+**Static tool field — `read_only`.** Every entry in `tools:` MUST declare
+`read_only: true` (or `false`, which will then be blocked by the D1 gate at
+eligibility time). This is a required field; manifests missing it fail to parse.
+
+**Probe credentials.**
+
+- *Service-account or mixed auth*: the manifest's service-account header is
+  used for probes. No additional setup required.
+- *OAuth-only auth*: an admin must designate a probe user via
+  `PUT /api/v1/admin/mcp/manifests/{id}/probe-user`. Until designated, the
+  manifest stays in `requires_probe_user` status and serves no tools.
+
+**Static + dynamic name collisions.** When a static tool and a discovered tool
+share a name:
+
+- If the static tool has `override_discovered: true`, the static entry wins and
+  surfaces with `tool_source: "static_override"`.
+- Otherwise BOTH entries are dropped from eligibility and the manifest's
+  discovery status flips to `degraded_collisions`. Inspect via
+  `GET /api/v1/admin/mcp/manifests/{id}`.
+
+**Boot behaviour.** Dynamic manifests are excluded from eligibility until the
+first successful probe completes. Status surfaces in the admin detail endpoint
+as `pending` → `ok` (or `failed` / `requires_probe_user`).
+
 ## Slack Integration (Optional)
 
 | Variable | Default | Description |
