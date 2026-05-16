@@ -339,6 +339,20 @@ That's the entire flow. No Rust code, no migrations, no deployment beyond the ro
 
 ---
 
+## Dynamic tool discovery
+
+Hand-declaring every tool in `tools:` is fine for small, stable MCP servers — but upstreams like GitHub, Sentry, or Datadog ship dozens of tools and add new ones between DocBrain releases. For those, a manifest can opt into **dynamic discovery**: at boot (and on a refresh interval), DocBrain queries the upstream's `tools/list` and auto-populates the catalog.
+
+A dynamic manifest declares `tool_discovery.mode: dynamic` and may leave `tools: []`. Static and discovered tools can coexist; when names collide, the static entry wins only if it sets `override_discovered: true`, otherwise both are dropped and the manifest is marked `degraded_collisions` until the conflict is resolved.
+
+**Read-only invariant.** DocBrain only registers discovered tools that the upstream marks `annotations.readOnlyHint == true`. The same gate applies to static tools via a required `read_only` field. This is a platform-wide guarantee: DocBrain does not dispatch write operations through MCP, ever.
+
+**OAuth-only manifests need a probe user.** Because periodic `tools/list` calls need credentials, an admin must designate a user whose OAuth token the discovery worker borrows. Until designated, the manifest's status sits at `requires_probe_user` and no tools are served. Mixed-auth manifests fall back to the service-account header for probes and need no extra setup.
+
+See [Configuration → Dynamic tool discovery](configuration.md#dynamic-tool-discovery) for the full `tool_discovery` YAML block and the [API Reference → Admin — MCP Manifests](api-reference.md#admin--mcp-manifests) for the discovery-probe and probe-user admin endpoints.
+
+---
+
 ## Admin-installed manifests (runtime install, no redeploy)
 
 In addition to manifests committed to git under `config/mcp-manifests/`, an admin can install a manifest at **runtime** through the admin API. This is useful for customer-bespoke internal MCPs — a private status page, an internal Jira-clone, a proprietary observability tool — that shouldn't live in a public manifest repo and shouldn't require a DocBrain release to add.

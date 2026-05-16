@@ -941,6 +941,159 @@ Returns an AI-curated reading list for a new team member.
 
 ---
 
+## Admin — MCP Manifests
+
+Admin endpoints for inspecting and operating the MCP tool platform — viewing
+merged tool catalogs, forcing discovery probes, and managing OAuth probe-user
+designations for dynamic manifests.
+
+All endpoints require the `admin` role.
+
+### GET /api/v1/admin/mcp/manifests/{id}
+
+Get full manifest detail including the merged tool catalog and discovery status.
+
+**Response (200 OK):**
+```json
+{
+  "id": "github",
+  "active_version": 5,
+  "display_name": "GitHub",
+  "auth": { "...": "..." },
+  "secrets": [ "..." ],
+
+  "tools": [
+    {
+      "name": "github.issue_read",
+      "description": "...",
+      "tool_source": "discovered",
+      "read_only": true,
+      "args_schema": { "...": "..." },
+      "output_size_cap_bytes": 16384,
+      "latency_budget_ms": 7000,
+      "upstream_name": "issue_read"
+    }
+  ],
+
+  "discovery": {
+    "mode": "dynamic",
+    "refresh_seconds": 3600,
+    "status": "ok",
+    "last_attempt":  "2026-05-15T20:42:11Z",
+    "last_success":  "2026-05-15T20:42:11Z",
+    "last_error":    null,
+    "next_scheduled": null,
+    "collisions":    []
+  },
+
+  "probe_user": {
+    "user_id": "uuid",
+    "designated_at": "ISO-8601",
+    "designated_by": "uuid",
+    "last_probed_at": "ISO-8601|null"
+  }
+}
+```
+
+**Field semantics:**
+
+- `tools[].tool_source` — one of `static` | `discovered` | `static_override`.
+  Tools are merged from both sources; collisions surface in
+  `discovery.collisions`.
+- `discovery.mode` — `static` | `dynamic` | `unknown` (the last when the
+  manifest isn't in the registry, e.g. after a discovery-disabled rollback).
+- `discovery.status` — `not_applicable` | `pending` | `ok` | `failed` |
+  `requires_probe_user` | `degraded_collisions`.
+- `discovery.last_success` — populated for `ok` and `degraded_collisions`
+  (degraded means the probe succeeded with name collisions; it is not a probe
+  failure).
+- `discovery.collisions[]` — names that appear in both static and discovered
+  catalogs when neither side has `override_discovered: true`.
+- `probe_user` — omitted entirely when no designation exists.
+
+For static manifests `discovery.mode == "static"` and all other `discovery`
+fields are `null`. Every tool has `tool_source: "static"`.
+
+### POST /api/v1/admin/mcp/manifests/{id}/discover
+
+Force an immediate probe of a dynamic MCP manifest. Synchronously runs the
+probe and returns the new catalog, or surfaces the failure inline so the admin
+UI can render it.
+
+**Path params:**
+- `{id}` — the manifest_id.
+
+**Responses:**
+- `200 OK` — `{ "outcome": "ok", "count": N, "tools": [...], "probed_at": "ISO-8601" }`
+- `200 OK` — `{ "outcome": "failed", "error": { "kind": "...", "detail": "..." }, "probed_at": "ISO-8601" }`
+- `404 Not Found` — manifest_id not in registry
+- `409 Conflict` — manifest is static, OR a probe is already in flight for this manifest
+- `503 Service Unavailable` — discovery worker not configured
+- `504 Gateway Timeout` — probe did not complete within 7s
+- `500 Internal Server Error` — worker dropped the reply channel (bug indicator)
+
+`error.kind` is a stable snake_case token: `timeout` | `auth` | `http` |
+`parse` | `transport` | `catalog_too_large` | `not_dynamic` | `not_found` |
+`requires_probe_user` | `already_in_flight`. The UI can branch on this; `detail`
+is human-readable.
+
+**Audit:** writes `mcp.manifest.discover` to `audit_log` with `{outcome, count}`
+on success or `{outcome, error_kind, error_detail}` on failure.
+
+### GET /api/v1/admin/mcp/manifests/{id}/probe-user
+
+Read the current OAuth probe-user designation. Returns the user designated to
+provide OAuth credentials for periodic discovery probes on this manifest.
+
+**Responses:**
+- `200 OK` —
+  ```json
+  {
+    "manifest_id": "github",
+    "user_id": "uuid",
+    "designated_at": "ISO-8601",
+    "designated_by": "uuid",
+    "last_probed_at": "ISO-8601|null"
+  }
+  ```
+- `404 Not Found` — no probe user designated for this manifest
+
+Unlike the other probe-user endpoints, this read succeeds even when MCP
+discovery is disabled, so admins can audit historical designations after a
+rollback.
+
+### PUT /api/v1/admin/mcp/manifests/{id}/probe-user
+
+Designate a user as the OAuth probe credential source. Validates that the user
+has a non-revoked, non-expired OAuth token for this manifest before recording
+the designation. The discovery worker will use this user's token for periodic
+`tools/list` probes.
+
+**Request:** `{ "user_id": "uuid" }`
+
+**Responses:**
+- `204 No Content` — designation recorded
+- `409 Conflict` — user has no valid OAuth token for this manifest (the user
+  must connect first via the standard OAuth flow)
+- `503 Service Unavailable` — discovery worker not configured
+
+**Audit:** writes `mcp.manifest.probe_user.set` with `{user_id}`.
+
+### DELETE /api/v1/admin/mcp/manifests/{id}/probe-user
+
+Remove the OAuth probe-user designation. After unset, the manifest's discovery
+status flips to `requires_probe_user` on the next probe tick — no probes will
+run until a new user is designated.
+
+**Responses:**
+- `204 No Content` — designation removed (or was already absent)
+- `503 Service Unavailable` — discovery worker not configured
+
+**Audit:** writes `mcp.manifest.probe_user.unset` with `{prior_user_id}` (the
+user being un-designated, captured pre-delete for audit completeness).
+
+---
+
 ## Knowledge Graph
 
 ### GET /api/v1/graph/entity/{name}
