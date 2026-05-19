@@ -161,6 +161,51 @@ event: answer
 data: {"answer": "...", "sources": [...], "session_id": "...", "episode_id": "...", "intent": "procedural"}
 ```
 
+### GET /api/v1/ask/picker-trace/{request_id}
+
+Returns the tool-picker trace for a recent `/ask` request — the catalog the
+fast LLM saw, the tools it selected and rejected, its 1-sentence rationale,
+and the user-specific buckets (`user_unconnected_relevant`,
+`user_failed_relevant`) used to surface "connect this tool" hints in the UI.
+
+**Path params:**
+- `{request_id}` — the per-request id returned in the `/ask` response.
+
+**RBAC:** any authenticated user. The handler restricts results to the
+calling user — cross-user lookups return `404` (existence-disclosure
+prevention). Service-account API keys (which have no `user_id`) get `403`.
+
+**Response (200 OK):**
+```json
+{
+  "request_id": "uuid",
+  "user_id": "uuid",
+  "considered": [
+    { "name": "github.issue_read", "manifest_id": "github" }
+  ],
+  "selected": [
+    { "name": "github.issue_read", "args": { "...": "..." } }
+  ],
+  "rejected": [
+    { "name": "jira.search", "reason": "not_relevant_to_query" }
+  ],
+  "rationale": "Fetching the linked issue gives the deploy-rollback context.",
+  "user_unconnected_relevant": [
+    { "manifest_id": "slack", "display_name": "Slack" }
+  ],
+  "user_failed_relevant": []
+}
+```
+
+**Responses:**
+- `200 OK` — trace returned.
+- `403 Forbidden` — caller is a service-account API key (no `user_id`).
+- `404 Not Found` — `request_id` unknown, expired, or owned by a different user.
+
+Traces are held in an in-process per-user LRU; they expire after roughly one
+hour or under cache pressure. The endpoint is read-only and does not write
+to `audit_log`.
+
 ---
 
 ### Submit Feedback
@@ -1091,6 +1136,191 @@ run until a new user is designated.
 
 **Audit:** writes `mcp.manifest.probe_user.unset` with `{prior_user_id}` (the
 user being un-designated, captured pre-delete for audit completeness).
+
+---
+
+## Admin — MCP Registry & Install
+
+Admin endpoints for browsing the signed remote MCP registry, fetching a
+single manifest from it, and installing a manifest in a single transactional
+call. All endpoints require the `admin` role.
+
+The 3 registry endpoints (`GET /registry`, `GET /registry/{id}/manifest`,
+`POST /install-from-registry`) require `MCP_REGISTRY_PUBKEY` to be set at
+boot. When unset the server boots normally and these endpoints return
+`503 Service Unavailable`; admins can still install manifests via the
+existing paste/URL flow.
+
+### GET /api/v1/admin/mcp/registry
+
+List the cached signed registry index.
+
+The server fetches the index from `MCP_REGISTRY_URL`, verifies its Ed25519
+signature against `MCP_REGISTRY_PUBKEY`, and caches it on disk at
+`MCP_REGISTRY_CACHE_PATH` so subsequent calls survive transient network
+outages (Tier 2 fallback).
+
+**Response (200 OK):**
+```json
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-15T20:42:11Z",
+  "entries": [
+    {
+      "id": "github",
+      "version": "1.4.2",
+      "display_name": "GitHub",
+      "summary": "Read-only GitHub MCP — issues, PRs, code search.",
+      "manifest_url": "https://registry.docbrain-ai.com/v1/github/1.4.2.yaml",
+      "manifest_sha256": "abc123…",
+      "signed": true
+    }
+  ]
+}
+```
+
+**Responses:**
+- `200 OK` — index returned (from network or disk cache).
+- `502 Bad Gateway` — both network fetch and disk cache failed (cold start
+  with no connectivity).
+- `503 Service Unavailable` — `MCP_REGISTRY_PUBKEY` not configured.
+
+### GET /api/v1/admin/mcp/registry/{id}/manifest
+
+Fetch and verify a single manifest by registry id. Used by the install
+wizard to preview the manifest before committing.
+
+**Path params:**
+- `{id}` — registry entry id (e.g. `github`).
+
+**Response (200 OK):**
+```json
+{
+  "yaml": "id: github\ndisplay_name: GitHub\n...",
+  "entry": {
+    "id": "github",
+    "version": "1.4.2",
+    "display_name": "GitHub",
+    "manifest_url": "https://registry.docbrain-ai.com/v1/github/1.4.2.yaml",
+    "manifest_sha256": "abc123…",
+    "signed": true
+  }
+}
+```
+
+**Responses:**
+- `200 OK` — manifest YAML + index entry returned.
+- `404 Not Found` — id not present in the registry index.
+- `502 Bad Gateway` — manifest fetch failed or sha256 / signature
+  verification failed.
+- `503 Service Unavailable` — `MCP_REGISTRY_PUBKEY` not configured.
+
+### POST /api/v1/admin/mcp/install-from-registry
+
+Atomic install of a registry manifest. Fetches and verifies the manifest,
+validates its schema, then in a single transaction writes
+`mcp_installed_manifests`, sets `mcp_active_manifest_version`, creates
+`mcp_manifest_enablements` for the requested scope, and records an
+`audit_log` row with action `admin_mcp_install_from_registry`.
+
+**Request:**
+```json
+{
+  "id": "github",
+  "version": "1.4.2",
+  "allow_unsigned": false,
+  "scope": { "type": "everyone" }
+}
+```
+
+Or with a group scope:
+```json
+{
+  "id": "github",
+  "version": "1.4.2",
+  "allow_unsigned": false,
+  "scope": { "type": "groups", "group_ids": ["uuid1", "uuid2"] }
+}
+```
+
+- `allow_unsigned` — MUST be `false`. Unsigned installs are not supported
+  by this endpoint; use the existing paste/URL install endpoint instead
+  (which renders its own per-manifest opt-in audit row).
+- `scope.type` — `everyone` or `groups`. When `groups`, `group_ids` is
+  required.
+
+**Response (200 OK):**
+```json
+{
+  "manifest_id": "github",
+  "version": "1.4.2",
+  "enabled_count": 12,
+  "already_installed": false
+}
+```
+
+Idempotent: re-installing the same `(id, version)` pair returns `200` with
+`already_installed: true` and does not duplicate audit rows.
+
+**Responses:**
+- `200 OK` — installed (or already present).
+- `400 Bad Request` — `allow_unsigned: true`, malformed scope, or schema
+  validation failure on the fetched manifest.
+- `404 Not Found` — `id` not present in the registry index.
+- `502 Bad Gateway` — manifest fetch / verification failed.
+- `503 Service Unavailable` — `MCP_REGISTRY_PUBKEY` not configured.
+
+**Audit:** writes `admin_mcp_install_from_registry` with `{id, version,
+scope, enabled_count}` on success.
+
+### GET /api/v1/admin/mcp/secrets/audit/{manifest_id}
+
+Inspect the running pod's environment for the env-var keys declared in
+the manifest's `service_account.secret_refs` and render the kubectl
+command to patch any missing ones.
+
+**Path params:**
+- `{manifest_id}` — the active manifest to audit.
+
+**Response (200 OK):**
+```json
+{
+  "manifest_id": "github",
+  "required": ["GITHUB_TOKEN", "GITHUB_APP_ID"],
+  "missing": ["GITHUB_APP_ID"],
+  "secret_name": "docbrain-secrets",
+  "namespace": "docbrain",
+  "patch_command": "kubectl create secret generic docbrain-secrets --from-literal=GITHUB_APP_ID=<PASTE_VALUE> --dry-run=client -o yaml | kubectl apply -f -"
+}
+```
+
+When `DOCBRAIN_K8S_SECRET_NAME` or `DOCBRAIN_K8S_NAMESPACE` are unset, the
+rendered command contains the placeholder strings `<set
+DOCBRAIN_K8S_SECRET_NAME>` / `<set DOCBRAIN_K8S_NAMESPACE>` so the admin
+sees exactly what to configure.
+
+**Operability:** env vars inject once at container start. After applying
+the rendered patch the admin MUST restart the pod (e.g. `kubectl rollout
+restart deployment/docbrain-server`) for the audit endpoint to reflect
+the new values.
+
+**Responses:**
+- `200 OK` — audit result returned.
+- `404 Not Found` — `manifest_id` unknown.
+
+### POST /api/v1/admin/mcp/secrets/oauth
+
+Reserved for v2 — programmatic OAuth-client-secret install via the
+Kubernetes API.
+
+**Response (501 Not Implemented):**
+```json
+{
+  "error": "not_implemented",
+  "hint": "Use the kubectl command rendered by GET /api/v1/admin/mcp/secrets/audit/{manifest_id} until v2 wires the Kubernetes client.",
+  "kind": "v1_kubectl_only"
+}
+```
 
 ---
 

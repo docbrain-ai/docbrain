@@ -773,6 +773,11 @@ enable live tool fan-out at answer time.
 | `MCP_OAUTH_ENCRYPTION_KEY` | — | Base64-encoded 32-byte key for at-rest encryption of per-user OAuth tokens stored in the `mcp_oauth_tokens` table. Required when `MCP_TOOLS_ENABLED=true`. |
 | `MCP_MANIFEST_DIR` | — | Directory containing MCP tool manifests (YAML). In the Helm chart this is mounted from the `docbrain-mcp-manifests` ConfigMap. |
 | `DOCBRAIN_INTERNAL_MCP_SECRET` | — | Bearer secret for the in-process `/internal/mcp/*` shim routes (e.g. `jira-rest`). The server checks this header on every internal shim call. Set via Helm `mcpTools.internalShimSecret`. |
+| `MCP_REGISTRY_PUBKEY` | — | Base64-encoded 32-byte Ed25519 public key used to verify the signed registry index and per-manifest signatures. When unset, `/api/v1/admin/mcp/registry*` and `/install-from-registry` return `503` and the server boots normally; admins can still install via the paste/URL endpoint. No default. |
+| `MCP_REGISTRY_URL` | `https://registry.docbrain-ai.com/v1/index.json` | URL of the signed registry index. |
+| `MCP_REGISTRY_CACHE_PATH` | `/var/lib/docbrain/registry-cache/index.json` | Disk path for the cached registry index. Acts as the Tier 2 fallback when the network fetch fails. |
+| `DOCBRAIN_K8S_SECRET_NAME` | — | Kubernetes Secret name embedded in the kubectl command rendered by `/api/v1/admin/mcp/secrets/audit/{id}`. Optional — when unset the rendered command shows a `<set DOCBRAIN_K8S_SECRET_NAME>` placeholder. |
+| `DOCBRAIN_K8S_NAMESPACE` | — | Kubernetes namespace for the same audit endpoint. Optional — placeholder when unset. |
 | `DOCBRAIN_SERVER_PORT` | `3000` | Port the `docbrain-server` listens on. Used by manifests that interpolate `${DOCBRAIN_SERVER_PORT}` into the shim endpoint URL. |
 
 YAML equivalent:

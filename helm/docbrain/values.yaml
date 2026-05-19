@@ -498,6 +498,33 @@ mcpTools:
   # Generate with: openssl rand -hex 32
   internalShimSecret: ""
 
+  # ── Plan A: signed remote registry ────────────────────────────────────
+  # When `registry.pubkey` is set, enables /api/v1/admin/mcp/registry,
+  # /api/v1/admin/mcp/registry/{id}/manifest, and
+  # /api/v1/admin/mcp/install-from-registry. Without it those endpoints
+  # return 503 and the server boots normally — admins can still install
+  # manifests via the existing paste/URL flow.
+  registry:
+    # Base64-encoded 32-byte Ed25519 public key for verifying the signed
+    # registry index and per-manifest signatures. Leave empty to disable
+    # the registry endpoints. No default.
+    pubkey: ""
+    # Registry index URL.
+    url: "https://registry.docbrain-ai.com/v1/index.json"
+    # On-disk cache path for the registry index. Acts as the Tier 2
+    # fallback when the network fetch fails.
+    cachePath: "/var/lib/docbrain/registry-cache/index.json"
+
+  # ── Plan A: kubectl-command rendering for /admin/mcp/secrets/audit ────
+  # Used to render the `kubectl create secret … --from-literal=…` command
+  # returned by /api/v1/admin/mcp/secrets/audit/{id}. When either field
+  # is empty the rendered command embeds <set DOCBRAIN_K8S_*> placeholders
+  # so the admin sees what to configure. Optional — the audit endpoint
+  # still works without them; only the rendered command quality differs.
+  k8s:
+    secretName: ""
+    namespace: ""
+
 # ── Learning pipeline (opt-in, Tier 2 feature) ─────────────────────────────
 learning:
   enabled: false
