@@ -132,6 +132,8 @@ tools:
     # 8s orchestrator ceiling), gives Atlassian + refresh margin without
     # making /ask feel hung.
     latency_budget_ms: 7000
+    # D1 invariant: this tool only reads from the Teamwork Graph.
+    read_only: true
 
   - name: jira.get_teamwork_graph_object
     upstream_name: getTeamworkGraphObject
@@ -155,6 +157,8 @@ tools:
     # Hydrating up to 25 ARIs in one batch can take longer than a single
     # context traversal. 7s budget matches the context tool.
     latency_budget_ms: 7000
+    # D1 invariant: read-only hydration of objects by ARI/URL.
+    read_only: true
 
 egress:
   hosts:

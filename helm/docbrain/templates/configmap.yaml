@@ -242,6 +242,16 @@ data:
   {{- if .Values.mcpTools.enabled }}
   MCP_TOOLS_ENABLED: "true"
   MCP_MANIFEST_DIR: "/etc/docbrain/mcp-manifests"
+  # Plan A — signed remote registry: non-sensitive endpoints + cache path.
+  # MCP_REGISTRY_PUBKEY lives in the Secret alongside MCP_OAUTH_ENCRYPTION_KEY.
+  # When mcpTools.registry.pubkey is empty the three /admin/mcp/registry*
+  # endpoints return 503; the server boots normally either way.
+  MCP_REGISTRY_URL: {{ .Values.mcpTools.registry.url | default "https://registry.docbrain-ai.com/v1/index.json" | quote }}
+  MCP_REGISTRY_CACHE_PATH: {{ .Values.mcpTools.registry.cachePath | default "/var/lib/docbrain/registry-cache/index.json" | quote }}
+  # Plan A — kubectl-render hints for /admin/mcp/secrets/audit/{id}. Optional;
+  # the audit endpoint embeds <set DOCBRAIN_K8S_*> placeholders when unset.
+  DOCBRAIN_K8S_SECRET_NAME: {{ .Values.mcpTools.k8s.secretName | default "" | quote }}
+  DOCBRAIN_K8S_NAMESPACE: {{ .Values.mcpTools.k8s.namespace | default "" | quote }}
   # OAuth callback + web-UI redirect base. Atlassian (and any IdP) sends the
   # user's browser back to {publicBaseUrl}/api/v1/oauth/mcp/callback/<manifest>;
   # the callback handler then redirects to {webBaseUrl}/integrations?connected=<id>.

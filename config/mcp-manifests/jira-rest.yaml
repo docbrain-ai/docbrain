@@ -81,6 +81,8 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     latency_budget_ms: 7000
+    # D1 invariant: read-only fetch of a single Jira issue by key.
+    read_only: true
 
   - name: jira_rest.search
     upstream_name: search
@@ -104,6 +106,8 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     latency_budget_ms: 7000
+    # D1 invariant: JQL search returns matching issues; never mutates.
+    read_only: true
 
 egress:
   # localhost / 127.0.0.1: the shim itself (orchestrator → docbrain-server).
