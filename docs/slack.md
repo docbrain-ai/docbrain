@@ -71,7 +71,7 @@ This allows users to capture Slack threads via a right-click shortcut — useful
 
 ## Step 3c: Enable Event Subscriptions (optional)
 
-This enables `@DocBrain capture` mentions as an alternative way to trigger thread capture.
+This enables `@DocBrain capture` mentions as an alternative way to trigger thread capture, and unlocks **auto-listen in threads** — un-mentioned follow-ups inside a thread the bot already replied in are treated as continued questions, so users don't have to re-mention the bot every turn.
 
 1. In the left sidebar, click **Event Subscriptions** → toggle **On**.
 2. Set the **Request URL** to:
@@ -80,8 +80,18 @@ This enables `@DocBrain capture` mentions as an alternative way to trigger threa
 https://<your-domain>/slack/events
 ```
 
-3. Under **Subscribe to bot events**, add `app_mention`.
-4. Go to **OAuth & Permissions** → **Bot Token Scopes** and add `app_mentions:read` and `channels:history` (if not already present).
+3. Under **Subscribe to bot events**, add:
+
+| Event | Why |
+|-------|-----|
+| `app_mention` | Explicit `@DocBrain` mentions |
+| `message.channels` | Auto-listen follow-ups in public-channel threads |
+| `message.groups` | Auto-listen follow-ups in private channels |
+| `message.im` | Auto-listen follow-ups in DMs |
+| `message.mpim` | Auto-listen follow-ups in group DMs |
+
+   The `message.*` events are only needed if you want auto-listen; `app_mention` alone is enough for explicit-mention-only behavior.
+4. Go to **OAuth & Permissions** → **Bot Token Scopes** and add `app_mentions:read` and the `*:history` scopes (see Step 4) if not already present.
 5. Click **Save Changes**.
 
 ## Step 4: Add OAuth Scopes
@@ -95,7 +105,10 @@ https://<your-domain>/slack/events
 | `chat:write` | Post answers and notifications |
 | `users:read.email` | Look up doc authors by email for stale-doc DMs |
 | `app_mentions:read` | Handle `@DocBrain capture` mentions in threads |
-| `channels:history` | Read thread messages for capture |
+| `channels:history` | Read thread messages for auto-listen / capture in public channels |
+| `groups:history` | Read thread messages for auto-listen / capture in private channels |
+| `im:history` | Read thread messages for auto-listen / capture in DMs |
+| `mpim:history` | Read thread messages for auto-listen / capture in group DMs |
 
 3. Click **Install to Workspace** (or **Reinstall** if already installed).
 4. Copy the **Bot User OAuth Token** (`xoxb-...`) — you'll need this in the next step.
@@ -193,6 +206,19 @@ Sends a Slack DM to every author in the SRE space whose docs are stale (freshnes
 ```
 
 Generates an AI-curated reading list of the most important docs in the ENG space, sorted by relevance and freshness — takes about 30 seconds.
+
+### Conversation memory & auto-listen
+
+DocBrain remembers prior turns in a conversation, so follow-up questions resolve in context instead of starting from scratch:
+
+- **Threaded mentions** share history within the thread — everyone in the thread builds on the same conversation.
+- **Top-level mentions** share history per `(channel, user)` — your follow-ups continue your own conversation.
+
+**Auto-listen.** Once the `message.*` events are subscribed (Step 3c) and the bot is a member of the channel, you no longer need to re-mention it on every turn — DocBrain answers un-mentioned follow-ups in any thread it already participated in. Top-level (non-thread) messages still require an explicit `@mention` to start a conversation.
+
+**Safety.** The bot ignores its own and other bots' messages (no reply loops) and only responds in threads it actually joined. It must be a member of the channel to receive messages at all.
+
+This conversation-memory behavior is consistent across surfaces — the same follow-up-in-context experience applies on the web UI and the CLI.
 
 ## Proactive Notifications
 
