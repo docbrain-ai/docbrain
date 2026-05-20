@@ -16,6 +16,8 @@ The **MCP Tool Platform** is the answer-time complement. At every `/ask`, after 
 - **Manifest-driven.** Each external system is described by a YAML manifest. No Rust code is required to add a new one.
 - **Open protocol.** DocBrain speaks [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) 2024-11-05 Streamable HTTP. Any MCP-compliant server works.
 - **Off by default.** When `MCP_TOOLS_ENABLED=false` (the default), the synthesis path is byte-identical to the pre-MCP path: no orchestrator, no fast-LLM dispatch, no measurable overhead.
+- **Every surface.** Tools dispatch uniformly wherever you ask — the web UI, Slack, and the `docbrain ask "..."` CLI all run the same orchestrator. (CLI questions previously skipped tool dispatch; they no longer do.)
+- **Intent-based, not keyword-based.** The tool picker infers intent from the *meaning* of the question, not from keywords. "Any active incidents?" will search the relevant connected tools without the user ever naming "Jira" or "Confluence".
 
 !!! info "Live tools vs. external connectors"
     [External Connectors](connectors.md) pull documents *into* DocBrain on a cron schedule — slow, batched, and indexed. MCP tools query systems *at answer time* — fast, on-demand, and never indexed. Use connectors for narrative knowledge (wiki pages, runbooks). Use MCP tools for state that changes minute-to-minute (ticket status, alert counts, build state).

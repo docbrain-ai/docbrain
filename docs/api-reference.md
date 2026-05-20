@@ -1137,6 +1137,78 @@ run until a new user is designated.
 **Audit:** writes `mcp.manifest.probe_user.unset` with `{prior_user_id}` (the
 user being un-designated, captured pre-delete for audit completeness).
 
+### GET /api/v1/admin/principals
+
+Search the principals table by case-insensitive prefix match on display name
+or external id. Powers the admin UI's principal typeahead (e.g. when scoping a
+tool to an SSO group or user).
+
+**Query params:**
+- `q` — prefix to match against `display` and `external_id`.
+- `limit` — max results, clamped to `1..=100` (default `25`).
+
+**Response (200 OK):**
+```json
+{
+  "principals": [
+    {
+      "id": 3,
+      "kind": "sso_group",
+      "source": "sso",
+      "external_id": "engineering",
+      "display": "Engineering"
+    }
+  ]
+}
+```
+
+### GET /api/v1/admin/mcp/manifests/{id}/usage
+
+Aggregate the MCP audit log for a manifest over a rolling window. Powers the
+admin UI Usage dashboard.
+
+**Query params:**
+- `days` — window size, clamped to `1..=90` (default `7`).
+
+**Response (200 OK):**
+```json
+{
+  "series":       [{ "day": "2026-05-19", "outcome": "ok", "count": 12 }],
+  "top_users":    [{ "user_id": "uuid", "display": "Alice", "count": 9 }],
+  "top_failures": [{ "tool_name": "jira.search", "args": {}, "error_class": "timeout", "count": 3 }]
+}
+```
+
+**Field semantics:**
+- `series[]` — daily invocation counts grouped by `outcome`.
+- `top_users[]` — top 10 attributable users by invocation count.
+- `top_failures[]` — top 5 failing `(tool_name, error_class)` groups, each with
+  a redacted-args sample.
+
+### POST /api/v1/admin/mcp/manifests/{id}/disable
+
+Reversibly disable a manifest. Sets all of the manifest's enablements to
+disabled, removing it from tool dispatch while preserving its scope
+configuration — so re-enabling is a single step. Idempotent.
+
+**Responses:**
+- `200 OK` — manifest disabled (or was already disabled).
+
+**Audit:** writes a manifest-disable entry to `audit_log`.
+
+### DELETE /api/v1/admin/mcp/manifests/{id}
+
+Irreversibly uninstall a manifest in a single transaction. Clears the
+active-version pointer, then removes the manifest's OAuth tokens, probe users,
+secrets, enablements, and all installed versions. Per-user OAuth tokens are
+deleted — users must re-authorize on reinstall.
+
+**Responses:**
+- `200 OK` — manifest uninstalled.
+- `404 Not Found` — manifest not installed.
+
+**Audit:** writes a manifest-uninstall entry to `audit_log`.
+
 ---
 
 ## Admin — MCP Registry & Install
