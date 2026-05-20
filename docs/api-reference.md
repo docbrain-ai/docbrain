@@ -136,9 +136,18 @@ POST /api/v1/ask
   "session_id": "uuid",
   "episode_id": "uuid",
   "turn": 1,
-  "intent": "procedural"
+  "intent": "procedural",
+  "picker_trace_id": "uuid",
+  "user_failed_relevant": [],
+  "user_unconnected_relevant": ["jira.search"]
 }
 ```
+
+When live MCP tools are involved, the response carries three optional fields (all omitted when empty / not applicable):
+
+- `picker_trace_id` — present when MCP tools fired for this request. Pass it to `GET /api/v1/ask/picker-trace/{request_id}` to retrieve the full tool-selection trace (what was considered, selected, rejected, and why). Powers the "Why these tools?" explainability panel in the UI.
+- `user_failed_relevant` — tool names the picker would have used, but the caller's OAuth token for that integration is expired/failed. Drives a "reconnect" prompt in the UI.
+- `user_unconnected_relevant` — tool names the picker would have used, but the caller has not connected that integration at all. Drives a "connect this tool" prompt in the UI.
 
 **Streaming Response** (`stream: true`):
 
