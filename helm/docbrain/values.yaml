@@ -246,6 +246,15 @@ consolidation:
 rag:
   cacheTtlHours: 24
   cacheThreshold: "0.95"
+  # -- Experimental retrieval ladder. Off by default. When enabled, answers
+  # are synthesised twice (indexed vs indexed+live-tool) and an LLM judge
+  # picks the winner; low-confidence answers get knowledge-graph expert
+  # routing. Costs an extra synthesis + judge call and disables token streaming.
+  retrievalLadder:
+    enabled: false
+    # graphAppendThreshold: 0.5     # below this confidence, append graph experts
+    # judgeTimeoutMs: 1500          # hard timeout for the judge LLM call
+    # judgeModelId: ""              # empty = use the configured fast model
 
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:

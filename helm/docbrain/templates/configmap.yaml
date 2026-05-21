@@ -197,6 +197,20 @@ data:
   STREAM_EXPERTISE_GAP_DAYS: {{ .Values.stream.expertiseGapDays | default 90 | quote }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
   RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
+  {{- if .Values.rag.retrievalLadder }}
+  {{- if .Values.rag.retrievalLadder.enabled }}
+  RAG_RETRIEVAL_LADDER_ENABLED: {{ .Values.rag.retrievalLadder.enabled | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.graphAppendThreshold }}
+  RAG_RETRIEVAL_LADDER_GRAPH_THRESHOLD: {{ .Values.rag.retrievalLadder.graphAppendThreshold | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.judgeTimeoutMs }}
+  RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS: {{ .Values.rag.retrievalLadder.judgeTimeoutMs | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.judgeModelId }}
+  RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ .Values.rag.retrievalLadder.judgeModelId | quote }}
+  {{- end }}
+  {{- end }}
   IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
   IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
   IMAGE_MAX_PER_PAGE: {{ .Values.imageExtraction.maxPerPage | default 20 | quote }}
