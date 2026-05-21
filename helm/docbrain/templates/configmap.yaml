@@ -211,6 +211,11 @@ data:
   RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ .Values.rag.retrievalLadder.judgeModelId | quote }}
   {{- end }}
   {{- end }}
+  {{- if .Values.rag.fusion }}
+  {{- if .Values.rag.fusion.preferFused }}
+  RAG_FUSION_PREFER_FUSED: {{ .Values.rag.fusion.preferFused | quote }}
+  {{- end }}
+  {{- end }}
   IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
   IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
   IMAGE_MAX_PER_PAGE: {{ .Values.imageExtraction.maxPerPage | default 20 | quote }}

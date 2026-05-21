@@ -256,6 +256,13 @@ rag:
     # judgeTimeoutMs: 1500          # hard timeout for the judge LLM call
     # judgeModelId: ""              # empty = use the configured fast model
 
+  # Multi-source answer fusion. When preferFused is true, answers combine ALL
+  # relevant sources (indexed docs + every fired live tool) into ONE grounded
+  # response instead of the retrievalLadder picking a single winner. Default
+  # off during rollout; flip per deployment once validated.
+  fusion:
+    preferFused: false
+
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:
   internal: true
