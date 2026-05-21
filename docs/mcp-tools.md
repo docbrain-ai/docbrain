@@ -125,6 +125,33 @@ auth:
 
 **Trade-off:** every tool call uses the same identity upstream. The external system can't enforce per-user permissions, so you must rely on DocBrain's RBAC + ACL layer for access control.
 
+#### Scoping self-referential queries (`identity_arg`)
+
+Because a service-account tool runs on shared credentials, a first-person question like *"what am I working on?"* has nothing to tie the result to the asking user — the only thing that scopes it is whatever person reference ends up in the query (a JQL `assignee`, a Slack `user`, etc.). If a tool leaves that to the language model, one user's *"my tickets"* can return another user's data.
+
+To make this safe, declare which argument carries the caller's identity and how to write it:
+
+```yaml
+tools:
+  - name: jira_rest.search
+    # ...
+    identity_arg:
+      arg: jql            # which argument scopes results to a person
+      kind: jql_assignee  # how the caller's identity is written into it
+```
+
+For a first-person-singular query, DocBrain forces the verified caller's identity into that argument — overriding whatever the model produced — across **every** service-account tool, not just Jira. Supported `kind` values:
+
+| `kind`         | Behavior                                                         | Example tool          |
+|----------------|------------------------------------------------------------------|-----------------------|
+| `jql_assignee` | Rewrites the `assignee` clause of a JQL string to the caller     | Jira search           |
+| `cql_creator`  | Rewrites the `creator` clause of a CQL string to the caller      | Confluence search     |
+| `literal`      | Replaces the whole argument value with the caller                | Slack `user`, GitHub `author` |
+
+Team, project, and named-person queries (*"what is my team working on"*, *"what is Alice working on"*) are left untouched — the shared service account is designed to see them.
+
+**Fail-closed default:** a service-account tool that does **not** declare `identity_arg` will *refuse* first-person queries rather than risk returning the wrong person's data. So a newly added third-party tool is safe by default; declaring `identity_arg` is how you opt it into answering *"my X"* safely. The named `arg` must be a property in the tool's `args_schema`, or the manifest fails to load.
+
 ### OAuth (per-user)
 
 Each user clicks **Connect** on `/integrations` and grants their own token to the external system. Tokens are stored encrypted at rest (AES-256-GCM with `MCP_OAUTH_ENCRYPTION_KEY`) in the `mcp_oauth_tokens` table and refreshed automatically before expiry.
