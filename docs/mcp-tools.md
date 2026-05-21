@@ -420,6 +420,8 @@ A dynamic manifest declares `tool_discovery.mode: dynamic` and may leave `tools:
 
 **Read-only invariant.** DocBrain only registers discovered tools that the upstream marks `annotations.readOnlyHint == true`. The same gate applies to static tools via a required `read_only` field. This is a platform-wide guarantee: DocBrain does not dispatch write operations through MCP, ever.
 
+As **defense-in-depth** (in case an upstream mislabels a write tool as read-only), discovery also drops any tool whose **name implies a mutation** — independent of `readOnlyHint`. A conservative, token-boundary verb check (`send`, `create`, `update`, `delete`, `post`, … matched as whole tokens, so `created_by`/`settings` are not false positives; camelCase like `sendMessage` is handled) blocks the tool and increments `mcp_discovery_write_name_blocked`. Reads (`get`, `list`, `search`, `read`, …) pass through.
+
 **OAuth-only manifests need a probe user.** Because periodic `tools/list` calls need credentials, an admin must designate a user whose OAuth token the discovery worker borrows. Until designated, the manifest's status sits at `requires_probe_user` and no tools are served. Mixed-auth manifests fall back to the service-account header for probes and need no extra setup.
 
 See [Configuration → Dynamic tool discovery](configuration.md#dynamic-tool-discovery) for the full `tool_discovery` YAML block and the [API Reference → Admin — MCP Manifests](api-reference.md#admin--mcp-manifests) for the discovery-probe and probe-user admin endpoints.
