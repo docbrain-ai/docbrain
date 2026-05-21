@@ -294,6 +294,17 @@ rag:
     - ms_teams_capture
   entity_cache_ttl_secs: 300            # entity → space cache TTL
   max_rewrites: 2                       # query rewrites per ask
+
+  # Retrieval ladder (experimental, off by default). When enabled, an
+  # answer is synthesised TWICE in parallel — once from indexed documents
+  # only, once also incorporating live tool (MCP) data — and a fast LLM
+  # "judge" picks the better answer. Low-confidence winners are augmented
+  # with knowledge-graph expert routing ("these people may know more").
+  retrieval_ladder:
+    enabled: false                      # master switch (default off = legacy single-synth)
+    graph_append_threshold: 0.5         # below this confidence, append graph experts
+    judge_timeout_ms: 1500              # hard timeout for the judge LLM call
+    # judge_model_id: null              # null = use the configured fast model
 ```
 
 | Key | Env var | Default | Description |
@@ -312,6 +323,10 @@ rag:
 | — | `RAG_RERANK_TITLE_ENRICH` | `true` | Pass chunk title + heading + source/space to the reranker alongside the content body. Title is the single strongest relevance signal and used to be discarded. Set to `false` to send content only (legacy behavior). |
 | `rag.entity_cache_ttl_secs` | `RAG_ENTITY_CACHE_TTL_SECS` | `300` | TTL for the entity → space resolution cache. New spaces added to the index become discoverable within this window. |
 | `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
+| `rag.retrieval_ladder.enabled` | — | `false` | **Experimental.** Master switch for the retrieval ladder. When `false` (default), DocBrain uses the standard single-synthesis path. When `true`, an answer is synthesised twice in parallel (indexed-only vs. indexed+live-tool data) and an LLM judge picks the winner; low-confidence winners are augmented with knowledge-graph expert routing. Costs an extra synthesis + a judge call per answer, and disables token streaming (the final answer is delivered once the judge decides). |
+| `rag.retrieval_ladder.graph_append_threshold` | — | `0.5` | When the winning answer's confidence is below this, append knowledge-graph "these people may know more" expert routing to the answer. Only applies when the ladder is enabled. |
+| `rag.retrieval_ladder.judge_timeout_ms` | — | `1500` | Hard timeout for the judge LLM call. On timeout the ladder falls back to the higher self-graded confidence between the two answers. |
+| `rag.retrieval_ladder.judge_model_id` | — | `null` | Model id for the judge call. `null` uses the configured fast model. |
 | `rag.max_chunks_per_doc_in_retriever` | `RAG_MAX_CHUNKS_PER_DOC` | `2` | **Chunk-flood fix.** Max chunks per document that any single retriever may contribute to RRF. Before this knob, BM25 could return 100 chunks of one dominant document, crowding out the real answer. Cap at 2 preserves the top chunk as the RRF anchor plus one more for context. Dedup is per-retriever; different retrievers can still independently vote for the same doc. Set to a large number to effectively disable. |
 | — | `RAG_COMPOUND_DECOMPOSE` | `true` | **Compound query decomposition.** Split questions like "what is X and how is X deployed" into distinct sub-intents, rerank each independently against the full candidate pool, and fuse results by taking the max rerank score per chunk across sub-intents. Fixes the class of question where no single chunk answers every intent, so the cross-encoder scores every chunk mediocrely against the compound query. Short questions (<8 words) skip decomposition entirely. Set to `false` to revert to single-query rerank. |
 
