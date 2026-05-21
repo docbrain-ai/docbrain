@@ -266,13 +266,6 @@ data:
   # the audit endpoint embeds <set DOCBRAIN_K8S_*> placeholders when unset.
   DOCBRAIN_K8S_SECRET_NAME: {{ .Values.mcpTools.k8s.secretName | default "" | quote }}
   DOCBRAIN_K8S_NAMESPACE: {{ .Values.mcpTools.k8s.namespace | default "" | quote }}
-  # Slack manifest — non-secret config. SLACK_MCP_BASE_URL is where the
-  # self-hosted Slack MCP server listens (substituted into the manifest's
-  # server.endpoint). SLACK_ALLOWED_CHANNELS is a comma-separated channel
-  # allowlist injected into the search tool's filter_in_channel via arg_defaults,
-  # so the tool cannot be steered to read channels outside this set.
-  SLACK_MCP_BASE_URL: {{ .Values.mcpTools.slack.mcpBaseUrl | default "" | quote }}
-  SLACK_ALLOWED_CHANNELS: {{ .Values.mcpTools.slack.allowedChannels | default "" | quote }}
   # OAuth callback + web-UI redirect base. Atlassian (and any IdP) sends the
   # user's browser back to {publicBaseUrl}/api/v1/oauth/mcp/callback/<manifest>;
   # the callback handler then redirects to {webBaseUrl}/integrations?connected=<id>.

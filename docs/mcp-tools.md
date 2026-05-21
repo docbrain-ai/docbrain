@@ -147,7 +147,7 @@ For a first-person-singular query, DocBrain forces the verified caller's identit
 | `jql_assignee`    | Rewrites the `assignee` clause of a JQL string to the caller                      | Jira search           |
 | `cql_creator`     | Rewrites the `creator` clause of a CQL string to the caller                       | Confluence search     |
 | `literal`         | Replaces the whole argument value with the caller's email/login                   | GitHub `author`       |
-| `slack_user_from` | Resolves the caller's **linked Slack user id** and writes it (Slack filters by id, not email). If the caller hasn't connected Slack, the tool is dropped and they're prompted to link it. | Slack search (`filter_users_from`) |
+| `slack_user_from` | Resolves the caller's **linked Slack user id** and writes it (some upstreams filter by Slack id, not email). If the caller has no linked identity, the tool is dropped and they're prompted to link it. *Not used by the bundled Slack manifest* (that runs per-user OAuth, where the token already scopes results) — provided for service-account tools that filter by Slack id. | service-account tools keyed on Slack id |
 
 Team, project, and named-person queries (*"what is my team working on"*, *"what is Alice working on"*) are left untouched — the shared service account is designed to see them.
 
@@ -371,87 +371,44 @@ That's the entire flow. No Rust code, no migrations, no deployment beyond the ro
 
 ## Adding Slack search
 
-Slack message search ships as a manifest (`slack.yaml`) but is **dormant until you stand up a Slack MCP server** — DocBrain does not talk to Slack directly. Understanding the topology is the key to setting it up:
+Slack search uses Slack's **official hosted MCP server** (`mcp.slack.com`) — the same model as the hosted Jira manifest. DocBrain points at Slack's URL; each user connects via OAuth on `/integrations`, and their search runs as themselves (scoped to the channels they're in plus all public channels). There is **no self-hosted server and no shared token** — you register a Slack OAuth app, set two secrets, and connect.
 
-```
-DocBrain  ──MCP/HTTP──►  Slack MCP server  ──Slack API──►  Slack
-(your pod)              (you run this)                     (slack.com)
-```
+The `slack` manifest is bundled with DocBrain — you do not author it.
 
-The Slack MCP server is a small open-source translator. DocBrain's `slack.yaml` points at it via `SLACK_MCP_BASE_URL`. The `slack` manifest is already bundled with DocBrain — you do **not** author it; you only deploy the server and set the config.
+!!! info "Read-only by design"
+    Slack's hosted server exposes search/read tools **and** write tools (send message, manage canvases). DocBrain imports the Slack catalog via [dynamic discovery](#dynamic-tool-discovery) and applies the read-only gate (`annotations.readOnlyHint == true`), so **only the search/read tools are registered — the write tools are dropped automatically.** DocBrain never sends Slack messages.
 
-!!! warning "Search needs a USER token, not a bot token"
-    Slack's `search.messages` API requires a **user token (`xoxp-`)**. A **bot token (`xoxb-`)** — the kind a typical Slack bot integration uses — cannot search messages, and the Slack MCP server will not even register the search tool when given one. This is separate from any existing DocBrain Slack *bot* integration.
+### Step 1 — Register a Slack OAuth app
 
-### Step 1 — Deploy a Slack MCP server
+Create (or extend) a Slack app for OAuth with the **user-token** search scopes:
 
-DocBrain is tested against [`korotovsky/slack-mcp-server`](https://github.com/korotovsky/slack-mcp-server), which exposes `conversations_search_messages` over HTTP/SSE. Run it as its own deployment in the same cluster (a Slack user token and an HTTP bearer key are its inputs):
+- `search:read.public`, `search:read.private`, `search:read.mpim`, `search:read.im`, `search:read.files`
 
-```yaml
-# slack-mcp-server.yaml (sketch — adapt to your platform)
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: slack-mcp-server
-spec:
-  replicas: 1
-  selector: { matchLabels: { app: slack-mcp-server } }
-  template:
-    metadata: { labels: { app: slack-mcp-server } }
-    spec:
-      containers:
-        - name: slack-mcp-server
-          image: ghcr.io/korotovsky/slack-mcp-server:latest
-          env:
-            - { name: SLACK_MCP_XOXP_TOKEN, valueFrom: { secretKeyRef: { name: slack-mcp-secret, key: xoxp } } }
-            - { name: SLACK_MCP_API_KEY,    valueFrom: { secretKeyRef: { name: slack-mcp-secret, key: apiKey } } }
-            - { name: SLACK_MCP_HOST, value: "0.0.0.0" }
-            - { name: SLACK_MCP_PORT, value: "13080" }
-          ports: [{ containerPort: 13080 }]
----
-apiVersion: v1
-kind: Service
-metadata: { name: slack-mcp-server }
-spec:
-  selector: { app: slack-mcp-server }
-  ports: [{ port: 13080, targetPort: 13080 }]
-```
+Slack uses granular per-conversation-type scopes — there is no single `search:read`. Note these are **user-token** scopes (the `oauth/v2_user/authorize` flow), distinct from a bot token; a `xoxb-` bot token cannot search. Grab the app's **client id** and **client secret**.
 
-The in-cluster address becomes `http://slack-mcp-server:13080` — that is your `SLACK_MCP_BASE_URL`.
+### Step 2 — Set DocBrain's Slack config
 
-### Step 2 — Get a Slack user token
-
-Create (or reuse) a Slack app in your workspace and obtain a **user token (`xoxp-`)** with the `search:read` scope. A dedicated service Slack account is recommended for the service-account path so search runs under a known identity. Put the token in the Slack MCP server's secret (`SLACK_MCP_XOXP_TOKEN` above) — **it lives on that server, never in DocBrain.**
-
-### Step 3 — Set DocBrain's Slack config
-
-DocBrain only needs to know where the server is, the bearer to reach it, and (for the OAuth path) the Slack OAuth app credentials. Add to your Helm values (or the externally-managed secret if you use `existingSecret`):
+Only the OAuth app credentials are needed (plus the MCP OAuth encryption key, required for any OAuth manifest):
 
 ```yaml
 mcpTools:
   enabled: true
+  encryptionKey: ""        # MCP_OAUTH_ENCRYPTION_KEY — required for OAuth manifests
   oauth:
     slack:
-      clientId: ""          # Slack OAuth app (per-user path; scope search:read)
-      clientSecret: ""
-  serviceAccount:
-    slack:
-      mcpApiKey: ""         # bearer that matches the server's SLACK_MCP_API_KEY
-  slack:
-    mcpBaseUrl: "http://slack-mcp-server:13080"   # the in-cluster server address
-    allowedChannels: "C0123ABCD,#engineering"     # optional channel allowlist
+      clientId: ""         # Slack OAuth app client id
+      clientSecret: ""     # Slack OAuth app client secret
 ```
 
-`allowedChannels` is pinned into the search tool's `filter_in_channel` via `arg_defaults`, so the tool cannot be steered to read channels outside this set (defaults override LLM-picked args — see [Service-account](#service-account)).
+If you use an externally-managed secret (`existingSecret`), add `SLACK_OAUTH_CLIENT_ID` and `SLACK_OAUTH_CLIENT_SECRET` to it instead.
 
-### Step 4 — Restart and enable
+### Step 3 — Restart and enable
 
-Restart the server. The boot log should now show the `slack` manifest loading (no longer "skipped") and `MCP OAuth enabled` with the slack manifest counted. Then enable it per principal at `/admin/tools/slack/enablements`, exactly like any other tool.
+Restart the server. The boot log shows the `slack` manifest loading and dynamic discovery probing `mcp.slack.com` (importing only the read/search tools). Then enable it per principal at `/admin/tools/slack/enablements`, exactly like any other tool.
 
-### Per-user vs. service-account for Slack
+### Step 4 — Users connect
 
-- **OAuth (preferred):** each user connects their own Slack on `/integrations`. Search runs as them, so Slack itself scopes results — "my Slack messages" is inherently safe and needs no identity rewriting.
-- **Service-account (shared token):** search runs under the single `xoxp-` token. For first-person queries DocBrain scopes results to the caller via `identity_arg: { arg: filter_users_from, kind: slack_user_from }` — it resolves the caller's **linked Slack user id** (from their connected identity) and writes it. If the caller has no linked Slack identity, the tool is dropped and they are prompted to connect Slack (it cannot be safely scoped otherwise).
+Each user clicks **Connect** on `/integrations` and authorizes Slack. Their search then runs as them — "what was discussed about the deploy in #eng?" or "my Slack messages" — scoped by Slack to the channels they belong to and all public channels. Because each user's own token scopes results, no identity rewriting is needed.
 
 ---
 
