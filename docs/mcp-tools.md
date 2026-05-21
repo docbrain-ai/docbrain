@@ -142,11 +142,12 @@ tools:
 
 For a first-person-singular query, DocBrain forces the verified caller's identity into that argument — overriding whatever the model produced — across **every** service-account tool, not just Jira. Supported `kind` values:
 
-| `kind`         | Behavior                                                         | Example tool          |
-|----------------|------------------------------------------------------------------|-----------------------|
-| `jql_assignee` | Rewrites the `assignee` clause of a JQL string to the caller     | Jira search           |
-| `cql_creator`  | Rewrites the `creator` clause of a CQL string to the caller      | Confluence search     |
-| `literal`      | Replaces the whole argument value with the caller                | Slack `user`, GitHub `author` |
+| `kind`            | Behavior                                                                          | Example tool          |
+|-------------------|-----------------------------------------------------------------------------------|-----------------------|
+| `jql_assignee`    | Rewrites the `assignee` clause of a JQL string to the caller                      | Jira search           |
+| `cql_creator`     | Rewrites the `creator` clause of a CQL string to the caller                       | Confluence search     |
+| `literal`         | Replaces the whole argument value with the caller's email/login                   | GitHub `author`       |
+| `slack_user_from` | Resolves the caller's **linked Slack user id** and writes it (Slack filters by id, not email). If the caller hasn't connected Slack, the tool is dropped and they're prompted to link it. | Slack search (`filter_users_from`) |
 
 Team, project, and named-person queries (*"what is my team working on"*, *"what is Alice working on"*) are left untouched — the shared service account is designed to see them.
 
