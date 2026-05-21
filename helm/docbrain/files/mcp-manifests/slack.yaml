@@ -1,136 +1,68 @@
 # Slack — DocBrain MCP manifest
 #
-# Consumes a self-hosted Slack MCP server (korotovsky/slack-mcp-server) over
-# HTTP/SSE. That server exposes Slack search as `conversations_search_messages`
-# with STRUCTURED filter arguments — notably `filter_users_from` (scope to a
-# person) and `filter_in_channel` (scope to a channel) — which is what lets
-# DocBrain enforce per-user scoping deterministically rather than parsing a
-# free-text query.
+# Uses Slack's OFFICIAL HOSTED remote MCP server (mcp.slack.com), launched
+# 2026-02-17 — the same model as Atlassian's hosted Jira MCP server. DocBrain
+# points at Slack's URL and each user connects via OAuth on /integrations; their
+# search runs as THEMSELVES, scoped to the channels they're in plus all public
+# channels. No self-hosted translator, no shared token — install and connect.
 #
-# Auth (two modes, see below):
-#   - oauth (PREFERRED): each user connects their own Slack account on
-#     /integrations. Search then runs as THAT user — Slack itself scopes
-#     results to what they can see, so "my messages" is inherently safe and
-#     needs no identity rewriting.
-#   - service_account (FALLBACK): a single shared Slack user token. Search runs
-#     as the token owner, so first-person queries MUST be scoped in code via
-#     identity_arg (filter_users_from = the caller's Slack user id).
+# Auth: OAuth (per-user) ONLY. Slack's search API requires a USER token, which
+# the OAuth dance issues per user. There is intentionally no service_account
+# mode — a shared token isn't needed and the per-user token already scopes
+# results correctly.
 #
-# IMPORTANT (upstream constraint): Slack's search.messages API requires a
-# NON-BOT user token (xoxp-). The korotovsky server does not even register the
-# search tool when given a bot token. So both modes below use a user token,
-# not a bot token.
+# Tool catalog: DYNAMIC discovery. Slack's hosted server exposes many tools
+# (search messages/files/users/channels, read history, AND write tools like
+# send-message and canvas management). DocBrain's discovery probe applies the
+# D1 read-only gate (annotations.readOnlyHint == true), so only the read/search
+# tools are imported — the write tools are dropped automatically. This is safer
+# than hand-declaring a schema and enforces the MCP read-only invariant at the
+# gate rather than by hand.
 
 manifest_version: 1
 id: slack
 display_name: "Slack"
-description: "Search Slack messages across channels by text, channel, author, and date. Read-only."
+description: "Search Slack messages, files, channels, and people via Slack's hosted MCP server. Read-only; runs as the connected user (their channels + all public)."
 category: "chat"
 icon: "slack.svg"
 
-# Non-secret deployment config referenced from arg_defaults / endpoint.
-# SLACK_ALLOWED_CHANNELS pins search to an operator-approved channel set
-# (a comma-separated list of channel names/ids) so the tool can't be steered
-# to read arbitrary channels. SLACK_MCP_BASE_URL is where the self-hosted
-# Slack MCP server listens.
-config_refs:
-  - SLACK_ALLOWED_CHANNELS
-  - SLACK_MCP_BASE_URL
-
 server:
   transport: http_sse
-  # The korotovsky server binds HTTP/SSE on SLACK_MCP_HOST:SLACK_MCP_PORT.
-  # Point this at wherever you deploy it (e.g. a sidecar or in-cluster svc).
-  endpoint: "${SLACK_MCP_BASE_URL}"
+  endpoint: "https://mcp.slack.com/mcp"
   protocol_version: "2024-11-05"
 
 auth:
   modes:
     - oauth
-    - service_account
-  # FALLBACK: a single shared Slack USER token (xoxp-), not a bot token —
-  # search requires a user token. The korotovsky server reads it from
-  # SLACK_MCP_XOXP_TOKEN; we forward it as a bearer to the server's own
-  # HTTP API key gate (SLACK_MCP_API_KEY). Adjust header_template to match
-  # how you expose the server (bearer key recommended).
-  service_account:
-    secret_refs:
-      - SLACK_MCP_API_KEY
-    header_template: "Bearer ${SLACK_MCP_API_KEY}"
-  # PREFERRED: per-user OAuth. Each user grants their own Slack token, so
-  # search runs as them and is scoped by Slack itself. provider: generic uses
-  # the standard authorization-code + PKCE flow against Slack's OAuth v2.
   oauth:
+    # Standards-compliant authorization-code + PKCE flow against Slack's user
+    # OAuth endpoints (note the v2_user / oauth.v2.user.access paths — these are
+    # the USER-token endpoints, distinct from Slack's bot-token OAuth).
     provider: generic
-    authorize_url: "https://slack.com/oauth/v2/authorize"
-    token_url: "https://slack.com/api/oauth.v2.access"
-    # User-token search scope. search:read is the scope behind search.messages.
+    authorize_url: "https://slack.com/oauth/v2_user/authorize"
+    token_url: "https://slack.com/api/oauth.v2.user.access"
+    # Granular read scopes for message/file/people/channel search. Slack does
+    # not use a single search:read scope — each conversation type is separate.
     scopes:
-      - "search:read"
+      - "search:read.public"
+      - "search:read.private"
+      - "search:read.mpim"
+      - "search:read.im"
+      - "search:read.files"
     client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
     use_pkce: true
 
-tools:
-  - name: slack.search_messages
-    # korotovsky upstream tool name (verified against pkg/server/server.go).
-    upstream_name: conversations_search_messages
-    description: |
-      Search Slack messages. Use for questions like "what was discussed about
-      the deploy in #eng?", "messages from Alice last week", or "what am I
-      being asked about in Slack?". Returns matching messages with channel,
-      author, timestamp, and text. Filters are structured arguments — prefer
-      them over embedding `from:`/`in:` operators in the query text.
-    args_schema:
-      type: object
-      properties:
-        search_query:
-          type: string
-          maxLength: 500
-          description: "Free-text search. Required if no filter is set."
-        filter_in_channel:
-          type: string
-          maxLength: 200
-          description: "Restrict to a channel by name (#general) or id (C0123...)."
-        filter_users_from:
-          type: string
-          maxLength: 100
-          description: "Restrict to messages FROM a Slack user (id Uxxxx or @username)."
-        filter_date_after:
-          type: string
-          maxLength: 10
-          description: "Only messages on/after this date (YYYY-MM-DD)."
-        filter_date_before:
-          type: string
-          maxLength: 10
-          description: "Only messages on/before this date (YYYY-MM-DD)."
-        limit:
-          type: integer
-          minimum: 1
-          maximum: 100
-          default: 20
-      additionalProperties: false
-    arg_defaults:
-      # Pin search to operator-approved channels (Helm value). Defaults win
-      # over LLM-picked args at dispatch, so this cannot be overridden by a
-      # prompt-injection attempt to read other channels.
-      filter_in_channel: "${SLACK_ALLOWED_CHANNELS}"
-    output_size_cap_bytes: 16384
-    latency_budget_ms: 7000
-    # Read-only: search returns messages, never posts.
-    read_only: true
-    # Per-user scoping for self-referential queries on the SERVICE-ACCOUNT
-    # (shared-token) path. `filter_users_from` is the person-scoping argument;
-    # kind: slack_user_from resolves the verified caller to their Slack user id
-    # (via the linked external identity) before writing it — because Slack
-    # filters by user id (Uxxxx), not email. On the OAuth path the per-user
-    # token already scopes results, so this rewrite is skipped.
-    identity_arg:
-      arg: filter_users_from
-      kind: slack_user_from
+# Empty tools + dynamic discovery: the hosted server is probed at boot and on
+# the refresh interval; only readOnlyHint:true tools survive the D1 gate.
+tools: []
+tool_discovery:
+  mode: dynamic
+  refresh_seconds: 3600
 
 egress:
   hosts:
+    - "mcp.slack.com"
     - "slack.com"
     - "*.slack.com"
 

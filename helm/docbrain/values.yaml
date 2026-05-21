@@ -481,8 +481,9 @@ mcpTools:
     atlassian:
       clientId: ""
       clientSecret: ""
-    # Slack OAuth app — per-user connect on /integrations (preferred path; each
-    # user's search runs as themselves). Needs scope search:read.
+    # Slack OAuth app — per-user connect on /integrations against Slack's hosted
+    # MCP server (mcp.slack.com). Each user's search runs as themselves. Needs
+    # the granular search:read.* scopes (configured in the slack manifest).
     slack:
       clientId: ""
       clientSecret: ""
@@ -498,19 +499,6 @@ mcpTools:
       # Shared with ingest / enrichment when those features are enabled.
       baseUrl: ""
       userEmail: ""
-    slack:
-      # Bearer key for the self-hosted Slack MCP server's HTTP gate. The Slack
-      # user token (xoxp-) itself lives ON that server, not here.
-      mcpApiKey: ""
-
-  # Slack manifest — non-secret config.
-  slack:
-    # URL where the self-hosted Slack MCP server (e.g. korotovsky/slack-mcp-server)
-    # listens for HTTP/SSE. Substituted into the manifest's server.endpoint.
-    mcpBaseUrl: ""
-    # Comma-separated channel allowlist (names or ids) the search tool is pinned
-    # to via arg_defaults — prevents reading channels outside this set.
-    allowedChannels: ""
 
   # 256-bit master key for at-rest encryption of mcp_oauth_tokens.
   # Generate with: openssl rand -hex 32
