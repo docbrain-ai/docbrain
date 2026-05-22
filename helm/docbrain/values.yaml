@@ -1,6 +1,6 @@
 # DocBrain Helm Chart Values
 
-# -- LLM provider: bedrock | anthropic | openai | ollama | groq | openrouter | together | deepseek | mistral | xai | gemini | azure_openai | vertex_ai | cohere
+# -- LLM provider: bedrock | anthropic | openai | ollama | groq | openrouter | together | deepseek | mistral | xai | gemini | azure_openai | cohere
 llm:
   provider: anthropic
   modelId: claude-sonnet-4-5-20250929
@@ -14,12 +14,12 @@ llm:
   #                        # IMPORTANT: set this to a cheaper model when using Opus 4 + thinkingBudget
   #                        # otherwise image extraction will trigger throttling errors on every page
   #                        # Falls back to modelId if not set
+  # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
+  #                        # does NOT apply to fastModelId or ingestModelId
   # draftModelId: ""       # model for autopilot draft generation (two-phase reasoning + writing)
   #                        # Falls back to modelId if not set. Use a high-capability model here.
   # draftProvider: ""      # provider for draft generation. Falls back to llm.provider if not set.
   #                        # Allows cross-provider drafting (e.g. Gemini for Q&A, Anthropic for drafts)
-  # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
-  #                        # does NOT apply to fastModelId or ingestModelId
 
   # -- Anthropic (provider: anthropic)
   # anthropicApiKey: ""    # set via --set or secret; ANTHROPIC_API_KEY
@@ -54,14 +54,14 @@ llm:
   # azureOpenaiEndpoint: ""   # AZURE_OPENAI_ENDPOINT e.g. https://my-resource.openai.azure.com
   # azureOpenaiApiVersion: "" # AZURE_OPENAI_API_VERSION default: 2024-02-01
 
+  # -- Cohere (provider: cohere, default model: command-r-plus)
+  # cohereApiKey: ""       # COHERE_API_KEY
+
   # -- Vertex AI — GCP-hosted models (provider: vertex_ai, default model: google/gemini-2.5-flash-001)
   # vertexProject: ""     # VERTEX_PROJECT — GCP project ID (required)
   # vertexRegion: ""      # VERTEX_REGION — GCP region (default: us-central1)
-  # Auth: set GOOGLE_APPLICATION_CREDENTIALS in server.env or use Workload Identity (GKE)
+  # Auth: set GOOGLE_APPLICATION_CREDENTIALS in server.env or use Workload Identity
   # Example models: google/gemini-2.5-flash-001, meta/llama-3.3-70b-instruct-maas
-
-  # -- Cohere (provider: cohere, default model: command-r-plus)
-  # cohereApiKey: ""       # COHERE_API_KEY
 
   # -- Ollama — local models (provider: ollama, default model: llama3.1)
   # ollamaBaseUrl: "http://ollama:11434"
@@ -78,12 +78,6 @@ ingest:
   sources: local  # comma-separated: local, confluence, github, github_pr, slack_thread, jira, etc.
   schedule: "0 */6 * * *"   # every 6 hours
   localDocsPath: /data/docs
-  # Size of the PersistentVolumeClaim created for local docs (ingest.sources includes "local").
-  docsStorage: 5Gi
-  # storageClassName: ""   # leave empty to use the cluster default StorageClass
-  # Run ingest once at server startup before the first scheduled CronJob run.
-  # Ensures data is indexed immediately after install or upgrade. Default: true.
-  runOnStartup: true
   # confluence:
   #   baseUrl: ""
   #   email: ""
@@ -91,36 +85,10 @@ ingest:
   #   spaceKeys: ""
   #   apiVersion: v2          # v2 for Cloud (default), v1 for self-hosted Data Center
   #   pageIds: ""             # comma-separated page IDs (+ all descendants); from any space
-  #   pageLimit: 0            # max pages per space; 0 = unlimited (fetch all subpages)
   # github:
   #   repoUrl: ""
   #   token: ""
   #   branch: main
-
-# -- Draft Publishing (multi-target)
-# Publish AI-generated drafts to Confluence, GitHub (PR), or GitLab (MR).
-# Per-space routing is managed via the API: /api/v1/publish-targets
-draftPublish:
-  target: "none"           # "confluence" | "github" | "gitlab" | "none"
-  autoIngestAfterPublish: true
-  # -- GitHub publishing (when target=github)
-  github:
-    # token: ""            # GITHUB_PUBLISH_TOKEN — GitHub PAT with repo scope (stored in Secret)
-    # repo: ""             # GITHUB_PUBLISH_REPO — owner/repo e.g. acme/docs
-    branch: "main"
-    docsPath: "docs"
-    prLabels: "docbrain,auto-generated"
-    createPr: true
-    # apiUrl: ""           # GITHUB_PUBLISH_API_URL — override for GitHub Enterprise
-  # -- GitLab publishing (when target=gitlab)
-  gitlab:
-    # token: ""            # GITLAB_PUBLISH_TOKEN — GitLab PAT with api scope (stored in Secret)
-    # projectId: ""        # GITLAB_PUBLISH_PROJECT_ID — numeric project ID
-    # baseUrl: ""          # GITLAB_PUBLISH_BASE_URL — default: https://gitlab.com
-    branch: "main"
-    docsPath: "docs"
-    mrLabels: "docbrain,auto-generated"
-    createMr: true
 
 # -- GitLab MR real-time capture webhook
 # Enables POST /api/v1/gitlab/events for `@docbrain capture` on merge requests.
@@ -150,11 +118,8 @@ confluenceWebhook:
 # -- DocBrain API Server
 server:
   image:
-    repository: ghcr.io/docbrain-ai/docbrain
-    # Defaults to Chart.AppVersion (e.g. "1.2.0") when left empty.
-    # Override for a specific release: tag: "v1.1.0"
-    # Or for the latest unstable build: tag: "edge"
-    tag: ""
+    repository: ghcr.io/docbrain/docbrain
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3000
@@ -165,31 +130,17 @@ server:
     limits:
       cpu: "1"
       memory: 512Mi
-  # CORS origins (comma-separated). Required for browser clients.
-  # Example: corsAllowedOrigins: "https://docbrain.mycompany.com"
-  corsAllowedOrigins: ""
-  # Session lifetime for web logins (hours). Default: 720 (30 days)
-  loginSessionTtlHours: "720"
-  # Additional arbitrary env vars passed through to the server ConfigMap
   env: {}
-  # Additional arbitrary key-value pairs added to the server Secret (e.g. for Vault references)
-  secrets: {}
-  # Extra pod annotations — injected into the server pod template (e.g. Vault Agent annotations)
-  vaultAnnotations: {}
 
 # -- DocBrain Web UI
 web:
   enabled: true
   image:
-    repository: ghcr.io/docbrain-ai/docbrain-web
-    # Defaults to Chart.AppVersion when left empty (same version as the server).
-    tag: ""
+    repository: ghcr.io/docbrain/docbrain-web
+    tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3001
-  # The frontend resolves the backend URL via window.location.origin (same-origin).
-  # The ingress above routes /api/* to the backend — no extra config needed.
-  # NEXT_PUBLIC_* env vars are baked at build time and cannot be overridden at runtime.
   resources:
     requests:
       cpu: 100m
@@ -197,74 +148,55 @@ web:
     limits:
       cpu: 500m
       memory: 256Mi
+  # The frontend resolves the backend URL via window.location.origin (same-origin).
+  # The ingress above routes /api/* to the backend — no extra config needed.
+  # NEXT_PUBLIC_* env vars are baked at build time and cannot be overridden at runtime.
 
 # -- PostgreSQL
 postgresql:
   internal: true
   image: postgres:17-alpine
   storage: 10Gi
-  # storageClassName: ""  # leave empty to use cluster default StorageClass
-  # password: ""          # auto-generated if not set; stored in the Secret
-  # externalUrl: ""       # if internal=false
-
-# -- OpenSearch
-opensearch:
-  internal: true
-  image: opensearchproject/opensearch:2.19.0
-  storage: 20Gi
-  # storageClassName: ""  # leave empty to use cluster default StorageClass
-  # externalUrl: ""
+  # externalUrl: ""    # if internal=false
 
 # -- Redis
 redis:
   internal: true
   image: redis:7-alpine
   storage: 1Gi
-  # storageClassName: ""  # leave empty to use cluster default StorageClass
   # externalUrl: ""
 
-# -- Event Bus (internal pub/sub — always enabled)
-eventBus:
-  capacity: 4096              # Broadcast channel buffer size (max: 65536)
-  retentionDays: 90           # Days to keep events in event_log table
-
-# -- Knowledge Fragments (confidence-based knowledge capture)
-fragments:
-  autoIndexThreshold: 0.7     # Min confidence to auto-index fragments into search
-  reviewThreshold: 0.4        # Min confidence for review queue; below = discard
-  maxContentLength: 10000     # Max fragment content length in characters
-  distillation:
-    enabled: true               # Enable/disable conversation auto-distillation
-    maxConcurrent: 3            # Max concurrent LLM distillation calls
-    maxContentChars: 8000       # Max conversation chars sent to LLM
-    maxFragments: 5             # Max fragments per conversation
-  clustering:
-    enabled: true               # Enable/disable semantic clustering endpoint
-    clusterThreshold: 0.80      # Cosine similarity threshold for grouping fragments
-    minClusterSize: 3           # Min fragments per cluster
-    minSourceDiversity: 2       # Min distinct source types for composability
-    maxFragmentsPerRun: 2000    # Max fragments loaded per clustering run
-
-# -- CI/CD Pipeline Capture (automated knowledge extraction from PRs and deployments)
-ci:
-  enabled: true                 # Enable/disable CI capture endpoints
+# -- Ingress
+ingress:
+  enabled: false
+  className: nginx
+  host: docbrain.local
+  tls: false
+  # tlsSecretName: docbrain-tls
+  # annotations: {}    # extra annotations merged into both Ingress objects
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
 # Enabled by default. Set enabled: false to opt out.
 autopilot:
   enabled: true
-  gapAnalysisIntervalHours: "6"
-  # Auto-draft: automatically generate drafts for qualifying gaps (no human trigger).
+  lookbackDays: 30
+  maxClusters: 50
+  maxEpisodes: 500
+  gapAnalysisIntervalHours: 6
+  # Auto-draft: automatically generate drafts for qualifying gaps (no human trigger)
   # Manual by default. Set autoDraft: true to enable.
   autoDraft: false
   # Minimum gap severity for auto-drafting: critical | high | medium | low
   autoDraftSeverity: critical
-  # Severity scale factors — tune for your org's signal volume.
-  criticalUsers: 5        # env: AUTOPILOT_CRITICAL_USERS
-  criticalSignals: 15     # env: AUTOPILOT_CRITICAL_SIGNALS
-  thresholdCritical: 0.75 # env: AUTOPILOT_CRITICAL_THRESHOLD
-  thresholdHigh: 0.55     # env: AUTOPILOT_HIGH_THRESHOLD
-  thresholdMedium: 0.35   # env: AUTOPILOT_MEDIUM_THRESHOLD
+  # Severity scoring scale factors — tune for your org's signal volume.
+  # criticalUsers: how many unique users needed for breadth score to reach 1.0 (default: 5)
+  # criticalSignals: how many negative signals needed for volume score to reach 1.0 (default: 15)
+  # Composite score thresholds — gaps scoring above these values get assigned that severity.
+  criticalUsers: 5
+  criticalSignals: 15
+  thresholdCritical: 0.75
+  thresholdHigh: 0.55
+  thresholdMedium: 0.35
 
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
@@ -272,31 +204,95 @@ autopilot:
 draftPublish:
   # Target system: "confluence" | "none"
   target: none
-  # confluenceSpaceKey: ""       # Confluence space key for new pages (e.g. "ENG")
-  # confluenceParentPageId: ""   # Optional parent page ID — new pages become children
-  # Re-ingest the published page so DocBrain learns from it immediately
+  # Confluence space key to create pages in (e.g. "ENG", "DOCS")
+  # confluenceSpaceKey: ""
+  # Optional parent page ID — new pages become children of this page
+  # confluenceParentPageId: ""
+  # Re-ingest the published page on next ingest cycle so DocBrain learns from it immediately
   autoIngestAfterPublish: true
 
 # -- Freshness scoring scheduler
 freshness:
-  schedulerIntervalHours: "24"
+  schedulerIntervalHours: 24
   # Max docs to run contradiction LLM checks per freshness pass. Higher = more cost/latency.
-  contradictionChecksPerPass: "10"
+  contradictionChecksPerPass: 10
   # Include recent event-based docs (Slack, PRs, Jira) in contradiction pass alongside stalest docs.
   contradictionIncludeRecentEventDocs: true
   # Only event-based docs edited within this many days are eligible for contradiction checks.
   contradictionEventDocMaxAgeDays: 90
 
-# -- Semantic quality scoring (LLM-assessed)
-semanticQuality:
-  enabled: true
-  intervalHours: "24"
-  budget: "50"
-  structuralThreshold: "40.0"
+# -- Learning Velocity — org-level documentation health metrics
+# Tracks gap resolution rate, knowledge half-life, tribal knowledge %, and ROI.
+# Snapshots are taken daily during memory consolidation.
+velocity:
+  minutesSavedPerQuery: 15   # Estimated engineer time saved per answered query (minutes)
+  hourlyRate: 75             # Hourly engineer cost (USD) for ROI calculation
 
-# -- Memory consolidation
-memory:
-  consolidationIntervalHours: "6"
+# -- Knowledge Stream — proactive push intelligence
+# Detects and pushes: incident warnings, knowledge decay risks,
+# expertise gaps, and context-aware doc updates.
+stream:
+  enabled: false               # Opt-in; set true to enable proactive alerting
+  intervalMinutes: 30          # How often to scan for events (minutes)
+  incidentWarningMinUsers: 2   # Min unique users in 2h window to trigger incident warning
+  # alertChannel: ""           # Slack channel for critical alerts (optional)
+  expertiseGapDays: 90         # Days without expert activity before gap alert
+
+# -- Memory consolidation scheduler
+consolidation:
+  intervalHours: 6
+
+# -- RAG (Retrieval-Augmented Generation) cache
+rag:
+  cacheTtlHours: 24
+  cacheThreshold: "0.95"
+  # -- Experimental retrieval ladder. Off by default. When enabled, answers
+  # are synthesised twice (indexed vs indexed+live-tool) and an LLM judge
+  # picks the winner; low-confidence answers get knowledge-graph expert
+  # routing. Costs an extra synthesis + judge call and disables token streaming.
+  retrievalLadder:
+    enabled: false
+    # graphAppendThreshold: 0.5     # below this confidence, append graph experts
+    # judgeTimeoutMs: 1500          # hard timeout for the judge LLM call
+    # judgeModelId: ""              # empty = use the configured fast model
+
+  # Multi-source answer fusion. When preferFused is true, answers combine ALL
+  # relevant sources (indexed docs + every fired live tool) into ONE grounded
+  # response instead of the retrievalLadder picking a single winner. Default
+  # off during rollout; flip per deployment once validated.
+  fusion:
+    preferFused: false
+
+# -- OpenSearch index names (change if sharing a cluster with other apps)
+opensearch:
+  internal: true
+  image: opensearchproject/opensearch:2.19.0
+  storage: 20Gi
+  chunksIndex: docbrain-chunks
+  episodesIndex: docbrain-episodes
+  # externalUrl: ""
+
+# -- Confluence image extraction from docs
+imageExtraction:
+  enabled: true
+  timeoutSecs: 30
+  llmTimeoutSecs: 120
+  maxPerPage: 20
+  minSizeBytes: 5120
+  maxSizeBytes: 10485760
+
+# -- Authentication
+auth:
+  # Session API key TTL in hours after email/password login. 0 = no expiry.
+  sessionTtlHours: 720
+  # CORS allowed origins (comma-separated). Defaults to web UI origin only.
+  # Example: "https://docbrain.mycompany.com"
+  corsAllowedOrigins: ""
+
+# -- Self-ingest of DocBrain's own documentation (so it can answer config questions)
+selfIngest:
+  enabled: true
+  docsPath: /app/docs
 
 # ── SSO / OAuth providers ────────────────────────────────────────────────
 # See docs/rbac.md for full setup guide.
@@ -344,10 +340,87 @@ oidc:
   # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
   #                     # The backend redirects here after OAuth completes.
 
+# -- Source-System ACL Mirroring (RFC-001)
+# Controls query-time enforcement of per-document ACLs derived from source
+# systems (Confluence restrictions, Slack channel membership, GitHub repo
+# access, Jira issue security levels, etc.).
+#
+# Default mode is `off` → preserves pre-RFC-001 behaviour exactly.
+# Operators flip to `warn` first to validate ACL coverage on a real corpus
+# (logs would-have-denied chunk_ids without changing user-visible results),
+# then to `enforce` once per-connector AclProvider impls have populated the
+# chunk index with `acl_principals` data.
+#
+# See docs/rfcs/RFC-001-source-system-acl-mirroring.md for the design.
+acl:
+  # off | warn | enforce
+  mode: "off"
+  # deny | allow — what to do with chunks lacking acl_principals data when
+  # mode=enforce. Default deny is fail-closed.
+  unknownPolicy: "deny"
+  # OpenSearch top_k multiplier when ACL filter is active. 1.0 = no overfetch.
+  recallOverfetch: 1.0
+  # Drop persisted user principals older than this. 0 = no fence.
+  userPrincipalMaxAgeSecs: 3600
+
+  # -- Denial UX (RFC-002)
+  # Controls how the system communicates a denial back to the user.
+  # See https://github.com/docbrain-ai/docbrain/blob/main/docs/rfcs/RFC-002-acl-denial-ux.md
+  denial:
+    # Global default mode. silent | disclosed_no_count | disclosed
+    #   silent              — no leak ('I don't have information'). Required for MNPI.
+    #   disclosed_no_count  — DEFAULT. Tells the user the filter is on, no specifics leak.
+    #   disclosed           — full transparency: includes count + referral string.
+    mode: "disclosed_no_count"
+    # Operator-provided referral string. Substituted into messages where
+    # <referral> placeholder appears.
+    referral: "your administrator"
+    # Audit log — when true, every full or partial denial is persisted to
+    # acl_audit_log table. Required for HIPAA / FedRAMP / SOC2.
+    audit: false
+    # When true, audit_log persists raw query text. Default false (queries
+    # are SHA256-hashed). Operators in regulated contexts should keep this
+    # off — queries can themselves be MNPI ("what's the Q3 earnings number?").
+    auditRawQuery: false
+
+  # -- Per-source ingest policy (M1.4)
+  # Controls what each connector does when ingesting documents:
+  #   off        — don't extract ACL data; chunks have empty acl_principals
+  #                (treated by query-time filter per acl.unknownPolicy)
+  #   public     — synthesise Public sentinel; any authenticated user reads
+  #   admin_only — synthesise admin role; only Admin role can read
+  #   mirror     — call source-system API to extract real per-doc ACL
+  sources:
+    confluence:
+      # Source-level mode applied to all spaces unless overridden below.
+      mode: "off"
+      # Per-space overrides (case-insensitive). Map space key → mode string.
+      # Example:
+      #   spaceOverrides:
+      #     ENG: public
+      #     HR: admin_only
+      spaceOverrides: {}
+    # GitHub (M1.5.1): repo visibility-derived ACL.
+    #   public repo  → World sentinel
+    #   internal     → Group(github, '<org>:members')
+    #   private      → enumerated User + Team principals
+    github:
+      mode: "off"
+    # Slack (M1.5.2): channel-membership ACL.
+    #   public channel  → workspace-wide group principal
+    #   private channel → enumerated User principals
+    #   shared / DMs    → admin-only fallback
+    slack:
+      mode: "off"
+    # Jira (M1.5.3): issue security level + project fallback.
+    #   security level set → Role(jira, '<project>:security:<level>')
+    #   no security        → Project(jira, '<project>')
+    jira:
+      mode: "off"
+
 # -- RBAC / SSO access control
 # Controls who is allowed to log in and what role they receive.
 # If allowedGroups and allowedDomains are both empty, all authenticated users are permitted.
-# See docs/rbac.md for full details.
 rbac:
   # Default role for new SSO users: viewer (default) | editor | admin
   defaultRole: "viewer"
@@ -357,105 +430,124 @@ rbac:
   adminEmails: ""
   # Comma-separated IdP group / GitHub org names that map to admin role
   adminGroups: ""
-  # Comma-separated IdP group / GitHub org names that map to analyst role (reserved for future use).
-  analystGroups: ""
   # Comma-separated IdP group / GitHub org names that map to editor role
   editorGroups: ""
   # ACCESS GATE — only members of these groups may log in at all.
-  # Comma-separated IdP group names (OIDC/GitLab) or GitHub org names.
-  # Leave empty to allow all authenticated users (default, backward-compatible).
-  # Example: "platform-team,sre-team"
   allowedGroups: ""
   # ACCESS GATE — only users with these email domains may log in.
-  # Comma-separated. Leave empty to allow all email domains (default).
-  # Example: "acme.com,acme.org"
   allowedDomains: ""
 
-# -- Ingress
-ingress:
-  enabled: false
-  className: nginx
-  host: docbrain.local
-  tls: false
-  # tlsSecretName: docbrain-tls
+# -- Secret (created from values, or use existing)
+existingSecret: ""
 
-# -- Bootstrap admin key lifecycle
-# The bootstrap key is generated once at helm install and stored in a separate
-# {release}-initial-admin-secret. It is preserved across helm upgrades.
-#
-# To disable (revoke from DB + delete the Secret on next upgrade):
-#   helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false
-#
-# Retrieve:
-#   kubectl get secret docbrain-initial-admin-secret \
+# -- Kubernetes ServiceAccount.
+# When create: true, helm creates a dedicated SA for docbrain pods. When
+# false, pods use the namespace's default SA. The serviceaccount.yaml
+# template and the serviceAccountName references in web-deployment.yaml +
+# ingest-cronjob.yaml branch on this. Most operators want create: true so
+# IAM roles for service accounts (IRSA on EKS, workload identity on GKE)
+# can be bound to a known name.
+serviceAccount:
+  # Create a dedicated ServiceAccount for docbrain pods.
+  create: true
+  # Name of the ServiceAccount. Auto-generated from release name when empty.
+  name: ""
+  # Annotations applied to the ServiceAccount (e.g. IRSA role ARN on EKS).
+  # Example:
+  #   annotations:
+  #     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/docbrain
+  annotations: {}
+
+# -- Bootstrap admin key.
+# When enabled: true, helm renders a Secret (<release>-initial-admin-secret)
+# containing a randomly generated API key with admin role. The server picks
+# it up at boot and inserts/preserves the row in api_keys. Retrieve with:
+#   kubectl get secret <release>-initial-admin-secret \
 #     -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
+# Disable after creating a proper admin user — the bootstrap key remains
+# active in the database until revoked via API or this flag flips false.
 bootstrapKey:
   enabled: true
 
-# -- Service Account
-# If create=true, a ServiceAccount is created and bound to all workloads (server, web, ingest).
-# Useful for IRSA (AWS), Workload Identity (GCP), or any pod-level IAM binding.
-serviceAccount:
-  create: false
-  # name: ""          # defaults to the release fullname when create=true
-  # annotations: {}   # e.g. eks.amazonaws.com/role-arn: arn:aws:iam::...
+# ── MCP tool platform (Plan 4) ────────────────────────────────────────────
+# Enables answer-time tool dispatch through external MCP servers
+# (Jira, GitHub, Sentry, etc.). Off by default — flip enabled=true once
+# the per-tool manifest credentials below are populated.
+#
+# Manifest YAML files are shipped from helm/docbrain/files/mcp-manifests/
+# (single source of truth: config/mcp-manifests/ in the repo). Drop a new
+# YAML file in that directory to register an additional tool; the
+# configmap-mcp-manifests.yaml template picks it up automatically via
+# .Files.Glob.
+mcpTools:
+  enabled: false
 
-# -- Secret (created from values, or use existing)
-# If existingSecret is set, the chart will NOT create a Secret and will use this one instead.
-# The existing secret must contain all required keys (POSTGRES_PASSWORD, etc.)
-existingSecret: ""
+  # OAuth provider credentials. Each entry maps to a manifest's
+  # auth.oauth.client_id_secret_ref / client_secret_ref.
+  oauth:
+    atlassian:
+      clientId: ""
+      clientSecret: ""
+    # Slack OAuth app — per-user connect on /integrations against Slack's hosted
+    # MCP server (mcp.slack.com). Each user's search runs as themselves. Needs
+    # the granular search:read.* scopes (configured in the slack manifest).
+    slack:
+      clientId: ""
+      clientSecret: ""
 
-# -- Documentation Analytics
-# ROI calculation parameters for the documentation analytics score.
-velocity:
-  minutesSavedPerQuery: 15    # Estimated minutes saved per deflected query
-  hourlyRate: 75              # Effective hourly rate (USD) for ROI
+  # Service-account credentials. Per-manifest secret_refs map to keys here.
+  serviceAccount:
+    jira:
+      apiToken: ""
+      # Atlassian workspace cloud ID — substituted into the manifest's
+      # server.endpoint URL at dispatch time (${JIRA_CLOUD_ID}).
+      cloudId: ""
+      # Used by the jira_rest manifest's shim for direct REST API calls.
+      # Shared with ingest / enrichment when those features are enabled.
+      baseUrl: ""
+      userEmail: ""
 
-# -- Knowledge Stream
-# Background task that emits proactive events (incidents, decay alerts, expertise gaps).
-stream:
-  enabled: false              # Set to true to enable stream emission
-  intervalMinutes: 30         # How often the background task runs
-  incidentWarningMinUsers: 3  # Min unique users hitting an unanswered question to emit warning
-  decayThreshold: 0.5         # Freshness score below which a decay alert is emitted
+  # 256-bit master key for at-rest encryption of mcp_oauth_tokens.
+  # Generate with: openssl rand -hex 32
+  # MUST be set whenever any manifest declares oauth in auth.modes.
+  encryptionKey: ""
 
-# -- Governance SLA Checker
-# Periodic background task that detects SLA breaches across gaps, drafts,
-# and documents. SLA thresholds are managed via the API (per-space overridable).
-governance:
-  slaCheckerIntervalHours: 1           # How often the checker runs (hours)
-  slaCheckerQueryTimeoutSecs: 30       # Per-entity-type query timeout (seconds)
-  slaCheckerMaxCandidates: 5000        # Max candidate entities per type per run
-  slaCheckerMaxEventsPerRun: 50        # Max SlaBreached events emitted per run
+  # Shared secret for the internal MCP shim (jira_rest manifest). The
+  # orchestrator → shim hop uses this as a bearer token. Set explicitly
+  # in production so the value is stable across pod restarts — leaving
+  # it empty causes the server to auto-generate per boot, which
+  # invalidates any in-flight MCP session on rolling deploys.
+  # Generate with: openssl rand -hex 32
+  internalShimSecret: ""
 
-# -- External Connectors (HTTP Connector Protocol)
-# Stateless HTTP servers that implement GET /health, POST /documents/list,
-# POST /documents/fetch. DocBrain calls them on a cron schedule to ingest documents.
-# Connectors are managed via the API (/api/v1/connectors).
-connectors:
-  enabled: true                       # Enable/disable the connector scheduler
-  maxConcurrentSyncs: 3               # Max connectors syncing simultaneously (1-20)
-  maxPagesPerSync: 200                # Max list pages fetched per sync
-  maxDocumentsPerSync: 5000           # Max documents ingested per sync
-  fetchBatchSize: 50                  # Documents fetched per batch (1-200)
-  requestTimeoutSecs: 30              # HTTP timeout for connector requests (5-300)
-  syncTimeoutSecs: 3600               # Overall sync timeout (60-7200)
-  maxResponseBytes: 10485760          # Max response body size (10MB)
-  circuitBreakerThreshold: 5          # Consecutive failures before auto-disable
-  allowInternal: false                # Allow connector URLs on private/internal IPs
+  # ── Plan A: signed remote registry ────────────────────────────────────
+  # When `registry.pubkey` is set, enables /api/v1/admin/mcp/registry,
+  # /api/v1/admin/mcp/registry/{id}/manifest, and
+  # /api/v1/admin/mcp/install-from-registry. Without it those endpoints
+  # return 503 and the server boots normally — admins can still install
+  # manifests via the existing paste/URL flow.
+  registry:
+    # Base64-encoded 32-byte Ed25519 public key for verifying the signed
+    # registry index and per-manifest signatures. Leave empty to disable
+    # the registry endpoints. No default.
+    pubkey: ""
+    # Registry index URL.
+    url: "https://registry.docbrain-ai.com/v1/index.json"
+    # On-disk cache path for the registry index. Acts as the Tier 2
+    # fallback when the network fetch fails.
+    cachePath: "/var/lib/docbrain/registry-cache/index.json"
 
-# -- Webhooks (outbound event delivery)
-# Push DocBrain events to external systems via HTTPS webhooks.
-# Subscriptions are managed via the API (/api/v1/webhooks). These values
-# control delivery behavior — timeouts, retries, and circuit breaker.
-webhooks:
-  deliveryTimeoutSeconds: 10        # HTTP timeout per delivery attempt (1-60)
-  maxRetries: 4                     # Max delivery attempts (1-10)
-  circuitBreakerThreshold: 10       # Consecutive failures before auto-disable (3-100)
-  allowInternal: false              # Allow delivery to private IPs (10.x, 172.16.x, 192.168.x)
+  # ── Plan A: kubectl-command rendering for /admin/mcp/secrets/audit ────
+  # Used to render the `kubectl create secret … --from-literal=…` command
+  # returned by /api/v1/admin/mcp/secrets/audit/{id}. When either field
+  # is empty the rendered command embeds <set DOCBRAIN_K8S_*> placeholders
+  # so the admin sees what to configure. Optional — the audit endpoint
+  # still works without them; only the rendered command quality differs.
+  k8s:
+    secretName: ""
+    namespace: ""
 
-# ── Embedding Fine-Tuning (opt-in, Tier 2) ─────────────────────────────────
-# Disabled by default. See docs/learning.md for setup instructions.
+# ── Learning pipeline (opt-in, Tier 2 feature) ─────────────────────────────
 learning:
   enabled: false
   storage:
@@ -469,33 +561,28 @@ learning:
     azureContainer: ""
     azureConnectionString: ""
   training:
-    # trainerUrl is auto-computed from the release name — do not override here.
-    # It resolves to http://<release>-trainer:8765 via the ConfigMap template.
+    trainerUrl: "http://docbrain-trainer:8765"
     minTriplets: 200
+    # Base HuggingFace model for fine-tuning (LEARNING_BASE_MODEL_ID on server,
+    # TRAINER_BASE_MODEL_NAME on trainer — both must match).
+    # Any sentence-transformers model works; smaller models train faster on CPU.
+    baseModelId: "sentence-transformers/all-MiniLM-L6-v2"
   safety:
     circuitBreakerThreshold: 0.05
     maxSingleUserFraction: 0.80
     poisonDetectionEnabled: true
 
-# ── Trainer sidecar ─────────────────────────────────────────────────────────
-# Only deployed when learning.enabled = true.
-# Requires at least 2 vCPU / 8 GB RAM for training runs. GPU optional.
-#
-# Security: set apiKey to a strong random secret shared with the DocBrain server.
-# Generate with: openssl rand -hex 32
-# The trainer Service is ClusterIP-only — it is never exposed outside the cluster.
+# ── Trainer sidecar (only deployed when learning.enabled = true) ───────────
 trainer:
   enabled: false
-  # Shared secret for trainer API authentication (X-Trainer-Key header).
-  # Set via --set trainer.apiKey=<secret> or a Kubernetes Secret reference.
-  # Leave empty to disable auth (development only).
-  apiKey: ""
   image:
     repository: ghcr.io/docbrain-ai/docbrain-trainer
-    # Defaults to Chart.AppVersion when left empty.
-    tag: ""
+    tag: latest
     pullPolicy: IfNotPresent
-  baseModelName: "sentence-transformers/all-MiniLM-L6-v2"
+  # Base model for fine-tuning — overrides learning.training.baseModelId if set explicitly.
+  # Set both to the same value. The chart uses learning.training.baseModelId as the default
+  # so you only need to set one. Leave empty to inherit from learning.training.baseModelId.
+  baseModelName: ""
   epochs: 3
   batchSize: 16
   maxSeqLength: 256

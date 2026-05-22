@@ -26,7 +26,7 @@ All other events (space events, blog posts, etc.) are acknowledged and ignored.
 
 ## Prerequisites
 
-The webhook uses the same Confluence API credentials as the ingest job. If you are already running `SOURCE_TYPE=confluence` ingest, `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` are already set — only `CONFLUENCE_WEBHOOK_SECRET` is new.
+The webhook uses the same Confluence API credentials as the ingest job. If you are already running scheduled Confluence ingest, `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` are already set — only `CONFLUENCE_WEBHOOK_SECRET` is new.
 
 If you are running webhooks **without** scheduled ingest, all three credentials are required.
 
@@ -114,7 +114,7 @@ If you see `CONFLUENCE_WEBHOOK_SECRET set but missing CONFLUENCE_BASE_URL/API_TO
 
 Webhooks and scheduled ingest complement each other:
 
-- Scheduled ingest (via `INGEST_SOURCES=confluence`) handles the full crawl on a cron schedule, catching any changes that arrived while the server was down.
+- Scheduled ingest (running `docbrain-ingest` on a cron with Confluence credentials set) handles the full crawl on a periodic schedule, catching any changes that arrived while the server was down.
 - Webhooks keep the index current between scheduled runs.
 
 When both are active, the same `CONFLUENCE_BASE_URL` / `CONFLUENCE_API_TOKEN` credentials are shared. Set `CONFLUENCE_WEBHOOK_SECRET` in addition to your existing ingest config and both will work independently.

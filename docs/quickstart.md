@@ -100,14 +100,16 @@ This takes ~30 seconds. Once done, you can ask questions about the sample docume
 
 ### Connect your real docs
 
-Create `config/local.yaml` (gitignored) and add your source credentials. This file is never committed — it's the right place for tokens and source settings.
+Create `config/local.yaml` (gitignored) and add your source credentials. This
+file is never committed — it's the right place for tokens and resource lists.
+
+All ingestion sources live under the top-level `sources:` block. A sub-source
+is enabled when its block is present in YAML. Resource lists (repos, projects,
+channels, teams) must always be non-empty.
 
 **Confluence:**
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: confluence
-
 confluence:
   base_url: https://yourcompany.atlassian.net/wiki
   user_email: you@yourcompany.com
@@ -115,40 +117,62 @@ confluence:
   space_keys: ENG,DOCS
 ```
 
-**GitHub repository:**
+**GitHub code (clone markdown from repos):**
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: github
-
-github:
-  repo_url: https://github.com/your-org/your-docs
-  token: ghp_...    # only for private repos
+sources:
+  github:
+    token: ${GITHUB_TOKEN}
+    code:
+      repos:
+        - your-org/your-docs            # default branch
+        - your-org/runbooks:develop     # pinned branch
 ```
 
 **GitHub Pull Requests:**
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: github_pr
-
-github_pr:
-  token: ghp_...
-  repo: your-org/your-repo
-  lookback_days: 365
+sources:
+  github:
+    token: ${GITHUB_TOKEN}
+    pull_requests:
+      repos:
+        - your-org/your-repo
+        - your-org/infra
+      lookback_days: 365
+      min_comments: 1
 ```
 
-**Local files** (no secrets needed — just set in `.env`):
-```env
-# .env
-LOCAL_DOCS_PATH=/data/docs
-```
-
-Multiple sources can be combined:
+**Local files:**
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: confluence,github_pr,jira
+sources:
+  local:
+    path: /data/docs
+```
+
+**Multiple providers** (all enabled together):
+```yaml
+# config/local.yaml
+confluence:
+  base_url: https://yourcompany.atlassian.net/wiki
+  user_email: you@yourcompany.com
+  api_token: your-api-token
+  space_keys: ENG,DOCS
+
+sources:
+  github:
+    token: ${GITHUB_TOKEN}
+    pull_requests:
+      repos:
+        - your-org/your-repo
+  jira:
+    base_url: https://yourcompany.atlassian.net
+    user_email: ${JIRA_USER_EMAIL}
+    api_token: ${JIRA_API_TOKEN}
+    projects:
+      - ENG
+      - PLAT
 ```
 
 Then restart and re-ingest:
@@ -252,7 +276,7 @@ docker compose exec server docbrain-ingest
 
 If ingestion completed but answers are still empty, check:
 - Are your documents in a format DocBrain supports? (`.md`, `.txt`, or Confluence/GitHub)
-- Is `SOURCE_TYPE` in `.env` set correctly?
+- Is `sources:` in `config/local.yaml` set correctly for at least one provider?
 - For Confluence: are the space keys correct? Check the URL of your Confluence space.
 
 ### Ingestion fails with "401 Unauthorized" (Confluence)

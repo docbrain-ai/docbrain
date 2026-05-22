@@ -5,16 +5,6 @@ metadata:
   labels:
     {{- include "docbrain.labels" . | nindent 4 }}
 data:
-  # Issue #2: APP_ENV must be "production" for production config loading
-  APP_ENV: "production"
-  # Point server to the config directory baked into the container image.
-  # Without this the server looks for ./config relative to CWD and crashes silently.
-  DOCBRAIN_CONFIG_DIR: "/app/config"
-  # Bootstrap admin key lifecycle control.
-  # Set bootstrapKey.enabled=false to revoke the bootstrap key from the DB on
-  # next restart and have Helm delete the initial-admin-secret on next upgrade.
-  BOOTSTRAP_KEY_ENABLED: {{ .Values.bootstrapKey.enabled | default true | quote }}
-
   LLM_PROVIDER: {{ .Values.llm.provider | quote }}
   LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}
   {{- if .Values.llm.fastModelId }}
@@ -36,26 +26,10 @@ data:
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
   INGEST_SOURCES: {{ .Values.ingest.sources | quote }}
   LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
-  INGEST_RUN_ON_STARTUP: {{ .Values.ingest.runOnStartup | default false | quote }}
   OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
   REDIS_URL: {{ include "docbrain.redisUrl" . | quote }}
   SERVER_BIND: "0.0.0.0"
   SERVER_PORT: {{ .Values.server.port | quote }}
-
-  # Issue #3: env vars documented in docker-compose but previously missing
-  CORS_ALLOWED_ORIGINS: {{ .Values.server.corsAllowedOrigins | default "" | quote }}
-  LOGIN_SESSION_TTL_HOURS: {{ .Values.server.loginSessionTtlHours | default "720" | quote }}
-  AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: {{ .Values.autopilot.gapAnalysisIntervalHours | default "6" | quote }}
-  FRESHNESS_SCHEDULER_INTERVAL_HOURS: {{ .Values.freshness.schedulerIntervalHours | default "24" | quote }}
-  CONTRADICTION_CHECKS_PER_PASS: {{ .Values.freshness.contradictionChecksPerPass | default "10" | quote }}
-  CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS: {{ .Values.freshness.contradictionIncludeRecentEventDocs | default true | quote }}
-  CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS: {{ .Values.freshness.contradictionEventDocMaxAgeDays | default 90 | quote }}
-  SEMANTIC_QUALITY_ENABLED: {{ .Values.semanticQuality.enabled | default true | quote }}
-  SEMANTIC_QUALITY_INTERVAL_HOURS: {{ .Values.semanticQuality.intervalHours | default "24" | quote }}
-  SEMANTIC_QUALITY_BUDGET: {{ .Values.semanticQuality.budget | default "50" | quote }}
-  SEMANTIC_QUALITY_STRUCTURAL_THRESHOLD: {{ .Values.semanticQuality.structuralThreshold | default "40.0" | quote }}
-  CONSOLIDATION_INTERVAL_HOURS: {{ .Values.memory.consolidationIntervalHours | default "6" | quote }}
-
   {{- if eq .Values.llm.provider "ollama" }}
   OLLAMA_BASE_URL: {{ .Values.llm.ollamaBaseUrl | default "http://ollama:11434" | quote }}
   {{- if .Values.llm.ollamaTimeoutSecs }}
@@ -80,15 +54,11 @@ data:
   {{- end }}
   {{- if .Values.ingest.confluence }}
   CONFLUENCE_BASE_URL: {{ .Values.ingest.confluence.baseUrl | default "" | quote }}
-  CONFLUENCE_USER_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
+  CONFLUENCE_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
   CONFLUENCE_SPACE_KEYS: {{ .Values.ingest.confluence.spaceKeys | default "" | quote }}
   CONFLUENCE_API_VERSION: {{ .Values.ingest.confluence.apiVersion | default "v2" | quote }}
-  CONFLUENCE_TLS_VERIFY: {{ .Values.ingest.confluence.tlsVerify | default "true" | quote }}
   {{- if .Values.ingest.confluence.pageIds }}
   CONFLUENCE_PAGE_IDS: {{ .Values.ingest.confluence.pageIds | quote }}
-  {{- end }}
-  {{- if .Values.ingest.confluence.pageLimit }}
-  CONFLUENCE_PAGE_LIMIT: {{ .Values.ingest.confluence.pageLimit | quote }}
   {{- end }}
   {{- end }}
   {{- if .Values.gitlabCapture.enabled }}
@@ -112,62 +82,17 @@ data:
   GITHUB_REPO_URL: {{ .Values.ingest.github.repoUrl | default "" | quote }}
   GITHUB_BRANCH: {{ .Values.ingest.github.branch | default "main" | quote }}
   {{- end }}
+  OPENSEARCH_INDEX: {{ .Values.opensearch.chunksIndex | default "docbrain-chunks" | quote }}
+  OPENSEARCH_EPISODE_INDEX: {{ .Values.opensearch.episodesIndex | default "docbrain-episodes" | quote }}
   {{- if ne .Values.autopilot.enabled false }}
   AUTOPILOT_ENABLED: "true"
   {{- else }}
   AUTOPILOT_ENABLED: "false"
   {{- end }}
-  {{- if .Values.autopilot.autoDraft }}
-  AUTOPILOT_AUTO_DRAFT: "true"
-  AUTOPILOT_AUTO_DRAFT_SEVERITY: {{ .Values.autopilot.autoDraftSeverity | default "critical" | quote }}
-  {{- end }}
-  AUTOPILOT_CRITICAL_USERS: {{ .Values.autopilot.criticalUsers | default 5 | quote }}
-  AUTOPILOT_CRITICAL_SIGNALS: {{ .Values.autopilot.criticalSignals | default 15 | quote }}
-  AUTOPILOT_CRITICAL_THRESHOLD: {{ .Values.autopilot.thresholdCritical | default 0.75 | quote }}
-  AUTOPILOT_HIGH_THRESHOLD: {{ .Values.autopilot.thresholdHigh | default 0.55 | quote }}
-  AUTOPILOT_MEDIUM_THRESHOLD: {{ .Values.autopilot.thresholdMedium | default 0.35 | quote }}
-  {{- if and .Values.draftPublish .Values.draftPublish.target (ne .Values.draftPublish.target "none") }}
-  DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
-  {{- end }}
-  {{- if and .Values.draftPublish .Values.draftPublish.confluenceSpaceKey }}
-  DRAFT_PUBLISH_CONFLUENCE_SPACE_KEY: {{ .Values.draftPublish.confluenceSpaceKey | quote }}
-  {{- end }}
-  {{- if and .Values.draftPublish .Values.draftPublish.confluenceParentPageId }}
-  DRAFT_PUBLISH_PARENT_PAGE_ID: {{ .Values.draftPublish.confluenceParentPageId | quote }}
-  {{- end }}
-  {{- if and .Values.draftPublish .Values.draftPublish.github }}
-  {{- with .Values.draftPublish.github }}
-  {{- if .repo }}
-  GITHUB_PUBLISH_REPO: {{ .repo | quote }}
-  {{- end }}
-  GITHUB_PUBLISH_BRANCH: {{ .branch | default "main" | quote }}
-  GITHUB_PUBLISH_DOCS_PATH: {{ .docsPath | default "docs" | quote }}
-  GITHUB_PUBLISH_PR_LABELS: {{ .prLabels | default "docbrain,auto-generated" | quote }}
-  GITHUB_PUBLISH_CREATE_PR: {{ .createPr | default true | quote }}
-  {{- if .apiUrl }}
-  GITHUB_PUBLISH_API_URL: {{ .apiUrl | quote }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- if and .Values.draftPublish .Values.draftPublish.gitlab }}
-  {{- with .Values.draftPublish.gitlab }}
-  {{- if .projectId }}
-  GITLAB_PUBLISH_PROJECT_ID: {{ .projectId | quote }}
-  {{- end }}
-  {{- if .baseUrl }}
-  GITLAB_PUBLISH_BASE_URL: {{ .baseUrl | quote }}
-  {{- end }}
-  GITLAB_PUBLISH_BRANCH: {{ .branch | default "main" | quote }}
-  GITLAB_PUBLISH_DOCS_PATH: {{ .docsPath | default "docs" | quote }}
-  GITLAB_PUBLISH_MR_LABELS: {{ .mrLabels | default "docbrain,auto-generated" | quote }}
-  GITLAB_PUBLISH_CREATE_MR: {{ .createMr | default true | quote }}
-  {{- end }}
-  {{- end }}
 
   # OAuth / SSO providers
   # OIDC_WEB_UI_URL tells the backend where to redirect the browser after any OAuth
-  # callback completes (GitHub, GitLab, or generic OIDC). It must be set whenever any
-  # SSO provider is enabled; emitting it here unconditionally when any provider is on.
+  # callback completes (GitHub, GitLab, or generic OIDC). Must be set in prod.
   {{- $webUiUrl := .Values.sso.webUiUrl | default "" }}
   {{- if .Values.oidc.webUiUrl }}{{- $webUiUrl = .Values.oidc.webUiUrl }}{{- end }}
   {{- if .Values.githubOAuth.webUiUrl }}{{- $webUiUrl = .Values.githubOAuth.webUiUrl }}{{- end }}
@@ -187,8 +112,26 @@ data:
   OIDC_REDIRECT_URI: {{ .Values.oidc.redirectUri | default "" | quote }}
   {{- end }}
 
-  # RBAC / SSO access control — emitted unconditionally so the server always
-  # has these available regardless of which SSO provider is active.
+  # Source-System ACL Mirroring (RFC-001)
+  ACL_MODE: {{ .Values.acl.mode | default "off" | quote }}
+  ACL_UNKNOWN_POLICY: {{ .Values.acl.unknownPolicy | default "deny" | quote }}
+  ACL_RECALL_OVERFETCH: {{ .Values.acl.recallOverfetch | default 1.0 | quote }}
+  ACL_USER_PRINCIPAL_MAX_AGE_SECS: {{ .Values.acl.userPrincipalMaxAgeSecs | default 3600 | quote }}
+  # Denial UX (RFC-002)
+  ACL_DENIAL_MODE: {{ .Values.acl.denial.mode | default "disclosed_no_count" | quote }}
+  ACL_DENIAL_REFERRAL: {{ .Values.acl.denial.referral | default "your administrator" | quote }}
+  ACL_DENIAL_AUDIT: {{ .Values.acl.denial.audit | default false | quote }}
+  ACL_DENIAL_AUDIT_RAW_QUERY: {{ .Values.acl.denial.auditRawQuery | default false | quote }}
+  # Per-source ingest policy (M1.4 / M1.5) — drives the *AclProvider impls.
+  ACL_CONFLUENCE_MODE: {{ .Values.acl.sources.confluence.mode | default "off" | quote }}
+  {{- range $space, $mode := .Values.acl.sources.confluence.spaceOverrides }}
+  ACL_CONFLUENCE_SPACE_{{ $space | upper }}: {{ $mode | quote }}
+  {{- end }}
+  ACL_GITHUB_MODE: {{ .Values.acl.sources.github.mode | default "off" | quote }}
+  ACL_SLACK_MODE:  {{ .Values.acl.sources.slack.mode | default "off" | quote }}
+  ACL_JIRA_MODE:   {{ .Values.acl.sources.jira.mode | default "off" | quote }}
+
+  # RBAC / SSO access control
   OIDC_DEFAULT_ROLE: {{ .Values.rbac.defaultRole | default "viewer" | quote }}
   {{- if .Values.rbac.adminDomain }}
   OIDC_ADMIN_DOMAIN: {{ .Values.rbac.adminDomain | quote }}
@@ -198,9 +141,6 @@ data:
   {{- end }}
   {{- if .Values.rbac.adminGroups }}
   OIDC_ADMIN_GROUPS: {{ .Values.rbac.adminGroups | quote }}
-  {{- end }}
-  {{- if .Values.rbac.analystGroups }}
-  OIDC_ANALYST_GROUPS: {{ .Values.rbac.analystGroups | quote }}
   {{- end }}
   {{- if .Values.rbac.editorGroups }}
   OIDC_EDITOR_GROUPS: {{ .Values.rbac.editorGroups | quote }}
@@ -212,66 +152,140 @@ data:
   OIDC_ALLOWED_DOMAINS: {{ .Values.rbac.allowedDomains | quote }}
   {{- end }}
 
-  # Learning pipeline — wires the server to the trainer sidecar when enabled
-  {{- if .Values.learning.enabled }}
-  LEARNING_ENABLED: "true"
-  EMBED_PROVIDER: "local"
-  TRAINER_URL: {{ printf "http://%s-trainer:8765" (include "docbrain.fullname" .) | quote }}
+  AUTOPILOT_LOOKBACK_DAYS: {{ .Values.autopilot.lookbackDays | default 30 | quote }}
+  AUTOPILOT_MAX_CLUSTERS: {{ .Values.autopilot.maxClusters | default 50 | quote }}
+  AUTOPILOT_MAX_EPISODES: {{ .Values.autopilot.maxEpisodes | default 500 | quote }}
+  AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS: {{ .Values.autopilot.gapAnalysisIntervalHours | default 6 | quote }}
+  {{- if .Values.autopilot.autoDraft }}
+  AUTOPILOT_AUTO_DRAFT: "true"
+  AUTOPILOT_AUTO_DRAFT_SEVERITY: {{ .Values.autopilot.autoDraftSeverity | default "critical" | quote }}
   {{- end }}
-
-  # Documentation Analytics
-  VELOCITY_MINUTES_SAVED_PER_QUERY: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
+  AUTOPILOT_CRITICAL_USERS: {{ .Values.autopilot.criticalUsers | default 5 | quote }}
+  AUTOPILOT_CRITICAL_SIGNALS: {{ .Values.autopilot.criticalSignals | default 15 | quote }}
+  AUTOPILOT_CRITICAL_THRESHOLD: {{ .Values.autopilot.thresholdCritical | default 0.75 | quote }}
+  AUTOPILOT_HIGH_THRESHOLD: {{ .Values.autopilot.thresholdHigh | default 0.55 | quote }}
+  AUTOPILOT_MEDIUM_THRESHOLD: {{ .Values.autopilot.thresholdMedium | default 0.35 | quote }}
+  {{- if .Values.draftPublish.target }}
+  DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
+  {{- end }}
+  {{- if .Values.draftPublish.confluenceSpaceKey }}
+  DRAFT_PUBLISH_CONFLUENCE_SPACE_KEY: {{ .Values.draftPublish.confluenceSpaceKey | quote }}
+  {{- end }}
+  {{- if .Values.draftPublish.confluenceParentPageId }}
+  DRAFT_PUBLISH_PARENT_PAGE_ID: {{ .Values.draftPublish.confluenceParentPageId | quote }}
+  {{- end }}
+  DRAFT_PUBLISH_AUTO_INGEST: {{ .Values.draftPublish.autoIngestAfterPublish | default true | quote }}
+  FRESHNESS_SCHEDULER_INTERVAL_HOURS: {{ .Values.freshness.schedulerIntervalHours | default 24 | quote }}
+  CONTRADICTION_CHECKS_PER_PASS: {{ .Values.freshness.contradictionChecksPerPass | default 10 | quote }}
+  CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS: {{ .Values.freshness.contradictionIncludeRecentEventDocs | default true | quote }}
+  CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS: {{ .Values.freshness.contradictionEventDocMaxAgeDays | default 90 | quote }}
+  CONSOLIDATION_INTERVAL_HOURS: {{ .Values.consolidation.intervalHours | default 6 | quote }}
+  # Learning Velocity
+  VELOCITY_MINUTES_SAVED: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
   VELOCITY_HOURLY_RATE: {{ .Values.velocity.hourlyRate | default 75 | quote }}
-
-  # Event Bus
-  EVENT_BUS_CAPACITY: {{ .Values.eventBus.capacity | default 4096 | quote }}
-  EVENT_LOG_RETENTION_DAYS: {{ .Values.eventBus.retentionDays | default 90 | quote }}
-
-  # Knowledge Fragments
-  FRAGMENT_AUTO_INDEX_THRESHOLD: {{ .Values.fragments.autoIndexThreshold | default 0.7 | quote }}
-  FRAGMENT_REVIEW_THRESHOLD: {{ .Values.fragments.reviewThreshold | default 0.4 | quote }}
-  FRAGMENT_MAX_CONTENT_LENGTH: {{ .Values.fragments.maxContentLength | default 10000 | quote }}
-
-  # Conversation Auto-Distillation
-  DISTILLATION_ENABLED: {{ .Values.fragments.distillation.enabled | default true | quote }}
-  DISTILLATION_MAX_CONCURRENT: {{ .Values.fragments.distillation.maxConcurrent | default 3 | quote }}
-  DISTILLATION_MAX_CONTENT_CHARS: {{ .Values.fragments.distillation.maxContentChars | default 8000 | quote }}
-  DISTILLATION_MAX_FRAGMENTS: {{ .Values.fragments.distillation.maxFragments | default 5 | quote }}
-
-  # Fragment Clustering
-  FRAGMENT_CLUSTERING_ENABLED: {{ .Values.fragments.clustering.enabled | default true | quote }}
-  FRAGMENT_CLUSTER_THRESHOLD: {{ .Values.fragments.clustering.clusterThreshold | default 0.80 | quote }}
-  FRAGMENT_MIN_CLUSTER_SIZE: {{ .Values.fragments.clustering.minClusterSize | default 3 | quote }}
-  FRAGMENT_MIN_SOURCE_DIVERSITY: {{ .Values.fragments.clustering.minSourceDiversity | default 2 | quote }}
-  FRAGMENT_MAX_PER_CLUSTERING_RUN: {{ .Values.fragments.clustering.maxFragmentsPerRun | default 2000 | quote }}
-
-  # Governance SLA Checker
-  SLA_CHECKER_INTERVAL_HOURS: {{ .Values.governance.slaCheckerIntervalHours | default 1 | quote }}
-  SLA_CHECKER_QUERY_TIMEOUT_SECS: {{ .Values.governance.slaCheckerQueryTimeoutSecs | default 30 | quote }}
-  SLA_CHECKER_MAX_CANDIDATES: {{ .Values.governance.slaCheckerMaxCandidates | default 5000 | quote }}
-  SLA_CHECKER_MAX_EVENTS_PER_RUN: {{ .Values.governance.slaCheckerMaxEventsPerRun | default 50 | quote }}
-
-  # External Connectors
-  CONNECTOR_ENABLED: {{ .Values.connectors.enabled | default true | quote }}
-  CONNECTOR_MAX_CONCURRENT_SYNCS: {{ .Values.connectors.maxConcurrentSyncs | default 3 | quote }}
-  CONNECTOR_MAX_PAGES_PER_SYNC: {{ .Values.connectors.maxPagesPerSync | default 200 | quote }}
-  CONNECTOR_MAX_DOCUMENTS_PER_SYNC: {{ .Values.connectors.maxDocumentsPerSync | default 5000 | quote }}
-  CONNECTOR_FETCH_BATCH_SIZE: {{ .Values.connectors.fetchBatchSize | default 50 | quote }}
-  CONNECTOR_REQUEST_TIMEOUT_SECS: {{ .Values.connectors.requestTimeoutSecs | default 30 | quote }}
-  CONNECTOR_SYNC_TIMEOUT_SECS: {{ .Values.connectors.syncTimeoutSecs | default 3600 | quote }}
-  CONNECTOR_MAX_RESPONSE_BYTES: {{ .Values.connectors.maxResponseBytes | default 10485760 | quote }}
-  CONNECTOR_CIRCUIT_BREAKER_THRESHOLD: {{ .Values.connectors.circuitBreakerThreshold | default 5 | quote }}
-  CONNECTOR_ALLOW_INTERNAL: {{ .Values.connectors.allowInternal | default false | quote }}
-
-  # CI/CD Pipeline Capture
-  CI_ANALYZE_ENABLED: {{ .Values.ci.enabled | default true | quote }}
-
   # Knowledge Stream
-  STREAM_ENABLED: {{ .Values.stream.enabled | default false | quote }}
+  {{- if .Values.stream.enabled }}
+  STREAM_ENABLED: "true"
+  {{- else }}
+  STREAM_ENABLED: "false"
+  {{- end }}
   STREAM_INTERVAL_MINUTES: {{ .Values.stream.intervalMinutes | default 30 | quote }}
   STREAM_INCIDENT_WARNING_MIN_USERS: {{ .Values.stream.incidentWarningMinUsers | default 2 | quote }}
-  STREAM_DECAY_THRESHOLD: {{ .Values.stream.decayThreshold | default 0.5 | quote }}
-
+  {{- if .Values.stream.alertChannel }}
+  STREAM_ALERT_CHANNEL: {{ .Values.stream.alertChannel | quote }}
+  {{- end }}
+  STREAM_EXPERTISE_GAP_DAYS: {{ .Values.stream.expertiseGapDays | default 90 | quote }}
+  RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
+  RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
+  {{- if .Values.rag.retrievalLadder }}
+  {{- if .Values.rag.retrievalLadder.enabled }}
+  RAG_RETRIEVAL_LADDER_ENABLED: {{ .Values.rag.retrievalLadder.enabled | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.graphAppendThreshold }}
+  RAG_RETRIEVAL_LADDER_GRAPH_THRESHOLD: {{ .Values.rag.retrievalLadder.graphAppendThreshold | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.judgeTimeoutMs }}
+  RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS: {{ .Values.rag.retrievalLadder.judgeTimeoutMs | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.judgeModelId }}
+  RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ .Values.rag.retrievalLadder.judgeModelId | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.rag.fusion }}
+  {{- if .Values.rag.fusion.preferFused }}
+  RAG_FUSION_PREFER_FUSED: {{ .Values.rag.fusion.preferFused | quote }}
+  {{- end }}
+  {{- end }}
+  IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
+  IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
+  IMAGE_MAX_PER_PAGE: {{ .Values.imageExtraction.maxPerPage | default 20 | quote }}
+  IMAGE_MIN_SIZE_BYTES: {{ .Values.imageExtraction.minSizeBytes | default 5120 | quote }}
+  IMAGE_MAX_SIZE_BYTES: {{ .Values.imageExtraction.maxSizeBytes | default 10485760 | quote }}
+  LOGIN_SESSION_TTL_HOURS: {{ .Values.auth.sessionTtlHours | default 720 | quote }}
+  {{- if .Values.auth.corsAllowedOrigins }}
+  CORS_ALLOWED_ORIGINS: {{ .Values.auth.corsAllowedOrigins | quote }}
+  {{- end }}
+  DOCBRAIN_SELF_INGEST: {{ .Values.selfIngest.enabled | default true | quote }}
+  DOCBRAIN_DOCS_PATH: {{ .Values.selfIngest.docsPath | default "/app/docs" | quote }}
+  # Learning pipeline — server-side config
+  {{- if .Values.learning.enabled }}
+  LEARNING_ENABLED: "true"
+  LEARNING_TRAINER_URL: {{ .Values.learning.training.trainerUrl | quote }}
+  LEARNING_BASE_MODEL_ID: {{ .Values.learning.training.baseModelId | default "sentence-transformers/all-MiniLM-L6-v2" | quote }}
+  LEARNING_STORAGE_BACKEND: {{ .Values.learning.storage.backend | quote }}
+  LEARNING_MIN_TRIPLETS: {{ .Values.learning.training.minTriplets | quote }}
+  LEARNING_CIRCUIT_BREAKER_THRESHOLD: {{ .Values.learning.safety.circuitBreakerThreshold | quote }}
+  LEARNING_MAX_SINGLE_USER_FRACTION: {{ .Values.learning.safety.maxSingleUserFraction | quote }}
+  LEARNING_POISON_DETECTION: {{ .Values.learning.safety.poisonDetectionEnabled | quote }}
+  {{- if eq .Values.learning.storage.backend "local" }}
+  # WARNING: LEARNING_LOCAL_PATH and TRAINER_LOCAL_MODEL_ROOT must point to the
+  # same shared volume. For Kubernetes, use S3/GCS/Azure instead of "local".
+  LEARNING_LOCAL_PATH: {{ .Values.learning.storage.localModelRoot | quote }}
+  {{- end }}
+  {{- if eq .Values.learning.storage.backend "s3" }}
+  LEARNING_S3_BUCKET: {{ .Values.learning.storage.s3Bucket | quote }}
+  LEARNING_S3_PREFIX: {{ .Values.learning.storage.s3Prefix | quote }}
+  LEARNING_S3_REGION: {{ .Values.learning.storage.s3Region | quote }}
+  {{- end }}
+  {{- if eq .Values.learning.storage.backend "gcs" }}
+  LEARNING_GCS_BUCKET: {{ .Values.learning.storage.gcsBucket | quote }}
+  LEARNING_GCS_PREFIX: {{ .Values.learning.storage.gcsPrefix | quote }}
+  {{- end }}
+  {{- if eq .Values.learning.storage.backend "azure" }}
+  LEARNING_AZURE_CONTAINER: {{ .Values.learning.storage.azureContainer | quote }}
+  {{- end }}
+  {{- else }}
+  LEARNING_ENABLED: "false"
+  {{- end }}
+  # MCP tool platform (Plan 4) — answer-time external tool dispatch.
+  {{- if .Values.mcpTools.enabled }}
+  MCP_TOOLS_ENABLED: "true"
+  MCP_MANIFEST_DIR: "/etc/docbrain/mcp-manifests"
+  # Plan A — signed remote registry: non-sensitive endpoints + cache path.
+  # MCP_REGISTRY_PUBKEY lives in the Secret alongside MCP_OAUTH_ENCRYPTION_KEY.
+  # When mcpTools.registry.pubkey is empty the three /admin/mcp/registry*
+  # endpoints return 503; the server boots normally either way.
+  MCP_REGISTRY_URL: {{ .Values.mcpTools.registry.url | default "https://registry.docbrain-ai.com/v1/index.json" | quote }}
+  MCP_REGISTRY_CACHE_PATH: {{ .Values.mcpTools.registry.cachePath | default "/var/lib/docbrain/registry-cache/index.json" | quote }}
+  # Plan A — kubectl-render hints for /admin/mcp/secrets/audit/{id}. Optional;
+  # the audit endpoint embeds <set DOCBRAIN_K8S_*> placeholders when unset.
+  DOCBRAIN_K8S_SECRET_NAME: {{ .Values.mcpTools.k8s.secretName | default "" | quote }}
+  DOCBRAIN_K8S_NAMESPACE: {{ .Values.mcpTools.k8s.namespace | default "" | quote }}
+  # OAuth callback + web-UI redirect base. Atlassian (and any IdP) sends the
+  # user's browser back to {publicBaseUrl}/api/v1/oauth/mcp/callback/<manifest>;
+  # the callback handler then redirects to {webBaseUrl}/integrations?connected=<id>.
+  # MUST be set when MCP OAuth is in use behind an ingress — defaults to
+  # localhost otherwise, which makes Atlassian-redirect callbacks unreachable.
+  {{- if .Values.server.publicBaseUrl }}
+  DOCBRAIN_PUBLIC_BASE_URL: {{ .Values.server.publicBaseUrl | quote }}
+  {{- end }}
+  {{- if .Values.server.webBaseUrl }}
+  DOCBRAIN_WEB_BASE_URL: {{ .Values.server.webBaseUrl | quote }}
+  {{- end }}
+  DOCBRAIN_SERVER_PORT: {{ .Values.server.port | quote }}
+  {{- else }}
+  MCP_TOOLS_ENABLED: "false"
+  {{- end }}
   {{- range $key, $val := .Values.server.env }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}

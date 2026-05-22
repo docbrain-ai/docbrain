@@ -1,0 +1,24 @@
+{{- if .Values.mcpTools.enabled }}
+# MCP tool manifests — one YAML file per installed manifest.
+# Single source of truth lives at config/mcp-manifests/<id>.yaml at the repo
+# root. Each file in helm/docbrain/files/mcp-manifests/ is a relative
+# symlink into config/mcp-manifests/, so edits in one place are picked up
+# by both local docker-compose runs (MCP_MANIFEST_DIR=config/mcp-manifests)
+# and helm-packaged deployments (which include the symlink targets verbatim
+# via Files.Glob — verified empirically). Adding a new manifest = drop a
+# new YAML in config/mcp-manifests/ AND ln -s it from
+# helm/docbrain/files/mcp-manifests/. The server reads the
+# MCP_MANIFEST_DIR env var (set in configmap.yaml) to locate this directory
+# at startup and registers every parseable manifest.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "docbrain.fullname" . }}-mcp-manifests
+  labels:
+    {{- include "docbrain.labels" . | nindent 4 }}
+data:
+{{- range $path, $_ := .Files.Glob "files/mcp-manifests/*.yaml" }}
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,172 @@
+# Atlassian Jira — DocBrain MCP manifest
+#
+# Atlassian's hosted Remote MCP Server (mcp.atlassian.com/v1/mcp/authv2)
+# exposes the Teamwork Graph API, not the legacy REST Jira API. Two tools:
+#
+#   - getTeamworkGraphContext  → fetch entity + relationships in one call
+#   - getTeamworkGraphObject   → hydrate full data for ARIs returned above
+#
+# Both tools REQUIRE `cloudId` (the Atlassian workspace UUID) in every
+# tool-call body. The URL itself is workspace-agnostic; the workspace
+# scope is carried as a tool argument. We inject `cloudId` from the
+# JIRA_CLOUD_ID env var via arg_defaults — the LLM does NOT pick it.
+#
+# Auth modes: service_account (org-wide token) OR oauth (per-user grant).
+# OAuth scopes include offline_access so Atlassian issues refresh tokens
+# — without it tokens expire ~1h after connection and users must
+# reconnect manually.
+
+manifest_version: 1
+id: jira
+display_name: "Atlassian Jira"
+description: "Live Jira ticket status, comments, and JQL search via Atlassian's Remote MCP Server (Teamwork Graph)."
+category: "issue-tracking"
+icon: "jira.svg"
+
+# Non-secret env vars referenced from arg_defaults below. JIRA_CLOUD_ID
+# is the Atlassian workspace UUID (visible in OAuth callback URLs); not
+# a secret. Declared here so the manifest loader's union-check accepts
+# `${JIRA_CLOUD_ID}` in arg_defaults values.
+config_refs:
+  - JIRA_CLOUD_ID
+
+server:
+  transport: http_sse
+  # Atlassian Remote MCP Server. Endpoint per their docs at
+  # https://support.atlassian.com/rovo/docs/getting-started-with-the-atlassian-remote-mcp-server/
+  # auto-discovers the workspace from the OAuth token (no cloud_id in path)
+  # but Teamwork Graph tools still require cloudId as a tool argument —
+  # see arg_defaults below.
+  endpoint: "https://mcp.atlassian.com/v1/mcp/authv2"
+  protocol_version: "2024-11-05"
+
+auth:
+  modes:
+    - service_account
+    - oauth
+  service_account:
+    secret_refs:
+      - JIRA_API_TOKEN
+    header_template: "Bearer ${JIRA_API_TOKEN}"
+  oauth:
+    provider: atlassian
+    authorize_url: "https://auth.atlassian.com/authorize"
+    token_url: "https://auth.atlassian.com/oauth/token"
+    scopes:
+      - "read:jira-work"
+      - "read:jira-user"
+      - "offline_access"     # required for refresh tokens
+    client_id_secret_ref: ATLASSIAN_OAUTH_CLIENT_ID
+    client_secret_ref: ATLASSIAN_OAUTH_CLIENT_SECRET
+    use_pkce: true
+
+tools:
+  - name: jira.get_teamwork_graph_context
+    # Our manifest naming convention is snake_case prefixed by the
+    # manifest id. Atlassian's actual upstream method name is
+    # `getTeamworkGraphContext` (camelCase) — sent verbatim in the
+    # JSON-RPC tools/call body. The dispatcher uses `upstream_name`
+    # when set; the manifest-name validator only checks `name`.
+    upstream_name: getTeamworkGraphContext
+    description: |
+      Retrieves connected context from Atlassian Teamwork Graph for any Atlassian entity (Jira issue,
+      Confluence page, Project, Goal, etc.). Returns relationships and linked objects within one traversal,
+      including cross-product connections. Use when the answer requires connections between entities —
+      e.g. "what's blocking PROJ-123?", "who is assigned to AITOOLINTG-35?", "what tickets reference
+      this Confluence page?". For a bare ticket key lookup, also pass `objectType: "JiraWorkItem"` and
+      the ticket key (e.g. "AITOOLINTG-35") as objectIdentifier.
+
+      Performance: prefer `detailLevel: summary` (counts + metadata, ~1-2s) for ticket status / assignee /
+      simple lookups. Only pass `detailLevel: full` when the user is asking about deep relationship content
+      (bodies, comments, attachments) — full traversal regularly takes 3-5s and may approach the 7s budget.
+    args_schema:
+      type: object
+      properties:
+        # objectType enum reduced from Atlassian's full 38-value list
+        # to the 12 most relevant for v1. Operators can extend later
+        # if a new type starts showing up in user questions.
+        objectType:
+          type: string
+          enum:
+            - JiraWorkItem
+            - JiraSpace
+            - JiraSprint
+            - JiraVersion
+            - JiraWorkItemComment
+            - ConfluencePage
+            - ConfluenceBlogPost
+            - ConfluenceSpace
+            - AtlassianProject
+            - AtlassianGoal
+            - AtlassianUser
+            - AtlassianTeam
+          description: "Type of object to fetch context for. v1 subset; Atlassian supports 38 types — extend manifest if needed."
+        objectIdentifier:
+          type: string
+          maxLength: 500
+          description: "Identifier for the object. For Jira: a ticket key like 'AITOOLINTG-35'. For Confluence: a page ID. For URLs: the full browser URL."
+        detailLevel:
+          type: string
+          enum: [summary, full]
+          default: summary
+        first:
+          type: integer
+          minimum: 1
+          maximum: 25
+          default: 10
+      required: [objectType, objectIdentifier]
+    arg_defaults:
+      # Atlassian requires cloudId in every call. Injected from env at
+      # registry load; LLM does NOT pick this. Defaults take precedence
+      # over LLM-picked args at dispatch time — a prompt-injection
+      # attempt to set cloudId="evil-workspace" is overwritten by this
+      # declared value.
+      cloudId: "${JIRA_CLOUD_ID}"
+    # Teamwork Graph results include nested relationship payloads; 8KiB
+    # gives enough headroom for ~20 linked entities. Still under the
+    # 16KiB hard ceiling.
+    output_size_cap_bytes: 8192
+    # Graph traversals are genuinely slow. Live verification (2026-05-12)
+    # showed `detailLevel: full` taking 5.3s; OAuth refresh adds another
+    # 0.5-1s when access tokens are near expiry. Budget = 7s (under the
+    # 8s orchestrator ceiling), gives Atlassian + refresh margin without
+    # making /ask feel hung.
+    latency_budget_ms: 7000
+    # D1 invariant: this tool only reads from the Teamwork Graph.
+    read_only: true
+
+  - name: jira.get_teamwork_graph_object
+    upstream_name: getTeamworkGraphObject
+    description: |
+      Fetches the full available data for one or more Atlassian objects using their ARIs or browser URLs.
+      Use after `get_teamwork_graph_context` returns ARIs you want to hydrate. Accepts up to 25 ARIs/URLs.
+    args_schema:
+      type: object
+      properties:
+        objects:
+          type: array
+          items:
+            type: string
+            maxLength: 500
+          maxItems: 25
+          description: "ARIs (e.g. 'ari:cloud:jira::issue/123') or browser URLs (e.g. 'https://example.atlassian.net/browse/PROJ-1')."
+      required: [objects]
+    arg_defaults:
+      cloudId: "${JIRA_CLOUD_ID}"
+    output_size_cap_bytes: 8192
+    # Hydrating up to 25 ARIs in one batch can take longer than a single
+    # context traversal. 7s budget matches the context tool.
+    latency_budget_ms: 7000
+    # D1 invariant: read-only hydration of objects by ARI/URL.
+    read_only: true
+
+egress:
+  hosts:
+    - "*.atlassian.com"
+    - "*.atlassian.net"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90

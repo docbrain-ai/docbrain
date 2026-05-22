@@ -194,16 +194,27 @@ Also uncheck **"Enable SSL verification"** on the GitLab webhook itself (Project
 
 ## Batch Ingest (Without Webhooks)
 
-To backfill existing MRs without waiting for new comments, use the batch ingest source:
+To backfill existing MRs without waiting for new comments, enable the
+GitLab merge-request ingest sub-source in `config/local.yaml`:
 
-```bash
-# .env or environment
-GITLAB_URL=https://gitlab.com
-GITLAB_TOKEN=<pat-with-api-scope>
-GITLAB_GROUPS=engineering,platform          # comma-separated group names
-GITLAB_MR_STATE=merged                      # open | merged | closed | all
-GITLAB_MR_LOOKBACK_DAYS=90                  # how far back to scan
+```yaml
+# config/local.yaml
+sources:
+  gitlab:
+    token: ${GITLAB_TOKEN}             # PAT with `api` scope
+    base_url: https://gitlab.com        # override for self-hosted
+    tls_verify: true
+    merge_requests:
+      projects:
+        - acme/platform
+        - acme/infra
+      lookback_days: 90
+      min_notes: 1
 ```
+
+Every project must be listed explicitly — an empty list is a startup error.
+See [configuration.md](./configuration.md#gitlab-merge-requests) for the full
+shape.
 
 Then trigger a manual ingest:
 

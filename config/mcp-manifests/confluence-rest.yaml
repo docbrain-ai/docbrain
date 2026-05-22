@@ -1,0 +1,142 @@
+# Atlassian Confluence via REST API — DocBrain MCP manifest (primary path
+# for direct page lookups).
+#
+# Why a Confluence-specific manifest?
+#
+# Atlassian's hosted Remote MCP Server (mcp.atlassian.com/v1/mcp/authv2)
+# exposes the Teamwork Graph API — which the `jira` manifest already
+# wraps — but it does NOT expose first-class Confluence page or space
+# tools. Direct lookups like "what does runbook page 98765 say?" have
+# no good path through the hosted server today. This manifest wraps
+# Atlassian's standard Confluence REST API as a second MCP server so
+# the dispatcher can answer Confluence page/space questions reliably
+# without depending on the Teamwork Graph rollout.
+#
+# Architecture: not a special-case bypass. This is an additional MCP
+# server served by docbrain-server itself at /internal/mcp/confluence-rest
+# (sibling to /internal/mcp/jira-rest). The orchestrator's gateway
+# speaks MCP 2024-11-05 Streamable HTTP to it the same way it speaks to
+# Atlassian's hosted server. Two distinct auth layers:
+#   - Orchestrator → shim:        bearer DOCBRAIN_INTERNAL_MCP_SECRET
+#                                 (single shared internal secret; the
+#                                 same value also guards the jira-rest
+#                                 shim — the manifest layer keeps the
+#                                 two endpoints logically distinct)
+#   - Shim → Atlassian REST:      Basic JIRA_USER_EMAIL:JIRA_API_TOKEN
+#                                 (Atlassian Cloud issues one API token
+#                                 per user that works across Jira AND
+#                                 Confluence within a tenancy; deliberate
+#                                 re-use rather than minting new env vars)
+#
+# Routing intent: prefer this manifest for any direct Confluence
+# question — page title / body / space / search by CQL. Use the
+# Teamwork Graph (`jira`) manifest only when the question explicitly
+# crosses product boundaries.
+
+manifest_version: 1
+id: confluence_rest
+display_name: "Atlassian Confluence (REST)"
+description: |
+  Confluence page lookups via Atlassian's standard REST API, wrapped as MCP
+  tools. Primary path for Confluence queries — Atlassian's hosted MCP server
+  (used by the `jira` manifest) wraps Teamwork Graph and does not expose
+  first-class Confluence page/space tools, so this shim handles direct page
+  fetches and CQL searches reliably. Use this for 'what does page X say' /
+  'search Confluence for Y' questions; use the Teamwork Graph manifest only
+  when the question explicitly asks about cross-product relationships.
+category: "documentation"
+icon: "confluence.svg"
+
+# DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
+# load time. Local dev: DOCBRAIN_SERVER_PORT=3000. Helm sets it from the
+# service port to keep dev / staging / prod consistent.
+config_refs:
+  - DOCBRAIN_SERVER_PORT
+
+server:
+  transport: http_sse
+  endpoint: "http://localhost:${DOCBRAIN_SERVER_PORT}/internal/mcp/confluence-rest"
+  protocol_version: "2024-11-05"
+
+auth:
+  modes:
+    - service_account
+  service_account:
+    # The shim authenticates the orchestrator (caller) via this bearer.
+    # Same shared secret the jira-rest shim uses — both /internal/mcp/*
+    # shims are server-to-self with loopback gate + bearer auth, so
+    # sharing the bearer is intentional and reduces operator config
+    # surface. NOT the Atlassian credential — that's read by the shim
+    # from JIRA_USER_EMAIL + JIRA_API_TOKEN env vars (same vars the
+    # jira-rest shim uses; Atlassian Cloud uses one credential pair
+    # per tenant across Jira and Confluence).
+    secret_refs:
+      - DOCBRAIN_INTERNAL_MCP_SECRET
+    header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+
+tools:
+  - name: confluence_rest.get_page
+    upstream_name: get_page
+    description: |
+      Fetch full data for a Confluence page by its numeric id. Returns id,
+      title, space key, page URL, last-updated timestamp, the first ~4KB of
+      the page body in Confluence storage format (XHTML), and the page
+      creator. Use this when the user asks about a specific page they've
+      identified — "what does page 98765 say", "summarise the runbook page
+      from the search hit above".
+    args_schema:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9]+$"
+          maxLength: 32
+          description: "Confluence page id (numeric, e.g. '98765')."
+      required: [id]
+      additionalProperties: false
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 7000
+    # D1 invariant: read-only fetch of a single Confluence page by id.
+    read_only: true
+
+  - name: confluence_rest.search
+    upstream_name: search
+    description: |
+      Search Confluence via CQL (Confluence Query Language). Returns up to
+      25 page references with id, title, space key, URL, last-updated
+      timestamp, and an excerpt when Confluence provides one. Use this for
+      queries like 'find the runbook for redis OOM' or 'show docs in space
+      ENG updated this week'. CQL docs:
+      https://developer.atlassian.com/cloud/confluence/cql-fields/
+    args_schema:
+      type: object
+      properties:
+        cql:
+          type: string
+          maxLength: 500
+          description: "Confluence Query Language. Example: 'type=page AND space=ENG AND text ~ \"redis OOM\" ORDER BY lastmodified DESC'"
+        max_results:
+          type: integer
+          minimum: 1
+          maximum: 25
+          default: 10
+      required: [cql]
+      additionalProperties: false
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 7000
+    # D1 invariant: CQL search returns matching pages; never mutates.
+    read_only: true
+
+egress:
+  # localhost / 127.0.0.1: the shim itself (orchestrator → docbrain-server).
+  # *.atlassian.net: where the shim's own outbound REST calls go.
+  hosts:
+    - "localhost"
+    - "127.0.0.1"
+    - "*.atlassian.net"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90

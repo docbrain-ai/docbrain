@@ -1,0 +1,73 @@
+# Slack — DocBrain MCP manifest
+#
+# Uses Slack's OFFICIAL HOSTED remote MCP server (mcp.slack.com), launched
+# 2026-02-17 — the same model as Atlassian's hosted Jira MCP server. DocBrain
+# points at Slack's URL and each user connects via OAuth on /integrations; their
+# search runs as THEMSELVES, scoped to the channels they're in plus all public
+# channels. No self-hosted translator, no shared token — install and connect.
+#
+# Auth: OAuth (per-user) ONLY. Slack's search API requires a USER token, which
+# the OAuth dance issues per user. There is intentionally no service_account
+# mode — a shared token isn't needed and the per-user token already scopes
+# results correctly.
+#
+# Tool catalog: DYNAMIC discovery. Slack's hosted server exposes many tools
+# (search messages/files/users/channels, read history, AND write tools like
+# send-message and canvas management). DocBrain's discovery probe applies the
+# D1 read-only gate (annotations.readOnlyHint == true), so only the read/search
+# tools are imported — the write tools are dropped automatically. This is safer
+# than hand-declaring a schema and enforces the MCP read-only invariant at the
+# gate rather than by hand.
+
+manifest_version: 1
+id: slack
+display_name: "Slack"
+description: "Search Slack messages, files, channels, and people via Slack's hosted MCP server. Read-only; runs as the connected user (their channels + all public)."
+category: "chat"
+icon: "slack.svg"
+
+server:
+  transport: http_sse
+  endpoint: "https://mcp.slack.com/mcp"
+  protocol_version: "2024-11-05"
+
+auth:
+  modes:
+    - oauth
+  oauth:
+    # Standards-compliant authorization-code + PKCE flow against Slack's user
+    # OAuth endpoints (note the v2_user / oauth.v2.user.access paths — these are
+    # the USER-token endpoints, distinct from Slack's bot-token OAuth).
+    provider: generic
+    authorize_url: "https://slack.com/oauth/v2_user/authorize"
+    token_url: "https://slack.com/api/oauth.v2.user.access"
+    # Granular read scopes for message/file/people/channel search. Slack does
+    # not use a single search:read scope — each conversation type is separate.
+    scopes:
+      - "search:read.public"
+      - "search:read.private"
+      - "search:read.mpim"
+      - "search:read.im"
+      - "search:read.files"
+    client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
+    client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
+    use_pkce: true
+
+# Empty tools + dynamic discovery: the hosted server is probed at boot and on
+# the refresh interval; only readOnlyHint:true tools survive the D1 gate.
+tools: []
+tool_discovery:
+  mode: dynamic
+  refresh_seconds: 3600
+
+egress:
+  hosts:
+    - "mcp.slack.com"
+    - "slack.com"
+    - "*.slack.com"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90
