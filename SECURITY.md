@@ -8,7 +8,7 @@ The DocBrain team takes security vulnerabilities seriously. We appreciate your e
 
 ### How to Report
 
-Email **[security@docbrain.ai](mailto:security@docbrain.ai)** with:
+Email **[security@docbrainapi.com](mailto:security@docbrainapi.com)** with:
 
 - A description of the vulnerability
 - Steps to reproduce the issue

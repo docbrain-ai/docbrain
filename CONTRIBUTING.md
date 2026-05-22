@@ -83,7 +83,7 @@ See the [Quickstart Guide](docs/quickstart.md) for detailed setup instructions.
 
 ## Code of Conduct
 
-All contributors are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [conduct@docbrain.ai](mailto:conduct@docbrain.ai).
+All contributors are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [conduct@docbrainapi.com](mailto:conduct@docbrainapi.com).
 
 ## License
 
@@ -91,4 +91,4 @@ By contributing to DocBrain, you agree that your contributions will be licensed 
 
 ## Questions?
 
-If you have questions about contributing, please open a [GitHub Discussion](https://github.com/docbrain-ai/docbrain/discussions) or reach out at [hello@docbrain.ai](mailto:hello@docbrain.ai).
+If you have questions about contributing, please open a [GitHub Discussion](https://github.com/docbrain-ai/docbrain/discussions) or reach out at [hello@docbrainapi.com](mailto:hello@docbrainapi.com).
