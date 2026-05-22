@@ -56,10 +56,8 @@ if [ ! -f config/local.yaml ]; then
 # Use this file for ingest source credentials and personal overrides.
 # Infrastructure secrets (DATABASE_URL, ANTHROPIC_API_KEY, etc.) stay in .env.
 #
-# Example:
-#
-# ingest:
-#   ingest_sources: confluence,github_pr
+# Example — Confluence + GitHub PRs + Jira (enablement is structural: a
+# sub-source runs when its block is present here):
 #
 # confluence:
 #   base_url: https://acme.atlassian.net/wiki
@@ -67,10 +65,21 @@ if [ ! -f config/local.yaml ]; then
 #   api_token: ATATT3x...
 #   space_keys: DOCS,ENG
 #
-# github_pr:
-#   token: ghp_...
-#   repo: acme/platform
-#   lookback_days: 180
+# sources:
+#   github:
+#     token: ghp_...
+#     pull_requests:
+#       repos:
+#         - acme/platform
+#         - acme/docs
+#       lookback_days: 180
+#   jira:
+#     base_url: https://acme.atlassian.net
+#     user_email: you@acme.com
+#     api_token: ATATT3x...
+#     projects:
+#       - ENG
+#       - PLAT
 LOCALYAML
 fi
 
@@ -201,9 +210,6 @@ case $source_choice in
         # Write source credentials to config/local.yaml (gitignored), not .env
         cat >> config/local.yaml << CONFYAML
 
-ingest:
-  ingest_sources: confluence
-
 confluence:
   base_url: ${conf_url}
   user_email: ${conf_email}
@@ -215,25 +221,25 @@ CONFYAML
         ;;
     4)
         echo ""
-        read -rp "  Repository URL: " gh_url
-        read -rp "  Token (optional, enter to skip): " gh_token
-        read -rp "  Branch [main]: " gh_branch
-        gh_branch=${gh_branch:-main}
+        read -rp "  Owner/repo (e.g. acme/docs): " gh_repo
+        read -rp "  Token (enter to skip — required for private repos): " gh_token
+        read -rp "  Branch (enter to use default branch): " gh_branch
         # Write source credentials to config/local.yaml (gitignored), not .env
+        # Build the repo selector: owner/repo or owner/repo:branch
+        if [[ -n "$gh_branch" ]]; then
+            gh_selector="${gh_repo}:${gh_branch}"
+        else
+            gh_selector="${gh_repo}"
+        fi
         cat >> config/local.yaml << GHYAML
 
-ingest:
-  ingest_sources: github
-
-github:
-  repo_url: ${gh_url}
-  branch: ${gh_branch}
+sources:
+  github:
+    token: ${gh_token:-<set-GITHUB_TOKEN-env-var>}
+    code:
+      repos:
+        - ${gh_selector}
 GHYAML
-        if [[ -n "$gh_token" ]]; then
-            cat >> config/local.yaml << GHTOKENYAML
-  token: ${gh_token}
-GHTOKENYAML
-        fi
         echo ""
         echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
         ;;

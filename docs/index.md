@@ -83,10 +83,11 @@ Engineer annotates in their IDE  → DocBrain links knowledge to the exact code 
 | [Configuration](configuration.md) | All environment variables and options |
 | [LLM Providers](providers.md) | 14 supported providers including fully-local Ollama |
 | [Ingestion](ingestion.md) | Connecting 13+ knowledge sources |
+| [External Connectors](connectors.md) | Build custom connectors for any knowledge source |
 | [Governance](governance.md) | Space ownership, SLAs, breach detection, dashboards |
 | [Review Workflows](reviews.md) | Multi-stage approval pipelines for documentation |
 | [Knowledge Intelligence](knowledge-intelligence.md) | Graph, analytics, predictive intelligence |
 | [Autopilot](autopilot.md) | Gap detection and draft generation |
-| [Slack](slack.md) | Slash commands and real-time capture |
+| [Slack](slack.md) | Slash commands, message shortcuts, and thread capture |
 | [Kubernetes](kubernetes.md) | Helm chart production deployment |
 | [API Reference](api-reference.md) | Full REST API documentation |

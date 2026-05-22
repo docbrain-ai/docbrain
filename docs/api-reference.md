@@ -136,9 +136,18 @@ POST /api/v1/ask
   "session_id": "uuid",
   "episode_id": "uuid",
   "turn": 1,
-  "intent": "procedural"
+  "intent": "procedural",
+  "picker_trace_id": "uuid",
+  "user_failed_relevant": [],
+  "user_unconnected_relevant": ["jira.search"]
 }
 ```
+
+When live MCP tools are involved, the response carries three optional fields (all omitted when empty / not applicable):
+
+- `picker_trace_id` — present when MCP tools fired for this request. Pass it to `GET /api/v1/ask/picker-trace/{request_id}` to retrieve the full tool-selection trace (what was considered, selected, rejected, and why). Powers the "Why these tools?" explainability panel in the UI.
+- `user_failed_relevant` — tool names the picker would have used, but the caller's OAuth token for that integration is expired/failed. Drives a "reconnect" prompt in the UI.
+- `user_unconnected_relevant` — tool names the picker would have used, but the caller has not connected that integration at all. Drives a "connect this tool" prompt in the UI.
 
 **Streaming Response** (`stream: true`):
 
@@ -160,6 +169,51 @@ data: {"text": " to production"}
 event: answer
 data: {"answer": "...", "sources": [...], "session_id": "...", "episode_id": "...", "intent": "procedural"}
 ```
+
+### GET /api/v1/ask/picker-trace/{request_id}
+
+Returns the tool-picker trace for a recent `/ask` request — the catalog the
+fast LLM saw, the tools it selected and rejected, its 1-sentence rationale,
+and the user-specific buckets (`user_unconnected_relevant`,
+`user_failed_relevant`) used to surface "connect this tool" hints in the UI.
+
+**Path params:**
+- `{request_id}` — the per-request id returned in the `/ask` response.
+
+**RBAC:** any authenticated user. The handler restricts results to the
+calling user — cross-user lookups return `404` (existence-disclosure
+prevention). Service-account API keys (which have no `user_id`) get `403`.
+
+**Response (200 OK):**
+```json
+{
+  "request_id": "uuid",
+  "user_id": "uuid",
+  "considered": [
+    { "name": "github.issue_read", "manifest_id": "github" }
+  ],
+  "selected": [
+    { "name": "github.issue_read", "args": { "...": "..." } }
+  ],
+  "rejected": [
+    { "name": "jira.search", "reason": "not_relevant_to_query" }
+  ],
+  "rationale": "Fetching the linked issue gives the deploy-rollback context.",
+  "user_unconnected_relevant": [
+    { "manifest_id": "slack", "display_name": "Slack" }
+  ],
+  "user_failed_relevant": []
+}
+```
+
+**Responses:**
+- `200 OK` — trace returned.
+- `403 Forbidden` — caller is a service-account API key (no `user_id`).
+- `404 Not Found` — `request_id` unknown, expired, or owned by a different user.
+
+Traces are held in an in-process per-user LRU; they expire after roughly one
+hour or under cache pressure. The endpoint is read-only and does not write
+to `audit_log`.
 
 ---
 
@@ -185,23 +239,20 @@ POST /api/v1/feedback
 
 ```
 GET /api/v1/freshness?space=DOCS
+GET /api/v1/freshness?tags=architecture,api
+GET /api/v1/freshness?archived=true
 ```
 
-**Query Parameters:**
+**Query Parameters** (mutually exclusive — `archived` > `tags` > `space`):
 - `space` (optional) — Filter by document space
+- `tags` (optional) — Comma-separated source labels. Returns docs whose `source_labels` overlap any value (e.g. `?tags=architecture,api`)
+- `archived` (optional) — When `true`, returns docs whose `lifecycle_status` is non-active (archived / reference / deprecated). Used to populate the "View excluded (N)" modal in the UI.
 
 **Response:**
 ```json
 {
   "space": "DOCS",
-  "summary": {
-    "total_docs": 142,
-    "fresh": 98,
-    "review": 27,
-    "stale": 12,
-    "outdated": 5,
-    "avg_score": 76.3
-  },
+  "summary": { "total_docs": 142, "fresh": 98, "review": 27, "stale": 12, "outdated": 5, "avg_score": 76.3 },
   "documents": [
     {
       "document_id": "123",
@@ -210,7 +261,8 @@ GET /api/v1/freshness?space=DOCS
       "source_url": "https://...",
       "total_score": 45.2,
       "status": "stale",
-      "freshness_badge": "🟡 Review",
+      "source_labels": ["api", "v2"],
+      "lifecycle_status": "active",
       "time_decay_score": 30,
       "engagement_score": 50,
       "content_currency_score": 40,
@@ -219,6 +271,41 @@ GET /api/v1/freshness?space=DOCS
     }
   ]
 }
+```
+
+---
+
+### Mark a Document Archived (Lifecycle Override)
+
+Manually set a document's lifecycle status. Sticky — survives future syncs even if the source-system label changes. Requires admin.
+
+```
+PATCH /api/v1/documents/{id}/lifecycle
+Content-Type: application/json
+
+{ "status": "archived" }
+```
+
+`status` must be one of: `active`, `archived`, `reference`, `deprecated`. Setting `active` re-enables freshness scoring for the doc and triggers a rescore.
+
+**Response:**
+```json
+{ "id": "uuid", "lifecycle_status": "archived", "lifecycle_source": "manual" }
+```
+
+---
+
+### Backfill Lifecycle Across the Corpus
+
+Re-derive `lifecycle_status` for every auto-managed doc from current `source_labels` and `freshness.exclusion_rules` config. Run after editing exclusion rules. Manual overrides are preserved. Requires admin.
+
+```
+POST /api/v1/freshness/backfill-lifecycle
+```
+
+**Response:**
+```json
+{ "changed": 8043, "total_auto_managed": 8874 }
 ```
 
 ---
@@ -903,6 +990,416 @@ Returns an AI-curated reading list for a new team member.
       "reason": "Direct onboarding guide covering role-specific processes and expectations."
     }
   ]
+}
+```
+
+---
+
+## Admin — MCP Manifests
+
+Admin endpoints for inspecting and operating the MCP tool platform — viewing
+merged tool catalogs, forcing discovery probes, and managing OAuth probe-user
+designations for dynamic manifests.
+
+All endpoints require the `admin` role.
+
+### GET /api/v1/admin/mcp/manifests/{id}
+
+Get full manifest detail including the merged tool catalog and discovery status.
+
+**Response (200 OK):**
+```json
+{
+  "id": "github",
+  "active_version": 5,
+  "display_name": "GitHub",
+  "auth": { "...": "..." },
+  "secrets": [ "..." ],
+
+  "tools": [
+    {
+      "name": "github.issue_read",
+      "description": "...",
+      "tool_source": "discovered",
+      "read_only": true,
+      "args_schema": { "...": "..." },
+      "output_size_cap_bytes": 16384,
+      "latency_budget_ms": 7000,
+      "upstream_name": "issue_read"
+    }
+  ],
+
+  "discovery": {
+    "mode": "dynamic",
+    "refresh_seconds": 3600,
+    "status": "ok",
+    "last_attempt":  "2026-05-15T20:42:11Z",
+    "last_success":  "2026-05-15T20:42:11Z",
+    "last_error":    null,
+    "next_scheduled": null,
+    "collisions":    []
+  },
+
+  "probe_user": {
+    "user_id": "uuid",
+    "designated_at": "ISO-8601",
+    "designated_by": "uuid",
+    "last_probed_at": "ISO-8601|null"
+  }
+}
+```
+
+**Field semantics:**
+
+- `tools[].tool_source` — one of `static` | `discovered` | `static_override`.
+  Tools are merged from both sources; collisions surface in
+  `discovery.collisions`.
+- `discovery.mode` — `static` | `dynamic` | `unknown` (the last when the
+  manifest isn't in the registry, e.g. after a discovery-disabled rollback).
+- `discovery.status` — `not_applicable` | `pending` | `ok` | `failed` |
+  `requires_probe_user` | `degraded_collisions`.
+- `discovery.last_success` — populated for `ok` and `degraded_collisions`
+  (degraded means the probe succeeded with name collisions; it is not a probe
+  failure).
+- `discovery.collisions[]` — names that appear in both static and discovered
+  catalogs when neither side has `override_discovered: true`.
+- `probe_user` — omitted entirely when no designation exists.
+
+For static manifests `discovery.mode == "static"` and all other `discovery`
+fields are `null`. Every tool has `tool_source: "static"`.
+
+### POST /api/v1/admin/mcp/manifests/{id}/discover
+
+Force an immediate probe of a dynamic MCP manifest. Synchronously runs the
+probe and returns the new catalog, or surfaces the failure inline so the admin
+UI can render it.
+
+**Path params:**
+- `{id}` — the manifest_id.
+
+**Responses:**
+- `200 OK` — `{ "outcome": "ok", "count": N, "tools": [...], "probed_at": "ISO-8601" }`
+- `200 OK` — `{ "outcome": "failed", "error": { "kind": "...", "detail": "..." }, "probed_at": "ISO-8601" }`
+- `404 Not Found` — manifest_id not in registry
+- `409 Conflict` — manifest is static, OR a probe is already in flight for this manifest
+- `503 Service Unavailable` — discovery worker not configured
+- `504 Gateway Timeout` — probe did not complete within 7s
+- `500 Internal Server Error` — worker dropped the reply channel (bug indicator)
+
+`error.kind` is a stable snake_case token: `timeout` | `auth` | `http` |
+`parse` | `transport` | `catalog_too_large` | `not_dynamic` | `not_found` |
+`requires_probe_user` | `already_in_flight`. The UI can branch on this; `detail`
+is human-readable.
+
+**Audit:** writes `mcp.manifest.discover` to `audit_log` with `{outcome, count}`
+on success or `{outcome, error_kind, error_detail}` on failure.
+
+### GET /api/v1/admin/mcp/manifests/{id}/probe-user
+
+Read the current OAuth probe-user designation. Returns the user designated to
+provide OAuth credentials for periodic discovery probes on this manifest.
+
+**Responses:**
+- `200 OK` —
+  ```json
+  {
+    "manifest_id": "github",
+    "user_id": "uuid",
+    "designated_at": "ISO-8601",
+    "designated_by": "uuid",
+    "last_probed_at": "ISO-8601|null"
+  }
+  ```
+- `404 Not Found` — no probe user designated for this manifest
+
+Unlike the other probe-user endpoints, this read succeeds even when MCP
+discovery is disabled, so admins can audit historical designations after a
+rollback.
+
+### PUT /api/v1/admin/mcp/manifests/{id}/probe-user
+
+Designate a user as the OAuth probe credential source. Validates that the user
+has a non-revoked, non-expired OAuth token for this manifest before recording
+the designation. The discovery worker will use this user's token for periodic
+`tools/list` probes.
+
+**Request:** `{ "user_id": "uuid" }`
+
+**Responses:**
+- `204 No Content` — designation recorded
+- `409 Conflict` — user has no valid OAuth token for this manifest (the user
+  must connect first via the standard OAuth flow)
+- `503 Service Unavailable` — discovery worker not configured
+
+**Audit:** writes `mcp.manifest.probe_user.set` with `{user_id}`.
+
+### DELETE /api/v1/admin/mcp/manifests/{id}/probe-user
+
+Remove the OAuth probe-user designation. After unset, the manifest's discovery
+status flips to `requires_probe_user` on the next probe tick — no probes will
+run until a new user is designated.
+
+**Responses:**
+- `204 No Content` — designation removed (or was already absent)
+- `503 Service Unavailable` — discovery worker not configured
+
+**Audit:** writes `mcp.manifest.probe_user.unset` with `{prior_user_id}` (the
+user being un-designated, captured pre-delete for audit completeness).
+
+### GET /api/v1/admin/principals
+
+Search the principals table by case-insensitive prefix match on display name
+or external id. Powers the admin UI's principal typeahead (e.g. when scoping a
+tool to an SSO group or user).
+
+**Query params:**
+- `q` — prefix to match against `display` and `external_id`.
+- `limit` — max results, clamped to `1..=100` (default `25`).
+
+**Response (200 OK):**
+```json
+{
+  "principals": [
+    {
+      "id": 3,
+      "kind": "sso_group",
+      "source": "sso",
+      "external_id": "engineering",
+      "display": "Engineering"
+    }
+  ]
+}
+```
+
+### GET /api/v1/admin/mcp/manifests/{id}/usage
+
+Aggregate the MCP audit log for a manifest over a rolling window. Powers the
+admin UI Usage dashboard.
+
+**Query params:**
+- `days` — window size, clamped to `1..=90` (default `7`).
+
+**Response (200 OK):**
+```json
+{
+  "series":       [{ "day": "2026-05-19", "outcome": "ok", "count": 12 }],
+  "top_users":    [{ "user_id": "uuid", "display": "Alice", "count": 9 }],
+  "top_failures": [{ "tool_name": "jira.search", "args": {}, "error_class": "timeout", "count": 3 }]
+}
+```
+
+**Field semantics:**
+- `series[]` — daily invocation counts grouped by `outcome`.
+- `top_users[]` — top 10 attributable users by invocation count.
+- `top_failures[]` — top 5 failing `(tool_name, error_class)` groups, each with
+  a redacted-args sample.
+
+### POST /api/v1/admin/mcp/manifests/{id}/disable
+
+Reversibly disable a manifest. Sets all of the manifest's enablements to
+disabled, removing it from tool dispatch while preserving its scope
+configuration — so re-enabling is a single step. Idempotent.
+
+**Responses:**
+- `200 OK` — manifest disabled (or was already disabled).
+
+**Audit:** writes a manifest-disable entry to `audit_log`.
+
+### DELETE /api/v1/admin/mcp/manifests/{id}
+
+Irreversibly uninstall a manifest in a single transaction. Clears the
+active-version pointer, then removes the manifest's OAuth tokens, probe users,
+secrets, enablements, and all installed versions. Per-user OAuth tokens are
+deleted — users must re-authorize on reinstall.
+
+**Responses:**
+- `200 OK` — manifest uninstalled.
+- `404 Not Found` — manifest not installed.
+
+**Audit:** writes a manifest-uninstall entry to `audit_log`.
+
+---
+
+## Admin — MCP Registry & Install
+
+Admin endpoints for browsing the signed remote MCP registry, fetching a
+single manifest from it, and installing a manifest in a single transactional
+call. All endpoints require the `admin` role.
+
+The 3 registry endpoints (`GET /registry`, `GET /registry/{id}/manifest`,
+`POST /install-from-registry`) require `MCP_REGISTRY_PUBKEY` to be set at
+boot. When unset the server boots normally and these endpoints return
+`503 Service Unavailable`; admins can still install manifests via the
+existing paste/URL flow.
+
+### GET /api/v1/admin/mcp/registry
+
+List the cached signed registry index.
+
+The server fetches the index from `MCP_REGISTRY_URL`, verifies its Ed25519
+signature against `MCP_REGISTRY_PUBKEY`, and caches it on disk at
+`MCP_REGISTRY_CACHE_PATH` so subsequent calls survive transient network
+outages (Tier 2 fallback).
+
+**Response (200 OK):**
+```json
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-15T20:42:11Z",
+  "entries": [
+    {
+      "id": "github",
+      "version": "1.4.2",
+      "display_name": "GitHub",
+      "summary": "Read-only GitHub MCP — issues, PRs, code search.",
+      "manifest_url": "https://registry.docbrain-ai.com/v1/github/1.4.2.yaml",
+      "manifest_sha256": "abc123…",
+      "signed": true
+    }
+  ]
+}
+```
+
+**Responses:**
+- `200 OK` — index returned (from network or disk cache).
+- `502 Bad Gateway` — both network fetch and disk cache failed (cold start
+  with no connectivity).
+- `503 Service Unavailable` — `MCP_REGISTRY_PUBKEY` not configured.
+
+### GET /api/v1/admin/mcp/registry/{id}/manifest
+
+Fetch and verify a single manifest by registry id. Used by the install
+wizard to preview the manifest before committing.
+
+**Path params:**
+- `{id}` — registry entry id (e.g. `github`).
+
+**Response (200 OK):**
+```json
+{
+  "yaml": "id: github\ndisplay_name: GitHub\n...",
+  "entry": {
+    "id": "github",
+    "version": "1.4.2",
+    "display_name": "GitHub",
+    "manifest_url": "https://registry.docbrain-ai.com/v1/github/1.4.2.yaml",
+    "manifest_sha256": "abc123…",
+    "signed": true
+  }
+}
+```
+
+**Responses:**
+- `200 OK` — manifest YAML + index entry returned.
+- `404 Not Found` — id not present in the registry index.
+- `502 Bad Gateway` — manifest fetch failed or sha256 / signature
+  verification failed.
+- `503 Service Unavailable` — `MCP_REGISTRY_PUBKEY` not configured.
+
+### POST /api/v1/admin/mcp/install-from-registry
+
+Atomic install of a registry manifest. Fetches and verifies the manifest,
+validates its schema, then in a single transaction writes
+`mcp_installed_manifests`, sets `mcp_active_manifest_version`, creates
+`mcp_manifest_enablements` for the requested scope, and records an
+`audit_log` row with action `admin_mcp_install_from_registry`.
+
+**Request:**
+```json
+{
+  "id": "github",
+  "version": "1.4.2",
+  "allow_unsigned": false,
+  "scope": { "type": "everyone" }
+}
+```
+
+Or with a group scope:
+```json
+{
+  "id": "github",
+  "version": "1.4.2",
+  "allow_unsigned": false,
+  "scope": { "type": "groups", "group_ids": ["uuid1", "uuid2"] }
+}
+```
+
+- `allow_unsigned` — MUST be `false`. Unsigned installs are not supported
+  by this endpoint; use the existing paste/URL install endpoint instead
+  (which renders its own per-manifest opt-in audit row).
+- `scope.type` — `everyone` or `groups`. When `groups`, `group_ids` is
+  required.
+
+**Response (200 OK):**
+```json
+{
+  "manifest_id": "github",
+  "version": "1.4.2",
+  "enabled_count": 12,
+  "already_installed": false
+}
+```
+
+Idempotent: re-installing the same `(id, version)` pair returns `200` with
+`already_installed: true` and does not duplicate audit rows.
+
+**Responses:**
+- `200 OK` — installed (or already present).
+- `400 Bad Request` — `allow_unsigned: true`, malformed scope, or schema
+  validation failure on the fetched manifest.
+- `404 Not Found` — `id` not present in the registry index.
+- `502 Bad Gateway` — manifest fetch / verification failed.
+- `503 Service Unavailable` — `MCP_REGISTRY_PUBKEY` not configured.
+
+**Audit:** writes `admin_mcp_install_from_registry` with `{id, version,
+scope, enabled_count}` on success.
+
+### GET /api/v1/admin/mcp/secrets/audit/{manifest_id}
+
+Inspect the running pod's environment for the env-var keys declared in
+the manifest's `service_account.secret_refs` and render the kubectl
+command to patch any missing ones.
+
+**Path params:**
+- `{manifest_id}` — the active manifest to audit.
+
+**Response (200 OK):**
+```json
+{
+  "manifest_id": "github",
+  "required": ["GITHUB_TOKEN", "GITHUB_APP_ID"],
+  "missing": ["GITHUB_APP_ID"],
+  "secret_name": "docbrain-secrets",
+  "namespace": "docbrain",
+  "patch_command": "kubectl create secret generic docbrain-secrets --from-literal=GITHUB_APP_ID=<PASTE_VALUE> --dry-run=client -o yaml | kubectl apply -f -"
+}
+```
+
+When `DOCBRAIN_K8S_SECRET_NAME` or `DOCBRAIN_K8S_NAMESPACE` are unset, the
+rendered command contains the placeholder strings `<set
+DOCBRAIN_K8S_SECRET_NAME>` / `<set DOCBRAIN_K8S_NAMESPACE>` so the admin
+sees exactly what to configure.
+
+**Operability:** env vars inject once at container start. After applying
+the rendered patch the admin MUST restart the pod (e.g. `kubectl rollout
+restart deployment/docbrain-server`) for the audit endpoint to reflect
+the new values.
+
+**Responses:**
+- `200 OK` — audit result returned.
+- `404 Not Found` — `manifest_id` unknown.
+
+### POST /api/v1/admin/mcp/secrets/oauth
+
+Reserved for v2 — programmatic OAuth-client-secret install via the
+Kubernetes API.
+
+**Response (501 Not Implemented):**
+```json
+{
+  "error": "not_implemented",
+  "hint": "Use the kubectl command rendered by GET /api/v1/admin/mcp/secrets/audit/{manifest_id} until v2 wires the Kubernetes client.",
+  "kind": "v1_kubectl_only"
 }
 ```
 

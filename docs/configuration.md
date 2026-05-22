@@ -33,19 +33,27 @@ Set `APP_ENV=production` for the production profile (this is the default in the 
 # config/local.yaml — never committed (gitignored)
 # Configure ingest sources and personal overrides here.
 
-ingest:
-  ingest_sources: confluence,github_pr
-
 confluence:
   base_url: https://acme.atlassian.net/wiki
   user_email: you@acme.com
   api_token: ATATT3x...
   space_keys: DOCS,ENG
 
-github_pr:
-  token: ghp_...
-  repo: acme/platform
-  lookback_days: 180
+sources:
+  github:
+    token: ghp_...
+    pull_requests:
+      repos:
+        - acme/platform
+        - acme/docs
+      lookback_days: 180
+  jira:
+    base_url: https://acme.atlassian.net
+    user_email: you@acme.com
+    api_token: ATATT3x...
+    projects:
+      - ENG
+      - PLAT
 
 # Local tuning overrides (optional)
 autopilot:
@@ -54,7 +62,6 @@ autopilot:
 
 rag:
   cache_ttl_hours: 1
-
 ```
 
 ### YAML Config Structure
@@ -168,6 +175,306 @@ To migrate:
 |----------|---------|-------------|
 | `FORCE_REINDEX` | `false` | Delete and recreate OpenSearch indexes when embedding dimensions change. Set once during migration, then remove. |
 
+## Retrieval Pipeline
+
+DocBrain runs queries through a five-stage retrieval pipeline when a
+reranker is configured:
+
+1. **Query understanding** — rewrites + entity → space mapping
+2. **Candidate generation** — parallel retrievers (BM25, vector,
+   entity-exact, freshness, procedural, semantic) fused with
+   Reciprocal Rank Fusion (RRF)
+3. **Semantic reranking** — a cross-encoder (e.g. Cohere Rerank on
+   Bedrock) scores every (query, candidate) pair on a calibrated
+   `[0.0, 1.0]` scale
+4. **Diversity + coverage** — per-source and per-document caps so one
+   dominant source can't crowd out the LLM's context window
+5. **Grounding floor** — chunks below a configurable relevance floor
+   are dropped before the LLM sees them, preventing confident
+   hallucination on noise
+
+### Why it matters
+
+Without a reranker, BM25 scoring systematically buries small specialised
+sources under corpus-dominant ones: a single captured PR with 11 chunks
+is structurally out-ranked by a 4000-page Confluence space that happens
+to mention the same keywords. The cross-encoder reranker scores each
+`(query, chunk)` pair directly, independent of corpus size, so a
+precise answer in a small source can outrank a tangentially relevant
+chunk in a huge one.
+
+**The pipeline is opt-in.** Set `rerank.provider = "none"` (the default)
+and DocBrain runs the legacy single-hybrid-search path with
+byte-identical behaviour to before the feature existed. Set it to any
+configured provider to activate the five-stage pipeline. Rollback is a
+single env var flip — no code change, no rebuild, no data migration.
+
+### Reranker (`rerank.*`)
+
+Stage 3 of retrieval rescores the candidate pool with a cross-encoder, producing calibrated `[0, 1]` scores that drive the grounding floors. DocBrain supports every major hosted rerank API through a single dialect-driven HTTP client — adding a new provider is typically a config change, not a code change.
+
+**Built-in providers:** `bedrock`, `cohere`, `voyage`, `jina`, `mixedbread`, `pinecone`, `ollama`. Plus `custom` for any other Cohere-family API without a rebuild.
+
+```yaml
+# config/local.yaml — any hosted provider, one env var away
+rerank:
+  provider: cohere                    # or: bedrock | voyage | jina | mixedbread | pinecone | ollama | custom
+  # model_id: rerank-v3.5             # provider default applies when unset
+  top_n: 200                          # candidates scored per query
+  batch_size: 100                     # docs per reranker call
+  timeout_secs: 10                    # per-call timeout
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `rerank.provider` | `RAG_RERANK_PROVIDER` | `none` | `none` \| `bedrock` \| `cohere` \| `voyage` \| `jina` \| `mixedbread` \| `pinecone` \| `ollama` \| `custom` |
+| `rerank.model_id` | `RAG_RERANK_MODEL_ID` | varies | Provider-specific model. Built-in defaults: Bedrock `cohere.rerank-v3-5:0`, Cohere `rerank-v3.5`, Voyage `rerank-2`, Jina `jina-reranker-v2-base-multilingual`, Mixedbread `mxbai-rerank-large-v1`, Pinecone `bge-reranker-v2-m3`, Ollama `nomic-embed-text`. |
+| `rerank.top_n` | `RAG_RERANK_TOP_N` | `200` | How many candidates the reranker scores per query. Should match `rag.candidate_pool_size`. |
+| `rerank.batch_size` | `RAG_RERANK_BATCH_SIZE` | `100` | Docs per reranker API call. Larger pools split into multiple batches. Clamped to `[1, 1000]`. |
+| `rerank.timeout_secs` | `RAG_RERANK_TIMEOUT_SECS` | `10` | Per-request timeout. Tight because the reranker sits on the hot path of every `/api/v1/ask` request. On failure the pipeline falls back to RRF-only ranking. |
+| `rerank.cohere_api_key` | `COHERE_RERANK_API_KEY` | — | Required when `provider = "cohere"`. |
+| `rerank.voyage_api_key` | `VOYAGE_API_KEY` | — | Required when `provider = "voyage"`. |
+| `rerank.jina_api_key` | `JINA_API_KEY` | — | Required when `provider = "jina"`. |
+| `rerank.mixedbread_api_key` | `MIXEDBREAD_API_KEY` | — | Required when `provider = "mixedbread"`. |
+| `rerank.pinecone_api_key` | `PINECONE_API_KEY` | — | Required when `provider = "pinecone"`. Uses `Api-Key` header, not Bearer. |
+| `rerank.ollama_base_url` | `RAG_RERANK_OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama endpoint for local reranking. Ollama is a bi-encoder approximation — see notes below. |
+
+#### Custom provider — plug-and-play for any rerank API
+
+Set `provider = "custom"` and fill the fields below to wire a new rerank API without rebuilding DocBrain. Defaults match Cohere's request/response shape; override any JSON key that differs.
+
+| Key | Env var | Required | Default | Description |
+|-----|---------|----------|---------|-------------|
+| `rerank.custom_base_url` | `RAG_RERANK_CUSTOM_BASE_URL` | ✅ | — | Full POST URL, e.g. `https://rerank.mycorp.internal/v1/rerank` |
+| `rerank.custom_api_key_env` | `RAG_RERANK_CUSTOM_API_KEY_ENV` | ✅ | — | Name of another env var that holds the API key (the key is never persisted in config.yaml) |
+| `rerank.model_id` | `RAG_RERANK_MODEL_ID` | ✅ | — | Model id to send in the request body |
+| `rerank.custom_auth_style` | `RAG_RERANK_CUSTOM_AUTH_STYLE` |  | `bearer_token` | `bearer_token` or `custom_header` |
+| `rerank.custom_auth_header_name` | `RAG_RERANK_CUSTOM_AUTH_HEADER_NAME` | only with `custom_header` | — | Header name, e.g. `Api-Key` |
+| `rerank.custom_documents_field` | `RAG_RERANK_CUSTOM_DOCUMENTS_FIELD` |  | `documents` | Request JSON key for the documents array |
+| `rerank.custom_top_n_field` | `RAG_RERANK_CUSTOM_TOP_N_FIELD` |  | `top_n` | Request JSON key for the top-N limit |
+| `rerank.custom_results_field` | `RAG_RERANK_CUSTOM_RESULTS_FIELD` |  | `results` | Response JSON key for the results array |
+| `rerank.custom_score_field` | `RAG_RERANK_CUSTOM_SCORE_FIELD` |  | `relevance_score` | Response JSON key for the score |
+
+**See [rerank-providers.md](rerank-providers.md)** for the provider matrix, per-provider quick-starts, and the "add a new provider in 2 minutes" walkthrough.
+
+**Ollama caveat**: Ollama has no first-class rerank endpoint. DocBrain approximates rerank by cosine-similarity over query + document embeddings from any Ollama embedding model — a **bi-encoder**, not a cross-encoder. Quality is meaningfully lower than hosted providers; it exists for local development and air-gapped deployments. For true cross-encoder quality locally, run `bge-reranker` or `mxbai-rerank` behind a small HTTP wrapper and use `provider: custom`.
+
+**Fail-loud**: a missing API key or an incomplete `custom_*` block fails at server startup with a message naming both the config field and its env var. There is no silent fallback to `none`.
+
+### Pipeline knobs (`rag.*`)
+
+Every pipeline parameter is configurable — nothing is hardcoded. These
+defaults are the canonical-paper / standard-practice values; tune them
+only when you have query latency or quality data to justify a change.
+
+```yaml
+rag:
+  cache_threshold: 0.95                # existing cache knob
+  cache_ttl_hours: 24                   # existing cache knob
+  top_k: 10                             # final chunks sent to the LLM
+  bm25_boost: 1.0                       # BM25 vs vector weight in hybrid
+
+  # New knobs for the five-stage pipeline:
+  candidate_pool_size: 200              # pool size fed to reranker
+  rrf_k: 60                             # RRF damping constant
+  max_per_source: 3                     # per-source cap in final top_k
+  max_per_document: 2                   # per-document cap in final top_k
+  # Grounding floors — calibrated for a cross-encoder reranker.
+  # See "Grounding floors" below for what each one does and what
+  # lowering them actually costs you.
+  min_relevance_score: 0.40             # retrieval floor
+  display_floor: 0.50                   # display floor (user-visible citations)
+  confidence_gate: 0.40                 # confidence gate (show-sources threshold)
+  strong_answer_floor: 0.55             # high-confidence answer threshold
+  freshness_window_days: 7              # freshness retriever window
+  freshness_source_types:               # which source types count as "fresh"
+    - github_capture
+    - gitlab_capture
+    - slack_capture
+    - ms_teams_capture
+  entity_cache_ttl_secs: 300            # entity → space cache TTL
+  max_rewrites: 2                       # query rewrites per ask
+
+  # Retrieval ladder (experimental, off by default). When enabled, an
+  # answer is synthesised TWICE in parallel — once from indexed documents
+  # only, once also incorporating live tool (MCP) data — and a fast LLM
+  # "judge" picks the better answer. Low-confidence winners are augmented
+  # with knowledge-graph expert routing ("these people may know more").
+  retrieval_ladder:
+    enabled: false                      # master switch (default off = legacy single-synth)
+    graph_append_threshold: 0.5         # below this confidence, append graph experts
+    judge_timeout_ms: 1500              # hard timeout for the judge LLM call
+    # judge_model_id: null              # null = use the configured fast model
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `rag.candidate_pool_size` | `RAG_CANDIDATE_POOL_SIZE` | `200` | How many candidates the candidate generator produces for the reranker. Larger = better recall, more reranker cost. |
+| `rag.rrf_k` | `RAG_RRF_K` | `60` | Reciprocal Rank Fusion damping constant. 60 is the canonical paper default. Larger = more democratic across retrievers; smaller = concentrates weight at top ranks. |
+| `rag.max_per_source` | `RAG_MAX_PER_SOURCE` | `3` | Max chunks from any single source in the final top-k. Prevents a dominant source from monopolising the LLM context. Set to `top_k` to disable. |
+| `rag.max_per_document` | `RAG_MAX_PER_DOCUMENT` | `2` | Max chunks from any single document in the final top-k. Prevents one long document from crowding out other relevant docs. Set to `top_k` to disable. |
+| `rag.min_relevance_score` | `RAG_MIN_RELEVANCE_SCORE` | `0.40` | **Retrieval floor** — reranker score required to survive diversity selection and reach the LLM. Chunks below this are dropped before the LLM sees them, even if it means returning fewer than `top_k` results. **Lowering sends weaker evidence into the prompt, which raises hallucination risk** — the LLM will try to answer from chunks that only tangentially match. Raising forces more "insufficient information" answers. Set to `0.0` to disable (required when `rerank.provider = "none"`, because raw BM25/vector scores are not calibrated to [0,1]). |
+| `rag.display_floor` | `RAG_DISPLAY_FLOOR` | `0.50` | **Display floor** — reranker score required for a chunk to appear in the `sources` array attached to the answer. Must be `>= min_relevance_score`. The LLM may still have used a chunk to form its answer even if it is hidden here. **Lowering surfaces more citations per answer, but includes tangentially-related docs that erode user trust** — the main cause of "why is this GitHub PR cited, it has nothing to do with my question?" complaints. Raising narrows the visible citation set to only high-confidence matches. |
+| `rag.confidence_gate` | `RAG_CONFIDENCE_GATE` | `0.40` | **Confidence gate** — minimum composite confidence score required to show any sources at all. When confidence is below this, DocBrain emits the answer with a "based on general knowledge" framing and no citations, instead of citing weak evidence. **Lowering shows sources on lower-confidence answers** (useful when operators want to see what the retriever found, even when it wasn't enough). **Raising forces the UI to go source-less more often**, which is safer for end users but hides the retriever's partial matches from debugging. |
+| `rag.strong_answer_floor` | `RAG_STRONG_ANSWER_FLOOR` | `0.55` | **Strong-answer floor** — top-1 reranker score required before the answer is emitted without a "low confidence" disclaimer. Below this threshold the answer carries a visible uncertainty warning; below `min_relevance_score` the query short-circuits to "insufficient information" without calling the LLM at all. **Lowering removes the uncertainty warning from more answers** (less noise in the UI, but users can't tell strong from borderline answers apart). Raising makes DocBrain more openly uncertain about marginal matches. |
+| `rag.freshness_window_days` | `RAG_FRESHNESS_WINDOW_DAYS` | `7` | Days back for the freshness retriever. Recent chunks in this window get a guaranteed slot in the candidate pool regardless of raw BM25/vector rank. Set to `0` to disable. |
+| `rag.freshness_source_types` | — (YAML only) | capture types | Which `source_type` values count for the freshness retriever. Default is the four capture types. Env vars can't represent lists — configure in YAML. |
+| — | `RAG_FRESHNESS_PRE_DIVERSITY` | `false` | **Deprecated** — legacy multiplier path that scaled rerank scores by a per-doc freshness multiplier before the retrieval floor. The path conflates relevance with freshness: an old-but-relevant doc (e.g. a rarely-touched runbook) gets multiplied below the floor even when it's the top semantic match. Freshness is now display metadata only, surfaced in source cards rather than gating retrieval. Setting this to `true` re-enables the deprecated behaviour and is **not recommended**; the path will be removed in a future release. |
+| — | `RAG_RERANK_TITLE_ENRICH` | `true` | Pass chunk title + heading + source/space to the reranker alongside the content body. Title is the single strongest relevance signal and used to be discarded. Set to `false` to send content only (legacy behavior). |
+| `rag.entity_cache_ttl_secs` | `RAG_ENTITY_CACHE_TTL_SECS` | `300` | TTL for the entity → space resolution cache. New spaces added to the index become discoverable within this window. |
+| `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
+| `rag.retrieval_ladder.enabled` | — | `false` | **Experimental.** Master switch for the retrieval ladder. When `false` (default), DocBrain uses the standard single-synthesis path. When `true`, an answer is synthesised twice in parallel (indexed-only vs. indexed+live-tool data) and an LLM judge picks the winner; low-confidence winners are augmented with knowledge-graph expert routing. Costs an extra synthesis + a judge call per answer, and disables token streaming (the final answer is delivered once the judge decides). |
+| `rag.retrieval_ladder.graph_append_threshold` | — | `0.5` | When the winning answer's confidence is below this, append knowledge-graph "these people may know more" expert routing to the answer. Only applies when the ladder is enabled. |
+| `rag.retrieval_ladder.judge_timeout_ms` | — | `1500` | Hard timeout for the judge LLM call. On timeout the ladder falls back to the higher self-graded confidence between the two answers. |
+| `rag.retrieval_ladder.judge_model_id` | — | `null` | Model id for the judge call. `null` uses the configured fast model. |
+| `rag.max_chunks_per_doc_in_retriever` | `RAG_MAX_CHUNKS_PER_DOC` | `2` | **Chunk-flood fix.** Max chunks per document that any single retriever may contribute to RRF. Before this knob, BM25 could return 100 chunks of one dominant document, crowding out the real answer. Cap at 2 preserves the top chunk as the RRF anchor plus one more for context. Dedup is per-retriever; different retrievers can still independently vote for the same doc. Set to a large number to effectively disable. |
+| — | `RAG_COMPOUND_DECOMPOSE` | `true` | **Compound query decomposition.** Split questions like "what is X and how is X deployed" into distinct sub-intents, rerank each independently against the full candidate pool, and fuse results by taking the max rerank score per chunk across sub-intents. Fixes the class of question where no single chunk answers every intent, so the cross-encoder scores every chunk mediocrely against the compound query. Short questions (<8 words) skip decomposition entirely. Set to `false` to revert to single-query rerank. |
+
+### Grounding floors — what lowering actually costs
+
+The four floor values above (`min_relevance_score`, `display_floor`, `confidence_gate`, `strong_answer_floor`) are the single biggest quality lever in DocBrain. They all gate on the reranker's calibrated `[0, 1]` score, which is the output of stage 3 of the retrieval pipeline. Their defaults are tuned for a real cross-encoder (Cohere Rerank v3.5, Voyage rerank-2, Jina reranker-v2, or equivalent).
+
+**The calibration insight.** A well-tuned cross-encoder's `[0, 1]` scores are **not** a percentage and **not** a uniform distribution. In practice, for Cohere Rerank v3.5 and similar models:
+
+| Score band | What this chunk means for the query |
+|---|---|
+| `> 0.70` | Directly answers the question. Should be cited. |
+| `0.50 – 0.70` | Strongly related, useful supporting evidence. Should be cited. |
+| `0.40 – 0.50` | Shares topical overlap. Probably useful context, not a standalone answer. |
+| `0.30 – 0.40` | Tangentially related. Shares some keywords. Usually noise. |
+| `< 0.30` | Unrelated. Safe to drop. |
+
+The recommended defaults (`0.40 / 0.50 / 0.40 / 0.55`) draw the line at "shares topical overlap" for retrieval and "strongly related" for citation display. That's deliberately asymmetric — the LLM can see weaker evidence than the user sees, so it can reason about it, but we don't surface marginal chunks as if they were endorsed sources.
+
+**The recall-precision knob.** Lowering any floor improves recall (more answers surfaced) and costs precision (more noise in what reaches the user). Raising any floor does the opposite. The four floors target different failure modes:
+
+- **`min_relevance_score` is the strongest lever for hallucination control.** Every chunk above this reaches the LLM. If you set it to `0.0`, the LLM sees the entire candidate pool — including the tangentially-related 30% — and will sometimes write confident-sounding answers grounded in chunks that don't actually support the claim. If you see hallucinations *on questions where the retriever did find the right doc*, this floor is too low.
+
+- **`display_floor` is the strongest lever for citation trust.** Every chunk above this gets shown to the user as a "source". If you see "why is this GitHub PR cited, it has nothing to do with my question?" complaints, this floor is too low. Raising it from `0.30` to `0.50` typically eliminates 60–80% of noisy citations without meaningfully changing answer quality, because the LLM still has access to those chunks internally.
+
+- **`confidence_gate` controls whether sources render at all.** It gates on the **composite** answer confidence, not the top rerank score — that's why it's separate from `strong_answer_floor`. Use it to hide sources on weak answers without killing the answer itself.
+
+- **`strong_answer_floor` is a UX knob, not a retrieval knob.** It only affects whether the answer carries a "low confidence" disclaimer. Lower it if your users find the disclaimer noisy; raise it to make DocBrain more openly uncertain about borderline matches.
+
+**When `rerank.provider = "none"`:** these floors gate on raw BM25/vector scores, which are **not** calibrated to `[0, 1]`. A BM25 score of `0.40` means nothing comparable to a cross-encoder score of `0.40`. Set all four floors to `0.0` in that mode and bound results with `top_k` instead. This is also what makes the plug-and-play rerank providers in [rerank-providers.md](rerank-providers.md) so load-bearing — a real reranker is what makes these floors work at all.
+
+**How to debug a noisy citation.** Run `docbrain trace-query "your question"` and look at the `rerank` log line in stage 3. Each cited chunk has its rerank score printed. If the noisy citation is scoring `0.30–0.45`, it's a floor problem — raise `display_floor` and it goes away. If it's scoring `> 0.50`, the reranker actually thinks it's relevant and the issue is upstream (candidate pool, query decomposition, or title enrichment leaking metadata into the rerank input).
+
+### Observability
+
+Every stage of the pipeline emits a structured log line so you can
+trace a single query's path through retrieval without attaching a
+debugger:
+
+```
+INFO stage="rag.staged.query_understanding" rewrites=2 sub_queries=2 entities=12 mapped_spaces=7
+INFO stage="rag.staged.kg_doc_retriever" kg_entities=12 kg_doc_ids=47 hits=18
+INFO stage="rag.staged.candidate_generation" retrievers=12 unique_chunks=348 pool_size=200
+INFO stage="rag.staged.rrf_fusion" fused=200 rrf_k=60
+INFO stage="rag.staged.rerank_sub_query" sub_query="what is payments-svc" top_score=0.82
+INFO stage="rag.staged.rerank_sub_query" sub_query="how is payments-svc deployed" top_score=0.79
+INFO stage="rag.staged.rerank" input_count=200 output_count=200 top_score=0.82 sub_queries=2 fusion="max_per_chunk"
+INFO stage="rag.staged.freshness_pre_diversity" multipliers_fetched=264 reranked_count=200
+INFO stage="rag.staged.diversity_select" candidates_in=200 selected=5 top_k=10 max_per_source=3 max_per_document=2 min_relevance_score=0.30
+INFO stage="rag.staged.complete" final_count=5 elapsed_ms=7812
+```
+
+Stage meanings (in order):
+
+- **query_understanding** — classify intent, extract entities, build rewrites, decompose compound questions into sub-intents, resolve entities to spaces. `sub_queries` is the number of distinct sub-intents the decomposer produced (1 = no decomposition).
+- **kg_doc_retriever** — only fires when the knowledge graph has `source_doc_ids` edges for resolved entities. Pulls every chunk of those docs directly, bypassing BM25/vector.
+- **candidate_generation** — all retrievers finished. `unique_chunks` is total across the 6–12 retrievers after per-retriever chunk-flood dedup (see `rag.max_chunks_per_doc_in_retriever`).
+- **rrf_fusion** — Reciprocal Rank Fusion collapses the retriever outputs into one scored list.
+- **rerank_sub_query** — per-sub-query log line emitted in compound-query mode only. Shows the top score that each distinct sub-intent produced against the shared candidate pool.
+- **rerank** — cross-encoder scores every chunk against the query. `top_score` in `[0, 1]` is the calibrated highest-ranked hit. Title + heading + space are included in the rerank input when `RAG_RERANK_TITLE_ENRICH=true` (default). When `sub_queries>1`, carries `fusion="max_per_chunk"` indicating each chunk's final score is its best against any sub-intent.
+- **freshness_pre_diversity** — *deprecated.* Only fires when `RAG_FRESHNESS_PRE_DIVERSITY=true` (no longer the default). The legacy multiplier path scaled rerank scores by a per-doc freshness factor before the retrieval floor, which dropped old-but-relevant docs even when they were the top semantic match. Freshness is now display metadata, surfaced in source cards rather than gating retrieval.
+- **diversity_select** — enforces per-source + per-document caps and the retrieval floor. `selected` is the final top-k count.
+- **complete** — total wall clock, final_count sent to the LLM.
+
+Set `RAG_TRACE_DETAIL=true` to additionally log every chunk in the
+final top-k with its reranker score, space, and document_id. Turn
+this on when diagnosing "why didn't chunk X surface?" — the logs will
+show whether it was dropped at retrieval, reranking, or diversity
+selection.
+
+### Admin trace endpoint — `?trace=true`
+
+Phase 3 adds a structured pipeline trace that admin users can request
+per-query instead of grepping logs. POST `/api/v1/ask` with
+`{ "question": "...", "stream": false, "trace": true }` and an admin
+API key. The response carries an extra `pipeline_trace` field:
+
+```json
+{
+  "answer": "...",
+  "sources": [...],
+  "confidence": 0.6,
+  "pipeline_trace": {
+    "query_id": "7c3a8f9b-...",
+    "question": "how is payments-svc deployed in our env?",
+    "retrievers_fired": ["literal", "rewrite_0", "entity_space_0", "kg_docs"],
+    "pool_size": 200,
+    "rerank_provider": "bedrock",
+    "sub_queries": ["what is payments-svc", "how is payments-svc deployed in our env"],
+    "stage_durations": {
+      "query_understanding": 12,
+      "kg_doc_retriever": 450,
+      "candidate_generation": 1024,
+      "rerank": 2870,
+      "freshness_pre_diversity": 3,
+      "diversity_select": 1,
+      "total": 4360
+    },
+    "chunks": {
+      "2217247499_2": {
+        "chunk_id": "2217247499_2",
+        "document_id": "2217247499",
+        "title": "RFC - k8s deployments - A self-service approach of using helm charts",
+        "space": "65673",
+        "per_retriever_rank": [["kg_docs", 0], ["rewrite_0", 23]],
+        "rrf_score": 0.234,
+        "rerank_score": 0.72,
+        "freshness_multiplier": 0.94,
+        "post_freshness_score": 0.677,
+        "passed_retrieval_floor": true,
+        "passed_diversity": true,
+        "final_rank": 0,
+        "dropped_at": null
+      }
+    }
+  }
+}
+```
+
+Non-admin callers with `trace: true` get `pipeline_trace: null` (or
+no field, serde skip). No error — the existence of the feature is
+hidden from non-admins.
+
+The admin CLI wraps this endpoint:
+
+```
+docbrain trace-query "how is payments-svc deployed?"
+```
+
+Renders the trace as a table: query info, retrievers fired, per-stage
+timings, final top-k chunks with titles and scores. Add `--json` to
+dump the raw trace JSON for scripting.
+
+Use this whenever you need to answer "why didn't chunk X surface?"
+instead of SSH'ing into the pod and running log-grep pipelines. The
+per-stage `dropped_at` field on each chunk names the exact stage that
+killed it: `rrf_not_in_pool`, `rerank_below_floor`,
+`diversity_source_cap`, `diversity_document_cap`, `diversity_top_k_filled`,
+`freshness_penalty`.
+
+### Rolling back
+
+If the staged pipeline ever causes a problem in production, roll back
+by setting `RAG_RERANK_PROVIDER=none` in the runtime environment and
+restarting the server. No code change, no rebuild, no data migration
+— the legacy single-hybrid-search path is byte-identical to before
+this feature shipped.
+
 ## Document Ingestion
 
 Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
@@ -176,15 +483,24 @@ Configure sources in `config/local.yaml` (gitignored). Put only infrastructure s
 
 | Setting (`config/local.yaml` key) | Env var equivalent | Default | Description |
 |---|---|---|---|
-| `ingest.ingest_sources` | `INGEST_SOURCES` | `local` | Comma-separated list of active sources: `local`, `confluence`, `github`, `github_pr`, `gitlab_mr`, `slack_thread`, `jira` |
 | `ingest.self_ingest` | `DOCBRAIN_SELF_INGEST` | `true` | Auto-ingest DocBrain's own docs |
 | `ingest.image_extraction_enabled` | `IMAGE_EXTRACTION_ENABLED` | `true` | Extract and describe images using vision LLM |
 
+Source enablement is structural — a sub-source runs when its block is present
+under `sources:` in YAML. There is no separate list or enable flag.
+
 ### Local Files
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion (set in `.env` or as env var) |
+```yaml
+# config/local.yaml
+sources:
+  local:
+    path: /data/docs
+```
+
+| Key | Env var | Default | Description |
+|-----|---------|---------|-------------|
+| `sources.local.path` | `LOCAL_DOCS_PATH` | — | Directory path for local file ingestion |
 
 ### Confluence
 
@@ -209,112 +525,175 @@ confluence:
 | `confluence.tls_verify` | `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
 | `confluence.webhook_secret` | `CONFLUENCE_WEBHOOK_SECRET` | — | HMAC secret for real-time webhook sync (set as env var) |
 
-### GitHub Repository
+## Ingestion sources — nested umbrella configuration
+
+All ingestion sources now live under a single top-level `sources:` block. Each
+provider has one umbrella entry (`github`, `gitlab`, `slack`, `jira`, `linear`,
+…) with its credentials at the top and optional sub-sources nested inside.
+A sub-source is **enabled** when its block is present in YAML — there is no
+separate `INGEST_SOURCES` env var, and no per-source enable flag.
+
+**Resource lists are always explicit.** Every list-of-targets field (repos,
+projects, channels, teams, …) must contain at least one entry. An empty list
+is a startup error — DocBrain never silently falls back to "ingest everything
+the token can see."
+
+### Selector grammar (GitHub & GitLab)
+
+Repositories are specified with a small selector grammar:
+
+| Syntax | Meaning |
+|--------|---------|
+| `acme/platform` | Exact repository, use the repo's default branch |
+| `acme/platform:develop` | Exact repository, pinned to the `develop` branch |
+| `acme/*` | All repositories in the `acme` organisation (default branches) |
+| `acme/infra-*` | All `acme` repositories whose name starts with `infra-` |
+| `acme/*:main` | **Rejected at startup** — wildcards must use default branches |
+
+> **Wildcards:** Parsing is supported today but **runtime expansion against the
+> GitHub/GitLab APIs is a follow-up** and rejected at startup for now with a
+> clear error. List repositories explicitly until wildcard resolution lands.
+
+### GitHub (code + pull requests)
 
 ```yaml
 # config/local.yaml
-github:
-  repo_url: https://github.com/your-org/your-docs
-  token: ghp_...    # only for private repos
-  branch: main
+sources:
+  github:
+    token: ${GITHUB_TOKEN}                 # repo:read scope
+    api_url: https://api.github.com         # override for GitHub Enterprise
+    code:                                  # optional — ingest markdown from repos
+      repos:
+        - acme/platform
+        - acme/docs:develop                 # pinned branch
+    pull_requests:                         # optional — ingest PR discussions
+      repos:
+        - acme/platform
+        - acme/backend
+      lookback_days: 365
+      min_comments: 1
+      labels: []                            # empty = index all PRs
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `github.repo_url` | `GITHUB_REPO_URL` | — | Repository URL to clone and ingest |
-| `github.token` | `GITHUB_TOKEN` | — | Personal access token (optional for public repos) |
-| `github.branch` | `GITHUB_BRANCH` | `main` | Branch to ingest from |
+| `sources.github.token` | `GITHUB_TOKEN` | — | GitHub personal access token with `repo:read` scope |
+| `sources.github.api_url` | `GITHUB_API_URL` | `https://api.github.com` | API host override for GitHub Enterprise |
+| `sources.github.code.repos` | — | — | **Required when `code` is set.** Non-empty list of `owner/repo[:branch]` selectors |
+| `sources.github.pull_requests.repos` | — | — | **Required when `pull_requests` is set.** Non-empty list of `owner/repo` selectors |
+| `sources.github.pull_requests.lookback_days` | — | `365` | How far back to fetch merged PRs |
+| `sources.github.pull_requests.min_comments` | — | `1` | Minimum total review/issue comments on a PR to be indexed |
+| `sources.github.pull_requests.labels` | — | `[]` | Label filter — empty list indexes all PRs |
 
-### GitHub Pull Requests
-
-Ingest PR titles, descriptions, and review discussions as searchable knowledge.
+### GitLab (merge requests)
 
 ```yaml
 # config/local.yaml
-github_pr:
-  token: ghp_...
-  repo: acme/platform
-  lookback_days: 365
-  min_comments: 1
+sources:
+  gitlab:
+    token: ${GITLAB_TOKEN}                 # api scope
+    base_url: https://gitlab.com            # override for self-hosted
+    tls_verify: true                        # false for self-signed certs
+    merge_requests:
+      projects:
+        - acme/platform
+        - acme/infra
+      lookback_days: 365
+      min_notes: 1
+      labels: []
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `github_pr.token` | `GITHUB_PR_TOKEN` | — | GitHub personal access token (secret — set in `config/local.yaml`) |
-| `github_pr.repo` | `GITHUB_PR_REPO` | — | Owner/repo (e.g. `acme/platform`) — set in `config/local.yaml` |
-| `github_pr.lookback_days` | `GITHUB_PR_LOOKBACK_DAYS` | `365` | How far back to fetch PRs |
-| `github_pr.min_comments` | `GITHUB_PR_MIN_COMMENTS` | `1` | Minimum comments for a PR to be ingested |
-| `github_pr.labels` | `GITHUB_PR_LABELS` | — | Comma-separated label filter (optional) |
-| `github_pr.api_url` | `GITHUB_PR_API_URL` | — | Override for GitHub Enterprise (optional) |
+| `sources.gitlab.token` | `GITLAB_TOKEN` | — | GitLab personal or project access token with `api` scope |
+| `sources.gitlab.base_url` | `GITLAB_BASE_URL` | `https://gitlab.com` | Instance URL for self-hosted GitLab |
+| `sources.gitlab.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs |
+| `sources.gitlab.merge_requests.projects` | — | — | **Required.** Non-empty list of `group/project` paths |
+| `sources.gitlab.merge_requests.lookback_days` | — | `365` | How far back to fetch merged MRs |
+| `sources.gitlab.merge_requests.min_notes` | — | `1` | Minimum discussion notes on an MR to be indexed |
+| `sources.gitlab.merge_requests.labels` | — | `[]` | Label filter — empty list indexes all MRs |
 
-### GitLab Merge Requests
-
-Ingest MR titles, descriptions, and discussion threads.
+### Slack (threads)
 
 ```yaml
 # config/local.yaml
-gitlab_mr:
-  token: glpat-...
-  project_ids: acme/platform,acme/infra
-  lookback_days: 365
+sources:
+  slack:
+    token: ${SLACK_INGEST_TOKEN}           # bot token: channels:history, channels:read, users:read
+    threads:
+      channels:                             # Slack channel names (not IDs)
+        - "#incident-response"
+        - "#eng-platform"
+      min_replies: 3
+      reactions:
+        - white_check_mark
+        - bookmark
+      lookback_days: 90
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `gitlab_mr.token` | `GITLAB_TOKEN` | — | GitLab personal access token (secret — set in `config/local.yaml`) |
-| `gitlab_mr.base_url` | `GITLAB_BASE_URL` | `https://gitlab.com` | GitLab instance URL |
-| `gitlab_mr.project_ids` | `GITLAB_PROJECT_IDS` | — | Comma-separated namespace/repo paths — set in `config/local.yaml` |
-| `gitlab_mr.lookback_days` | `GITLAB_MR_LOOKBACK_DAYS` | `365` | How far back to fetch MRs |
-| `gitlab_mr.min_notes` | `GITLAB_MR_MIN_NOTES` | `1` | Minimum notes/comments for an MR to be ingested |
-| `gitlab_mr.labels` | `GITLAB_MR_LABELS` | — | Comma-separated label filter (optional) |
-| `gitlab_mr.tls_verify` | `GITLAB_TLS_VERIFY` | `true` | Set to `false` for self-signed certs (batch ingest) |
-| `gitlabCapture.tlsInsecure` | `GITLAB_CAPTURE_TLS_INSECURE` | `false` | Set to `true` for self-signed certs (real-time capture) |
+| `sources.slack.token` | `SLACK_INGEST_TOKEN` | — | Bot token for ingestion (separate from `SLACK_BOT_TOKEN` used by @mentions) |
+| `sources.slack.threads.channels` | — | — | **Required.** Non-empty list of channel names (leading `#` optional). The bot must be invited to every channel. |
+| `sources.slack.threads.min_replies` | — | `3` | Minimum replies for a thread to be indexed |
+| `sources.slack.threads.reactions` | — | `[white_check_mark, bookmark]` | Reactions that override the reply-count threshold |
+| `sources.slack.threads.lookback_days` | — | `90` | How far back to scan for threads |
 
-### Slack Threads
-
-Ingest high-signal Slack threads (by reaction count or reply threshold).
+### Jira (issues)
 
 ```yaml
 # config/local.yaml
-slack_ingest:
-  token: xoxb-...
-  channels: C01234567,C09876543
-  min_replies: 3
-  reactions: "white_check_mark,bookmark"
-  lookback_days: 90
+sources:
+  jira:
+    base_url: https://yourcompany.atlassian.net
+    user_email: ${JIRA_USER_EMAIL}
+    api_token: ${JIRA_API_TOKEN}
+    projects:                               # required — no silent "all projects" fallback
+      - ENG
+      - PLAT
+    # jql_filter: "resolution = Fixed"     # optional extra JQL clause
+    lookback_days: 365
+    issue_types:
+      - Bug
+      - Story
+      - Task
+      - Epic
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `slack_ingest.token` | `SLACK_INGEST_TOKEN` | — | Slack bot token (secret — set in `config/local.yaml`) |
-| `slack_ingest.channels` | `SLACK_INGEST_CHANNELS` | — | Comma-separated channel IDs — set in `config/local.yaml` |
-| `slack_ingest.min_replies` | `SLACK_MIN_REPLIES` | `3` | Minimum thread replies to be ingested |
-| `slack_ingest.reactions` | `SLACK_INGEST_REACTIONS` | `white_check_mark,bookmark` | Comma-separated reaction names that flag a thread for ingest |
-| `slack_ingest.lookback_days` | `SLACK_LOOKBACK_DAYS` | `90` | How far back to scan channels |
+| `sources.jira.base_url` | `JIRA_BASE_URL` | — | Jira instance URL |
+| `sources.jira.user_email` | `JIRA_USER_EMAIL` | — | Service-account email for Basic auth |
+| `sources.jira.api_token` | `JIRA_API_TOKEN` | — | Atlassian API token |
+| `sources.jira.projects` | — | — | **Required.** Non-empty list of project keys (e.g. `ENG`, `PLAT`) |
+| `sources.jira.jql_filter` | `JIRA_JQL_FILTER` | — | Additional JQL clause appended to the default query |
+| `sources.jira.lookback_days` | `JIRA_LOOKBACK_DAYS` | `365` | How far back to fetch resolved issues |
+| `sources.jira.issue_types` | — | `[Bug, Story, Task, Epic]` | Issue types to include |
 
-### Jira
-
-Ingest Jira issues (bugs, stories, tasks, epics) as searchable knowledge.
+### Linear (issues)
 
 ```yaml
 # config/local.yaml
-jira_ingest:
-  base_url: https://yourcompany.atlassian.net
-  user_email: you@yourcompany.com
-  api_token: your-token
-  projects: ENG,OPS
-  lookback_days: 365
+sources:
+  linear:
+    api_key: ${LINEAR_API_KEY}
+    teams:                                  # required — no silent "all teams" fallback
+      - ENG
+      - OPS
+    lookback_days: 365
+    states:
+      - Done
+      - Cancelled
+      - Duplicate
 ```
 
 | Key | Env var | Default | Description |
 |-----|---------|---------|-------------|
-| `jira_ingest.base_url` | `JIRA_BASE_URL` | — | Jira instance URL — set in `config/local.yaml` |
-| `jira_ingest.user_email` | `JIRA_USER_EMAIL` | — | Jira account email — set in `config/local.yaml` |
-| `jira_ingest.api_token` | `JIRA_API_TOKEN` | — | Jira API token (secret — set in `config/local.yaml`) |
-| `jira_ingest.projects` | `JIRA_PROJECTS` | — | Comma-separated project keys — set in `config/local.yaml` |
-| `jira_ingest.jql_filter` | `JIRA_JQL_FILTER` | — | Additional JQL filter (optional) |
-| `jira_ingest.lookback_days` | `JIRA_LOOKBACK_DAYS` | `365` | How far back to fetch issues |
-| `jira_ingest.issue_types` | `JIRA_ISSUE_TYPES` | `Bug,Story,Task,Epic` | Comma-separated issue types to ingest |
+| `sources.linear.api_key` | `LINEAR_API_KEY` | — | Linear personal API key |
+| `sources.linear.teams` | — | — | **Required.** Non-empty list of team keys |
+| `sources.linear.lookback_days` | `LINEAR_LOOKBACK_DAYS` | `365` | How far back to fetch completed/cancelled issues |
+| `sources.linear.states` | — | `[Done, Cancelled, Duplicate]` | Issue states to include |
+
 
 ## Rate Limiting
 
@@ -394,6 +773,105 @@ Image extraction requires a vision-capable LLM. Supported providers: **Bedrock**
 |----------|---------|-------------|
 | `LOGIN_SESSION_TTL_HOURS` | `720` | Session lifetime after email/password login (default: 720 hours = 30 days). Set to `0` for no expiry. |
 | `MAX_QUERY_LENGTH` | `4000` | Maximum characters allowed for question and description inputs |
+
+## MCP Tool Platform
+
+Master switch for the live-tool orchestrator. When disabled (the
+default), the synthesis path is byte-identical to the pre-MCP path: no orchestrator
+round-trip, no fast-LLM dispatch, no measurable overhead. Flip to `true`
+once `MCP_OAUTH_ENCRYPTION_KEY` and `MCP_MANIFEST_DIR` are configured to
+enable live tool fan-out at answer time.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_TOOLS_ENABLED` | `false` | Master switch. `true` = orchestrator runs after retrieval, injects live-tool blocks into the synthesis prompt. Requires `MCP_OAUTH_ENCRYPTION_KEY` + `MCP_MANIFEST_DIR` to also be configured (else falls back to disabled). |
+| `MCP_OAUTH_ENCRYPTION_KEY` | — | Base64-encoded 32-byte key for at-rest encryption of per-user OAuth tokens stored in the `mcp_oauth_tokens` table. Required when `MCP_TOOLS_ENABLED=true`. |
+| `MCP_MANIFEST_DIR` | — | Directory containing MCP tool manifests (YAML). In the Helm chart this is mounted from the `docbrain-mcp-manifests` ConfigMap. |
+| `DOCBRAIN_INTERNAL_MCP_SECRET` | — | Bearer secret for the in-process `/internal/mcp/*` shim routes (e.g. `jira-rest`). The server checks this header on every internal shim call. Set via Helm `mcpTools.internalShimSecret`. |
+| `MCP_REGISTRY_PUBKEY` | — | Base64-encoded 32-byte Ed25519 public key used to verify the signed registry index and per-manifest signatures. When unset, `/api/v1/admin/mcp/registry*` and `/install-from-registry` return `503` and the server boots normally; admins can still install via the paste/URL endpoint. No default. |
+| `MCP_REGISTRY_URL` | `https://registry.docbrain-ai.com/v1/index.json` | URL of the signed registry index. |
+| `MCP_REGISTRY_CACHE_PATH` | `/var/lib/docbrain/registry-cache/index.json` | Disk path for the cached registry index. Acts as the Tier 2 fallback when the network fetch fails. |
+| `DOCBRAIN_K8S_SECRET_NAME` | — | Kubernetes Secret name embedded in the kubectl command rendered by `/api/v1/admin/mcp/secrets/audit/{id}`. Optional — when unset the rendered command shows a `<set DOCBRAIN_K8S_SECRET_NAME>` placeholder. |
+| `DOCBRAIN_K8S_NAMESPACE` | — | Kubernetes namespace for the same audit endpoint. Optional — placeholder when unset. |
+| `DOCBRAIN_SERVER_PORT` | `3000` | Port the `docbrain-server` listens on. Used by manifests that interpolate `${DOCBRAIN_SERVER_PORT}` into the shim endpoint URL. |
+
+YAML equivalent:
+
+```yaml
+mcp_tools:
+  enabled: false
+```
+
+### Helm values
+
+The chart exposes these under `mcpTools.*` in `values.yaml`:
+
+| Helm value | Maps to env | Notes |
+|---|---|---|
+| `mcpTools.enabled` | `MCP_TOOLS_ENABLED` | Master switch. |
+| `mcpTools.encryptionKey` | `MCP_OAUTH_ENCRYPTION_KEY` | Required when enabled. |
+| `mcpTools.internalShimSecret` | `DOCBRAIN_INTERNAL_MCP_SECRET` | Required when any `internal:` manifest is loaded. |
+| `mcpTools.manifestDir` | `MCP_MANIFEST_DIR` | Defaults to the mounted ConfigMap path. |
+| `mcpTools.serviceAccount.jira.apiToken` | — | Service-account fallback token used by the `jira-rest` shim. |
+| `mcpTools.serviceAccount.jira.cloudId` | — | Atlassian cloud-id for the shim's REST base URL. |
+| `mcpTools.oauth.atlassian.clientId` | — | OAuth client ID for per-user Atlassian token exchange. |
+| `mcpTools.oauth.atlassian.clientSecret` | — | OAuth client secret. |
+
+Two reference manifests ship in the chart:
+
+- **`jira`** — Teamwork Graph / Atlassian Remote MCP. External; depends on Atlassian's hosted MCP server.
+- **`jira-rest`** — Internal shim served at `/internal/mcp/jira-rest`, backed by the Atlassian REST v3 API. Preferred path; more reliable than the hosted MCP.
+
+### Dynamic tool discovery
+
+For MCP servers that publish a `tools/list` endpoint, DocBrain can auto-populate
+the tool catalog instead of requiring every tool to be hand-declared in the
+manifest. Add a `tool_discovery` block:
+
+```yaml
+id: my_mcp
+display_name: My MCP
+# ... rest of manifest ...
+tools: []                           # may be empty when discovery is dynamic
+tool_discovery:
+  mode: dynamic                     # default: static — explicit "dynamic" enables auto-discovery
+  refresh_seconds: 3600             # poll interval; must be 0 (boot-only) or >= 60
+  per_tool_defaults:
+    output_size_cap_bytes: 16384    # <= 16384 ceiling
+    latency_budget_ms: 7000         # <= 8000 ceiling
+```
+
+**Read-only invariant (D1).** DocBrain only registers tools where the upstream
+declares `annotations.readOnlyHint == true`. Tools without the hint, or marked
+`false`, are silently dropped at probe time. DocBrain does not dispatch write
+operations via MCP; this is a platform-wide invariant enforced at three gates:
+the probe-time filter, the required `read_only` field on every static tool, and
+a final assertion in `eligibility_for_user`.
+
+**Static tool field — `read_only`.** Every entry in `tools:` MUST declare
+`read_only: true` (or `false`, which will then be blocked by the D1 gate at
+eligibility time). This is a required field; manifests missing it fail to parse.
+
+**Probe credentials.**
+
+- *Service-account or mixed auth*: the manifest's service-account header is
+  used for probes. No additional setup required.
+- *OAuth-only auth*: an admin must designate a probe user via
+  `PUT /api/v1/admin/mcp/manifests/{id}/probe-user`. Until designated, the
+  manifest stays in `requires_probe_user` status and serves no tools.
+
+**Static + dynamic name collisions.** When a static tool and a discovered tool
+share a name:
+
+- If the static tool has `override_discovered: true`, the static entry wins and
+  surfaces with `tool_source: "static_override"`.
+- Otherwise BOTH entries are dropped from eligibility and the manifest's
+  discovery status flips to `degraded_collisions`. Inspect via
+  `GET /api/v1/admin/mcp/manifests/{id}`.
+
+**Boot behaviour.** Dynamic manifests are excluded from eligibility until the
+first successful probe completes. Status surfaces in the admin detail endpoint
+as `pending` → `ok` (or `failed` / `requires_probe_user`).
 
 ## Slack Integration (Optional)
 
@@ -493,6 +971,92 @@ When publishing, DocBrain resolves the target in priority order: space-specific 
 | `CONTRADICTION_CHECKS_PER_PASS` | `10` | Max documents checked for contradictions per freshness run (LLM cost) |
 | `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
+
+### Event-Based Source Types
+
+Source types whose documents are permanent historical records — incident threads, merged PRs, support tickets — never go stale and shouldn't be evaluated for content currency or contradictions. The scorer pins their `time_decay = 100` and skips LLM/link/contradiction passes.
+
+This was a hardcoded list until v1.4; it's now configurable so operators can register custom permanent-record source types (e.g. a homegrown incident system) without rebuilding the image.
+
+| YAML key (under `freshness`) | Default | Description |
+|------------------------------|---------|-------------|
+| `event_based_spaces` | `[slack_thread, github_pr, github, gitlab_mr, jira, linear, pagerduty, opsgenie, zendesk, intercom, fireflies]` | List of `documents.space` values treated as permanent historical records. Capture sources (`slack_capture`, `github_capture`, `gitlab_capture`) are intentionally NOT in the default — design discussions DO go stale. |
+
+Override in `default.yaml` (or via the helm value `freshness.eventBasedSpaces`) to add custom source types.
+
+### Excluding Documents from Freshness Reports
+
+Documents that are intentionally frozen — archived project pages, retros, historical decision records, reference material — should not be evaluated for freshness. Old isn't the same as wrong. DocBrain detects these from source-system metadata at ingest and skips them in the scorer.
+
+The **Freshness page** in the UI shows excluded counts via "View excluded (N)" in the page header. Excluded docs don't appear in the Total / Outdated / Stale / Review / Fresh rollups — they're not noise in the freshness view.
+
+#### Quick recipe — exclude every doc tagged `retrospective` in Confluence
+
+**Helm-managed deployments** (recommended — no image rebuild):
+
+```yaml
+# values.yaml
+freshness:
+  exclusionRules:
+    archived_labels:
+      - archived          # defaults
+      - historical
+      - obsolete
+      - deprecated
+      - frozen
+      - reference
+      - retrospective     # ← your addition
+```
+
+```sh
+helm upgrade <release> <chart> -f values.yaml
+```
+
+Then in the DocBrain UI:
+1. **Freshness → Reclassify lifecycle** (or `POST /api/v1/freshness/backfill-lifecycle`) — re-derives every auto-managed doc against the new rules. Existing retrospective-tagged docs become archived in seconds.
+2. **Freshness → Rescore All** — refreshes the rollup numbers.
+
+Future docs with the tag get caught automatically at ingest. No further action needed.
+
+**Direct config edits** (when not using helm): edit `config/default.yaml`, restart the server pod. Same rule.
+
+**Per-doc override** (just one specific document, not the whole tag):
+
+```sh
+curl -X PATCH https://your.docbrain.example/api/v1/documents/{doc_id}/lifecycle \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "archived"}'
+```
+
+Or use the row action menu in the UI: **⋯ → Mark archived**. Manual overrides are sticky — they survive future syncs even if the source-system label changes back.
+
+#### How detection works
+
+During Confluence ingestion DocBrain reads each page's labels and (for Confluence Cloud) page status. The lifecycle classifier matches against three independent signal sources — any match marks the doc archived:
+
+| YAML key (under `freshness.exclusion_rules`) | Helm value | Default | What it matches |
+|----------------------------------------------|------------|---------|-----------------|
+| `archived_labels` | `freshness.exclusionRules.archived_labels` | `[archived, historical, obsolete, deprecated, frozen, reference]` | Source labels, case-insensitive. Confluence page labels match here. |
+| `archived_page_statuses` | `freshness.exclusionRules.archived_page_statuses` | `[archived, trashed]` | Confluence Cloud `status` field. |
+| `archived_title_patterns` | `freshness.exclusionRules.archived_title_patterns` | `['^Archived ', '^\[ARCHIVED\]', '\(archived\)$']` | Regex against doc title — safety net for un-labeled legacy docs. |
+
+These rules are list-shaped and configured in YAML only (env vars can't represent lists).
+
+#### Which lifecycle status to use
+
+The `PATCH /lifecycle` API and the row action menu accept four values. They all exclude the doc from scoring; pick the one that matches intent so your audit trail stays meaningful:
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Default. Scored normally. Use this to un-archive a doc. |
+| `archived` | Frozen historical record. Old by design. |
+| `reference` | Evergreen content (style guides, glossaries). Don't nag, don't decay. |
+| `deprecated` | Should eventually be deleted, but kept for now. |
+
+#### Reviewing what's been excluded
+
+Click **View excluded (N)** in the Freshness page header. The modal groups docs by lifecycle status (archived / reference / deprecated), shows the source labels that triggered the classification, and exposes a **Mark active** button per row to un-archive a doc directly. Search filters by title, space, or tag.
 
 ### Semantic Quality Scoring
 
@@ -641,6 +1205,77 @@ OIDC_EDITOR_GROUPS=docs-writers
 
 ---
 
+## ACL
+
+Mirrors source-system permissions (Confluence space restrictions, Slack private channels, GitHub repo visibility, Jira issue security levels) at query time. A user only sees retrieval results for documents they can read in the source.
+
+For the conceptual guide, modes, denial UX, audit log, and threat model, see **[Access Control (ACL)](access-control.md)**. The reference below is the env-var / YAML surface only.
+
+### Top-level
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ACL_MODE` | `off` | `off` (no filtering), `warn` (log denials, return all), `enforce` (filter + redact) |
+| `ACL_RECALL_OVERFETCH` | `2.0` | Recall multiplier — pull this much extra from the index so post-filter results still hit `top_k` |
+| `ACL_UNKNOWN_POLICY` | `deny` | What to do with chunks that have no ACL data: `deny` (fail-closed) or `allow` (legacy / migration mode) |
+
+### Per-source policy (`acl.sources.*`)
+
+Each connector slot accepts `mirror` (default — use real source ACLs), `public` (everyone in the workspace can see all docs from this source), or `admin_only`.
+
+```yaml
+acl:
+  sources:
+    confluence: mirror
+    slack: mirror
+    github: mirror
+    jira: mirror
+    gitlab: public        # if your GitLab MRs are intentionally workspace-wide
+    ms_teams: admin_only  # restrict until ACL provider lands
+    linear: mirror
+```
+
+Per-namespace overrides (per Confluence space, per Slack channel, etc.) live under `acl.denial.source_overrides.<source>.{space,channel,repo,project}_overrides`.
+
+### Denial UX (`acl.denial.*`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ACL_DENIAL_MODE` | `disclosed_no_count` | `silent` (no hint), `disclosed_no_count` (acknowledge, hide count), `disclosed` (full count + breakdown) |
+| `ACL_DENIAL_REFERRAL` | _unset_ | Optional URL shown in denial messages (e.g. your access-request portal) |
+| `ACL_DENIAL_PARTIAL_DENIAL` | `true` | Surface `access` metadata even when *some* results were returned |
+| `ACL_AUDIT_ENABLED` | `false` | Write denial events to `acl_audit_log` (required for HIPAA / FedRAMP / SOC2 trails) |
+| `ACL_AUDIT_RAW_QUERY` | `false` | Store the raw user query (default: SHA256 hash only — queries can carry MNPI / PII) |
+
+Per-role overrides (admin sees full disclosure, employee sees no count) and per-source overrides are YAML-only:
+
+```yaml
+acl:
+  denial:
+    mode: disclosed_no_count
+    role_overrides:
+      admin: disclosed
+    source_overrides:
+      confluence:
+        mode: disclosed
+      slack:
+        mode: silent
+```
+
+> Strictest-wins: if any one denied source resolves to `silent`, the whole response goes silent. This prevents side-channel leaks where a user learns *which* source restricted them.
+
+### Diagnostics
+
+```bash
+# What does ACL think this user can see?
+GET /api/v1/me/acl
+
+# Coverage report — how many indexed chunks have ACL principals attached?
+SELECT source_type, COUNT(*) FROM document_acl GROUP BY source_type;
+```
+
+---
+
 ## Documentation Analytics
 
 | Variable | Default | Description |
@@ -713,7 +1348,7 @@ See the [API Reference](api-reference.md#cicd-pipeline-capture) for endpoint det
 
 ## Conversation Auto-Distillation
 
-Automatically extracts structured knowledge fragments from captured conversations — Slack threads (via `/docbrain sync`) and GitHub PR discussions (via `@docbrain capture`). After a successful capture, DocBrain runs LLM-powered distillation in the background to identify decisions, facts, caveats, procedures, and context embedded in the conversation.
+Automatically extracts structured knowledge fragments from captured conversations — Slack threads (via message shortcut, `@DocBrain capture`, or `/docbrain capture`) and GitHub PR discussions (via `@docbrain capture`). After a successful capture, DocBrain runs LLM-powered distillation in the background to identify decisions, facts, caveats, procedures, and context embedded in the conversation.
 
 Distillation is fire-and-forget: it never affects capture response time. Failures are logged and metriced but don't block the capture path.
 

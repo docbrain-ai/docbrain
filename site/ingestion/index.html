@@ -1,0 +1,3783 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Shift-left documentation platform — capture knowledge at the source, score quality automatically, publish docs that stay accurate.">
+      
+      
+      
+        <link rel="canonical" href="https://docbrainapi.com/docs/ingestion/">
+      
+      
+        <link rel="prev" href="../learning/">
+      
+      
+        <link rel="next" href="../connectors/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Ingestion Guide - DocBrain Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ingestion-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="DocBrain Docs" class="md-header__button md-logo" aria-label="DocBrain Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.5c-1.35-.85-3.8-1.5-5.5-1.5-1.65 0-3.35.3-4.75 1.05-.1.05-.15.05-.25.05-.25 0-.5-.25-.5-.5V6c.6-.45 1.25-.75 2-1 1.11-.35 2.33-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.17 0 2.39.15 3.5.5.75.25 1.4.55 2 1v14.6c0 .25-.25.5-.5.5-.1 0-.15 0-.25-.05-1.4-.75-3.1-1.05-4.75-1.05-1.7 0-4.15.65-5.5 1.5M12 8v11.5c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5V7c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5m1 3.5c1.11-.68 2.6-1 4.5-1 .91 0 1.76.09 2.5.28V9.23c-.87-.15-1.71-.23-2.5-.23q-2.655 0-4.5.84zm4.5.17c-1.71 0-3.21.26-4.5.79v1.69c1.11-.65 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24v-1.5c-.87-.16-1.71-.23-2.5-.23m2.5 2.9c-.87-.16-1.71-.24-2.5-.24-1.83 0-3.33.27-4.5.8v1.69c1.11-.66 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DocBrain Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Ingestion Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/docbrain-ai/docbrain" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    docbrain-ai/docbrain
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="DocBrain Docs" class="md-nav__button md-logo" aria-label="DocBrain Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.5c-1.35-.85-3.8-1.5-5.5-1.5-1.65 0-3.35.3-4.75 1.05-.1.05-.15.05-.25.05-.25 0-.5-.25-.5-.5V6c.6-.45 1.25-.75 2-1 1.11-.35 2.33-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.17 0 2.39.15 3.5.5.75.25 1.4.55 2 1v14.6c0 .25-.25.5-.5.5-.1 0-.15 0-.25-.05-1.4-.75-3.1-1.05-4.75-1.05-1.7 0-4.15.65-5.5 1.5M12 8v11.5c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5V7c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5m1 3.5c1.11-.68 2.6-1 4.5-1 .91 0 1.76.09 2.5.28V9.23c-.87-.15-1.71-.23-2.5-.23q-2.655 0-4.5.84zm4.5.17c-1.71 0-3.21.26-4.5.79v1.69c1.11-.65 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24v-1.5c-.87-.16-1.71-.23-2.5-.23m2.5 2.9c-.87-.16-1.71-.24-2.5-.24-1.83 0-3.33.27-4.5.8v1.69c1.11-.66 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24z"/></svg>
+
+    </a>
+    DocBrain Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/docbrain-ai/docbrain" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    docbrain-ai/docbrain
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rerank-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rerank Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge-intelligence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Intelligence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autopilot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autopilot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reviews/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingestion Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingestion Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-ingestion-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Ingestion Works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-1-local-files-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Local Files (Default)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 1: Local Files (Default)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-your-own-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Your Own Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-file-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported File Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-2-confluence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Confluence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 2: Confluence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-create-a-confluence-api-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Create a Confluence API Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-find-your-space-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Find Your Space Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-configlocalyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure config/local.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-run-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Run Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#self-hosted-confluence-data-center" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Hosted Confluence (Data Center)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permissions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-3-github-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: GitHub Repository
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 3: GitHub Repository">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#creating-a-github-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a GitHub Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-ingestion_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-ingested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Ingested
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monorepo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monorepo?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-extraction-confluence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image Extraction (Confluence)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Image Extraction (Confluence)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-providers-support-vision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which Providers Support Vision?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Guardrails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabling-image-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling Image Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-time-sync-confluence-webhooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Sync: Confluence Webhooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-Time Sync: Confluence Webhooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-generate-a-webhook-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Generate a Webhook Secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-configure-docbrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Configure DocBrain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-the-webhook-in-confluence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure the Webhook in Confluence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 3: Configure the Webhook in Confluence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#confluence-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confluence Cloud
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confluence-data-center-self-hosted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confluence Data Center (Self-Hosted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webhooks-vs-scheduled-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Webhooks vs. Scheduled Ingest
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-time-capture-docbrain-capture-and-docbrain-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Capture: @docbrain capture and /docbrain capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-Time Capture: @docbrain capture and /docbrain capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-capture-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Capture Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#github-prissue-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub PR/Issue Capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GitHub PR/Issue Capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register-the-webhook-in-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register the Webhook in GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-indexed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Indexed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reply-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reply Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-and-access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security and Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gitlab-mr-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitLab MR Capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GitLab MR Capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-configure-docbrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Configure DocBrain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-register-the-webhook-in-gitlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Register the Webhook in GitLab
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-test-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Test It
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-indexed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Indexed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reply-behavior_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reply Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-and-access-control_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security and Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slack-thread-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slack Thread Capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slack Thread Capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-indexed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Indexed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capture-lifecycle-and-freshness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture Lifecycle and Freshness
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capture Lifecycle and Freshness">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#space-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Space Assignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#staleness-and-time-decay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Staleness and Time Decay
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-ingestion-and-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-Ingestion and Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Re-Ingestion and Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#updating-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating Documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduled-ingestion-kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scheduled Ingestion (Kubernetes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-re-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Re-Index
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Connectors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../slack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gitlab-capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitLab Capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confluence-webhook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Confluence Webhook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kubernetes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC & SSO
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../access-control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (ACL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-ingestion-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Ingestion Works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-1-local-files-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Local Files (Default)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 1: Local Files (Default)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-your-own-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Your Own Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-file-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported File Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-2-confluence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Confluence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 2: Confluence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-create-a-confluence-api-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Create a Confluence API Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-find-your-space-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Find Your Space Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-configlocalyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure config/local.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-run-ingestion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Run Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#self-hosted-confluence-data-center" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Self-Hosted Confluence (Data Center)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#permissions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Permissions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-3-github-repository" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: GitHub Repository
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option 3: GitHub Repository">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#creating-a-github-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating a GitHub Token
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#run-ingestion_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run Ingestion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-ingested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Ingested
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monorepo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monorepo?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#image-extraction-confluence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image Extraction (Confluence)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Image Extraction (Confluence)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-providers-support-vision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which Providers Support Vision?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#guardrails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Guardrails
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disabling-image-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Disabling Image Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-time-sync-confluence-webhooks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Sync: Confluence Webhooks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-Time Sync: Confluence Webhooks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-generate-a-webhook-secret" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Generate a Webhook Secret
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-configure-docbrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Configure DocBrain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-the-webhook-in-confluence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure the Webhook in Confluence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 3: Configure the Webhook in Confluence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#confluence-cloud" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confluence Cloud
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confluence-data-center-self-hosted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confluence Data Center (Self-Hosted)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-verify" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Verify
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#webhooks-vs-scheduled-ingest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Webhooks vs. Scheduled Ingest
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-time-capture-docbrain-capture-and-docbrain-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-Time Capture: @docbrain capture and /docbrain capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-Time Capture: @docbrain capture and /docbrain capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-capture-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Capture Does
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#github-prissue-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitHub PR/Issue Capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GitHub PR/Issue Capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#register-the-webhook-in-github" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Register the Webhook in GitHub
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-indexed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Indexed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reply-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reply Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-and-access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security and Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gitlab-mr-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GitLab MR Capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GitLab MR Capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-configure-docbrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Configure DocBrain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-register-the-webhook-in-gitlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Register the Webhook in GitLab
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-test-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Test It
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-indexed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Indexed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reply-behavior_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reply Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security-and-access-control_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security and Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slack-thread-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slack Thread Capture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slack Thread Capture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#access-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Access Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-gets-indexed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Gets Indexed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#capture-lifecycle-and-freshness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture Lifecycle and Freshness
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capture Lifecycle and Freshness">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#space-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Space Assignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#staleness-and-time-decay" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Staleness and Time Decay
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-ingestion-and-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Re-Ingestion and Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Re-Ingestion and Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#updating-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating Documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduled-ingestion-kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scheduled Ingestion (Kubernetes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-re-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Re-Index
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ingestion-guide">Ingestion Guide<a class="headerlink" href="#ingestion-guide" title="Permanent link">&para;</a></h1>
+<p>DocBrain needs documents to answer questions. This guide walks you through connecting your document sources — Confluence, GitHub, or local files.</p>
+<h2 id="how-ingestion-works">How Ingestion Works<a class="headerlink" href="#how-ingestion-works" title="Permanent link">&para;</a></h2>
+<p>When you run ingestion, DocBrain:</p>
+<ol>
+<li><strong>Fetches</strong> documents from your configured source</li>
+<li><strong>Converts</strong> them to Markdown (HTML, Confluence storage format, etc.)</li>
+<li><strong>Extracts cross-document references</strong> — URLs to GitHub PRs, GitLab MRs, Jira tickets, Confluence pages, and other linked resources are identified, classified, and stored as a reference graph in PostgreSQL</li>
+<li><strong>Chunks</strong> them using heading-aware splitting (preserves semantic coherence)</li>
+<li><strong>Embeds</strong> each chunk into vectors using your configured embedding provider</li>
+<li><strong>Indexes</strong> the vectors in OpenSearch for hybrid search (k-NN + BM25), with referenced document IDs attached to each chunk for enrichment at query time</li>
+</ol>
+<p>After ingestion, you can immediately start asking questions. DocBrain cites sources in every answer, linking back to the original document.</p>
+<h2 id="quick-reference">Quick Reference<a class="headerlink" href="#quick-reference" title="Permanent link">&para;</a></h2>
+<p>Configure sources in <code>config/local.yaml</code> (gitignored) under the top-level
+<code>sources:</code> block. Put only infrastructure secrets in <code>.env</code>. A sub-source is
+enabled simply by being present in YAML — there is <strong>no separate
+<code>INGEST_SOURCES</code> env var</strong>, and every list of targets must be non-empty.</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Sub-source</th>
+<th>What You Need</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local files</td>
+<td><code>sources.local.path</code></td>
+<td>A directory of <code>.md</code> or <code>.txt</code> files</td>
+</tr>
+<tr>
+<td>Confluence</td>
+<td><code>confluence.*</code> (flat, legacy)</td>
+<td>Atlassian URL, email, API token, space keys</td>
+</tr>
+<tr>
+<td>GitHub code</td>
+<td><code>sources.github.code</code></td>
+<td>GitHub token, list of <code>owner/repo[:branch]</code></td>
+</tr>
+<tr>
+<td>GitHub PRs</td>
+<td><code>sources.github.pull_requests</code></td>
+<td>GitHub token, list of <code>owner/repo</code></td>
+</tr>
+<tr>
+<td>GitLab MRs</td>
+<td><code>sources.gitlab.merge_requests</code></td>
+<td>GitLab token, list of <code>group/project</code></td>
+</tr>
+<tr>
+<td>Slack threads</td>
+<td><code>sources.slack.threads</code></td>
+<td>Slack bot token, list of channel names</td>
+</tr>
+<tr>
+<td>Jira</td>
+<td><code>sources.jira</code></td>
+<td>Jira URL, email, API token, list of project keys</td>
+</tr>
+<tr>
+<td>Linear</td>
+<td><code>sources.linear</code></td>
+<td>Linear API key, list of team keys</td>
+</tr>
+<tr>
+<td>PagerDuty</td>
+<td><code>sources.pagerduty</code></td>
+<td>PagerDuty API token, list of service IDs</td>
+</tr>
+<tr>
+<td>OpsGenie</td>
+<td><code>sources.opsgenie</code></td>
+<td>OpsGenie API key, list of team names</td>
+</tr>
+<tr>
+<td>Zendesk</td>
+<td><code>sources.zendesk</code></td>
+<td>Zendesk subdomain, email, API token</td>
+</tr>
+<tr>
+<td>Intercom</td>
+<td><code>sources.intercom</code></td>
+<td>Intercom access token</td>
+</tr>
+<tr>
+<td>MS Teams</td>
+<td><code>sources.ms_teams</code></td>
+<td>Azure tenant/client/secret, list of team names</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="option-1-local-files-default">Option 1: Local Files (Default)<a class="headerlink" href="#option-1-local-files-default" title="Permanent link">&para;</a></h2>
+<p>The simplest option. Point DocBrain at a folder of Markdown or text files.</p>
+<h3 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h3>
+<p>Add to <code>config/local.yaml</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># config/local.yaml</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">sources</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">local</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/docs</span>
+</span></code></pre></div>
+<p>Or set the path via <code>.env</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>LOCAL_DOCS_PATH=/data/docs
+</span></code></pre></div>
+<p>By default, Docker Compose mounts <code>./examples/sample-docs</code> to <code>/data/docs</code> — so DocBrain works out of the box with the included sample documents.</p>
+<h3 id="using-your-own-files">Using Your Own Files<a class="headerlink" href="#using-your-own-files" title="Permanent link">&para;</a></h3>
+<p><strong>Option A: Edit the volume mount</strong> in <code>docker-compose.yml</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">volumes</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/absolute/path/to/your/docs:/data/docs:ro</span>
+</span></code></pre></div>
+<p><strong>Option B: Copy files into the sample-docs directory:</strong></p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/my-docs/*<span class="w"> </span>examples/sample-docs/
+</span></code></pre></div>
+<h3 id="run-ingestion">Run Ingestion<a class="headerlink" href="#run-ingestion" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+</span></code></pre></div>
+<h3 id="supported-file-types">Supported File Types<a class="headerlink" href="#supported-file-types" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>.md</code> — Markdown (recommended)</li>
+<li><code>.txt</code> — Plain text</li>
+</ul>
+<h3 id="verify">Verify<a class="headerlink" href="#verify" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Ask a question about your docs</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-cli<span class="w"> </span>ask<span class="w"> </span><span class="s2">&quot;What is in my documentation?&quot;</span>
+</span></code></pre></div>
+<hr />
+<h2 id="option-2-confluence">Option 2: Confluence<a class="headerlink" href="#option-2-confluence" title="Permanent link">&para;</a></h2>
+<p>Connect DocBrain to your Atlassian Confluence instance. DocBrain fetches pages from the spaces you specify, converts Confluence storage format to Markdown, and indexes everything.</p>
+<h3 id="step-1-create-a-confluence-api-token">Step 1: Create a Confluence API Token<a class="headerlink" href="#step-1-create-a-confluence-api-token" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to <a href="https://id.atlassian.com/manage-profile/security/api-tokens">https://id.atlassian.com/manage-profile/security/api-tokens</a></li>
+<li>Click <strong>Create API token</strong></li>
+<li>Give it a label (e.g. "DocBrain")</li>
+<li>Copy the token — you won't see it again</li>
+</ol>
+<h3 id="step-2-find-your-space-keys">Step 2: Find Your Space Keys<a class="headerlink" href="#step-2-find-your-space-keys" title="Permanent link">&para;</a></h3>
+<p>Space keys are the short identifiers for your Confluence spaces. You can find them in the URL:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>https://yourcompany.atlassian.net/wiki/spaces/ENG/pages/...
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>                                              ^^^
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>                                              This is the space key
+</span></code></pre></div>
+<p>Common examples: <code>ENG</code>, <code>DOCS</code>, <code>OPS</code>, <code>PLATFORM</code></p>
+<h3 id="step-3-configure-configlocalyaml">Step 3: Configure <code>config/local.yaml</code><a class="headerlink" href="#step-3-configure-configlocalyaml" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># config/local.yaml — never committed (gitignored)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://yourcompany.atlassian.net/wiki</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">user_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">you@yourcompany.com</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-api-token-here</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">space_keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ENG,DOCS</span>
+</span></code></pre></div>
+<p><strong>Multiple spaces</strong>: Separate with commas: <code>ENG,DOCS,OPS</code></p>
+<p><strong>Limiting pages</strong>: By default, DocBrain ingests all pages in each space. To cap the number of pages per space (useful for testing), add:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">page_limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span><span class="w">   </span><span class="c1"># 0 = unlimited (default)</span>
+</span></code></pre></div>
+<h3 id="step-4-run-ingestion">Step 4: Run Ingestion<a class="headerlink" href="#step-4-run-ingestion" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restart the server to pick up the new config</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Run ingestion</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+</span></code></pre></div>
+<p>You'll see output like:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Fetching pages from space ENG... 47 pages found
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>Fetching pages from space DOCS... 123 pages found
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>Converting 170 pages to Markdown...
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>Chunking... 892 chunks created
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>Generating embeddings... done
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>Indexing in OpenSearch... done
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>Ingestion complete: 170 pages, 892 chunks
+</span></code></pre></div>
+<h3 id="step-5-verify">Step 5: Verify<a class="headerlink" href="#step-5-verify" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-cli<span class="w"> </span>ask<span class="w"> </span><span class="s2">&quot;What are our deployment procedures?&quot;</span>
+</span></code></pre></div>
+<p>The answer should cite your Confluence pages with links back to the originals.</p>
+<h3 id="self-hosted-confluence-data-center">Self-Hosted Confluence (Data Center)<a class="headerlink" href="#self-hosted-confluence-data-center" title="Permanent link">&para;</a></h3>
+<p>DocBrain also supports self-hosted Confluence Data Center 7.x+ instances:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># config/local.yaml</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">api_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://confluence.yourcompany.com</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-personal-access-token</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span><span class="nt">space_keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ENG,DOCS</span>
+</span></code></pre></div>
+<p><strong>Creating a Personal Access Token (Data Center):</strong></p>
+<ol>
+<li>Log in to your Confluence Data Center instance</li>
+<li>Go to your profile (top-right) &gt; <strong>Settings</strong> &gt; <strong>Personal Access Tokens</strong></li>
+<li>Click <strong>Create token</strong>, give it a name (e.g. "DocBrain"), and copy the token</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Cloud</th>
+<th>Self-Hosted (Data Center)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CONFLUENCE_API_VERSION</code></td>
+<td><code>v2</code> (default)</td>
+<td><code>v1</code></td>
+</tr>
+<tr>
+<td><code>CONFLUENCE_BASE_URL</code></td>
+<td><code>https://yourco.atlassian.net/wiki</code></td>
+<td><code>https://confluence.yourco.com</code></td>
+</tr>
+<tr>
+<td><code>CONFLUENCE_USER_EMAIL</code></td>
+<td>Atlassian account email</td>
+<td>Not required</td>
+</tr>
+<tr>
+<td><code>CONFLUENCE_API_TOKEN</code></td>
+<td>API token from Atlassian</td>
+<td>Personal Access Token (Bearer auth)</td>
+</tr>
+</tbody>
+</table>
+<p>If your instance uses a self-signed certificate or an internal CA that Docker doesn't trust, disable TLS verification:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># config/local.yaml</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">tls_verify</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span></code></pre></div>
+<p>Everything else works identically — same space keys, same page limit, same webhook sync, same image extraction.</p>
+<h3 id="permissions">Permissions<a class="headerlink" href="#permissions" title="Permanent link">&para;</a></h3>
+<p>The API token inherits the Confluence permissions of the user account. DocBrain can only access pages that user can read. For broad access, use a service account with read permissions across your target spaces.</p>
+<h3 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>401 Unauthorized</code></td>
+<td>Wrong email or token</td>
+<td>Double-check email matches the Atlassian account that created the token</td>
+</tr>
+<tr>
+<td><code>404 Not Found</code></td>
+<td>Wrong base URL</td>
+<td>Use <code>https://yourco.atlassian.net/wiki</code> (must include <code>/wiki</code>)</td>
+</tr>
+<tr>
+<td>0 pages found</td>
+<td>Wrong space key</td>
+<td>Check the URL of your Confluence space for the correct key</td>
+</tr>
+<tr>
+<td>Timeout on large spaces</td>
+<td>Too many pages</td>
+<td>This is normal for 500+ page spaces — ingestion continues in the background</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="option-3-github-repository">Option 3: GitHub Repository<a class="headerlink" href="#option-3-github-repository" title="Permanent link">&para;</a></h2>
+<p>Ingest documentation from one or more GitHub repositories. DocBrain clones each
+repo, finds Markdown and text files, and indexes them. Each repo may optionally
+pin a specific branch via the <code>:branch</code> suffix — otherwise the default branch
+is used.</p>
+<h3 id="setup_1">Setup<a class="headerlink" href="#setup_1" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># config/local.yaml</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nt">sources</span><span class="p">:</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_TOKEN}</span><span class="w">                 </span><span class="c1"># repo:read scope</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="nt">code</span><span class="p">:</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">      </span><span class="nt">repos</span><span class="p">:</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-org/your-docs-repo</span><span class="w">          </span><span class="c1"># default branch</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-org/runbooks:develop</span><span class="w">        </span><span class="c1"># pinned branch</span>
+</span></code></pre></div>
+<p>Each entry in <code>repos</code> is an <code>owner/repo[:branch]</code> selector. The list must be
+non-empty — an empty list is a startup error.</p>
+<h3 id="creating-a-github-token">Creating a GitHub Token<a class="headerlink" href="#creating-a-github-token" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to <a href="https://github.com/settings/tokens">https://github.com/settings/tokens</a></li>
+<li>Click <strong>Generate new token (classic)</strong></li>
+<li>Select scope: <code>repo</code> (for private repos) or <code>public_repo</code> (for public repos only)</li>
+<li>Copy the token and either export it as <code>GITHUB_TOKEN</code> or put it directly in <code>sources.github.token</code></li>
+</ol>
+<h3 id="run-ingestion_1">Run Ingestion<a class="headerlink" href="#run-ingestion_1" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+</span></code></pre></div>
+<h3 id="what-gets-ingested">What Gets Ingested<a class="headerlink" href="#what-gets-ingested" title="Permanent link">&para;</a></h3>
+<p>DocBrain ingests all <code>.md</code> and <code>.txt</code> files in the repository. It respects directory structure and uses file paths as metadata for source citations.</p>
+<h3 id="monorepo">Monorepo?<a class="headerlink" href="#monorepo" title="Permanent link">&para;</a></h3>
+<p>If your docs are in a subdirectory of a larger repo, DocBrain still ingests the whole repo but filters for documentation files. Future versions will support path filtering.</p>
+<hr />
+<h2 id="image-extraction-confluence">Image Extraction (Confluence)<a class="headerlink" href="#image-extraction-confluence" title="Permanent link">&para;</a></h2>
+<p>When ingesting from Confluence, DocBrain automatically downloads images (diagrams, screenshots, flowcharts) from each page and uses a vision-capable LLM to generate detailed descriptions. These descriptions are injected into the document content and indexed alongside the text — making image content searchable and available for Q&amp;A.</p>
+<p><strong>This is enabled by default.</strong> No extra configuration needed if your LLM provider supports vision.</p>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<ol>
+<li>During page processing, DocBrain extracts image references from the HTML</li>
+<li>Downloads each image attachment from the Confluence API</li>
+<li>Sends the image to the configured LLM's vision endpoint</li>
+<li>Injects the description into the Markdown before chunking</li>
+</ol>
+<h3 id="which-providers-support-vision">Which Providers Support Vision?<a class="headerlink" href="#which-providers-support-vision" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Vision Support</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWS Bedrock</td>
+<td>Yes</td>
+<td>Uses Claude's native vision via Messages API</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>Yes</td>
+<td>Uses Claude's native vision via Messages API</td>
+</tr>
+<tr>
+<td>OpenAI</td>
+<td>Yes</td>
+<td>Uses GPT-4o vision via Chat Completions API</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>Depends on model</td>
+<td>Vision models (<code>llava</code>, <code>llama3.2-vision</code>, <code>moondream</code>) work. Text-only models (<code>llama3.1</code>) are auto-detected on first call — images are skipped with a warning, no failures.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="guardrails">Guardrails<a class="headerlink" href="#guardrails" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Guardrail</th>
+<th>Value</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Max images per page</td>
+<td>20</td>
+<td>Prevent runaway LLM costs on image-heavy pages</td>
+</tr>
+<tr>
+<td>Min image size</td>
+<td>5KB</td>
+<td>Skip icons, avatars, decorative images</td>
+</tr>
+<tr>
+<td>Max image size</td>
+<td>10MB</td>
+<td>Skip huge files</td>
+</tr>
+<tr>
+<td>Allowed types</td>
+<td><code>png</code>, <code>jpeg</code>, <code>gif</code>, <code>webp</code></td>
+<td>Skip PDFs, ZIPs, videos</td>
+</tr>
+<tr>
+<td>Timeout per image</td>
+<td>30s</td>
+<td>Don't block the pipeline</td>
+</tr>
+</tbody>
+</table>
+<h3 id="disabling-image-extraction">Disabling Image Extraction<a class="headerlink" href="#disabling-image-extraction" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>IMAGE_EXTRACTION_ENABLED=false
+</span></code></pre></div>
+<p>When disabled, images get a <code>[Image: filename.png]</code> placeholder in the text (the pre-existing behavior). You can re-enable later and re-ingest to pick up image descriptions.</p>
+<h3 id="cost">Cost<a class="headerlink" href="#cost" title="Permanent link">&para;</a></h3>
+<p>Image descriptions use the <code>HAIKU_MODEL_ID</code> model if set (recommended for cost efficiency), otherwise falls back to <code>LLM_MODEL_ID</code>. With Claude Haiku, expect ~$0.001 per image. A full ingestion of 1000 pages with ~3 images each costs roughly $3.</p>
+<hr />
+<h2 id="real-time-sync-confluence-webhooks">Real-Time Sync: Confluence Webhooks<a class="headerlink" href="#real-time-sync-confluence-webhooks" title="Permanent link">&para;</a></h2>
+<p>By default, DocBrain ingests documents when you run <code>docbrain-ingest</code> manually or on a cron schedule. But if you want pages to sync <strong>automatically</strong> the moment they're created, updated, or deleted in Confluence, enable webhook integration.</p>
+<h3 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Confluence Event</th>
+<th>DocBrain Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>page_created</code></td>
+<td>Fetches the new page, chunks it, embeds it, indexes it</td>
+</tr>
+<tr>
+<td><code>page_updated</code></td>
+<td>Deletes old chunks, re-fetches, re-chunks, re-indexes</td>
+</tr>
+<tr>
+<td><code>page_restored</code></td>
+<td>Same as created</td>
+</tr>
+<tr>
+<td><code>page_removed</code> / <code>page_trashed</code></td>
+<td>Deletes the page's chunks from OpenSearch and marks it deleted in PostgreSQL</td>
+</tr>
+</tbody>
+</table>
+<p>All processing happens asynchronously — DocBrain returns <code>200 OK</code> to Confluence immediately and syncs in the background.</p>
+<h3 id="step-1-generate-a-webhook-secret">Step 1: Generate a Webhook Secret<a class="headerlink" href="#step-1-generate-a-webhook-secret" title="Permanent link">&para;</a></h3>
+<p>Pick a strong random string. This secret is shared between Confluence and DocBrain for HMAC-SHA256 signature verification.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Generate a random secret</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
+</span></code></pre></div>
+<h3 id="step-2-configure-docbrain">Step 2: Configure DocBrain<a class="headerlink" href="#step-2-configure-docbrain" title="Permanent link">&para;</a></h3>
+<p>Set the webhook secret as an environment variable (it's a runtime secret injected by the environment):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a># .env — webhook secret only
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>CONFLUENCE_WEBHOOK_SECRET=your-generated-secret-here
+</span></code></pre></div>
+<p>Confluence credentials must also be set in <code>config/local.yaml</code> (DocBrain needs API access to fetch page content when a webhook fires):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># config/local.yaml</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://yourcompany.atlassian.net/wiki</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-api-token</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">  </span><span class="nt">user_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">you@yourcompany.com</span>
+</span></code></pre></div>
+<p>Restart the server. You should see:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>[startup] Confluence webhook integration enabled
+</span></code></pre></div>
+<p>If you see <code>CONFLUENCE_WEBHOOK_SECRET set but missing CONFLUENCE_BASE_URL/API_TOKEN — webhook sync disabled</code>, check that both <code>CONFLUENCE_BASE_URL</code> and <code>CONFLUENCE_API_TOKEN</code> are set.</p>
+<h3 id="step-3-configure-the-webhook-in-confluence">Step 3: Configure the Webhook in Confluence<a class="headerlink" href="#step-3-configure-the-webhook-in-confluence" title="Permanent link">&para;</a></h3>
+<h4 id="confluence-cloud">Confluence Cloud<a class="headerlink" href="#confluence-cloud" title="Permanent link">&para;</a></h4>
+<ol>
+<li>Go to your Confluence instance → <strong>Settings</strong> (gear icon) → <strong>Webhooks</strong> (under "Atlassian Admin" → find your site)</li>
+<li>Or use the Atlassian admin: <code>https://admin.atlassian.com</code> → your site → <strong>Settings</strong> → <strong>Webhooks</strong></li>
+<li>Click <strong>Create webhook</strong></li>
+<li>Configure:</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>URL</strong></td>
+<td><code>https://&lt;your-docbrain-domain&gt;/confluence/events</code></td>
+</tr>
+<tr>
+<td><strong>Secret</strong></td>
+<td>The same secret you set in <code>CONFLUENCE_WEBHOOK_SECRET</code></td>
+</tr>
+<tr>
+<td><strong>Events</strong></td>
+<td>Select: <code>page_created</code>, <code>page_updated</code>, <code>page_removed</code>, <code>page_trashed</code>, <code>page_restored</code></td>
+</tr>
+</tbody>
+</table>
+<ol>
+<li>Save and activate the webhook.</li>
+</ol>
+<blockquote>
+<p><strong>Important:</strong> The URL must be HTTPS and publicly reachable from Atlassian's servers. If DocBrain runs behind a firewall, you'll need an ingress or tunnel (e.g., ngrok for testing, or a proper reverse proxy in production).</p>
+</blockquote>
+<h4 id="confluence-data-center-self-hosted">Confluence Data Center (Self-Hosted)<a class="headerlink" href="#confluence-data-center-self-hosted" title="Permanent link">&para;</a></h4>
+<ol>
+<li>Go to <strong>Administration</strong> → <strong>Further Configuration</strong> → <strong>Webhooks</strong> (or install the Webhook plugin if not available)</li>
+<li>Create a webhook with the same URL and secret as above</li>
+<li>Select the page events you want to track</li>
+</ol>
+<h3 id="step-4-verify">Step 4: Verify<a class="headerlink" href="#step-4-verify" title="Permanent link">&para;</a></h3>
+<p>Create or edit a page in Confluence. Within a few seconds, check the DocBrain server logs:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>[confluence] Processing page_updated for page &#39;My Test Page&#39; (id=12345)
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>[confluence] Updated page &#39;My Test Page&#39; — 8 chunks re-indexed
+</span></code></pre></div>
+<p>Then ask a question about the content you just changed:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>docbrain-cli<span class="w"> </span>ask<span class="w"> </span><span class="s2">&quot;What did I just write about?&quot;</span>
+</span></code></pre></div>
+<p>The answer should reflect the latest content.</p>
+<h3 id="security">Security<a class="headerlink" href="#security" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Every incoming webhook is verified using <strong>HMAC-SHA256</strong> with the shared secret</li>
+<li>The signature is checked via the <code>X-Hub-Signature: sha256=&lt;hex&gt;</code> header</li>
+<li>Constant-time comparison prevents timing attacks</li>
+<li>Request body is limited to 1MB</li>
+<li>If verification fails, DocBrain returns <code>401 Unauthorized</code> and ignores the event</li>
+</ul>
+<h3 id="webhooks-vs-scheduled-ingest">Webhooks vs. Scheduled Ingest<a class="headerlink" href="#webhooks-vs-scheduled-ingest" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Webhooks</th>
+<th>Scheduled Ingest (<code>docbrain-ingest</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Latency</strong></td>
+<td>Seconds after page edit</td>
+<td>Hours (depends on cron interval)</td>
+</tr>
+<tr>
+<td><strong>Scope</strong></td>
+<td>Single page per event</td>
+<td>All pages in configured spaces</td>
+</tr>
+<tr>
+<td><strong>Use case</strong></td>
+<td>Real-time sync for active teams</td>
+<td>Bulk initial load, catch-up, re-indexing</td>
+</tr>
+<tr>
+<td><strong>Requirements</strong></td>
+<td>Public HTTPS URL, Confluence webhook config</td>
+<td>Just a cron schedule</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommendation:</strong> Use both. Run scheduled ingest as a daily safety net (catches anything webhooks might miss — network blips, downtime), and use webhooks for real-time updates.</p>
+<hr />
+<h2 id="real-time-capture-docbrain-capture-and-docbrain-capture">Real-Time Capture: <code>@docbrain capture</code> and <code>/docbrain capture</code><a class="headerlink" href="#real-time-capture-docbrain-capture-and-docbrain-capture" title="Permanent link">&para;</a></h2>
+<p>DocBrain supports on-demand capture from GitHub PRs/issues, GitLab MRs, and Slack threads. Capture <strong>only ingests</strong> the thread into the knowledge base — it does not generate a Q&amp;A reply. After capture, the content is immediately searchable via <code>/docbrain ask</code> (Slack) or the API.</p>
+<h3 id="what-capture-does">What Capture Does<a class="headerlink" href="#what-capture-does" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Trigger</th>
+<th>What's indexed</th>
+<th>Reply</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub</td>
+<td>Comment <code>@docbrain capture</code> on any PR or issue</td>
+<td>PR/issue description + all comments</td>
+<td>Posts a reply comment confirming capture</td>
+</tr>
+<tr>
+<td>GitLab</td>
+<td>Comment <code>@docbrain capture</code> on any MR</td>
+<td>MR title, description, all human discussion notes</td>
+<td>Posts a reply note confirming capture</td>
+</tr>
+<tr>
+<td>Slack</td>
+<td>Message shortcut, <code>@DocBrain capture</code> mention, or <code>/docbrain capture</code></td>
+<td>All thread messages, user names resolved</td>
+<td>Posts a message in the thread confirming capture</td>
+</tr>
+</tbody>
+</table>
+<p>Capture is separate from <code>/docbrain ask</code> (Slack) or <code>@docbrain ask</code> (GitHub/GitLab) — those are Q&amp;A commands that answer questions from the knowledge base.</p>
+<hr />
+<h2 id="github-prissue-capture">GitHub PR/Issue Capture<a class="headerlink" href="#github-prissue-capture" title="Permanent link">&para;</a></h2>
+<p>Comment <code>@docbrain capture</code> on any GitHub pull request or issue to immediately index the discussion.</p>
+<p><strong>Requirements:</strong> GitHub webhook configured to send <code>issue_comment</code> and <code>pull_request_review_comment</code> events to DocBrain.</p>
+<h3 id="setup_2">Setup<a class="headerlink" href="#setup_2" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>GITHUB_CAPTURE_WEBHOOK_SECRET=your-webhook-secret   # generate with: openssl rand -hex 32
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>GITHUB_CAPTURE_TOKEN=ghp_...                         # Personal access token with repo:read scope
+</span></code></pre></div>
+<p>Optional access control (recommended for shared installations):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>GITHUB_CAPTURE_ALLOWED_REPOS=myorg/backend,myorg/frontend  # Only these repos can trigger capture
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>GITHUB_CAPTURE_ALLOWED_USERS=alice,bob                      # Only these users can trigger capture
+</span></code></pre></div>
+<h3 id="register-the-webhook-in-github">Register the Webhook in GitHub<a class="headerlink" href="#register-the-webhook-in-github" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to your repository: <strong>Settings → Webhooks → Add webhook</strong></li>
+<li>Fill in:</li>
+<li><strong>Payload URL:</strong> <code>https://your-docbrain-host/api/v1/github/events</code></li>
+<li><strong>Content type:</strong> <code>application/json</code></li>
+<li><strong>Secret:</strong> same value as <code>GITHUB_CAPTURE_WEBHOOK_SECRET</code></li>
+<li><strong>Events:</strong> select <code>Issue comments</code> and <code>Pull request review comments</code></li>
+<li>Save</li>
+</ol>
+<h3 id="what-gets-indexed">What Gets Indexed<a class="headerlink" href="#what-gets-indexed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Issue/PR title, description, and all comments</li>
+<li>Cross-document references (URLs to other PRs, Jira tickets, Confluence pages, etc.) are extracted and stored in the reference graph</li>
+<li>Threads over 500KB are skipped (DocBrain posts a reply explaining the limit)</li>
+<li>Threads under 200 characters are skipped as too short</li>
+</ul>
+<h3 id="reply-behavior">Reply Behavior<a class="headerlink" href="#reply-behavior" title="Permanent link">&para;</a></h3>
+<p>On success, DocBrain posts a comment:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>✅ Captured by DocBrain — 12 chunks indexed and immediately searchable.
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>This thread will feed Autopilot&#39;s next gap analysis run.
+</span></code></pre></div></p>
+<p>On failure:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>⚠️ Capture failed: &lt;error message&gt;
+</span></code></pre></div></p>
+<h3 id="security-and-access-control">Security and Access Control<a class="headerlink" href="#security-and-access-control" title="Permanent link">&para;</a></h3>
+<ul>
+<li>All incoming webhooks are verified via HMAC-SHA256 (<code>X-Hub-Signature-256</code> header)</li>
+<li><code>GITHUB_CAPTURE_ALLOWED_REPOS</code> — restrict to specific <code>owner/repo</code> pairs</li>
+<li><code>GITHUB_CAPTURE_ALLOWED_USERS</code> — restrict to specific GitHub usernames</li>
+<li>Empty allowlists = all users and repos can trigger capture (acceptable for private org webhooks)</li>
+</ul>
+<hr />
+<h2 id="gitlab-mr-capture">GitLab MR Capture<a class="headerlink" href="#gitlab-mr-capture" title="Permanent link">&para;</a></h2>
+<p>Comment <code>@docbrain capture</code> on any GitLab merge request to immediately index the full MR discussion.</p>
+<p><strong>Requirements:</strong> <code>GITLAB_CAPTURE_WEBHOOK_SECRET</code> and <code>GITLAB_CAPTURE_TOKEN</code> configured, webhook registered in GitLab.</p>
+<h3 id="step-1-configure-docbrain">Step 1: Configure DocBrain<a class="headerlink" href="#step-1-configure-docbrain" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>GITLAB_CAPTURE_WEBHOOK_SECRET=your-webhook-secret   # generate with: openssl rand -hex 32
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>GITLAB_CAPTURE_TOKEN=glpat-...                       # Personal access token with api scope
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>GITLAB_CAPTURE_BASE_URL=https://gitlab.com           # Default; set for self-hosted GitLab
+</span></code></pre></div>
+<p>Optional allowlists (recommended for shared instances):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>GITLAB_CAPTURE_ALLOWED_USERS=alice,bob          # Only these users can trigger capture
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>GITLAB_CAPTURE_ALLOWED_PROJECTS=myorg/myrepo    # Only these projects can trigger capture
+</span></code></pre></div>
+<h3 id="step-2-register-the-webhook-in-gitlab">Step 2: Register the Webhook in GitLab<a class="headerlink" href="#step-2-register-the-webhook-in-gitlab" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Go to your project: <strong>Settings → Webhooks</strong></li>
+<li>Fill in:</li>
+<li><strong>URL:</strong> <code>https://your-docbrain-host/api/v1/gitlab/events</code></li>
+<li><strong>Secret token:</strong> same value as <code>GITLAB_CAPTURE_WEBHOOK_SECRET</code></li>
+<li><strong>Trigger:</strong> enable <strong>Comments</strong></li>
+<li>Click <strong>Add webhook</strong></li>
+</ol>
+<h3 id="step-3-test-it">Step 3: Test It<a class="headerlink" href="#step-3-test-it" title="Permanent link">&para;</a></h3>
+<p>Open any merge request and add a comment containing <code>@docbrain capture</code>. Within a few seconds, DocBrain replies with a note on the MR:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>✅ Captured by DocBrain — 12 chunks indexed and immediately searchable.
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>This MR will feed Autopilot&#39;s next gap analysis run.
+</span></code></pre></div>
+<h3 id="what-gets-indexed_1">What Gets Indexed<a class="headerlink" href="#what-gets-indexed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>MR title and description</li>
+<li>All human discussion notes (system notes — merge events, label changes, approval events — are excluded)</li>
+<li>Cross-document references — URLs and GitLab shorthand references (<code>!123</code>, <code>#123</code>) are extracted, resolved, and stored in the reference graph</li>
+<li>Threads over 500KB are skipped silently (too large for the embedding pipeline)</li>
+</ul>
+<h3 id="reply-behavior_1">Reply Behavior<a class="headerlink" href="#reply-behavior_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>On success: DocBrain posts a note confirming the chunk count</li>
+<li>On failure: DocBrain posts <code>⚠️ Capture failed: &lt;error&gt;</code></li>
+<li>Replies require <code>GITLAB_CAPTURE_TOKEN</code> to be set (token is also used to fetch MR notes)</li>
+<li>The allowlist check is applied to the <strong>commenter</strong> (the user who wrote <code>@docbrain capture</code>), not the MR author</li>
+</ul>
+<h3 id="security-and-access-control_1">Security and Access Control<a class="headerlink" href="#security-and-access-control_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>All incoming webhooks are verified via the <code>X-Gitlab-Token</code> header (constant-time comparison)</li>
+<li><code>GITLAB_CAPTURE_ALLOWED_USERS</code> — restrict to specific GitLab usernames (the commenter, not the MR author)</li>
+<li><code>GITLAB_CAPTURE_ALLOWED_PROJECTS</code> — restrict to specific project paths (e.g. <code>myorg/myrepo</code>)</li>
+<li>If no allowlists are configured, any user in any project can trigger capture — consider setting <code>GITLAB_CAPTURE_ALLOWED_PROJECTS</code> at minimum</li>
+</ul>
+<hr />
+<h2 id="slack-thread-capture">Slack Thread Capture<a class="headerlink" href="#slack-thread-capture" title="Permanent link">&para;</a></h2>
+<p>Capture any Slack thread into DocBrain using one of three methods:</p>
+<ul>
+<li><strong>Message shortcut (recommended):</strong> Right-click a message in the thread → <strong>Shortcuts</strong> → <strong>Capture to DocBrain</strong></li>
+<li><strong>Bot mention:</strong> Type <code>@DocBrain capture</code> in the thread (requires Event Subscriptions with <code>app_mention</code>)</li>
+<li><strong>Slash command:</strong> <code>/docbrain capture</code> — works outside threads, but <strong>Slack blocks slash commands inside threads</strong>, so use the shortcut or @mention instead</li>
+</ul>
+<p><strong>Note:</strong> Capture only ingests the thread. Use <code>/docbrain ask &lt;question&gt;</code> separately to query the knowledge base.</p>
+<h3 id="setup_3">Setup<a class="headerlink" href="#setup_3" title="Permanent link">&para;</a></h3>
+<p>Ensure the Slack bot is installed and <code>SLACK_BOT_TOKEN</code> is configured. The bot needs <code>channels:history</code> and <code>users:read</code> OAuth scopes. For @mention support, also enable Event Subscriptions and add the <code>app_mentions:read</code> scope. See the <a href="../slack/">Slack integration guide</a> for full setup steps.</p>
+<h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Open a Slack thread with a substantive discussion</li>
+<li>Use the <strong>message shortcut</strong> (right-click → Shortcuts → Capture to DocBrain), type <strong><code>@DocBrain capture</code></strong> in the thread, or run <strong><code>/docbrain capture</code></strong> (outside threads only)</li>
+<li>DocBrain fetches all messages, resolves user names, and indexes the conversation</li>
+</ol>
+<p>Within ~15 seconds, DocBrain posts back in the thread:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>✅ Thread from #platform-incidents captured into DocBrain (8 chunks indexed).
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>It&#39;s now searchable and will be used by Autopilot&#39;s next gap analysis.
+</span></code></pre></div></p>
+<h3 id="access-control">Access Control<a class="headerlink" href="#access-control" title="Permanent link">&para;</a></h3>
+<p>By default, any user in any channel can trigger capture (via shortcut, @mention, or slash command). Restrict access with:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>SLACK_CAPTURE_ALLOWED_CHANNELS=platform-team,infra-review  # channel names (no #) or IDs
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>SLACK_CAPTURE_ALLOWED_USERS=alice,U01234567                 # usernames or user IDs
+</span></code></pre></div>
+<ul>
+<li>Channel check matches against both <code>channel_name</code> and <code>channel_id</code></li>
+<li>User check matches against both <code>user_name</code> and <code>user_id</code></li>
+<li>If rejected, DocBrain responds with an ephemeral message: <code>⚠️ You don't have permission to use /docbrain capture in this channel.</code></li>
+</ul>
+<h3 id="what-gets-indexed_2">What Gets Indexed<a class="headerlink" href="#what-gets-indexed_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>All thread messages with resolved display names and timestamps</li>
+<li>Cross-document references (URLs to PRs, tickets, Confluence pages, etc.) are extracted from messages and stored in the reference graph</li>
+<li>Threads under 200 characters are skipped as too short</li>
+<li>The thread is immediately searchable after capture</li>
+</ul>
+<hr />
+<h2 id="capture-lifecycle-and-freshness">Capture Lifecycle and Freshness<a class="headerlink" href="#capture-lifecycle-and-freshness" title="Permanent link">&para;</a></h2>
+<h3 id="space-assignment">Space Assignment<a class="headerlink" href="#space-assignment" title="Permanent link">&para;</a></h3>
+<p>Captured content is stored under a meaningful space name derived from the source:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Space assigned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub PR/issue</td>
+<td><code>owner/repo</code> (e.g., <code>myorg/backend</code>)</td>
+</tr>
+<tr>
+<td>GitLab MR</td>
+<td><code>group/project</code> (e.g., <code>platform/api</code>)</td>
+</tr>
+<tr>
+<td>Slack thread</td>
+<td>Channel name (e.g., <code>platform-incidents</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>This means <code>allowed_spaces</code> ACL filtering works as expected — setting <code>allowed_spaces: ["platform-incidents"]</code> on an API key will correctly scope answers to Slack captures from that channel, GitHub captures from a matching repo, etc.</p>
+<h3 id="staleness-and-time-decay">Staleness and Time Decay<a class="headerlink" href="#staleness-and-time-decay" title="Permanent link">&para;</a></h3>
+<p>Unlike incident records (Jira, PagerDuty, Zendesk), which are permanent historical events, <strong>captured content decays with age</strong>. A GitHub PR discussing an architecture from 5 years ago, or a Slack thread about a since-replaced system, should score low in freshness — not be treated as always-current.</p>
+<ul>
+<li>The freshness scorer uses the <strong>original content creation date</strong> (when the PR/MR was opened, when the Slack thread started) as the age baseline — not the time DocBrain captured it.</li>
+<li>Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one, which reduces its weight in RAG retrieval and Autopilot gap analysis.</li>
+<li><strong>Re-capturing the same thread</strong> (via message shortcut, <code>@DocBrain capture</code>, or <code>@docbrain capture</code> on a PR) updates the content but preserves the original creation date as the age baseline.</li>
+</ul>
+<p>This ensures that outdated design decisions, replaced architectures, or deprecated processes are progressively de-emphasized in answers as they age — without ever being deleted (the historical record is preserved for explicit search).</p>
+<hr />
+<h2 id="re-ingestion-and-updates">Re-Ingestion and Updates<a class="headerlink" href="#re-ingestion-and-updates" title="Permanent link">&para;</a></h2>
+<h3 id="updating-documents">Updating Documents<a class="headerlink" href="#updating-documents" title="Permanent link">&para;</a></h3>
+<p>Run ingestion again to pick up changes:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+</span></code></pre></div>
+<p>DocBrain uses upsert logic — new and changed documents are updated, unchanged documents are skipped. This is safe to run repeatedly.</p>
+<h3 id="scheduled-ingestion-kubernetes">Scheduled Ingestion (Kubernetes)<a class="headerlink" href="#scheduled-ingestion-kubernetes" title="Permanent link">&para;</a></h3>
+<p>The Helm chart includes a CronJob that runs ingestion on a schedule:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># In values.yaml</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="nt">ingest</span><span class="p">:</span>
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="w">  </span><span class="nt">schedule</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;0</span><span class="nv"> </span><span class="s">*/6</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*</span><span class="nv"> </span><span class="s">*&quot;</span><span class="w">  </span><span class="c1"># every 6 hours</span>
+</span></code></pre></div>
+<h3 id="full-re-index">Full Re-Index<a class="headerlink" href="#full-re-index" title="Permanent link">&para;</a></h3>
+<p>If you change your embedding provider (e.g., from Ollama to OpenAI), you need a full re-index because embedding dimensions differ between providers. Delete the OpenSearch index and re-ingest:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># Delete the existing index</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>DELETE<span class="w"> </span>http://localhost:9200/docbrain_chunks
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="c1"># Re-ingest everything</span>
+</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+</span></code></pre></div>
+<hr />
+<h2 id="multiple-sources">Multiple Sources<a class="headerlink" href="#multiple-sources" title="Permanent link">&para;</a></h2>
+<p>DocBrain supports ingesting from multiple providers simultaneously. Simply
+declare each under <code>sources:</code> — enablement is structural (a sub-source runs
+if its block is present in YAML). There is no <code>INGEST_SOURCES</code> env var.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1"># config/local.yaml</span>
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a><span class="w">  </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://acme.atlassian.net/wiki</span>
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="w">  </span><span class="nt">user_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">you@acme.com</span>
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ATATT3x...</span>
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a><span class="w">  </span><span class="nt">space_keys</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DOCS,ENG</span>
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a><span class="nt">sources</span><span class="p">:</span>
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a><span class="w">  </span><span class="nt">github</span><span class="p">:</span>
+</span><span id="__span-35-10"><a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${GITHUB_TOKEN}</span>
+</span><span id="__span-35-11"><a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a><span class="w">    </span><span class="nt">pull_requests</span><span class="p">:</span>
+</span><span id="__span-35-12"><a id="__codelineno-35-12" name="__codelineno-35-12" href="#__codelineno-35-12"></a><span class="w">      </span><span class="nt">repos</span><span class="p">:</span>
+</span><span id="__span-35-13"><a id="__codelineno-35-13" name="__codelineno-35-13" href="#__codelineno-35-13"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acme/platform</span>
+</span><span id="__span-35-14"><a id="__codelineno-35-14" name="__codelineno-35-14" href="#__codelineno-35-14"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acme/docs</span>
+</span><span id="__span-35-15"><a id="__codelineno-35-15" name="__codelineno-35-15" href="#__codelineno-35-15"></a><span class="w">      </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
+</span><span id="__span-35-16"><a id="__codelineno-35-16" name="__codelineno-35-16" href="#__codelineno-35-16"></a>
+</span><span id="__span-35-17"><a id="__codelineno-35-17" name="__codelineno-35-17" href="#__codelineno-35-17"></a><span class="w">  </span><span class="nt">jira</span><span class="p">:</span>
+</span><span id="__span-35-18"><a id="__codelineno-35-18" name="__codelineno-35-18" href="#__codelineno-35-18"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://acme.atlassian.net</span>
+</span><span id="__span-35-19"><a id="__codelineno-35-19" name="__codelineno-35-19" href="#__codelineno-35-19"></a><span class="w">    </span><span class="nt">user_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">you@acme.com</span>
+</span><span id="__span-35-20"><a id="__codelineno-35-20" name="__codelineno-35-20" href="#__codelineno-35-20"></a><span class="w">    </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${JIRA_API_TOKEN}</span>
+</span><span id="__span-35-21"><a id="__codelineno-35-21" name="__codelineno-35-21" href="#__codelineno-35-21"></a><span class="w">    </span><span class="nt">projects</span><span class="p">:</span>
+</span><span id="__span-35-22"><a id="__codelineno-35-22" name="__codelineno-35-22" href="#__codelineno-35-22"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ENG</span>
+</span><span id="__span-35-23"><a id="__codelineno-35-23" name="__codelineno-35-23" href="#__codelineno-35-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OPS</span>
+</span><span id="__span-35-24"><a id="__codelineno-35-24" name="__codelineno-35-24" href="#__codelineno-35-24"></a>
+</span><span id="__span-35-25"><a id="__codelineno-35-25" name="__codelineno-35-25" href="#__codelineno-35-25"></a><span class="w">  </span><span class="nt">slack</span><span class="p">:</span>
+</span><span id="__span-35-26"><a id="__codelineno-35-26" name="__codelineno-35-26" href="#__codelineno-35-26"></a><span class="w">    </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${SLACK_INGEST_TOKEN}</span>
+</span><span id="__span-35-27"><a id="__codelineno-35-27" name="__codelineno-35-27" href="#__codelineno-35-27"></a><span class="w">    </span><span class="nt">threads</span><span class="p">:</span>
+</span><span id="__span-35-28"><a id="__codelineno-35-28" name="__codelineno-35-28" href="#__codelineno-35-28"></a><span class="w">      </span><span class="nt">channels</span><span class="p">:</span>
+</span><span id="__span-35-29"><a id="__codelineno-35-29" name="__codelineno-35-29" href="#__codelineno-35-29"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;#incident-response&quot;</span>
+</span><span id="__span-35-30"><a id="__codelineno-35-30" name="__codelineno-35-30" href="#__codelineno-35-30"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;#eng-platform&quot;</span>
+</span></code></pre></div>
+<p>Then run a single ingestion pass to pull from all sources:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+</span></code></pre></div>
+<p>Documents from different sources coexist in the same index and are searched together.</p>
+<hr />
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../connectors/">External Connectors</a> — build a connector for any knowledge source (ServiceNow, Notion, SharePoint, custom databases, etc.)</li>
+<li><a href="../configuration/">Configuration Reference</a> — all ingestion-related environment variables</li>
+<li><a href="../providers/">Provider Setup</a> — configure embedding providers for ingestion</li>
+<li><a href="../architecture/">Architecture</a> — how the ingestion pipeline works under the hood</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../learning/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Learning Pipeline">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Learning Pipeline
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../connectors/" class="md-footer__link md-footer__link--next" aria-label="Next: External Connectors">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                External Connectors
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024-2026 DocBrain AI
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/docbrain-ai/docbrain" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.youtube.com/@docbrain-ai" target="_blank" rel="noopener" title="www.youtube.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M549.7 124.1c-6.2-23.7-24.8-42.3-48.3-48.6C458.9 64 288.1 64 288.1 64S117.3 64 74.7 75.5c-23.5 6.3-42 24.9-48.3 48.6C15 167 15 256.4 15 256.4s0 89.4 11.4 132.3c6.3 23.6 24.8 41.5 48.3 47.8C117.3 448 288.1 448 288.1 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zM232.2 337.6V175.2l142.7 81.2z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

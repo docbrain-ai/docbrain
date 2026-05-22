@@ -50,6 +50,91 @@ rag:
   cache_ttl_hours: 24     # Cache max age in hours
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
 
+  # ── Staged retrieval pipeline tuning ─────────────────────────────────
+  # Every field below has a sensible default baked into the code; uncomment
+  # only to override. Also configurable via the environment variables listed
+  # in .env.example and docs/configuration.md.
+  #
+  # top_k: 10                         # Chunks sent to the LLM
+  # bm25_boost: 1.0                   # BM25 vs vector weight in hybrid
+  # candidate_pool_size: 200          # Pool fed to the reranker
+  # rrf_k: 60                         # RRF damping constant (canonical paper)
+  # max_per_source: 3                 # Per-source cap in final top-k
+  # max_per_document: 2               # Per-document cap in final top-k
+  #
+  # ── Grounding floors — calibrated for a real cross-encoder reranker ──
+  #
+  # These four values are the single biggest quality lever in the RAG
+  # pipeline. They all gate on the reranker's calibrated [0, 1] score.
+  # Recommended defaults below match where Cohere Rerank v3.5 and
+  # similarly tuned cross-encoders separate "actually answers the
+  # question" from "shares a few keywords but is not on-topic".
+  #
+  # Lowering → more recall, noisier citations, higher hallucination risk.
+  # Raising  → more precision, more "insufficient information" answers.
+  #
+  # If `rerank.provider = "none"` these gate on raw BM25/vector scores
+  # which are NOT calibrated — set them to 0.0 in that mode. See
+  # docs/rerank-providers.md § "Tuning the grounding floors" for the
+  # full explanation.
+  min_relevance_score: 0.40           # Retrieval floor — chunks below this never reach diversity selection or the LLM. Lowering sends weaker evidence to the LLM (hallucination risk).
+  display_floor: 0.50                 # Display floor — chunks below this are never shown as citations. Lowering surfaces more tangential sources (user trust cost).
+  confidence_gate: 0.40                # Confidence gate — below this, sources are hidden and the answer is shown as "general knowledge". Lowering shows sources on lower-confidence answers.
+  strong_answer_floor: 0.55           # Strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer.
+  # freshness_window_days: 7          # Freshness retriever window (0 to disable)
+  # entity_cache_ttl_secs: 300        # Entity → space cache TTL
+  # max_rewrites: 2                   # Query rewrites per ask (0 to disable)
+  # max_chunks_per_doc_in_retriever: 2  # Phase 2 chunk-flood fix — per-retriever cap
+  #
+  # Compound query decomposition (Phase 5) is gated on RAG_COMPOUND_DECOMPOSE
+  # (env only, default true). Not a RagConfig struct field because it's a
+  # behavior flag, not a numeric tunable.
+
+# ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
+#
+# The reranker takes the candidate pool from stage 2 and rescores each
+# (query, chunk) pair with a cross-encoder, producing calibrated scores in
+# [0, 1] that drive the downstream grounding floors.
+#
+# DocBrain ships with plug-and-play support for every major hosted rerank
+# API through a single HTTP client parameterised by a "dialect". Built-in
+# dialects: cohere, voyage, jina, mixedbread, pinecone. Unknown APIs can be
+# wired via `provider: custom` with the custom_* fields below — no rebuild
+# required.
+#
+# See docs/rerank-providers.md for the full provider matrix and the
+# "how to add a new provider in 2 minutes" recipe.
+rerank:
+  provider: "none"        # none | bedrock | cohere | voyage | jina | mixedbread | pinecone | ollama | custom
+  # model_id: ~           # Provider-specific default applies when unset.
+  top_n: 200              # Max candidates handed to the reranker per call.
+  batch_size: 100         # Split larger pools into batches of this size.
+  timeout_secs: 10        # Per-request timeout on the critical path.
+  #
+  # Provider API keys (set via env vars in production — never commit secrets):
+  # cohere_api_key: ~     # COHERE_RERANK_API_KEY
+  # voyage_api_key: ~     # VOYAGE_API_KEY
+  # jina_api_key: ~       # JINA_API_KEY
+  # mixedbread_api_key: ~ # MIXEDBREAD_API_KEY
+  # pinecone_api_key: ~   # PINECONE_API_KEY
+  #
+  # Ollama (local, no key):
+  # ollama_base_url: "http://localhost:11434"  # RAG_RERANK_OLLAMA_BASE_URL
+  #
+  # ── provider: "custom" — plug-and-play for any Cohere-family rerank API ──
+  # Set `provider: custom` and fill these fields to wire a new rerank
+  # provider without a rebuild. Defaults match Cohere's request/response
+  # shape; override any field whose JSON key differs.
+  #
+  # custom_base_url: "https://api.example.test/v1/rerank"   # RAG_RERANK_CUSTOM_BASE_URL   (required)
+  # custom_api_key_env: "EXAMPLE_RERANK_API_KEY"            # RAG_RERANK_CUSTOM_API_KEY_ENV (required)
+  # custom_auth_style: "bearer_token"                       # RAG_RERANK_CUSTOM_AUTH_STYLE  (or "custom_header")
+  # custom_auth_header_name: "Api-Key"                      # RAG_RERANK_CUSTOM_AUTH_HEADER_NAME (only when custom_header)
+  # custom_documents_field: "documents"                     # RAG_RERANK_CUSTOM_DOCUMENTS_FIELD
+  # custom_top_n_field:    "top_n"                          # RAG_RERANK_CUSTOM_TOP_N_FIELD
+  # custom_results_field:  "results"                        # RAG_RERANK_CUSTOM_RESULTS_FIELD
+  # custom_score_field:    "relevance_score"                # RAG_RERANK_CUSTOM_SCORE_FIELD
+
 rbac:
   # Default role for new SSO users.
   # Role hierarchy: viewer (1) < editor (2) < analyst (3) < admin (4)
@@ -124,6 +209,43 @@ freshness:
   contradiction_include_recent_event_docs: true   # Include recent Slack/PR/Jira docs in contradiction pass
   contradiction_event_doc_max_age_days: 90        # Only event-based docs edited within N days are eligible
 
+  # ── Event-based source types ───────────────────────────────────────────
+  # Sources whose docs are permanent historical records (incident threads,
+  # merged PRs, support tickets). For these, time_decay is always 100 and
+  # LLM/link/contradiction passes are skipped. Capture sources are NOT here
+  # — design discussions DO go stale as systems evolve.
+  event_based_spaces:
+    - slack_thread
+    - github_pr
+    - github
+    - gitlab_mr
+    - jira
+    - linear
+    - pagerduty
+    - opsgenie
+    - zendesk
+    - intercom
+    - fireflies
+
+  # ── Lifecycle exclusion rules ──────────────────────────────────────────
+  # Docs matching any rule are auto-marked 'archived' at ingest and skipped
+  # by the freshness scorer. Manual overrides via API are sticky.
+  exclusion_rules:
+    archived_labels:
+      - archived
+      - historical
+      - obsolete
+      - deprecated
+      - frozen
+      - reference
+    archived_page_statuses:    # Confluence Cloud page status
+      - archived
+      - trashed
+    archived_title_patterns:   # regex; catches un-labeled legacy docs
+      - '^Archived '
+      - '^\[ARCHIVED\]'
+      - '\(archived\)$'
+
 # ── Semantic Quality Scoring ───────────────────────────────────────────────
 # LLM-assessed quality on four dimensions: accuracy, completeness, clarity,
 # actionability. Runs as a background sweep on structurally-scored documents.
@@ -157,121 +279,140 @@ slack:
 ingest:
   self_ingest: true
   image_extraction_enabled: true
-  # ── Scheduled ingest sources (DISABLED by default) ──────────────────────
-  # The docbrain-ingest binary is a standalone CLI, not a background job.
-  # It does not run automatically unless you wire it to a cron job or
-  # docker-compose scheduled service.
-  #
-  # To enable scheduled ingestion:
-  #   1. Set ingest_sources to the sources you want:
-  #        ingest_sources: confluence,github_pr,slack_thread
-  #   2. Run docbrain-ingest on a schedule (cron, systemd timer, etc.):
-  #        # example cron — run every 6 hours
-  #        0 */6 * * * docker compose exec -T server docbrain-ingest
-  #   3. Or trigger manually at any time:
-  #        docker compose exec server docbrain-ingest
-  #
-  # ingest_sources: ~   # disabled — set to: local, confluence, github, github_pr, slack_thread, jira, ms_teams, etc.
 
-# ── GitHub PR + Review Comments (batch ingest) ───────────────────────────────
-github_pr:
-  # token: ~             # secret — set in config/local.yaml or GITHUB_PR_TOKEN env var
-  # repo: ~              # owner/repo format e.g. acme/platform
-  lookback_days: 365
-  min_comments: 1
-  # labels: ~            # comma-separated label filter — empty = all PRs
-  # api_url: ~           # override for GitHub Enterprise (default: https://api.github.com)
+# ═══════════════════════════════════════════════════════════════════════════
+# Ingestion sources — nested umbrella configuration
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Each provider lives under `sources.<provider>`. A sub-source is enabled when
+# its block is present in YAML; there is no separate INGEST_SOURCES env var.
+#
+# Resource lists (repos, projects, channels, teams, …) are ALWAYS explicit.
+# An empty list is a startup error — DocBrain never falls back to "ingest
+# everything the token can see." See docs/configuration.md for the full
+# selector grammar (exact / wildcard / branch-pinning rules).
+#
+# Ingest runs via the docbrain-ingest CLI — trigger on a cron or on demand:
+#   docker compose exec server docbrain-ingest
+sources:
+  local:
+    # path: /data/docs
+
+  # github:
+  #   token: ${GITHUB_TOKEN}
+  #   api_url: https://api.github.com
+  #   code:
+  #     repos:
+  #       - acme/platform
+  #       - acme/docs:develop
+  #   pull_requests:
+  #     repos:
+  #       - acme/platform
+  #     lookback_days: 365
+  #     min_comments: 1
+  #     labels: []
+
+  # gitlab:
+  #   token: ${GITLAB_TOKEN}
+  #   base_url: https://gitlab.com
+  #   tls_verify: true
+  #   merge_requests:
+  #     projects:
+  #       - acme/platform
+  #       - acme/backend
+  #     lookback_days: 365
+  #     min_notes: 1
+  #     labels: []
+
+  # slack:
+  #   token: ${SLACK_INGEST_TOKEN}
+  #   threads:
+  #     channels:
+  #       - "#incident-response"
+  #       - "#eng-platform"
+  #     min_replies: 3
+  #     reactions:
+  #       - white_check_mark
+  #       - bookmark
+  #     lookback_days: 90
+
+  # jira:
+  #   base_url: https://acme.atlassian.net
+  #   user_email: ${JIRA_USER_EMAIL}
+  #   api_token: ${JIRA_API_TOKEN}
+  #   projects:
+  #     - ENG
+  #     - PLAT
+  #   lookback_days: 365
+  #   issue_types:
+  #     - Bug
+  #     - Story
+  #     - Task
+  #     - Epic
+
+  # linear:
+  #   api_key: ${LINEAR_API_KEY}
+  #   teams:
+  #     - ENG
+  #     - OPS
+  #   lookback_days: 365
+  #   states:
+  #     - Done
+  #     - Cancelled
+  #     - Duplicate
+
+  # pagerduty:
+  #   api_token: ${PAGERDUTY_API_TOKEN}
+  #   services:
+  #     - PXXXXXX
+  #   lookback_days: 180
+  #   min_duration_minutes: 5
+
+  # opsgenie:
+  #   api_key: ${OPSGENIE_API_KEY}
+  #   teams:
+  #     - platform-oncall
+  #   lookback_days: 180
+  #   min_duration_minutes: 5
+
+  # zendesk:
+  #   subdomain: acme
+  #   email: ${ZENDESK_EMAIL}
+  #   api_token: ${ZENDESK_API_TOKEN}
+  #   lookback_days: 180
+
+  # intercom:
+  #   access_token: ${INTERCOM_ACCESS_TOKEN}
+  #   lookback_days: 180
+  #   min_messages: 2
+  #   tags: []
+
+  # ms_teams:
+  #   tenant_id: ${MS_TEAMS_TENANT_ID}
+  #   client_id: ${MS_TEAMS_CLIENT_ID}
+  #   client_secret: ${MS_TEAMS_CLIENT_SECRET}
+  #   teams:
+  #     - platform-eng
+  #   lookback_days: 90
+  #   include_chats: false
+  #   include_files: true
+  #   include_transcripts: true
+  #   min_replies: 2
 
 # ── GitHub Real-Time Capture ───────────────────────────────────────────────
-# Enables `@docbrain capture` on GitHub PRs/issues.
-# Both fields are required; if either is missing, the route is not registered.
+# Enables `@docbrain capture` on GitHub PRs/issues. Separate from ingestion.
 github_capture:
   # webhook_secret: ~   # set GITHUB_WEBHOOK_SECRET env var
-  # bot_token: ~        # set GITHUB_BOT_TOKEN env var (or GITHUB_PR_TOKEN as fallback)
-
-# ── GitLab MR + Review Notes (batch ingest) ──────────────────────────────────
-gitlab_mr:
-  # token: ~             # secret — set in config/local.yaml or GITLAB_MR_TOKEN env var
-  base_url: "https://gitlab.com"   # override for self-hosted
-  # project_ids: ~       # comma-separated namespace/repo paths e.g. acme/platform,acme/backend
-  lookback_days: 365
-  min_notes: 1
-  # labels: ~            # comma-separated label filter — empty = all MRs
-  tls_verify: true       # set false for self-hosted with self-signed certs
+  # bot_token: ~        # set GITHUB_BOT_TOKEN env var
 
 # ── GitLab MR Real-Time Capture ───────────────────────────────────────────
-# Enables `@docbrain capture` on GitLab MRs via POST /api/v1/gitlab/events.
-# At least one of webhook_secret or token must be set; if neither is present,
-# the route is not registered.
+# Enables `@docbrain capture` on GitLab MRs. Separate from ingestion.
 gitlab_capture:
-  # webhook_secret: ~        # set GITLAB_CAPTURE_WEBHOOK_SECRET env var (X-Gitlab-Token validation)
-  # token: ~                 # set GITLAB_CAPTURE_TOKEN env var (PAT with api scope — fetch notes + post replies)
-  base_url: "https://gitlab.com"  # override for self-hosted: GITLAB_CAPTURE_BASE_URL
-  # allowed_users: ~         # set GITLAB_CAPTURE_ALLOWED_USERS (comma-separated; empty = all)
-  # allowed_projects: ~      # set GITLAB_CAPTURE_ALLOWED_PROJECTS (comma-separated group/project; empty = all)
-
-# ── Slack Thread Ingest ───────────────────────────────────────────────────────
-slack_ingest:
-  # token: ~             # secret — set in config/local.yaml or SLACK_INGEST_TOKEN env var
-  # channels: ~          # comma-separated channel IDs e.g. C01234,C56789
-  min_replies: 3
-  reactions: "white_check_mark,bookmark"
-  lookback_days: 90
-
-# ── Linear Issue Ingest ───────────────────────────────────────────────────────
-linear:
-  # api_key: ~          # secret — set in config/local.yaml or LINEAR_API_KEY env var
-  # teams: ~            # comma-separated team keys e.g. ENG,OPS — empty = all teams
-  lookback_days: 365
-  states: "Done,Cancelled,Duplicate"
-
-# ── Jira Issue Ingest ─────────────────────────────────────────────────────────
-jira_ingest:
-  # base_url: ~          # secret — set in config/local.yaml or JIRA_BASE_URL env var
-  # user_email: ~        # secret — set in config/local.yaml or JIRA_USER_EMAIL env var
-  # api_token: ~         # secret — set in config/local.yaml or JIRA_API_TOKEN env var
-  # projects: ~          # comma-separated project keys e.g. ENG,OPS — empty = all
-  # jql_filter: ~        # optional extra JQL clause
-  lookback_days: 365
-  issue_types: "Bug,Story,Task,Epic"
-
-# ── PagerDuty Incident Ingest ─────────────────────────────────────────────────
-pagerduty:
-  # api_token: ~         # secret — set in config/local.yaml or PAGERDUTY_API_TOKEN env var
-  lookback_days: 180
-  min_duration_minutes: 5
-  # services: ~          # comma-separated service IDs to filter — empty = all
-
-# ── OpsGenie Alert Ingest ─────────────────────────────────────────────────────
-opsgenie:
-  # api_key: ~           # secret — set in config/local.yaml or OPSGENIE_API_KEY env var
-  lookback_days: 180
-  min_duration_minutes: 5
-  # teams: ~             # comma-separated team names to filter — empty = all
-
-# ── Zendesk Ticket Ingest ──────────────────────────────────────────────────────
-zendesk:
-  # subdomain: ~         # your-company (before .zendesk.com) — set ZENDESK_SUBDOMAIN
-  # email: ~             # agent email for Basic Auth — set ZENDESK_EMAIL
-  # api_token: ~         # secret — set in config/local.yaml or ZENDESK_API_TOKEN env var
-  lookback_days: 180
-  # min_rating: ~        # "good" | "bad" | empty (include all) — set ZENDESK_MIN_RATING
-
-# ── Microsoft Teams Ingest ────────────────────────────────────────────────────
-# Requires an Azure Entra (Azure AD) app registration with application
-# permissions: Team.ReadBasic.All, Channel.ReadBasic.All, ChannelMessage.Read.All,
-# Chat.Read.All (optional), Files.Read.All, OnlineMeetingTranscript.Read.All (optional).
-# Tenant admin must grant consent for the app.
-ms_teams:
-  # tenant_id: ~        # secret — set MS_TEAMS_TENANT_ID env var
-  # client_id: ~        # secret — set MS_TEAMS_CLIENT_ID env var
-  # client_secret: ~    # secret — set MS_TEAMS_CLIENT_SECRET env var
-  # teams: ~            # comma-separated team names/IDs to filter — empty = all
-  lookback_days: 90
-  include_chats: false         # 1:1/group chats — high volume, enable with care
-  include_files: true          # channel files from SharePoint
-  include_transcripts: true    # meeting transcripts (requires app access policy)
-  min_replies: 2               # minimum replies for channel thread to be indexed
+  # webhook_secret: ~        # set GITLAB_CAPTURE_WEBHOOK_SECRET env var
+  # token: ~                 # set GITLAB_CAPTURE_TOKEN env var
+  base_url: "https://gitlab.com"
+  # allowed_users: ~         # set GITLAB_CAPTURE_ALLOWED_USERS
+  # allowed_projects: ~      # set GITLAB_CAPTURE_ALLOWED_PROJECTS
 
 # ── Intercom Conversation Ingest ───────────────────────────────────────────────
 intercom:
@@ -365,3 +506,55 @@ connectors:
 #   max_retries: ${WEBHOOK_MAX_RETRIES:-4}
 #   circuit_breaker_threshold: ${WEBHOOK_CIRCUIT_BREAKER_THRESHOLD:-10}
 #   allow_internal: ${ALLOW_INTERNAL_WEBHOOKS:-false}
+
+# ── Source-System ACL Mirroring (RFC-001) ────────────────────────────────
+# Query-time enforcement of per-document ACLs derived from source systems
+# (Confluence restrictions, Slack channel membership, GitHub repo access,
+# Jira issue security levels, etc.).
+#
+# Default mode is `off` → preserves pre-RFC-001 behaviour exactly.
+# Operators flip to `warn` first to validate ACL coverage on a real corpus
+# (logs would-have-denied chunk_ids without changing user-visible results),
+# then to `enforce` once per-connector AclProvider impls have populated
+# the chunk index with `acl_principals` data.
+#
+# See docs/rfcs/RFC-001-source-system-acl-mirroring.md for the design.
+acl:
+  mode: "${ACL_MODE:-off}"                                            # off | warn | enforce
+  unknown_policy: "${ACL_UNKNOWN_POLICY:-deny}"                       # deny | allow — for chunks lacking acl_principals data
+  recall_overfetch: ${ACL_RECALL_OVERFETCH:-1.0}                      # OpenSearch top_k multiplier when filter is active (1.0 = no overfetch)
+  user_principal_max_age_secs: ${ACL_USER_PRINCIPAL_MAX_AGE_SECS:-3600} # Drop user principals older than this. 0 = no fence.
+  # Denial UX (RFC-002) — controls how denials are communicated to users.
+  denial:
+    mode: "${ACL_DENIAL_MODE:-disclosed_no_count}"                    # silent | disclosed_no_count | disclosed
+    referral: "${ACL_DENIAL_REFERRAL:-your administrator}"            # operator-provided referral string surfaced in denial messages
+    audit: ${ACL_DENIAL_AUDIT:-false}                                 # persist every denial to acl_audit_log (HIPAA/FedRAMP/SOC2)
+    audit_raw_query: ${ACL_DENIAL_AUDIT_RAW_QUERY:-false}             # persist raw query text (default: SHA256-hashed)
+  # bootstrap_principal_set: kept at the conservative default
+  # ["public:system:public", "world:system:world"]. Operators who need
+  # broader access for cron jobs should register a service-account user
+  # rather than extend this list.
+  #
+  # Per-source policy (M1.4+ AclProvider impls consult this at ingest time):
+  # sources:
+  #   confluence:
+  #     mode: mirror              # off | mirror | public | admin_only
+  #     space_overrides:          # per-space override (case-insensitive)
+  #       ENG: public
+  #       HR: admin_only
+  #   slack:
+  #     mode: mirror
+  #     channel_overrides:
+  #       "#general": public
+  #   github:
+  #     mode: mirror
+  #     visibility_policy:        # GitHub visibility-derived policy
+  #       public: public
+  #       internal: public        # GH Enterprise: internal == "all org members"
+  #       private: mirror         # mirror collaborators + teams
+  #     repo_overrides:
+  #       "acme/secrets": admin_only
+  #   jira:
+  #     mode: mirror
+  #     project_overrides: {}
+  # Defaults to all sources at mode=off (opted-out of ACL system entirely).

@@ -47,6 +47,7 @@ nav:
     - Quickstart: quickstart.md
     - Configuration: configuration.md
     - LLM Providers: providers.md
+    - Rerank Providers: rerank-providers.md
   - Core Concepts:
     - Architecture: architecture.md
     - Knowledge Intelligence: knowledge-intelligence.md
@@ -56,12 +57,16 @@ nav:
     - Learning Pipeline: learning.md
   - Integrations:
     - Ingestion Guide: ingestion.md
+    - External Connectors: connectors.md
+    - MCP Tool Platform: mcp-tools.md
     - Slack: slack.md
     - GitLab Capture: gitlab-capture.md
     - Confluence Webhook: confluence-webhook.md
   - Deployment:
     - Kubernetes: kubernetes.md
     - RBAC & SSO: rbac.md
+    - Access Control (ACL): access-control.md
+    - 'Runbook: MCP Shadow Run': runbooks/mcp-shadow-run.md
   - Reference:
     - API Reference: api-reference.md
 

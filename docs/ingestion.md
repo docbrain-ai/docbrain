@@ -17,17 +17,26 @@ After ingestion, you can immediately start asking questions. DocBrain cites sour
 
 ## Quick Reference
 
-Configure sources in `config/local.yaml` (gitignored). Put only infrastructure secrets in `.env`.
+Configure sources in `config/local.yaml` (gitignored) under the top-level
+`sources:` block. Put only infrastructure secrets in `.env`. A sub-source is
+enabled simply by being present in YAML — there is **no separate
+`INGEST_SOURCES` env var**, and every list of targets must be non-empty.
 
-| Source | `ingest_sources` value | What You Need |
-|--------|------------------------|---------------|
-| Local files | `local` | A directory of `.md` or `.txt` files |
-| Confluence | `confluence` | Atlassian URL, email, API token, space keys |
-| GitHub | `github` | Repository URL, optional token for private repos |
-| GitHub PRs | `github_pr` | GitHub token, owner/repo |
-| GitLab MRs | `gitlab_mr` | GitLab token, project path |
-| Slack threads | `slack_thread` | Slack bot token, channel IDs |
-| Jira | `jira` | Jira URL, email, API token, project keys |
+| Provider | Sub-source | What You Need |
+|----------|------------|---------------|
+| Local files | `sources.local.path` | A directory of `.md` or `.txt` files |
+| Confluence | `confluence.*` (flat, legacy) | Atlassian URL, email, API token, space keys |
+| GitHub code | `sources.github.code` | GitHub token, list of `owner/repo[:branch]` |
+| GitHub PRs | `sources.github.pull_requests` | GitHub token, list of `owner/repo` |
+| GitLab MRs | `sources.gitlab.merge_requests` | GitLab token, list of `group/project` |
+| Slack threads | `sources.slack.threads` | Slack bot token, list of channel names |
+| Jira | `sources.jira` | Jira URL, email, API token, list of project keys |
+| Linear | `sources.linear` | Linear API key, list of team keys |
+| PagerDuty | `sources.pagerduty` | PagerDuty API token, list of service IDs |
+| OpsGenie | `sources.opsgenie` | OpsGenie API key, list of team names |
+| Zendesk | `sources.zendesk` | Zendesk subdomain, email, API token |
+| Intercom | `sources.intercom` | Intercom access token |
+| MS Teams | `sources.ms_teams` | Azure tenant/client/secret, list of team names |
 
 ---
 
@@ -41,11 +50,12 @@ Add to `config/local.yaml`:
 
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: local
+sources:
+  local:
+    path: /data/docs
 ```
 
-And set the path in `.env` (it's a filesystem path, not a secret, but it's deployment-specific):
+Or set the path via `.env`:
 
 ```env
 LOCAL_DOCS_PATH=/data/docs
@@ -115,9 +125,6 @@ Common examples: `ENG`, `DOCS`, `OPS`, `PLATFORM`
 
 ```yaml
 # config/local.yaml — never committed (gitignored)
-ingest:
-  ingest_sources: confluence
-
 confluence:
   base_url: https://yourcompany.atlassian.net/wiki
   user_email: you@yourcompany.com
@@ -217,33 +224,33 @@ The API token inherits the Confluence permissions of the user account. DocBrain 
 
 ## Option 3: GitHub Repository
 
-Ingest documentation from a GitHub repository. DocBrain clones the repo, finds Markdown and text files, and indexes them.
+Ingest documentation from one or more GitHub repositories. DocBrain clones each
+repo, finds Markdown and text files, and indexes them. Each repo may optionally
+pin a specific branch via the `:branch` suffix — otherwise the default branch
+is used.
 
 ### Setup
 
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: github
-
-github:
-  repo_url: https://github.com/your-org/your-docs-repo
-  branch: main
+sources:
+  github:
+    token: ${GITHUB_TOKEN}                 # repo:read scope
+    code:
+      repos:
+        - your-org/your-docs-repo          # default branch
+        - your-org/runbooks:develop        # pinned branch
 ```
 
-**For private repositories**, add a personal access token:
+Each entry in `repos` is an `owner/repo[:branch]` selector. The list must be
+non-empty — an empty list is a startup error.
 
-```yaml
-github:
-  token: ghp_your_token_here
-```
-
-### Creating a GitHub Token (for private repos)
+### Creating a GitHub Token
 
 1. Go to [https://github.com/settings/tokens](https://github.com/settings/tokens)
 2. Click **Generate new token (classic)**
 3. Select scope: `repo` (for private repos) or `public_repo` (for public repos only)
-4. Copy the token
+4. Copy the token and either export it as `GITHUB_TOKEN` or put it directly in `sources.github.token`
 
 ### Run Ingestion
 
@@ -432,9 +439,9 @@ DocBrain supports on-demand capture from GitHub PRs/issues, GitLab MRs, and Slac
 |----------|---------|----------------|-------|
 | GitHub | Comment `@docbrain capture` on any PR or issue | PR/issue description + all comments | Posts a reply comment confirming capture |
 | GitLab | Comment `@docbrain capture` on any MR | MR title, description, all human discussion notes | Posts a reply note confirming capture |
-| Slack | Run `/docbrain capture` inside a thread | All thread messages, user names resolved | Posts a message in the thread confirming capture |
+| Slack | Message shortcut, `@DocBrain capture` mention, or `/docbrain capture` | All thread messages, user names resolved | Posts a message in the thread confirming capture |
 
-Capture is separate from `/docbrain ask` (Slack) or `@docbrain ask` (GitHub/GitLab) — those are Q&A commands that answer questions from the knowledge base.
+Capture is separate from the Q&A commands. To ask a question, just mention DocBrain — `@DocBrain <your question>` in Slack, or `@docbrain <your question>` on a GitHub PR / GitLab MR. The bot replies with an answer drawn from your indexed knowledge base. (You can also still type `@DocBrain ask <question>` in Slack — both forms work.)
 
 ---
 
@@ -561,18 +568,22 @@ This MR will feed Autopilot's next gap analysis run.
 
 ## Slack Thread Capture
 
-Run `/docbrain capture` inside any Slack thread to immediately index the conversation.
+Capture any Slack thread into DocBrain using one of three methods:
 
-**Note:** `/docbrain capture` only ingests the thread. Use `/docbrain ask <question>` separately to query the knowledge base.
+- **Message shortcut (recommended):** Right-click a message in the thread → **Shortcuts** → **Capture to DocBrain**
+- **Bot mention:** Type `@DocBrain capture` in the thread (requires Event Subscriptions with `app_mention`)
+- **Slash command:** `/docbrain capture` — works outside threads, but **Slack blocks slash commands inside threads**, so use the shortcut or @mention instead
+
+**Note:** Capture only ingests the thread. Use `/docbrain ask <question>` separately to query the knowledge base.
 
 ### Setup
 
-Ensure the Slack bot is installed and `SLACK_BOT_TOKEN` is configured. The bot needs `channels:history` and `users:read` OAuth scopes.
+Ensure the Slack bot is installed and `SLACK_BOT_TOKEN` is configured. The bot needs `channels:history` and `users:read` OAuth scopes. For @mention support, also enable Event Subscriptions and add the `app_mentions:read` scope. See the [Slack integration guide](slack.md) for full setup steps.
 
 ### Usage
 
 1. Open a Slack thread with a substantive discussion
-2. Run `/docbrain capture` inside the thread (not on a top-level message)
+2. Use the **message shortcut** (right-click → Shortcuts → Capture to DocBrain), type **`@DocBrain capture`** in the thread, or run **`/docbrain capture`** (outside threads only)
 3. DocBrain fetches all messages, resolves user names, and indexes the conversation
 
 Within ~15 seconds, DocBrain posts back in the thread:
@@ -583,7 +594,7 @@ It's now searchable and will be used by Autopilot's next gap analysis.
 
 ### Access Control
 
-By default, any user in any channel can run `/docbrain capture`. Restrict access with:
+By default, any user in any channel can trigger capture (via shortcut, @mention, or slash command). Restrict access with:
 
 ```env
 SLACK_CAPTURE_ALLOWED_CHANNELS=platform-team,infra-review  # channel names (no #) or IDs
@@ -623,7 +634,7 @@ Unlike incident records (Jira, PagerDuty, Zendesk), which are permanent historic
 
 - The freshness scorer uses the **original content creation date** (when the PR/MR was opened, when the Slack thread started) as the age baseline — not the time DocBrain captured it.
 - Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one, which reduces its weight in RAG retrieval and Autopilot gap analysis.
-- **Re-capturing the same thread** (running `/docbrain capture` again on the same PR or Slack thread) updates the content but preserves the original creation date as the age baseline.
+- **Re-capturing the same thread** (via message shortcut, `@DocBrain capture`, or `@docbrain capture` on a PR) updates the content but preserves the original creation date as the age baseline.
 
 This ensures that outdated design decisions, replaced architectures, or deprecated processes are progressively de-emphasized in answers as they age — without ever being deleted (the historical record is preserved for explicit search).
 
@@ -667,28 +678,41 @@ docker compose exec server docbrain-ingest
 
 ## Multiple Sources
 
-DocBrain supports ingesting from multiple sources simultaneously. Set `ingest_sources` in `config/local.yaml` to a comma-separated list of sources, and configure credentials for each:
+DocBrain supports ingesting from multiple providers simultaneously. Simply
+declare each under `sources:` — enablement is structural (a sub-source runs
+if its block is present in YAML). There is no `INGEST_SOURCES` env var.
 
 ```yaml
 # config/local.yaml
-ingest:
-  ingest_sources: confluence,github_pr,jira
-
 confluence:
   base_url: https://acme.atlassian.net/wiki
   user_email: you@acme.com
   api_token: ATATT3x...
   space_keys: DOCS,ENG
 
-github_pr:
-  token: ghp_...
-  repo: acme/platform
+sources:
+  github:
+    token: ${GITHUB_TOKEN}
+    pull_requests:
+      repos:
+        - acme/platform
+        - acme/docs
+      lookback_days: 365
 
-jira_ingest:
-  base_url: https://acme.atlassian.net
-  user_email: you@acme.com
-  api_token: your-jira-token
-  projects: ENG,OPS
+  jira:
+    base_url: https://acme.atlassian.net
+    user_email: you@acme.com
+    api_token: ${JIRA_API_TOKEN}
+    projects:
+      - ENG
+      - OPS
+
+  slack:
+    token: ${SLACK_INGEST_TOKEN}
+    threads:
+      channels:
+        - "#incident-response"
+        - "#eng-platform"
 ```
 
 Then run a single ingestion pass to pull from all sources:
@@ -703,6 +727,7 @@ Documents from different sources coexist in the same index and are searched toge
 
 ## Next Steps
 
+- [External Connectors](./connectors.md) — build a connector for any knowledge source (ServiceNow, Notion, SharePoint, custom databases, etc.)
 - [Configuration Reference](./configuration.md) — all ingestion-related environment variables
 - [Provider Setup](./providers.md) — configure embedding providers for ingestion
 - [Architecture](./architecture.md) — how the ingestion pipeline works under the hood

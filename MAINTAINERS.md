@@ -4,7 +4,7 @@ This file lists the individuals who have write access to the repository and are 
 
 | Name | GitHub ID | Email | Affiliation |
 | :--- | :--- | :--- | :--- |
-| Sab Barabar| @abhipsnl | delmenw@gmail.com | Independent  |
+| Sab Barabar| @abhipsnl | hello@docbrainapi.com | Independent  |
 
 ## Emeritus Maintainers
 *None*

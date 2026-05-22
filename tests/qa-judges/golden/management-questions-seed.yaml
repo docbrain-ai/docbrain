@@ -1,0 +1,145 @@
+# Seed batch — management-style questions for v1 ship gate.
+#
+# Each case is a (question, rubric) tuple. The shadow-run grader and v1
+# ship gate evaluator (Tasks 4.11 + 4.13) ask DocBrain the question
+# through the live pipeline (with MCP tools enabled), capture the
+# answer, then grade it with the judge framework from Task 4.10a.
+#
+# Pass criteria for v1 ship gate (Task 4.13):
+#   pass_count >= baseline_pre_plan_4 (recorded in tests/qa-judges/runs/baseline-pre-plan-4.json)
+#
+# Rubric authoring guidelines:
+# - expected_facts: PROPOSITIONAL truths the answer should reflect. Phrase
+#   them as standalone claims, not phrases that must literally appear.
+#   "AITOOLINTG-35 is the blocker" — good. "AITOOLINTG-35" — bad.
+# - forbidden_claims: things the answer must NOT assert. Catch known
+#   regressions (e.g. an old wrong answer) and category-1 false positives.
+# - Keep each fact/claim concise — judge model is Haiku 4.5 with limited
+#   context for the verdict. ~80 characters max per item.
+# - 2-5 expected_facts per case is the sweet spot. >5 is hard to grade.
+#
+# Operator (Bhanu) note:
+# This file ships with TWO starter cases scaffolded from the plan. The
+# remaining 8 are marked TODO and must be authored against your operational
+# reality before Task 4.11 (shadow run) can produce a meaningful baseline.
+# Each TODO block has the structural skeleton — fill in question + facts +
+# forbidden claims, then remove the TODO marker.
+
+cases:
+  - id: helm_migration_blocker
+    question: "What is blocking the helm migration this week?"
+    expected_facts:
+      - "AITOOLINTG-35 is the current blocker"
+      - "Hayden is the assignee or owner of the blocking work"
+    forbidden_claims:
+      - "Devin worked on the blocking ticket"
+    judge_model: claude-haiku-4-5
+    notes: |
+      Live-tool dependency: jira.search or jira.get_issue must surface
+      AITOOLINTG-35's current state. Pre-Plan-4 path (JiraEnricher)
+      handled this via ingest-time enrichment.
+
+  - id: aitoolintg_35_status
+    question: "What is the status of AITOOLINTG-35?"
+    expected_facts:
+      - "answer reflects the CURRENT Jira status (not stale ingest-time data)"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: |
+      Calibration target: this is the canonical test that proves the
+      shadow run is reading live data, not the baked-in [Status: ...]
+      annotation from Plan-1-era JiraEnricher. If this answers "In
+      Progress" when Jira says "Done", the live-tool path is broken.
+
+  # ---------------------------------------------------------------------
+  # TODO(bhanu): 8 more questions below. Fill in against operational
+  # reality (Helm migration, SSO rollout, autopilot rollouts, ACL mode
+  # switches, MM2 connector work, etc.). Each TODO block has the
+  # structural skeleton — remove the marker comment when authored.
+  #
+  # Suggested coverage targets (pick 8 from this menu, or substitute):
+  #   - one question about an owner / responsible engineer ("who owns X?")
+  #   - one question that should surface a multi-ticket answer
+  #   - one question about a recently-CLOSED ticket (regression: stale
+  #     data would still report "In Progress")
+  #   - one question that crosses two Jira projects
+  #   - one question that must NOT mention a specific person (forbidden
+  #     claim regression guard)
+  #   - one question about timing / dates ("when is X due?")
+  #   - one operational question that depends on live state
+  #     (Jira sprint, deployment status, etc.)
+  #   - one question whose answer should be "I don't know" — the judge
+  #     must accept that as PASS when the rubric is "answer admits no info"
+  # ---------------------------------------------------------------------
+
+  # TODO(bhanu) case 3
+  - id: TODO_3
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO: why this case matters"
+
+  # TODO(bhanu) case 4
+  - id: TODO_4
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
+
+  # TODO(bhanu) case 5
+  - id: TODO_5
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
+
+  # TODO(bhanu) case 6
+  - id: TODO_6
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
+
+  # TODO(bhanu) case 7
+  - id: TODO_7
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
+
+  # TODO(bhanu) case 8
+  - id: TODO_8
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
+
+  # TODO(bhanu) case 9
+  - id: TODO_9
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
+
+  # TODO(bhanu) case 10
+  - id: TODO_10
+    question: "TODO: question text"
+    expected_facts:
+      - "TODO: fact 1"
+    forbidden_claims: []
+    judge_model: claude-haiku-4-5
+    notes: "TODO"
