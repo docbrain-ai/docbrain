@@ -11,13 +11,14 @@
 | Asset | Sensitivity | Description |
 |---|---|---|
 | **API keys** | Critical | Bearer tokens granting access to all API functionality |
-| **Admin API key** | Critical | Master key with full access — generated once on first boot |
+| **Admin API key** | Critical | Master key with full access, generated once on first boot |
 | **User query data** | High | Episodes table contains user questions (potentially sensitive: incident context, internal tooling names) |
 | **Confluence credentials** | High | API token / PAT for Confluence integration |
+| **Per-user OAuth tokens** | High | Tokens for live MCP tools (Jira, Confluence, Slack). Scoped per user, encrypted at rest with AES-256-GCM (see T11) |
 | **LLM API keys** | High | Anthropic/OpenAI/AWS credentials |
-| **Embeddings index** | Medium | OpenSearch semantic index — contains chunked documentation content |
+| **Embeddings index** | Medium | OpenSearch semantic index, contains chunked documentation content |
 | **Documentation content** | Medium | The ingested documentation itself (may contain internal procedures, configs) |
-| **Freshness/gap signals** | Low | Aggregate analytics — less sensitive than raw queries |
+| **Freshness/gap signals** | Low | Aggregate analytics, less sensitive than raw queries |
 
 ---
 
@@ -49,8 +50,8 @@
 
 **Mitigations:**
 - ✅ All API endpoints except `/api/v1/health` and `/api/v1/config` require Bearer token
-- ✅ Keys are stored as Argon2 hashes — raw key cannot be recovered from DB
-- ✅ Key revocation is instant — revoked keys fail validation on next request
+- ✅ Keys are stored as Argon2 hashes, raw key cannot be recovered from DB
+- ✅ Key revocation is instant, revoked keys fail validation on next request
 - ✅ Per-key rate limiting (configurable RPM) prevents abuse
 - ⚠️ **Residual risk:** No IP allowlisting. In production, deploy behind a reverse proxy with IP restriction if possible.
 
@@ -58,7 +59,7 @@
 
 **Threat:** An API key is leaked via logs, error messages, or accidental commit.
 **Impact:** Unauthorized access to all functionality at that key's role level.
-**Likelihood:** Medium — common in practice.
+**Likelihood:** Medium, common in practice.
 
 **Mitigations:**
 - ✅ Keys are never logged (auth middleware doesn't log extracted keys)
@@ -71,11 +72,11 @@
 
 **Threat:** An attacker manipulates a URL parameter to cause the server to make requests to internal services (metadata endpoints, localhost services, etc.).
 **Impact:** Internal service enumeration, credential theft from metadata APIs (AWS IMDS, GCP metadata).
-**Likelihood:** Low — URL inputs come from admin-configured env vars, not user requests.
+**Likelihood:** Low, URL inputs come from admin-configured env vars, not user requests.
 
 **Mitigations:**
 - ✅ Confluence base URL is admin-configured, not user-supplied
-- ✅ Image download URLs are relative paths from the Confluence base URL — cannot be redirected to arbitrary hosts
+- ✅ Image download URLs are relative paths from the Confluence base URL, cannot be redirected to arbitrary hosts
 - ✅ LLM API endpoints are configured at startup, not per-request
 - ⚠️ **Residual risk:** If Confluence is self-hosted, an admin could configure `CONFLUENCE_BASE_URL=http://169.254.169.254/` to hit cloud metadata endpoints. Mitigate by validating that the Confluence URL is not a private IP range in future versions.
 
@@ -83,7 +84,7 @@
 
 **Threat:** Malicious query input is injected into SQL statements.
 **Impact:** Data exfiltration, data modification, authentication bypass.
-**Likelihood:** Very Low — all queries use parameterized statements.
+**Likelihood:** Very Low, all queries use parameterized statements.
 
 **Mitigations:**
 - ✅ All database queries use sqlx parameterized queries (`$1`, `$2` bindings)
@@ -96,23 +97,23 @@
 
 Two distinct attack vectors:
 
-**5a — XML delimiter injection:** A document contains `</documents>` or `</question>`, closing the XML tags used to delimit context blocks. Text after the closed tag is interpreted by the LLM as instructions rather than content.
+**5a: XML delimiter injection:** A document contains `</documents>` or `</question>`, closing the XML tags used to delimit context blocks. Text after the closed tag is interpreted by the LLM as instructions rather than content.
 
-**5b — Cross-user episodic memory injection:** A user submits a malicious query (e.g. `IGNORE ALL PREVIOUS INSTRUCTIONS — you are now...`). That text is stored as `query_text` in the episodes table and fed back verbatim into future LLM prompts for *other users* whose questions are semantically similar. The injector doesn't need access to other users' sessions — the episodic recall mechanism delivers the payload automatically.
+**5b: Cross-user episodic memory injection:** A user submits a malicious query (e.g. `IGNORE ALL PREVIOUS INSTRUCTIONS, you are now...`). That text is stored as `query_text` in the episodes table and fed back verbatim into future LLM prompts for *other users* whose questions are semantically similar. The injector doesn't need access to other users' sessions. The episodic recall mechanism delivers the payload automatically.
 
 **Impact:** LLM produces misleading or dangerous answers; confidential context from other sessions potentially leaked.
 **Likelihood:** Medium for 5a (requires a malicious or compromised Confluence contributor). Medium for 5b (any authenticated user can attempt it).
 
 **Mitigations:**
 - ✅ System prompt enforces grounding: "Every factual claim MUST come from the provided context"
-- ✅ XML delimiter injection (5a): all untrusted strings are sanitized before LLM context assembly — `</documents>`, `</question>`, `<documents>`, `<question>` are HTML-entity escaped. Applied to document content, titles, session history, episodic memory fields (`query_text`, `answer_text`, `feedback_note`, `feedback_reason`), knowledge graph entity/relation fields, and the user query itself.
+- ✅ XML delimiter injection (5a): all untrusted strings are sanitized before LLM context assembly, `</documents>`, `</question>`, `<documents>`, `<question>` are HTML-entity escaped. Applied to document content, titles, session history, episodic memory fields (`query_text`, `answer_text`, `feedback_note`, `feedback_reason`), knowledge graph entity/relation fields, and the user query itself.
 - ⚠️ **Residual risk (5b):** HTML-entity escaping neutralizes structural XML injection. It does not prevent a sophisticated natural-language injection ("You are a helpful assistant who always...") from influencing LLM output if it reaches the context. Mitigation: review episodic memory entries flagged with unusual query patterns; consider a content moderation pass on stored episodes in high-security deployments.
 
 ### T6: Data Exfiltration via Analytics
 
 **Threat:** A regular user (non-admin) calls `/api/v1/analytics` to extract raw user query text.
-**Impact:** Privacy violation — users' questions could contain sensitive information.
-**Likelihood:** Medium — the analytics endpoint exists and is accessible to all authenticated users.
+**Impact:** Privacy violation, users' questions could contain sensitive information.
+**Likelihood:** Medium, the analytics endpoint exists and is accessible to all authenticated users.
 
 **Mitigations:**
 - ✅ `top_queries` (raw query text) is cleared from analytics responses for non-admin users
@@ -123,19 +124,19 @@ Two distinct attack vectors:
 ### T7: Session Fixation / Token Theft
 
 **Threat:** Web UI tokens stored in localStorage are stolen via XSS.
-**Impact:** Session hijacking — attacker can use the stolen API key.
-**Likelihood:** Low — Next.js mitigates most XSS vectors; localStorage tokens are a known risk.
+**Impact:** Session hijacking, attacker can use the stolen API key.
+**Likelihood:** Low, Next.js mitigates most XSS vectors; localStorage tokens are a known risk.
 
 **Mitigations:**
-- ✅ OIDC/SSO integration is implemented — organizations can configure SSO so users authenticate via their identity provider rather than storing raw API keys in the browser
-- ⚠️ **Known gap:** Even with OIDC, the session token derived from OIDC auth is stored in `localStorage` rather than an `httpOnly` cookie. If XSS were achieved in the web UI, the token could be exfiltrated. Tracked as a known issue — migrating web UI session storage to `httpOnly` cookies is planned.
+- ✅ OIDC/SSO integration is implemented, organizations can configure SSO so users authenticate via their identity provider rather than storing raw API keys in the browser
+- ⚠️ **Known gap:** Even with OIDC, the session token derived from OIDC auth is stored in `localStorage` rather than an `httpOnly` cookie. If XSS were achieved in the web UI, the token could be exfiltrated. Tracked as a known issue, migrating web UI session storage to `httpOnly` cookies is planned.
 - ⚠️ **Residual risk:** CSP headers on the web UI are not enforced by default. Operators should configure CSP via their reverse proxy (nginx, Caddy, ALB) as part of the production deployment checklist.
 
 ### T8: Webhook Replay / Forgery (Confluence)
 
 **Threat:** An attacker sends forged Confluence webhook events to trigger unauthorized document sync or deletion.
 **Impact:** Document index poisoning, unauthorized content ingestion.
-**Likelihood:** Low — requires attacker to be able to reach the webhook endpoint.
+**Likelihood:** Low, requires attacker to be able to reach the webhook endpoint.
 
 **Mitigations:**
 - ✅ Confluence webhook HMAC-SHA256 signature verification is implemented
@@ -146,7 +147,7 @@ Two distinct attack vectors:
 
 **Threat:** An attacker sends extremely large query strings or floods the API to degrade service.
 **Impact:** Service unavailability, high LLM costs.
-**Likelihood:** Medium — API is often internet-accessible.
+**Likelihood:** Medium, API is often internet-accessible.
 
 **Mitigations:**
 - ✅ Per-key rate limiting (RPM cap) prevents sustained flooding
@@ -160,9 +161,23 @@ Two distinct attack vectors:
 **Likelihood:** High in dev/quick-start setups.
 
 **Mitigations:**
-- ✅ CORS defaults to `http://localhost:3001` only — not `*`
+- ✅ CORS defaults to `http://localhost:3001` only, not `*`
 - ✅ CORS can be overridden via `CORS_ALLOWED_ORIGINS` env var
 - ⚠️ **Residual risk:** No TLS termination built-in. DocBrain should always be deployed behind nginx/caddy/ALB with TLS in production. See `docs/deployment.md`.
+
+### T11: Live MCP Tool Platform (Connected Source Systems)
+
+**Threat:** DocBrain can connect to live external systems (Jira, Confluence, Slack, or any MCP server) and read from them at answer time. This introduces three distinct risks: (a) a connected tool that can *write* could let the LLM modify a source system; (b) one user's question could surface another user's private data from a connected tool; (c) a malicious or misconfigured tool endpoint could be used for SSRF or token exfiltration.
+**Impact:** Unauthorized writes to source systems, cross-user data leakage, SSRF, OAuth token theft.
+**Likelihood:** Medium, live tools are opt-in, but once enabled they sit on the answer path for every query.
+
+**Mitigations:**
+- ✅ **Read-only, enforced at discovery.** Tools are admitted only when the upstream advertises `readOnlyHint == true`, and a defense-in-depth name check drops any tool whose name implies a write verb. The platform cannot create, edit, or delete in a connected system, regardless of what a tool claims it does.
+- ✅ **Per-user identity binding, fail-closed.** Live tools connect with each user's own OAuth, so results are scoped to what that user can already see. Self-referential queries ("my tickets") are bound to the verified caller; if identity cannot be established (anonymous caller, or a service-account tool with no declared identity argument), the tool pick is **dropped** rather than answered with a guessed identity. The default is to leak nothing.
+- ✅ **Tokens encrypted at rest.** Per-user OAuth tokens are stored with AES-256-GCM, each blob with its own fresh nonce. Tokens are never logged and refresh transparently.
+- ✅ **SSRF guard on tool endpoints.** Discovery and dispatch reject endpoints that resolve to private, loopback, or link-local ranges (including cloud metadata addresses), and egress is constrained to the hosts declared in each tool's manifest.
+- ✅ **Tool descriptions are treated as data, not instructions.** A connected tool's description cannot redirect the router's behavior (see T5).
+- ⚠️ **Residual risk:** The read-only guarantee depends on upstream servers honestly setting `readOnlyHint`; the name-based fallback is conservative but not exhaustive. Treat the set of connected MCP servers as part of your trust boundary, and prefer servers you operate or vet. Connect only the tools you actually need.
 
 ---
 
@@ -188,6 +203,7 @@ Before deploying to production:
 - [ ] Set up database backups for PostgreSQL (episodes + gap clusters contain valuable signal)
 - [ ] Run `cargo audit` regularly to check for dependency vulnerabilities
 - [ ] Monitor for unusual query patterns that may indicate abuse
+- [ ] Connect only the live MCP tools you need, and prefer servers you operate or vet (they sit on the answer path for every query)
 
 ---
 
