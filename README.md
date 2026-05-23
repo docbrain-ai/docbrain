@@ -243,6 +243,8 @@ Every team has a style guide. Nobody follows it. DocBrain enforces it on every d
 
 **Lint any text on demand:** `POST /api/v1/quality/lint` with raw text → get violations with line numbers, severity, and fix suggestions. Wire it into CI to block PRs that break your style guide.
 
+**GitOps for style policy:** Check `.docbrain/style.md` into your team's repo; DocBrain pulls it on a schedule and applies the rules to every draft for that space. Policy changes go through normal PR review. See [`docs/style-policy.md`](docs/style-policy.md) and the working [`examples/style/`](examples/style/) example.
+
 ### Governance & Accountability
 
 Documentation without ownership decays. DocBrain makes ownership and accountability explicit:

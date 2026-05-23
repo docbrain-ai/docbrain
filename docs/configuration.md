@@ -1430,4 +1430,6 @@ Five default rules are seeded on first migration:
 
 **API endpoints:** See [API Reference — Style Rules Engine](api-reference.md#style-rules-engine) for full endpoint documentation.
 
-There are no environment variables for the style rules engine — all limits are compile-time constants. Custom rules are created and managed entirely through the API.
+**Layered policy + file-based puller:** For the full model — global vs. space overrides, overridable vs. mandatory enforcement, and the `.docbrain/style.md` file-based puller that lets teams version-control their style policy in a source repo — see [Style Policy](style-policy.md). A working example file lives at [`examples/style/.docbrain/style.md`](https://github.com/docbrain-ai/docbrain-public/tree/main/examples/style) in this repo.
+
+There are no environment variables for the in-database style rules engine — all limits are compile-time constants. The file-based puller has one environment variable: `POLICY_FILE_SYNC_INTERVAL_SECS` (default `900`, set to `0` to disable the scheduled-pull background job).
