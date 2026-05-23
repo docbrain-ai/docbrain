@@ -15,4 +15,3 @@ and applies it to every draft generated for the ENG space.
 - avoid-word: just
 - avoid-word: simply
 - avoid-word: obviously
-- require-section: rollback
