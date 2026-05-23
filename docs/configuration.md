@@ -772,6 +772,10 @@ Image extraction requires a vision-capable LLM. Supported providers: **Bedrock**
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOGIN_SESSION_TTL_HOURS` | `720` | Session lifetime after email/password login (default: 720 hours = 30 days). Set to `0` for no expiry. |
+| `IDLE_TIMEOUT_HOURS` | `0` | When set to a positive value, API keys whose `last_used_at` is older than this window are rejected as expired — defense against stolen-laptop / forgotten-kiosk scenarios where the absolute TTL is too generous. Default `0` = disabled (preserves existing behaviour). Recommended `24` for production deployments. |
+| `IP_LOGIN_MAX_FAILURES` | `100` | Per-IP cap on public auth attempts within `IP_LOGIN_LOCKOUT_WINDOW_SECS`. Higher than the per-email cap (10) because corporate NATs share an IP across many users. Triggers `429 Too Many Requests` when exceeded. |
+| `IP_LOGIN_LOCKOUT_WINDOW_SECS` | `600` | Sliding window in seconds for the per-IP attempt counter. 10 minutes by default. |
+| `TRUSTED_PROXY_HOPS` | `0` | Number of trusted proxy hops in front of DocBrain. When `0` (default), `X-Forwarded-For` is ignored and the raw socket address is used for IP-based rate limiting — **wrong for deployments behind a load balancer**. Set to `1` when running behind a single ALB / nginx / Cloudflare hop so the per-IP cap keys on the real client IP, not the proxy IP. Without this, 100 failed auth attempts from any combination of users behind the proxy will trigger a shared 429 for everyone. |
 | `MAX_QUERY_LENGTH` | `4000` | Maximum characters allowed for question and description inputs |
 
 ## MCP Tool Platform
@@ -971,6 +975,8 @@ When publishing, DocBrain resolves the target in priority order: space-specific 
 | `CONTRADICTION_CHECKS_PER_PASS` | `10` | Max documents checked for contradictions per freshness run (LLM cost) |
 | `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
+| `FRESHNESS_LLM_CALLS_PER_PASS` | `50` | Max documents that get LLM content-currency analysis per scheduler tick. At 50/day, a 10k-doc corpus takes ~200 days to cover — raise as needed. Each call costs LLM tokens proportional to doc length. |
+| `FRESHNESS_LINK_CHECKS_PER_PASS` | `20` | Max documents that get HTTP HEAD link-health checks per scheduler tick. Cheap compared to LLM — safe to raise for large corpora. |
 
 ### Event-Based Source Types
 

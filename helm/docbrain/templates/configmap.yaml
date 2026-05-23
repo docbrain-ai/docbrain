@@ -179,6 +179,13 @@ data:
   CONTRADICTION_CHECKS_PER_PASS: {{ .Values.freshness.contradictionChecksPerPass | default 10 | quote }}
   CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS: {{ .Values.freshness.contradictionIncludeRecentEventDocs | default true | quote }}
   CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS: {{ .Values.freshness.contradictionEventDocMaxAgeDays | default 90 | quote }}
+  # Pass 2: LLM content-currency analysis. Default 50 docs per scheduler tick.
+  # Raise for larger corpora — at 50/day, 10k docs would take ~200 days to cover.
+  # Each call costs LLM tokens proportional to doc length.
+  FRESHNESS_LLM_CALLS_PER_PASS: {{ .Values.freshness.llmCallsPerPass | default 50 | quote }}
+  # Pass 3: HTTP HEAD link-health checks. Default 20 docs per tick. Cheap
+  # compared to LLM — safe to raise for large corpora.
+  FRESHNESS_LINK_CHECKS_PER_PASS: {{ .Values.freshness.linkChecksPerPass | default 20 | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.consolidation.intervalHours | default 6 | quote }}
   # Learning Velocity
   VELOCITY_MINUTES_SAVED: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
@@ -222,6 +229,19 @@ data:
   IMAGE_MIN_SIZE_BYTES: {{ .Values.imageExtraction.minSizeBytes | default 5120 | quote }}
   IMAGE_MAX_SIZE_BYTES: {{ .Values.imageExtraction.maxSizeBytes | default 10485760 | quote }}
   LOGIN_SESSION_TTL_HOURS: {{ .Values.auth.sessionTtlHours | default 720 | quote }}
+  # Idle timeout: API keys whose last_used_at is older than this are rejected.
+  # 0 = disabled (default). Recommended 24 for production deployments.
+  IDLE_TIMEOUT_HOURS: {{ .Values.auth.idleTimeoutHours | default 0 | quote }}
+  # Per-IP cap on public auth attempts (Auth#4/#16). Higher than per-email
+  # because corporate NATs share IPs.
+  IP_LOGIN_MAX_FAILURES: {{ .Values.auth.ipLoginMaxFailures | default 100 | quote }}
+  IP_LOGIN_LOCKOUT_WINDOW_SECS: {{ .Values.auth.ipLoginLockoutWindowSecs | default 600 | quote }}
+  # Trusted-proxy-hops for IP attribution. MUST be set to the number of
+  # proxies/load-balancers in front of DocBrain or the per-IP rate limit will
+  # key on the proxy's IP and lock out everyone behind it. Set to 1 for a
+  # single nginx/ALB hop, 2 for nginx+CDN, etc. Leave at 0 only when running
+  # without any reverse proxy.
+  TRUSTED_PROXY_HOPS: {{ .Values.auth.trustedProxyHops | default 0 | quote }}
   {{- if .Values.auth.corsAllowedOrigins }}
   CORS_ALLOWED_ORIGINS: {{ .Values.auth.corsAllowedOrigins | quote }}
   {{- end }}
