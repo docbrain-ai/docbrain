@@ -16,7 +16,7 @@ and the [Style Policy guide](../docs/style-policy.md).
 ## Style Overrides
 
 - max-heading-depth: 4
-- max-sentence-length: 30
+- max-sentence-length: 22
 - avoid-word: just
 - avoid-word: simply
 - avoid-word: obviously
