@@ -220,6 +220,13 @@ freshness:
   contradictionIncludeRecentEventDocs: true
   # Only event-based docs edited within this many days are eligible for contradiction checks.
   contradictionEventDocMaxAgeDays: 90
+  # Pass 2: LLM content-currency budget per scheduler tick.
+  # Default 50 — at this rate, 10k docs take ~200 days to cover; raise as needed.
+  # Each call costs LLM tokens proportional to doc length.
+  llmCallsPerPass: 50
+  # Pass 3: HTTP HEAD link-health budget per tick. Default 20; cheap vs LLM,
+  # safe to raise for large corpora.
+  linkChecksPerPass: 20
 
 # -- Learning Velocity — org-level documentation health metrics
 # Tracks gap resolution rate, knowledge half-life, tribal knowledge %, and ROI.
