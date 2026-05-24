@@ -15,6 +15,21 @@
 # OAuth scopes include offline_access so Atlassian issues refresh tokens
 # — without it tokens expire ~1h after connection and users must
 # reconnect manually.
+#
+# OPERATIONAL NOTE — Teamwork Graph permission failures.
+# Both tools below call Atlassian's Teamwork Graph endpoint, which is
+# a paid Atlassian feature gated on per-user / per-project permission.
+# Symptom in /admin/tools/jira → Diagnostics: `permanent_fail` with
+# upstream error `{"error":true,"message":"You don't have access ..."}`.
+# Two remediation paths:
+#   1. Disable the failing tool via /admin/tools/jira → Manage enablements
+#      → toggle off the tool for the principal that hit the error.
+#   2. Have an Atlassian admin grant the service-account user (or the
+#      OAuth user) Teamwork Graph access on the queried object — usually
+#      requires Jira Premium / Compass entitlement.
+# This is NOT a DocBrain bug; the call reached Atlassian and Atlassian
+# refused on permission grounds. The upstream JSON body in the audit
+# log row identifies which objectIdentifier was denied.
 
 manifest_version: 1
 id: jira
