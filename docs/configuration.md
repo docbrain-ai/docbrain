@@ -329,6 +329,34 @@ rag:
 | `rag.retrieval_ladder.judge_model_id` | — | `null` | Model id for the judge call. `null` uses the configured fast model. |
 | `rag.max_chunks_per_doc_in_retriever` | `RAG_MAX_CHUNKS_PER_DOC` | `2` | **Chunk-flood fix.** Max chunks per document that any single retriever may contribute to RRF. Before this knob, BM25 could return 100 chunks of one dominant document, crowding out the real answer. Cap at 2 preserves the top chunk as the RRF anchor plus one more for context. Dedup is per-retriever; different retrievers can still independently vote for the same doc. Set to a large number to effectively disable. |
 | — | `RAG_COMPOUND_DECOMPOSE` | `true` | **Compound query decomposition.** Split questions like "what is X and how is X deployed" into distinct sub-intents, rerank each independently against the full candidate pool, and fuse results by taking the max rerank score per chunk across sub-intents. Fixes the class of question where no single chunk answers every intent, so the cross-encoder scores every chunk mediocrely against the compound query. Short questions (<8 words) skip decomposition entirely. Set to `false` to revert to single-query rerank. |
+| — | `RAG_CONFIDENCE_RETRY_ENABLED` | `false` | **Confidence-retry fallback.** Master switch. When `true`, /ask responses with very-low confidence AND unused MCP tools in the user's eligible catalog are re-synthesized once with the picker in widen-mode (encouraging maximal tool selection). The retry's tool set is a strict superset of the first pass; the retry's answer always replaces the first-pass answer when the gate triggers. Default OFF — opt in per deployment. **Doubles worst-case latency on the small fraction of queries that fall below threshold AND have unused tools.** High-confidence answers, queries with all tools already dispatched, and queries that already exceeded the latency budget are never retried. Accepts `true \| 1 \| yes \| on` (case-insensitive). |
+| — | `RAG_CONFIDENCE_RETRY_THRESHOLD` | `0.25` | Confidence (strictly) below this triggers retry when the master switch is on. Bounded `0.0–1.0`; out-of-range values fall back to the default. Lower → fewer retries (only the very worst answers re-run). Higher → more retries (catches borderline answers but doubles latency on them). |
+| — | `RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS` | `12000` | Skip retry when the first pass already took this long. Bounded `1000–60000`; out-of-range values fall back to the default. Protects against pathologically slow queries getting hammered twice. |
+
+### Confidence-retry fallback — when to enable
+
+DocBrain's standard /ask path makes a single picker decision: the fast LLM looks at the question and the user's eligible MCP tool catalog and decides which subset to invoke. That works for the vast majority of queries — the picker correctly invokes the relevant 1-3 tools and the synthesis produces a high-confidence answer.
+
+The failure mode the retry fallback targets: the picker invokes a subset that doesn't find the answer (or invokes nothing), the synthesis returns very-low confidence, and the user gets a weak "I don't have enough information" answer when one of the *unused* tools in their catalog would have surfaced the data. This is most common when:
+
+- The user's question is phrased indirectly enough that the picker conservatively chose only one of several plausible tools.
+- A tool's manifest description doesn't match the question's keywords well, even though the underlying data is there.
+- Multiple loosely-related tools each could contribute, and the picker chose a single one rather than the union.
+
+**Default OFF.** Existing deployments are byte-identical until they opt in. To enable, set `RAG_CONFIDENCE_RETRY_ENABLED=true` in the server's env (helm: `server.env.RAG_CONFIDENCE_RETRY_ENABLED: "true"`).
+
+**Gate logic (ALL must hold for the retry to trigger):**
+
+1. Env flag is on.
+2. First-pass confidence is known and strictly below `RAG_CONFIDENCE_RETRY_THRESHOLD`.
+3. First-pass dispatched fewer tools than the eligible catalog (room to widen).
+4. First-pass elapsed wall-clock ≤ `RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS`.
+
+Any false → retry skipped → first-pass answer returned unchanged.
+
+**Observability.** A triggered retry emits two structured log lines: `rag::retry triggered — re-synthesizing with all tools` (with the first-pass confidence, tool count, catalog size, elapsed_ms, and configured threshold) and `rag::retry completed` (with the retry's confidence, tool count, and a `retry_helped` boolean comparing first-vs-retry confidence). Operators tune the threshold by measuring the ratio of triggered retries to `retry_helped=true` results; if a deployment's retries rarely improve answers, the threshold is too high and the retry is wasting budget. If too few queries trigger retry but reviewers see weak answers, the threshold is too low.
+
+**Latency.** When the gate triggers, the request makes a second picker call + a second synthesis call. Median latency for the retry is similar to the first pass; worst case approximately doubles. The latency budget gate (`RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS`) protects against the pathological case where the first pass already burned the user-tolerable budget — those queries skip retry and return the first-pass answer unchanged.
 
 ### Grounding floors — what lowering actually costs
 

@@ -90,6 +90,37 @@ rag:
   # (env only, default true). Not a RagConfig struct field because it's a
   # behavior flag, not a numeric tunable.
 
+  # ── Confidence-retry fallback (intelligent tool fan-out on weak answers) ──
+  #
+  # When a /ask first pass returns very-low confidence AND the user has
+  # unused MCP tools in their eligible catalog, optionally re-run once
+  # with the picker in widen-mode (encouraging maximal tool selection).
+  # The retry's tool set is a strict superset of the first pass — never
+  # narrower. The retry's answer ALWAYS replaces the first-pass answer
+  # when the gate triggers (we trust the broader sweep when confidence
+  # was very low).
+  #
+  # Default OFF — opt in per deployment. When enabled, doubles
+  # worst-case latency on the small fraction of queries that fall
+  # below threshold AND have unused tools. High-confidence answers
+  # are never retried.
+  #
+  # Configured via environment variables (NOT this YAML — env-only so
+  # an ops change can flip it without a redeploy):
+  #
+  #   RAG_CONFIDENCE_RETRY_ENABLED            true | 1 | yes | on
+  #   RAG_CONFIDENCE_RETRY_THRESHOLD          0.0–1.0 (default 0.25)
+  #   RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS  1000–60000 (default 12000)
+  #
+  # Gate logic (ALL must hold to trigger retry):
+  #   1. Env flag is on
+  #   2. First-pass confidence < threshold
+  #   3. First-pass dispatched fewer tools than the eligible catalog
+  #   4. First-pass elapsed_ms <= latency budget
+  #
+  # See docs/configuration.md § "Confidence-retry fallback" for tuning
+  # guidance and observability.
+
 # ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
 #
 # The reranker takes the candidate pool from stage 2 and rescores each

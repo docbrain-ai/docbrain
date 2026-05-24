@@ -130,6 +130,18 @@ server:
     limits:
       cpu: "1"
       memory: 512Mi
+  # env is a catch-all map: every key/value flows through to the
+  # server container as an environment variable via the helm
+  # configmap (templates/configmap.yaml).
+  #
+  # Confidence-retry fallback. Default OFF. When enabled, /ask
+  # responses with very-low confidence AND unused MCP tools in the
+  # catalog re-run once with the picker in widen-mode. Doubles
+  # worst-case latency on misses. To enable, uncomment:
+  #   env:
+  #     RAG_CONFIDENCE_RETRY_ENABLED: "true"
+  #     RAG_CONFIDENCE_RETRY_THRESHOLD: "0.25"           # 0.0–1.0
+  #     RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS: "12000"  # 1000–60000
   env: {}
 
 # -- DocBrain Web UI
