@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://docbrainapi.com/docs/slack/">
       
       
-        <link rel="prev" href="../connectors/">
+        <link rel="prev" href="../mcp-tools/">
       
       
         <link rel="next" href="../gitlab-capture/">
@@ -630,6 +630,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../style-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reviews/" class="md-nav__link">
         
   
@@ -783,6 +811,34 @@
     
   
     External Connectors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tool Platform
   
 
     
@@ -1061,6 +1117,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#conversation-memory-auto-listen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversation memory &amp; auto-listen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1320,6 +1387,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../runbooks/mcp-shadow-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runbook: MCP Shadow Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1359,7 +1454,7 @@
   <span class="md-ellipsis">
     
   
-    Reference
+    Security
   
 
     
@@ -1372,6 +1467,95 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/slack-dm-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slack DM Privacy Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1641,6 +1825,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#conversation-memory-auto-listen" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversation memory &amp; auto-listen
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1837,7 +2032,7 @@
 <li>Click <strong>Save</strong>.</li>
 </ol>
 <h2 id="step-3c-enable-event-subscriptions-optional">Step 3c: Enable Event Subscriptions (optional)<a class="headerlink" href="#step-3c-enable-event-subscriptions-optional" title="Permanent link">&para;</a></h2>
-<p>This enables <code>@DocBrain capture</code> mentions as an alternative way to trigger thread capture.</p>
+<p>This enables <code>@DocBrain capture</code> mentions as an alternative way to trigger thread capture, and unlocks <strong>auto-listen in threads</strong> — un-mentioned follow-ups inside a thread the bot already replied in are treated as continued questions, so users don't have to re-mention the bot every turn.</p>
 <ol>
 <li>In the left sidebar, click <strong>Event Subscriptions</strong> → toggle <strong>On</strong>.</li>
 <li>Set the <strong>Request URL</strong> to:</li>
@@ -1845,10 +2040,41 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>https://&lt;your-domain&gt;/slack/events
 </span></code></pre></div>
 <ol>
-<li>Under <strong>Subscribe to bot events</strong>, add <code>app_mention</code>.</li>
-<li>Go to <strong>OAuth &amp; Permissions</strong> → <strong>Bot Token Scopes</strong> and add <code>app_mentions:read</code> and <code>channels:history</code> (if not already present).</li>
-<li>Click <strong>Save Changes</strong>.</li>
+<li>Under <strong>Subscribe to bot events</strong>, add:</li>
 </ol>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app_mention</code></td>
+<td>Explicit <code>@DocBrain</code> mentions</td>
+</tr>
+<tr>
+<td><code>message.channels</code></td>
+<td>Auto-listen follow-ups in public-channel threads</td>
+</tr>
+<tr>
+<td><code>message.groups</code></td>
+<td>Auto-listen follow-ups in private channels</td>
+</tr>
+<tr>
+<td><code>message.im</code></td>
+<td>Auto-listen follow-ups in DMs</td>
+</tr>
+<tr>
+<td><code>message.mpim</code></td>
+<td>Auto-listen follow-ups in group DMs</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>message.*</code> events are only needed if you want auto-listen; <code>app_mention</code> alone is enough for explicit-mention-only behavior.
+4. Go to <strong>OAuth &amp; Permissions</strong> → <strong>Bot Token Scopes</strong> and add <code>app_mentions:read</code> and the <code>*:history</code> scopes (see Step 4) if not already present.
+5. Click <strong>Save Changes</strong>.</p>
 <h2 id="step-4-add-oauth-scopes">Step 4: Add OAuth Scopes<a class="headerlink" href="#step-4-add-oauth-scopes" title="Permanent link">&para;</a></h2>
 <ol>
 <li>In the left sidebar, click <strong>OAuth &amp; Permissions</strong>.</li>
@@ -1880,7 +2106,19 @@
 </tr>
 <tr>
 <td><code>channels:history</code></td>
-<td>Read thread messages for capture</td>
+<td>Read thread messages for auto-listen / capture in public channels</td>
+</tr>
+<tr>
+<td><code>groups:history</code></td>
+<td>Read thread messages for auto-listen / capture in private channels</td>
+</tr>
+<tr>
+<td><code>im:history</code></td>
+<td>Read thread messages for auto-listen / capture in DMs</td>
+</tr>
+<tr>
+<td><code>mpim:history</code></td>
+<td>Read thread messages for auto-listen / capture in group DMs</td>
 </tr>
 </tbody>
 </table>
@@ -1940,6 +2178,15 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/docbrain onboard ENG
 </span></code></pre></div>
 <p>Generates an AI-curated reading list of the most important docs in the ENG space, sorted by relevance and freshness — takes about 30 seconds.</p>
+<h3 id="conversation-memory-auto-listen">Conversation memory &amp; auto-listen<a class="headerlink" href="#conversation-memory-auto-listen" title="Permanent link">&para;</a></h3>
+<p>DocBrain remembers prior turns in a conversation, so follow-up questions resolve in context instead of starting from scratch:</p>
+<ul>
+<li><strong>Threaded mentions</strong> share history within the thread — everyone in the thread builds on the same conversation.</li>
+<li><strong>Top-level mentions</strong> share history per <code>(channel, user)</code> — your follow-ups continue your own conversation.</li>
+</ul>
+<p><strong>Auto-listen.</strong> Once the <code>message.*</code> events are subscribed (Step 3c) and the bot is a member of the channel, you no longer need to re-mention it on every turn — DocBrain answers un-mentioned follow-ups in any thread it already participated in. Top-level (non-thread) messages still require an explicit <code>@mention</code> to start a conversation.</p>
+<p><strong>Safety.</strong> The bot ignores its own and other bots' messages (no reply loops) and only responds in threads it actually joined. It must be a member of the channel to receive messages at all.</p>
+<p>This conversation-memory behavior is consistent across surfaces — the same follow-up-in-context experience applies on the web UI and the CLI.</p>
 <h2 id="proactive-notifications">Proactive Notifications<a class="headerlink" href="#proactive-notifications" title="Permanent link">&para;</a></h2>
 <p>When configured, DocBrain sends automatic notifications without anyone running a command:</p>
 <table>
@@ -2077,7 +2324,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../connectors/" class="md-footer__link md-footer__link--prev" aria-label="Previous: External Connectors">
+          <a href="../mcp-tools/" class="md-footer__link md-footer__link--prev" aria-label="Previous: MCP Tool Platform">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2087,7 +2334,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                External Connectors
+                MCP Tool Platform
               </div>
             </div>
           </a>

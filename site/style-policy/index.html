@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docbrainapi.com/docs/confluence-webhook/">
+        <link rel="canonical" href="https://docbrainapi.com/docs/style-policy/">
       
       
-        <link rel="prev" href="../gitlab-capture/">
+        <link rel="prev" href="../governance/">
       
       
-        <link rel="next" href="../kubernetes/">
+        <link rel="next" href="../reviews/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Confluence Webhook - DocBrain Docs</title>
+        <title>Style Policy - DocBrain Docs</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#confluence-webhook-real-time-page-sync" class="md-skip">
+        <a href="#style-policy" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Confluence Webhook
+              Style Policy
             
           </span>
         </div>
@@ -461,8 +461,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -473,13 +475,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -500,7 +500,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -627,10 +627,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../style-policy/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style Policy
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -646,6 +673,181 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#layered-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layered model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mandatory-vs-overridable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mandatory vs. overridable
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-rules-come-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where rules come from
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where rules come from">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-admin-ui-adminstyle-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Admin UI (/admin/style-rules)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-yaml-import-post-apiv1style-rulesimport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. YAML import (POST /api/v1/style-rules/import)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-file-based-puller-docbrainstylemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. File-based puller (.docbrain/style.md)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. File-based puller (.docbrain/style.md)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registering-a-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering a source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#branch-policy-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Branch policy (v1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduled-pulls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scheduled pulls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-rule-changes-propagate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How rule changes propagate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-recorded-for-every-draft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's recorded for every draft
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -718,8 +920,6 @@
       
   
   
-    
-  
   
   
     
@@ -732,11 +932,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -757,7 +959,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -912,37 +1114,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Confluence Webhook
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../confluence-webhook/" class="md-nav__link">
         
   
   
@@ -958,136 +1133,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#endpoint" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Endpoint
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#events-handled" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Events handled
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment variables
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#helm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Helm
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker-compose-raw-env" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Docker Compose / raw env
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-the-webhook-in-confluence-cloud" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring the webhook in Confluence Cloud
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-the-webhook-in-confluence-data-center" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring the webhook in Confluence Data Center
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verifying-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verifying it works
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-webhooks-alongside-scheduled-ingest" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using webhooks alongside scheduled ingest
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1478,10 +1523,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#endpoint" class="md-nav__link">
+  <a href="#layered-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Endpoint
+        Layered model
       
     </span>
   </a>
@@ -1489,10 +1534,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#events-handled" class="md-nav__link">
+  <a href="#mandatory-vs-overridable" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Events handled
+        Mandatory vs. overridable
       
     </span>
   </a>
@@ -1500,10 +1545,99 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#where-rules-come-from" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        Where rules come from
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where rules come from">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-admin-ui-adminstyle-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Admin UI (/admin/style-rules)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-yaml-import-post-apiv1style-rulesimport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. YAML import (POST /api/v1/style-rules/import)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-file-based-puller-docbrainstylemd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. File-based puller (.docbrain/style.md)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. File-based puller (.docbrain/style.md)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#registering-a-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Registering a source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#branch-policy-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Branch policy (v1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduled-pulls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scheduled pulls
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-rule-changes-propagate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How rule changes propagate
       
     </span>
   </a>
@@ -1511,10 +1645,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-variables" class="md-nav__link">
+  <a href="#whats-recorded-for-every-draft" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment variables
+        What's recorded for every draft
       
     </span>
   </a>
@@ -1522,10 +1656,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#helm" class="md-nav__link">
+  <a href="#failure-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Helm
+        Failure modes
       
     </span>
   </a>
@@ -1533,54 +1667,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#docker-compose-raw-env" class="md-nav__link">
+  <a href="#configuration-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Compose / raw env
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-the-webhook-in-confluence-cloud" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring the webhook in Confluence Cloud
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-the-webhook-in-confluence-data-center" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring the webhook in Confluence Data Center
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#verifying-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Verifying it works
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#using-webhooks-alongside-scheduled-ingest" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using webhooks alongside scheduled ingest
+        Configuration reference
       
     </span>
   </a>
@@ -1607,145 +1697,216 @@
   
 
 
-<h1 id="confluence-webhook-real-time-page-sync">Confluence Webhook — Real-Time Page Sync<a class="headerlink" href="#confluence-webhook-real-time-page-sync" title="Permanent link">&para;</a></h1>
-<p>DocBrain can update its index the moment a Confluence page is created, updated, or deleted — no polling, no waiting for the next scheduled ingest run.</p>
-<p>When a webhook fires, DocBrain re-fetches the page content from the Confluence API, re-chunks and re-embeds it, and updates OpenSearch. Delete events remove all chunks for that page. The response is always <code>200 OK</code> within milliseconds; all processing happens asynchronously to satisfy Confluence's 30-second timeout.</p>
-<h2 id="endpoint">Endpoint<a class="headerlink" href="#endpoint" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>POST /confluence/events
-</span></code></pre></div>
-<p>Confluence sends an <code>X-Hub-Signature: sha256=&lt;hex&gt;</code> header. DocBrain verifies the HMAC-SHA256 signature against <code>CONFLUENCE_WEBHOOK_SECRET</code> before processing any payload.</p>
-<h2 id="events-handled">Events handled<a class="headerlink" href="#events-handled" title="Permanent link">&para;</a></h2>
+<h1 id="style-policy">Style Policy<a class="headerlink" href="#style-policy" title="Permanent link">&para;</a></h1>
+<p>DocBrain's style policy is the set of rules that govern how documents
+look — what words to avoid, what sections every runbook must have, how
+deep heading nesting can go. The policy is enforced at three points:</p>
+<ol>
+<li><strong>Draft generation</strong> — the LLM is prompted with the effective ruleset
+   for the target space, so generated drafts are born compliant.</li>
+<li><strong>Post-generation lint</strong> — every draft is linted against the same
+   ruleset before it lands in review. Mandatory-severity violations
+   block publish unless an admin explicitly overrides.</li>
+<li><strong>Existing-content lint</strong> — <code>/api/v1/quality/lint</code> and the Quality
+   Score page surface rule violations in the corpus, so operators can
+   prioritise cleanup.</li>
+</ol>
+<p>This page covers how the policy is structured, where it comes from, and
+what an operator needs to know about how changes propagate. For the
+API surface (CRUD endpoints, request/response shapes), see the
+<a href="../api-reference/#style-rules-engine">API Reference</a>.</p>
+<h2 id="layered-model">Layered model<a class="headerlink" href="#layered-model" title="Permanent link">&para;</a></h2>
+<p>DocBrain rules sit at two scopes:</p>
 <table>
 <thead>
 <tr>
-<th>Confluence event</th>
-<th>DocBrain action</th>
+<th>Scope</th>
+<th>Applies to</th>
+<th>Set by</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>page_created</code></td>
-<td>Fetch, chunk, embed, index</td>
+<td><code>global</code></td>
+<td>Every draft and document in the corpus</td>
+<td>Admin (UI / API / YAML import)</td>
 </tr>
 <tr>
-<td><code>page_updated</code></td>
-<td>Re-fetch, re-chunk, re-embed, update index</td>
-</tr>
-<tr>
-<td><code>page_restored</code></td>
-<td>Same as <code>page_updated</code></td>
-</tr>
-<tr>
-<td><code>page_removed</code></td>
-<td>Delete all chunks for this page</td>
-</tr>
-<tr>
-<td><code>page_trashed</code></td>
-<td>Delete all chunks for this page</td>
+<td><code>space_override</code></td>
+<td>Every draft and document in one specific space</td>
+<td>Admin (UI / API / file-based puller)</td>
 </tr>
 </tbody>
 </table>
-<p>All other events (space events, blog posts, etc.) are acknowledged and ignored.</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p>The webhook uses the same Confluence API credentials as the ingest job. If you are already running scheduled Confluence ingest, <code>CONFLUENCE_BASE_URL</code> and <code>CONFLUENCE_API_TOKEN</code> are already set — only <code>CONFLUENCE_WEBHOOK_SECRET</code> is new.</p>
-<p>If you are running webhooks <strong>without</strong> scheduled ingest, all three credentials are required.</p>
-<h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Variable</th>
-<th>Required</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>CONFLUENCE_WEBHOOK_SECRET</code></td>
-<td>Yes</td>
-<td>Shared secret you generate and paste into Confluence. Enables the webhook endpoint.</td>
-</tr>
-<tr>
-<td><code>CONFLUENCE_BASE_URL</code></td>
-<td>Yes</td>
-<td>Full Confluence base URL, e.g. <code>https://your-org.atlassian.net/wiki</code></td>
-</tr>
-<tr>
-<td><code>CONFLUENCE_API_TOKEN</code></td>
-<td>Yes</td>
-<td>API token (Cloud) or Personal Access Token (Data Center)</td>
-</tr>
-<tr>
-<td><code>CONFLUENCE_USER_EMAIL</code></td>
-<td>Cloud only</td>
-<td>Email of the Confluence user (not required for Data Center)</td>
-</tr>
-<tr>
-<td><code>CONFLUENCE_API_VERSION</code></td>
-<td>No</td>
-<td><code>v2</code> for Cloud (default), <code>v1</code> for self-hosted Data Center</td>
-</tr>
-</tbody>
-</table>
-<h2 id="helm">Helm<a class="headerlink" href="#helm" title="Permanent link">&para;</a></h2>
-<p>Add to your <code>values.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">confluenceWebhook</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">webhookSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-random-secret&quot;</span><span class="w">   </span><span class="c1"># generate with: openssl rand -hex 32</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="c1"># Required only if ingest.confluence is not already configured:</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">baseUrl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://your-org.atlassian.net/wiki&quot;</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;docbrain@your-org.com&quot;</span><span class="w">        </span><span class="c1"># Cloud only</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">apiToken</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-confluence-api-token&quot;</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v2</span><span class="w">                        </span><span class="c1"># v2 for Cloud, v1 for Data Center</span>
+<p>When a draft is generated for a space, DocBrain computes the
+<strong>effective ruleset</strong> for that space:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>effective_rules(space) = globals ∪ (space_overrides − keys_already_mandatory)
 </span></code></pre></div>
-<p>Then upgrade:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>values.yaml
-</span></code></pre></div>
-<h2 id="docker-compose-raw-env">Docker Compose / raw env<a class="headerlink" href="#docker-compose-raw-env" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>CONFLUENCE_WEBHOOK_SECRET=your-random-secret
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>CONFLUENCE_BASE_URL=https://your-org.atlassian.net/wiki
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>CONFLUENCE_USER_EMAIL=docbrain@your-org.com
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>CONFLUENCE_API_TOKEN=your-confluence-api-token
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>CONFLUENCE_API_VERSION=v2
-</span></code></pre></div>
-<h2 id="configuring-the-webhook-in-confluence-cloud">Configuring the webhook in Confluence Cloud<a class="headerlink" href="#configuring-the-webhook-in-confluence-cloud" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Go to <strong>Confluence Settings</strong> → <strong>System</strong> → <strong>Webhooks</strong> (requires Confluence Admin).</li>
-<li>Click <strong>Create a Webhook</strong>.</li>
-<li>Set <strong>URL</strong> to <code>https://your-docbrain-domain/confluence/events</code>.</li>
-<li>Set <strong>Secret</strong> to the same value as <code>CONFLUENCE_WEBHOOK_SECRET</code>.</li>
-<li>Under <strong>Page</strong> events, check:</li>
-<li>Page Created</li>
-<li>Page Updated</li>
-<li>Page Removed</li>
-<li>Page Restored</li>
-<li>Page Trashed</li>
-<li>Click <strong>Save</strong>.</li>
-</ol>
-<p>Confluence will immediately send a test ping. DocBrain returns <code>200 OK</code> for all unrecognised events, so the ping succeeds.</p>
-<h2 id="configuring-the-webhook-in-confluence-data-center">Configuring the webhook in Confluence Data Center<a class="headerlink" href="#configuring-the-webhook-in-confluence-data-center" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Go to <strong>Administration</strong> → <strong>System</strong> → <strong>WebHooks</strong>.</li>
-<li>Click <strong>Create a WebHook</strong>.</li>
-<li>Set <strong>URL</strong> to <code>https://your-docbrain-domain/confluence/events</code>.</li>
-<li>Set <strong>Secret</strong> to the value of <code>CONFLUENCE_WEBHOOK_SECRET</code>.</li>
-<li>Select the same page events listed above.</li>
-<li>Set <code>CONFLUENCE_API_VERSION=v1</code> in your DocBrain environment.</li>
-</ol>
-<h2 id="verifying-it-works">Verifying it works<a class="headerlink" href="#verifying-it-works" title="Permanent link">&para;</a></h2>
-<p>After setup, edit a Confluence page and check the DocBrain server logs:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>INFO Processing page_updated for page &#39;My Page&#39; (id=12345)
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>INFO Updated page &#39;My Page&#39; — 8 chunks re-indexed
-</span></code></pre></div>
-<p>If you see a <code>401 Unauthorized</code> log entry instead, the shared secret does not match — regenerate it and update both sides.</p>
-<p>If you see <code>CONFLUENCE_WEBHOOK_SECRET set but missing CONFLUENCE_BASE_URL/API_TOKEN</code>, the Confluence credentials are not configured alongside the secret.</p>
-<h2 id="using-webhooks-alongside-scheduled-ingest">Using webhooks alongside scheduled ingest<a class="headerlink" href="#using-webhooks-alongside-scheduled-ingest" title="Permanent link">&para;</a></h2>
-<p>Webhooks and scheduled ingest complement each other:</p>
+<p>A space override may shadow an overridable global by the same
+<code>(rule_type, name)</code> identity. It may <strong>not</strong> shadow a mandatory global —
+the resolver drops the override and logs the attempt. This is how
+admins encode "every team can tune the heading depth, but the
+brand-mandated terminology rule is non-negotiable."</p>
+<h2 id="mandatory-vs-overridable">Mandatory vs. overridable<a class="headerlink" href="#mandatory-vs-overridable" title="Permanent link">&para;</a></h2>
+<p>Every rule has an <code>enforcement_level</code>:</p>
 <ul>
-<li>Scheduled ingest (running <code>docbrain-ingest</code> on a cron with Confluence credentials set) handles the full crawl on a periodic schedule, catching any changes that arrived while the server was down.</li>
-<li>Webhooks keep the index current between scheduled runs.</li>
+<li><strong><code>overridable</code></strong> (default) — a space can override this rule.
+  Teams have flexibility; the global is a baseline.</li>
+<li><strong><code>mandatory</code></strong> — a space cannot override this rule. The puller
+  rejects any file-based attempt to weaken it; the resolver drops any
+  in-memory override attempt; the DB has a trigger that raises an
+  exception on a direct <code>DELETE</code> of a mandatory row. This is reserved
+  for org-wide policies that must hold everywhere (e.g. PII-language
+  rules, compliance terminology).</li>
 </ul>
-<p>When both are active, the same <code>CONFLUENCE_BASE_URL</code> / <code>CONFLUENCE_API_TOKEN</code> credentials are shared. Set <code>CONFLUENCE_WEBHOOK_SECRET</code> in addition to your existing ingest config and both will work independently.</p>
+<p>Mandatory rules can only be created or modified through the admin API
+by an admin role. The file-based puller is intentionally limited to
+overridable rules.</p>
+<h2 id="where-rules-come-from">Where rules come from<a class="headerlink" href="#where-rules-come-from" title="Permanent link">&para;</a></h2>
+<p>There are three sources of style rules. They all write to the same
+underlying table; the difference is who controls them.</p>
+<h3 id="1-admin-ui-adminstyle-rules">1. Admin UI (<code>/admin/style-rules</code>)<a class="headerlink" href="#1-admin-ui-adminstyle-rules" title="Permanent link">&para;</a></h3>
+<p>Hand-crafted rules created by an administrator. Useful for one-off
+rules, mandatory rules, and rules with <code>severity=error</code> that block
+publish.</p>
+<h3 id="2-yaml-import-post-apiv1style-rulesimport">2. YAML import (<code>POST /api/v1/style-rules/import</code>)<a class="headerlink" href="#2-yaml-import-post-apiv1style-rulesimport" title="Permanent link">&para;</a></h3>
+<p>Bulk-import a ruleset from a YAML file. Useful for seeding a new
+deployment from a curated template, or for keeping a version-controlled
+copy of the ruleset checked into a config repo.</p>
+<h3 id="3-file-based-puller-docbrainstylemd">3. File-based puller (<code>.docbrain/style.md</code>)<a class="headerlink" href="#3-file-based-puller-docbrainstylemd" title="Permanent link">&para;</a></h3>
+<p>The puller monitors a registered source repository and syncs the rules
+declared in its <code>.docbrain/style.md</code> file on a schedule. This is the
+"GitOps for style policy" path — the policy file lives in the repo
+that owns the team's standards, change review goes through normal
+PR review, and DocBrain pulls the latest version.</p>
+<p>See the <a href="https://github.com/docbrain-ai/docbrain-public/tree/main/examples/style">working example</a>
+for a complete <code>.docbrain/style.md</code> you can copy.</p>
+<h4 id="registering-a-source">Registering a source<a class="headerlink" href="#registering-a-source" title="Permanent link">&para;</a></h4>
+<p>Admin → <strong>Style Policy</strong> in the sidebar (or <code>/admin/policy-file-sources</code>).
+Click "Register a source" and provide:</p>
+<ul>
+<li><strong>Repository URL</strong> — the HTTPS URL of the repo containing
+  <code>.docbrain/style.md</code> at its root.</li>
+<li><strong>Declared scope</strong> — the space this repo is authorized to publish
+  policy for. Use a space name (e.g. <code>ENG</code>) for space-scoped rules, or
+  <code>global</code> for org-wide overrides.</li>
+</ul>
+<p>The puller verifies that the file's frontmatter <code>docbrain_scope</code> matches
+the registered scope before applying any rules — a repo registered for
+<code>ENG</code> cannot smuggle rules into <code>HR</code>.</p>
+<h4 id="branch-policy-v1">Branch policy (v1)<a class="headerlink" href="#branch-policy-v1" title="Permanent link">&para;</a></h4>
+<p>The puller fetches <code>.docbrain/style.md</code> from the <strong>repository's default
+branch only</strong>. This is intentional: the trust model assumes the
+customer has branch protection on the default branch, so policy
+changes go through review. Feature branches typically don't have the
+same protection, so accepting non-default refs would let any team
+member with push access deploy policy bypassing review.</p>
+<p>Non-default branch support is on the roadmap with additional
+audit-trail safeguards.</p>
+<h4 id="scheduled-pulls">Scheduled pulls<a class="headerlink" href="#scheduled-pulls" title="Permanent link">&para;</a></h4>
+<p>The scheduler runs every <code>POLICY_FILE_SYNC_INTERVAL_SECS</code> seconds
+(default 900s = 15 minutes). Each tick sweeps every <code>enabled=true</code>
+source, fetches its <code>.docbrain/style.md</code>, parses, and upserts the
+declared rules. Per-source failures are isolated — a 404 or a transient
+network error on one repo doesn't abort the sweep, and the failure
+surfaces on that source's row as <code>last_error</code>.</p>
+<p>You can disable the scheduler by setting <code>POLICY_FILE_SYNC_INTERVAL_SECS=0</code>.
+Manual pulls via the admin "Sync now" button still work when the
+scheduler is disabled.</p>
+<h2 id="how-rule-changes-propagate">How rule changes propagate<a class="headerlink" href="#how-rule-changes-propagate" title="Permanent link">&para;</a></h2>
+<p>This is the part operators most often ask about.</p>
+<p><strong>Single-replica deployments.</strong> When an admin creates, updates, or
+deletes a rule via the API or UI, the server's in-memory rule cache
+reloads immediately after the database commit. The next draft request
+sees the new rule. There is no cache TTL.</p>
+<p><strong>Multi-replica deployments.</strong> Each replica has its own in-memory rule
+cache. When an admin's PATCH lands on Replica A, <strong>only Replica A
+reloads</strong> — Replica B's cache stays stale until one of:</p>
+<ul>
+<li>Replica B handles its own write (the next admin action that lands on it)</li>
+<li>Replica B's scheduled-pull tick processes a source and triggers a reload</li>
+<li>Replica B restarts</li>
+</ul>
+<p>There is currently no cross-replica invalidation broadcast. This is a
+known limitation. Operators running multi-replica deployments who need
+guaranteed cross-pod consistency should restart the deployment after
+any policy change until cross-replica invalidation ships.</p>
+<h2 id="whats-recorded-for-every-draft">What's recorded for every draft<a class="headerlink" href="#whats-recorded-for-every-draft" title="Permanent link">&para;</a></h2>
+<p>When a draft is generated, DocBrain freezes a snapshot of the rules
+that were effective at that moment into <code>autopilot_drafts.style_snapshot</code>.
+This means:</p>
+<ul>
+<li>An audit of any past draft can show exactly which rules applied.</li>
+<li>A rule change in the future doesn't retroactively re-judge an old
+  draft.</li>
+<li>The <code>severity</code> and <code>enforcement_level</code> of each rule at the time are
+  preserved.</li>
+</ul>
+<h2 id="failure-modes">Failure modes<a class="headerlink" href="#failure-modes" title="Permanent link">&para;</a></h2>
+<p>The puller has explicit semantics for every failure class. None of these
+silently corrupt your ruleset.</p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Network / 5xx / timeout</td>
+<td>Existing rules left in place. <code>last_error</code> set.</td>
+</tr>
+<tr>
+<td>401 / 403 (auth)</td>
+<td>Existing rules left in place. <code>last_error</code> set.</td>
+</tr>
+<tr>
+<td>404 (file deleted upstream)</td>
+<td>Rules previously pulled from this source are deleted. (Team retracted policy.)</td>
+</tr>
+<tr>
+<td>Oversized file</td>
+<td>Existing rules left in place. <code>last_error</code> set.</td>
+</tr>
+<tr>
+<td>Scope mismatch (file says HR, registered as ENG)</td>
+<td>Existing rules left in place. <strong>Logged as security event.</strong> <code>last_error</code> set.</td>
+</tr>
+<tr>
+<td>Tries to define a mandatory rule</td>
+<td>Existing rules left in place. <strong>Logged as security event.</strong> <code>last_error</code> set.</td>
+</tr>
+</tbody>
+</table>
+<p>The two security-event rows (scope mismatch and mandatory smuggling)
+are the load-bearing trust boundaries of the file-based puller. They
+ensure a compromised or hostile policy file cannot escalate a rule's
+authority or cross scope boundaries.</p>
+<h2 id="configuration-reference">Configuration reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Setting / env var</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setting <code>style.policy_file_max_bytes</code></td>
+<td><code>262144</code> (256 KiB)</td>
+<td>Maximum file size the puller will accept. Larger files are rejected.</td>
+</tr>
+<tr>
+<td>Env <code>POLICY_FILE_SYNC_INTERVAL_SECS</code></td>
+<td><code>900</code> (15 min)</td>
+<td>Scheduled-pull interval in seconds. <code>0</code> disables the scheduler.</td>
+</tr>
+</tbody>
+</table>
+<p>For the full set of style-rule-related API endpoints, see the
+<a href="../api-reference/#style-rules-engine">API Reference</a>.</p>
 
 
 
@@ -1783,7 +1944,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../gitlab-capture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: GitLab Capture">
+          <a href="../governance/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Governance">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1793,20 +1954,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                GitLab Capture
+                Governance
               </div>
             </div>
           </a>
         
         
           
-          <a href="../kubernetes/" class="md-footer__link md-footer__link--next" aria-label="Next: Kubernetes">
+          <a href="../reviews/" class="md-footer__link md-footer__link--next" aria-label="Next: Review Workflows">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Kubernetes
+                Review Workflows
               </div>
             </div>
             <div class="md-footer__button md-icon">
