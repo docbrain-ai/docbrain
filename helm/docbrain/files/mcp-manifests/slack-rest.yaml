@@ -1,0 +1,191 @@
+# Slack via REST API — DocBrain MCP manifest (in-process shim).
+#
+# Why two Slack manifests?
+#
+# The other manifest (`slack`) talks to Slack's hosted Remote MCP Server
+# (mcp.slack.com) which exposes message-search / channel-search / file-search
+# tools. That hosted server does NOT advertise direct-fetch tools — its tool
+# descriptions reference `slack_read_thread`, `slack_read_channel`,
+# `slack_read_canvas` but the actual `tools/list` response from
+# mcp.slack.com does not include them. Verified live on docbrain-poc
+# 2026-05-25 via the admin discover endpoint.
+#
+# Consequence: a user query like "summarize this slack thread: <URL>" has
+# no direct-fetch tool to dispatch — the picker falls back to keyword
+# search which can't match a URL-shaped input.
+#
+# This manifest wraps Slack's standard Web API (conversations.replies,
+# conversations.history) as a second MCP server served in-process at
+# /internal/mcp/slack-rest. Mirrors the established jira_rest /
+# confluence_rest pattern.
+#
+# Auth model: SERVICE-ACCOUNT mode between orchestrator and shim
+# (DOCBRAIN_INTERNAL_MCP_SECRET bearer — same as jira_rest). The shim
+# itself does NOT have a shared Slack token — it looks up the CALLING
+# USER's per-user Slack OAuth token from mcp_oauth_tokens (keyed on the
+# X-Docbrain-User-Id header injected by the orchestrator) and forwards
+# THAT token to slack.com. So the upstream call to Slack still runs
+# as the user, scoped to the user's grants. The shim is a token-
+# resolution and DM-refusal proxy, not a privileged bot.
+#
+# Important: this manifest needs its OWN row in mcp_oauth_tokens for
+# each connecting user, because Slack's OAuth scope set differs from
+# the `slack` manifest's. Users see two Connect buttons on /integrations
+# — one for slack (search), one for slack_rest (thread reads).
+#
+# Routing intent: the picker should prefer slack_rest tools when the
+# user names a specific Slack URL or channel+ts pair; the search-style
+# slack manifest stays the default for keyword-style queries.
+
+manifest_version: 1
+id: slack_rest
+display_name: "Slack (REST — thread/channel reads)"
+description: |
+  Slack thread and channel reads via Slack's standard Web API, wrapped as MCP
+  tools. Primary path for direct-resource Slack queries — Slack's hosted MCP
+  server (used by the `slack` manifest) does not expose first-class thread/
+  channel reads, so this shim handles direct fetches reliably.
+  Use this when the user names a specific Slack URL (thread permalink) or
+  channel id + ts; use the `slack` manifest's search tools for keyword
+  queries across channels.
+  DOES NOT support DM threads: D-prefix channel IDs are explicitly refused
+  per DocBrain's privacy policy (see docs/security/slack-dm-policy.md).
+category: "chat"
+icon: "slack.svg"
+
+# DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
+# load time. Local dev: DOCBRAIN_SERVER_PORT=3000. Helm sets it from the
+# service port. Same pattern as jira_rest / confluence_rest.
+config_refs:
+  - DOCBRAIN_SERVER_PORT
+
+server:
+  transport: http_sse
+  endpoint: "http://localhost:${DOCBRAIN_SERVER_PORT}/internal/mcp/slack-rest"
+  protocol_version: "2024-11-05"
+
+auth:
+  # Hybrid: SA for the orchestrator→shim hop (jira_rest pattern), OAuth
+  # for the dance that issues the per-user Slack token the SHIM reads
+  # internally. The picker dispatches via SA mode (so gateway/auth.rs
+  # injects the internal bearer + X-Docbrain-User-Id header); the OAuth
+  # config exists ONLY so users can click Connect on /integrations and
+  # grant the conversations-history scopes. The resulting row in
+  # mcp_oauth_tokens(manifest_id='slack_rest') is what the shim looks
+  # up at dispatch time. Slack's API is never called by the gateway
+  # directly for this manifest — it's the shim that calls Slack.
+  modes:
+    - service_account
+    - oauth
+  service_account:
+    # The shim authenticates the orchestrator (caller) via this bearer.
+    # NOT a Slack credential — the shim resolves the user's Slack OAuth
+    # token from mcp_oauth_tokens internally using the X-Docbrain-User-Id
+    # header that the orchestrator's auth path injects on every dispatch.
+    secret_refs:
+      - DOCBRAIN_INTERNAL_MCP_SECRET
+    header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+  oauth:
+    # Standards-compliant authorization-code + PKCE flow against Slack's
+    # user OAuth endpoints — same as the `slack` manifest, but with a
+    # different scope set (conversations:history instead of search:read.*).
+    # Users see a separate Connect button on /integrations for slack_rest.
+    provider: generic
+    authorize_url: "https://slack.com/oauth/v2_user/authorize"
+    token_url: "https://slack.com/api/oauth.v2.user.access"
+    # Conversation-read scopes for thread + message fetching:
+    #   channels:history → public channels
+    #   groups:history   → private channels the user is a member of
+    # DM/MPIM scopes (im:history, mpim:history) are INTENTIONALLY OMITTED.
+    # The shim ALSO refuses D-prefix channel IDs at the args layer.
+    scopes:
+      - "channels:history"
+      - "groups:history"
+    client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
+    client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
+    use_pkce: true
+
+# Static tool catalog — declared here rather than discovered, because the
+# shim's endpoint is in-process and we want explicit, schema-validated
+# inputs (especially the D-prefix refusal which must be deterministic at
+# the args boundary, not after we've already forwarded to Slack).
+tools:
+  - name: slack_rest.read_thread
+    upstream_name: read_thread
+    description: |
+      Fetch a Slack thread by channel ID + parent message timestamp, OR by a
+      Slack archive URL. Returns the parent message plus all replies in
+      order, with sender, timestamp, and text per message.
+
+      Use when the user names a specific Slack thread — typically via a
+      slack.com/archives/{CHANNEL}/p{TIMESTAMP} URL or by referencing a
+      channel and message ts directly.
+
+      REFUSES DM threads (D-prefix channel IDs) per DocBrain's privacy
+      policy. For DM content the user must open Slack directly.
+
+      Args: provide EITHER `url` (the archive permalink) OR both
+      `channel_id` and `ts`. The shim parses the URL when present.
+    args_schema:
+      type: object
+      properties:
+        url:
+          type: string
+          description: "Slack archive URL like 'https://example.slack.com/archives/C123/p1779711358604539'. Mutually exclusive with channel_id + ts."
+          maxLength: 500
+        channel_id:
+          type: string
+          pattern: "^[CG][A-Z0-9]{8,12}$"
+          description: "Slack channel ID. Must start with C (public) or G (private channel). D-prefix DMs are refused at runtime by Slack's scope boundary AND by the shim's args validation."
+        ts:
+          type: string
+          pattern: "^[0-9]+\\.[0-9]+$"
+          description: "Parent message timestamp like '1779711358.604539'."
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+          description: "Max number of replies to include (parent always included). Defaults to 50."
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 5000
+    read_only: true
+
+  - name: slack_rest.get_message
+    upstream_name: get_message
+    description: |
+      Fetch a single Slack message by channel ID + timestamp. Returns the
+      one message (no thread replies — use read_thread for those). Useful
+      when the user references a specific message without needing replies.
+
+      REFUSES DM messages (D-prefix channel IDs) per DocBrain's privacy
+      policy.
+    args_schema:
+      type: object
+      properties:
+        url:
+          type: string
+          description: "Slack archive URL. Mutually exclusive with channel_id + ts."
+          maxLength: 500
+        channel_id:
+          type: string
+          pattern: "^[CG][A-Z0-9]{8,12}$"
+          description: "Slack channel ID (C or G only — D-prefix refused)."
+        ts:
+          type: string
+          pattern: "^[0-9]+\\.[0-9]+$"
+          description: "Message timestamp."
+    output_size_cap_bytes: 8192
+    latency_budget_ms: 3000
+    read_only: true
+
+egress:
+  hosts:
+    - "slack.com"
+    - "*.slack.com"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90
