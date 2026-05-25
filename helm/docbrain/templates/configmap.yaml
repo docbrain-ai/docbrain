@@ -179,6 +179,13 @@ data:
   CONTRADICTION_CHECKS_PER_PASS: {{ .Values.freshness.contradictionChecksPerPass | default 10 | quote }}
   CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS: {{ .Values.freshness.contradictionIncludeRecentEventDocs | default true | quote }}
   CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS: {{ .Values.freshness.contradictionEventDocMaxAgeDays | default 90 | quote }}
+  # Engagement-v2 (Wilson lower bound on distinct users, recency-windowed).
+  # See values.yaml `freshness.engagementV2Enabled` for the semantics.
+  # Flag-off (default) → legacy v1 engagement path runs verbatim.
+  FRESHNESS_ENGAGEMENT_V2_ENABLED: {{ .Values.freshness.engagementV2Enabled | default false | quote }}
+  FRESHNESS_ENGAGEMENT_MIN_RETRIEVERS: {{ .Values.freshness.engagementMinRetrievers | default 3 | quote }}
+  FRESHNESS_ENGAGEMENT_MIN_VOTERS: {{ .Values.freshness.engagementMinVoters | default 3 | quote }}
+  FRESHNESS_ENGAGEMENT_WINDOW_DAYS: {{ .Values.freshness.engagementWindowDays | default 180 | quote }}
   # Pass 2: LLM content-currency analysis. Default 50 docs per scheduler tick.
   # Raise for larger corpora — at 50/day, 10k docs would take ~200 days to cover.
   # Each call costs LLM tokens proportional to doc length.

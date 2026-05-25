@@ -232,6 +232,24 @@ freshness:
   contradictionIncludeRecentEventDocs: true
   # Only event-based docs edited within this many days are eligible for contradiction checks.
   contradictionEventDocMaxAgeDays: 90
+  # Engagement signal v2 — Wilson-score lower bound on distinct-user-gated,
+  # recency-windowed feedback. When `engagementV2Enabled: true`, the
+  # per-doc engagement score requires:
+  #   • engagementMinRetrievers distinct users to have retrieved the doc
+  #     (default 3) within engagementWindowDays (default 180),
+  #   • engagementMinVoters distinct users to have given thumbs-up/down
+  #     feedback (default 3), and
+  #   • each user counts as at most one vote per doc (anti-brigade).
+  # Score is the Wilson lower bound at 95% confidence on the up-vote ratio
+  # across distinct users. Health becomes bidirectional — when activity
+  # stops, votes fall out of the window and the doc returns to
+  # "Insufficient signals".
+  # When `false` (default), the legacy v1 engagement path runs verbatim
+  # — operators can flip back on any deployment without code changes.
+  engagementV2Enabled: false
+  engagementMinRetrievers: 3
+  engagementMinVoters: 3
+  engagementWindowDays: 180
   # Pass 2: LLM content-currency budget per scheduler tick.
   # Default 50 — at this rate, 10k docs take ~200 days to cover; raise as needed.
   # Each call costs LLM tokens proportional to doc length.

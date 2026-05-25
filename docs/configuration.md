@@ -1005,6 +1005,21 @@ When publishing, DocBrain resolves the target in priority order: space-specific 
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
 | `FRESHNESS_LLM_CALLS_PER_PASS` | `50` | Max documents that get LLM content-currency analysis per scheduler tick. At 50/day, a 10k-doc corpus takes ~200 days to cover — raise as needed. Each call costs LLM tokens proportional to doc length. |
 | `FRESHNESS_LINK_CHECKS_PER_PASS` | `20` | Max documents that get HTTP HEAD link-health checks per scheduler tick. Cheap compared to LLM — safe to raise for large corpora. |
+| `FRESHNESS_ENGAGEMENT_V2_ENABLED` | `false` | **Engagement signal v2.** Master switch. When `true`, the per-doc engagement score uses Wilson lower bound on distinct-user-gated, recency-windowed votes (anti-brigade + bidirectional decay). When `false`, the legacy v1 path runs — `up / (up + down) * 100` over raw row counts with a `total >= 3 AND feedback_total >= 3` gate. Default OFF — opt in per deployment. **Existing engagement_score values in `freshness_scores` are recomputed on the next scoring pass after the flag flips; no migration needed.** Accepts `true \| 1 \| yes \| on` (case-insensitive). |
+| `FRESHNESS_ENGAGEMENT_MIN_RETRIEVERS` | `3` | v2 only. Minimum distinct users (NULL `user_id` excluded) who must have retrieved the doc within the recency window before any engagement signal is reported. Below this gate → `has_engagement_data = false` → doc stays in "Insufficient signals". |
+| `FRESHNESS_ENGAGEMENT_MIN_VOTERS` | `3` | v2 only. Minimum distinct users who must have given thumbs-up or thumbs-down feedback within the window. Each user counts as at most one vote per doc (anti-brigade). |
+| `FRESHNESS_ENGAGEMENT_WINDOW_DAYS` | `180` | v2 only. Days. Votes and retrievals older than this are ignored — this is what makes engagement decay automatically. A doc with no activity in this window has its engagement signal drop to neutral and returns to "Insufficient signals". Max `i32::MAX`; values above the cap fall back to default with a warn log. |
+
+**Engagement v2 algorithm.** The per-doc engagement score is the Wilson score lower bound at 95% confidence (z = 1.96) computed over the distinct-user up-vote ratio. Compared to the v1 raw ratio:
+
+- One user thumbs-up 10 times → counts as 1 vote (anti-brigade).
+- 1 unanimous up-voter scores ~21, not 100 (false confidence at low n is suppressed).
+- 100 unanimous up-voters scores ~96.
+- A user who later thumbs-down is treated by their NET vote — if the net sum is negative, counted as a down-voter; if zero, as a retriever-but-not-voter.
+
+**Bidirectional behaviour.** When activity stops, old votes fall out of the recency window. The doc's `has_engagement_data` flips back to `false` on the next scoring pass and the doc returns to "Insufficient signals". This is the key difference from v1, where engagement was monotonically sticky.
+
+**Migration story.** Flip-on is safe at any time: the legacy `engagement_score` column is recomputed in place by the next scheduled freshness pass (default 24h). Operators can flip back without rollback — the v1 code path is preserved verbatim and reused when `FRESHNESS_ENGAGEMENT_V2_ENABLED=false`.
 
 ### Event-Based Source Types
 
