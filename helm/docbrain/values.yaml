@@ -558,6 +558,15 @@ mcpTools:
   # turn off. Default false.
   dmRedactorDebugProbe: false
 
+  # -- Diagnostic probe for OAuth token-exchange decode failures.
+  # When true, token-exchange decode failures emit a WARN with the
+  # first ~800 chars of the upstream IdP's raw response body. Useful
+  # for diagnosing response-shape mismatches when adding a new OAuth
+  # manifest. Can leak partial credentials in error-response shapes —
+  # turn on transiently to capture the upstream response, then turn
+  # off. Default false.
+  oauthExchangeDebugProbe: false
+
   # OAuth provider credentials. Each entry maps to a manifest's
   # auth.oauth.client_id_secret_ref / client_secret_ref.
   oauth:

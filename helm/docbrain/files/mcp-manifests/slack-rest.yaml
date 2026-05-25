@@ -86,13 +86,29 @@ auth:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
   oauth:
-    # Standards-compliant authorization-code + PKCE flow against Slack's
-    # user OAuth endpoints — same as the `slack` manifest, but with a
-    # different scope set (conversations:history instead of search:read.*).
-    # Users see a separate Connect button on /integrations for slack_rest.
+    # Slack's MODERN OAuth v2 endpoints. Different from the `slack`
+    # manifest's `v2_user/` legacy variant:
+    #
+    #   - `/oauth/v2/authorize` (not `/oauth/v2_user/authorize`):
+    #     Required to grant USER-token scopes like channels:history /
+    #     groups:history. The v2_user endpoint silently doesn't present
+    #     these scopes on the consent screen, leading Slack to return
+    #     `no_user_scopes` at exchange time. Verified live 2026-05-25
+    #     via the dance + exchange probes (commits dd127ac + ab01ad1).
+    #
+    #   - `oauth.v2.access` (not `oauth.v2.user.access`): pairs with
+    #     v2/authorize. Returns BOTH bot token (top-level access_token)
+    #     and user token (authed_user.access_token). We extract the
+    #     USER token via token_response_access_token_path below.
+    #
+    #   - `scope_param_name: user_scope`: v2/authorize uses TWO separate
+    #     scope params — `scope` for bot scopes, `user_scope` for user
+    #     scopes. We're a user-token-only manifest so we send user_scope.
     provider: generic
-    authorize_url: "https://slack.com/oauth/v2_user/authorize"
-    token_url: "https://slack.com/api/oauth.v2.user.access"
+    authorize_url: "https://slack.com/oauth/v2/authorize"
+    token_url: "https://slack.com/api/oauth.v2.access"
+    scope_param_name: user_scope
+    token_response_access_token_path: "authed_user.access_token"
     # Conversation-read scopes for thread + message fetching:
     #   channels:history → public channels
     #   groups:history   → private channels the user is a member of

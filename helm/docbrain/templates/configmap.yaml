@@ -333,6 +333,14 @@ data:
   # against a new or changed upstream MCP envelope shape, then turn
   # back off.
   DOCBRAIN_DM_REDACTOR_DEBUG_PROBE: {{ .Values.mcpTools.dmRedactorDebugProbe | default false | quote }}
+  # DOCBRAIN_OAUTH_EXCHANGE_DEBUG_PROBE — diagnostic-only. When `true`,
+  # OAuth token-exchange decode failures emit a WARN with the first
+  # ~800 chars of the upstream IdP's raw response body. Used to diagnose
+  # response-shape mismatches when adding a new OAuth manifest. The
+  # probe can leak partial credentials in error-response shapes; turn
+  # on transiently, capture the IdP response, then turn off. Default
+  # `false`.
+  DOCBRAIN_OAUTH_EXCHANGE_DEBUG_PROBE: {{ .Values.mcpTools.oauthExchangeDebugProbe | default false | quote }}
   {{- range $key, $val := .Values.server.env }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}
