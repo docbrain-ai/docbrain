@@ -153,7 +153,9 @@ tools:
   - name: jira.get_teamwork_graph_object
     upstream_name: getTeamworkGraphObject
     description: |
-      Fetches the full available data for one or more Atlassian objects using their ARIs or browser URLs.
+      Fetches the full available data for one or more Atlassian objects using their ARIs or Atlassian browser URLs.
+      ATLASSIAN-ONLY: this tool accepts ONLY Atlassian inputs — either ARIs (e.g. `ari:cloud:jira::issue/...`) OR `*.atlassian.net` browser URLs (e.g. `https://example.atlassian.net/browse/PROJ-1`, `/wiki/spaces/...`).
+      DO NOT use this tool for GitHub URLs (`github.com/...`), Slack URLs (`*.slack.com/...`), or any non-Atlassian links — the upstream will refuse them. Route GitHub URLs to `github.*` tools and Slack URLs to `slack.*` tools.
       Use after `get_teamwork_graph_context` returns ARIs you want to hydrate. Accepts up to 25 ARIs/URLs.
     args_schema:
       type: object
