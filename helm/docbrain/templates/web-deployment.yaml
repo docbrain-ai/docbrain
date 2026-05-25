@@ -8,6 +8,16 @@ metadata:
     app.kubernetes.io/component: web
 spec:
   replicas: {{ .Values.web.replicas }}
+  # Zero-downtime rolling update. The web tier is a stateless Next.js
+  # frontend; the only side effect at boot is `next start` warming a
+  # JS bundle cache, which is per-pod and harmless to overlap. Explicit
+  # maxUnavailable: 0 guarantees that on a single-replica deployment the
+  # surface stays reachable through the rollover (~5-10s overlap window).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       {{- include "docbrain.selectorLabels" . | nindent 6 }}

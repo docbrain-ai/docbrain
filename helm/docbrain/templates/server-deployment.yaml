@@ -7,8 +7,22 @@ metadata:
     app.kubernetes.io/component: server
 spec:
   replicas: {{ .Values.server.replicas }}
+  # Zero-downtime rolling update. Safe even on a single-replica deployment
+  # because sqlx::migrate! at boot acquires the `_sqlx_migrations` advisory
+  # lock — only one pod runs the migration, the other waits. The two-pod
+  # window during rollover is ~10s, which is acceptable for: (1) read-side
+  # work that's idempotent against the DB, and (2) writers that are
+  # protected by their own per-resource locks (single-flight quality
+  # rescore, freshness scorer pass guard, etc.).
+  #
+  # WAS `type: Recreate` — caused a brief outage window on every rollout
+  # because the old pod terminated before the new one became Ready. The
+  # advisory lock makes Recreate unnecessary.
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       {{- include "docbrain.selectorLabels" . | nindent 6 }}
