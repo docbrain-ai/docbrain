@@ -68,6 +68,8 @@ nav:
     - RBAC & SSO: rbac.md
     - Access Control (ACL): access-control.md
     - 'Runbook: MCP Shadow Run': runbooks/mcp-shadow-run.md
+  - Security:
+    - 'Slack DM Privacy Policy': security/slack-dm-policy.md
   - Reference:
     - API Reference: api-reference.md
 

@@ -826,6 +826,7 @@ enable live tool fan-out at answer time.
 | `DOCBRAIN_K8S_SECRET_NAME` | — | Kubernetes Secret name embedded in the kubectl command rendered by `/api/v1/admin/mcp/secrets/audit/{id}`. Optional — when unset the rendered command shows a `<set DOCBRAIN_K8S_SECRET_NAME>` placeholder. |
 | `DOCBRAIN_K8S_NAMESPACE` | — | Kubernetes namespace for the same audit endpoint. Optional — placeholder when unset. |
 | `DOCBRAIN_SERVER_PORT` | `3000` | Port the `docbrain-server` listens on. Used by manifests that interpolate `${DOCBRAIN_SERVER_PORT}` into the shim endpoint URL. |
+| `DOCBRAIN_DM_PERSIST_POLICY` | `strict` | **MCP tool-result DM redactor policy.** When `strict` (default), tool-result entries identified as DMs (`is_im: true`, `is_mpim: true`, or channel.id starting with `D`) are stripped before they reach the synthesis prompt, episode cache, or memory consolidation. When `warn`, the redactor logs a warning per dispatch but passes DM content through (staging only). When `allow`, the redactor is disabled entirely — explicit foot-gun for operators who fork the Slack manifest and want DM content in their corpus. See [`docs/security/slack-dm-policy.md`](security/slack-dm-policy.md) for the threat model. |
 
 YAML equivalent:
 
@@ -848,6 +849,7 @@ The chart exposes these under `mcpTools.*` in `values.yaml`:
 | `mcpTools.serviceAccount.jira.cloudId` | — | Atlassian cloud-id for the shim's REST base URL. |
 | `mcpTools.oauth.atlassian.clientId` | — | OAuth client ID for per-user Atlassian token exchange. |
 | `mcpTools.oauth.atlassian.clientSecret` | — | OAuth client secret. |
+| `mcpTools.dmPersistPolicy` | `DOCBRAIN_DM_PERSIST_POLICY` | DM redactor policy: `strict` (default) / `warn` / `allow`. See [`security/slack-dm-policy.md`](security/slack-dm-policy.md). |
 
 Two reference manifests ship in the chart:
 

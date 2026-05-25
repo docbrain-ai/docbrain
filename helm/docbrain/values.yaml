@@ -519,6 +519,37 @@ bootstrapKey:
 mcpTools:
   enabled: false
 
+  # -- DM redactor policy (Slack today; designed for any privacy-classified
+  # MCP source). Controls whether tool-result entries identified as DMs
+  # (`is_im: true`, `is_mpim: true`, or channel.id starting with `D`) are
+  # stripped before they flow into the synthesis prompt, episode cache,
+  # and memory consolidation.
+  #
+  # Why this matters: DocBrain persists tool results into
+  # `episodes.cached_sources_json` and `episodes.answer_text`, which then
+  # feed memory consolidation, expert routing, and the knowledge stream.
+  # Slack's per-user OAuth token boundary prevents A from reading B's
+  # DMs, but it does NOT prevent A's own DMs from being materialised
+  # into the DocBrain corpus where downstream features can re-surface
+  # them.
+  #
+  # Values:
+  #   strict (default) — DM entries are replaced with a sentinel before
+  #                      ANY downstream sees them. Safe default for
+  #                      every deployment.
+  #   warn             — log a warning per dispatch but pass DM content
+  #                      through unredacted. Staging / debugging only.
+  #   allow            — disable the redactor entirely. Explicit
+  #                      foot-gun for operators who fork the Slack
+  #                      manifest, re-add `search:read.im`/`search:read.mpim`
+  #                      scopes, AND want DM content in their corpus.
+  #
+  # The OSS default Slack manifest does NOT request DM scopes, so a
+  # default-configured deployment is safe even without this redactor.
+  # The policy guards the case where a customer's manifest fork DOES
+  # request them.
+  dmPersistPolicy: "strict"
+
   # OAuth provider credentials. Each entry maps to a manifest's
   # auth.oauth.client_id_secret_ref / client_secret_ref.
   oauth:

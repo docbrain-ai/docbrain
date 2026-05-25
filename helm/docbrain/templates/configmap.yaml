@@ -313,6 +313,18 @@ data:
   {{- else }}
   MCP_TOOLS_ENABLED: "false"
   {{- end }}
+  # MCP tool-result redactor policy. Controls how DocBrain handles
+  # privacy-classified content returned by MCP tools (today: Slack DMs).
+  # Defaults to `strict` — DM-bearing entries are stripped from tool
+  # results before they reach the synthesis prompt, episode cache, or
+  # memory consolidation. See docs/security/slack-dm-policy.md for the
+  # threat model. Operators who fork the Slack manifest to re-add the
+  # `search:read.im` / `search:read.mpim` OAuth scopes AND want DM
+  # content materialised into the DocBrain corpus must flip this to
+  # `allow` explicitly. `warn` logs but does not redact (staging /
+  # debugging use only — production deployments should not run with
+  # `warn`).
+  DOCBRAIN_DM_PERSIST_POLICY: {{ .Values.mcpTools.dmPersistPolicy | default "strict" | quote }}
   {{- range $key, $val := .Values.server.env }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}
