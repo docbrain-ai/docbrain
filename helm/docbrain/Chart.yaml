@@ -2,8 +2,8 @@ apiVersion: v2
 name: docbrain
 description: AI-powered documentation intelligence platform
 type: application
-version: 1.4.10
-appVersion: "1.4.10"
+version: 1.4.12
+appVersion: "1.4.12"
 keywords:
   - documentation
   - ai
