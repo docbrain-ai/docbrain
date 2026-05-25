@@ -108,6 +108,11 @@ auth:
     authorize_url: "https://slack.com/oauth/v2/authorize"
     token_url: "https://slack.com/api/oauth.v2.access"
     scope_param_name: user_scope
+    # Slack's /oauth/v2/authorize silently drops space-separated scopes
+    # in user_scope=. Verified live 2026-05-25: with space-separated
+    # input the dance returned `{"ok":true,...}` but NO access_token —
+    # Slack granted zero scopes. Comma-separated is what works.
+    scope_separator: ","
     token_response_access_token_path: "authed_user.access_token"
     # Conversation-read scopes for thread + message fetching:
     #   channels:history → public channels
