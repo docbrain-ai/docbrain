@@ -325,6 +325,14 @@ data:
   # debugging use only — production deployments should not run with
   # `warn`).
   DOCBRAIN_DM_PERSIST_POLICY: {{ .Values.mcpTools.dmPersistPolicy | default "strict" | quote }}
+  # DOCBRAIN_DM_REDACTOR_DEBUG_PROBE — diagnostic-only. When `true`,
+  # the redactor logs a WARN per slack-manifest dispatch dumping the
+  # first ~500 chars of the parsed JSON shape and the post-walker
+  # redaction report. DM content can land in logs when this is on.
+  # Default `false`. Turn on transiently to diagnose detection misses
+  # against a new or changed upstream MCP envelope shape, then turn
+  # back off.
+  DOCBRAIN_DM_REDACTOR_DEBUG_PROBE: {{ .Values.mcpTools.dmRedactorDebugProbe | default false | quote }}
   {{- range $key, $val := .Values.server.env }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}

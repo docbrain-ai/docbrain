@@ -550,6 +550,14 @@ mcpTools:
   # request them.
   dmPersistPolicy: "strict"
 
+  # -- Diagnostic probe for the DM redactor. When true, the redactor
+  # logs a WARN per slack dispatch with the first ~500 chars of the
+  # parsed JSON envelope and the redaction report. DM content can
+  # land in logs when this is on — turn on transiently to diagnose
+  # detection misses against a new upstream MCP envelope shape, then
+  # turn off. Default false.
+  dmRedactorDebugProbe: false
+
   # OAuth provider credentials. Each entry maps to a manifest's
   # auth.oauth.client_id_secret_ref / client_secret_ref.
   oauth:
