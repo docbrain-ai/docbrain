@@ -276,6 +276,14 @@ velocity:
   roiExcludeAdmin: true      # Exclude admin votes (operators inflate their own number otherwise)
   roiMaxVotesPerUser: 10     # Per-user vote cap inside the window (prevents power-user skew)
 
+  # Tribal Knowledge v2 — applies the same defensive methodology to the
+  # tribal-knowledge percentage. See docs/configuration.md §
+  # "Tribal Knowledge methodology".
+  tribalV2Enabled: true              # Switch to v2 formula
+  tribalExcludeAdmin: true           # Exclude admin votes from the expert population
+  tribalMaxExpertsPerDomain: 2       # Domains with ≤ this many distinct non-admin experts are "tribal"
+  tribalMinDomainsWithSignal: 3      # Minimum distinct domains with feedback before the percentage is reported
+
 # -- Knowledge Stream — proactive push intelligence
 # Detects and pushes: incident warnings, knowledge decay risks,
 # expertise gaps, and context-aware doc updates.

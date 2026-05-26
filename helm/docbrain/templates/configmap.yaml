@@ -207,6 +207,11 @@ data:
   VELOCITY_ROI_MIN_DISTINCT_USERS:  {{ .Values.velocity.roiMinDistinctUsers      | default 3     | quote }}
   VELOCITY_ROI_EXCLUDE_ADMIN:       {{ if hasKey .Values.velocity "roiExcludeAdmin" }}{{ .Values.velocity.roiExcludeAdmin | quote }}{{ else }}"true"{{ end }}
   VELOCITY_ROI_MAX_VOTES_PER_USER:  {{ .Values.velocity.roiMaxVotesPerUser       | default 10    | quote }}
+  # Tribal Knowledge v2 — same hasKey pattern for booleans.
+  VELOCITY_TRIBAL_V2_ENABLED:       {{ if hasKey .Values.velocity "tribalV2Enabled"    }}{{ .Values.velocity.tribalV2Enabled    | quote }}{{ else }}"true"{{ end }}
+  VELOCITY_TRIBAL_EXCLUDE_ADMIN:    {{ if hasKey .Values.velocity "tribalExcludeAdmin" }}{{ .Values.velocity.tribalExcludeAdmin | quote }}{{ else }}"true"{{ end }}
+  VELOCITY_TRIBAL_MAX_EXPERTS:      {{ .Values.velocity.tribalMaxExpertsPerDomain | default 2 | quote }}
+  VELOCITY_TRIBAL_MIN_DOMAINS:      {{ .Values.velocity.tribalMinDomainsWithSignal | default 3 | quote }}
   # Knowledge Stream
   {{- if .Values.stream.enabled }}
   STREAM_ENABLED: "true"

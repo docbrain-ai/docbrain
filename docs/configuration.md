@@ -1341,6 +1341,10 @@ SELECT source_type, COUNT(*) FROM document_acl GROUP BY source_type;
 | `VELOCITY_ROI_MIN_DISTINCT_USERS` | `3` | **v2 only.** Minimum distinct non-admin users with positive feedback before a number is reported. Below this, the dashboard shows "Insufficient signal". |
 | `VELOCITY_ROI_EXCLUDE_ADMIN` | `true` | **v2 only.** Exclude admin users from the ROI population (admins tend to vote on their own answers). |
 | `VELOCITY_ROI_MAX_VOTES_PER_USER` | `10` | **v2 only.** Per-user cap on positive votes counted inside the window. Prevents one power-user from dominating the org-wide number. |
+| `VELOCITY_TRIBAL_V2_ENABLED` | `true` | Switch to v2 tribal-knowledge methodology (admin-excluded, configurable threshold, insufficient-signal gate). Set `false` for the legacy v1 formula. |
+| `VELOCITY_TRIBAL_EXCLUDE_ADMIN` | `true` | **v2 only.** Exclude admin users from the expert population. |
+| `VELOCITY_TRIBAL_MAX_EXPERTS` | `2` | **v2 only.** Domains with ≤ this many distinct non-admin experts in the last 90 days are counted as "tribal." Raise for larger orgs. |
+| `VELOCITY_TRIBAL_MIN_DOMAINS` | `3` | **v2 only.** Minimum distinct domains with positive-feedback signal before the percentage is reported. Below this, the dashboard shows "Insufficient signal." |
 
 ### Documentation ROI — how the number is calculated
 
@@ -1485,6 +1489,80 @@ is the one you can defend in a board meeting. Past snapshots are kept
 unchanged in the database; v2 only changes what the *live* dashboard
 shows. You can switch back to v1 at any time by setting
 `VELOCITY_ROI_V2_ENABLED=false`.
+
+### Tribal Knowledge — how the number is calculated
+
+The **"Tribal Knowledge"** card tells you what share of your
+knowledge domains (Confluence spaces, Slack channels, GitHub repos)
+are dangerously concentrated — where only one or two people have the
+context to answer questions. A high number means key knowledge lives
+in a few people's heads; if they leave or go on vacation, work stalls.
+
+This metric had the same v1 inflation problem as ROI:
+
+#### The v1 problem
+
+The original formula counted **every** user who gave positive feedback
+on a doc in that domain as an "expert." Two problems:
+
+1. **The admin was counted.** When you (operating DocBrain) clicked 👍
+   on an answer in any domain, you registered as an expert in that
+   domain. On a young deployment where you're the only feedback giver,
+   every domain showed exactly one expert (you) — making 100% of
+   domains "tribal" by the ≤ 2 threshold.
+
+2. **The threshold was hardcoded.** "≤ 2 experts = tribal" is right
+   for some orgs but absurd for others. A 5-person startup has tribal
+   knowledge by definition (everyone wears many hats). A 500-person
+   org probably wants ≥ 5 experts before considering a domain healthy.
+
+3. **No "insufficient signal" check.** With only 2 domains showing any
+   feedback, calling it "50% tribal" is meaningless — you'd need
+   far more data to draw a conclusion. v1 showed the number anyway.
+
+#### How v2 fixes it (the recommended default)
+
+Three corrections, mirroring the ROI v2 design:
+
+1. **Exclude admin from the expert population.** Same reasoning as
+   ROI: operators rate their own work. Controlled by
+   `VELOCITY_TRIBAL_EXCLUDE_ADMIN` (default `true`).
+
+2. **Make the threshold tunable.** `VELOCITY_TRIBAL_MAX_EXPERTS`
+   (default `2`) sets the cutoff: domains with ≤ this many distinct
+   non-admin experts in the last 90 days are tribal. A small team
+   might lower to 1; a large org might raise to 5.
+
+3. **Require enough domains to draw a conclusion.** If fewer than
+   `VELOCITY_TRIBAL_MIN_DOMAINS` domains have any positive-feedback
+   signal (default 3), the dashboard shows "Insufficient signal"
+   instead of a misleading percentage.
+
+#### Which knob should I change?
+
+| Your situation | Knob | Suggested value |
+|----------------|------|-----------------|
+| **Small team (≤ 20 engineers)** | `VELOCITY_TRIBAL_MAX_EXPERTS` | Keep at `2`. Tribal in small teams is normal but worth surfacing. |
+| **Large org (100+ engineers)** | `VELOCITY_TRIBAL_MAX_EXPERTS` | Raise to `5`. Anything fewer than 5 active contributors is a bus-factor risk at scale. |
+| **Just rolled out DocBrain; only a handful of users** | `VELOCITY_TRIBAL_MIN_DOMAINS` | Keep at `3`. Wait for adoption; "Insufficient signal" is the honest answer. |
+| **I want the old (inflated) number** | `VELOCITY_TRIBAL_V2_ENABLED` | Set to `false`. Not recommended. |
+
+#### Where to set these
+
+In Helm (`values.yaml`):
+
+```yaml
+velocity:
+  tribalMaxExpertsPerDomain: 5
+  tribalMinDomainsWithSignal: 10
+```
+
+Or as environment variables:
+
+```bash
+export VELOCITY_TRIBAL_MAX_EXPERTS=5
+export VELOCITY_TRIBAL_MIN_DOMAINS=10
+```
 
 ---
 
