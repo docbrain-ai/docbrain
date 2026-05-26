@@ -1564,6 +1564,81 @@ export VELOCITY_TRIBAL_MAX_EXPERTS=5
 export VELOCITY_TRIBAL_MIN_DOMAINS=10
 ```
 
+### Forecast Trend — how "Improving / Stable / Worsening" is decided
+
+The dashboard's **"Trend"** label above Knowledge Health (homepage)
+classifies your gap-resolution velocity over the last 4 weeks. It
+reads from `/api/v1/autopilot/forecast`.
+
+#### The v1 problem
+
+The v1 formula reported a definitive verdict on **any** non-zero
+amount of data:
+
+```
+if avg_new == 0           → "stable"
+ratio = avg_resolved / avg_new
+ratio ≥ 0.75              → "improving"
+ratio ≥ 0.40              → "stable"
+otherwise                 → "worsening"
+```
+
+Two failure modes on real deployments:
+
+1. **Single-event fluke.** One gap created last week, one resolved
+   the same week → ratio = 1.0 → reported "improving" even though
+   the sample is statistically meaningless.
+
+2. **"Stable" overloaded.** Both "no gap activity at all" and
+   "moderate resolution rate" map to "stable." Operators can't tell
+   "healthy quiet corpus" from "we don't have enough data."
+
+#### How v2 fixes it
+
+Three corrections, mirroring ROI v2 and Tribal v2:
+
+1. **Insufficient-signal gate.** When fewer than
+   `AUTOPILOT_TREND_MIN_EVENTS` (default 5) total gap events (new
+   + resolved) have occurred in the 4-week window, the dashboard
+   shows **"Trend: Insufficient signal"** rather than guessing.
+
+2. **"No gaps open" as a distinct positive state.** When the corpus
+   has zero new gaps AND zero currently-open gaps in the window,
+   that's actively healthy — reported as **"Trend: No gaps open"**
+   (green), not the neutral "stable."
+
+3. **Configurable thresholds.** The 0.75 and 0.40 cutoffs are now
+   `AUTOPILOT_TREND_IMPROVING_THRESHOLD` and
+   `AUTOPILOT_TREND_WORSENING_THRESHOLD`. A strict ops team might
+   want `improving ≥ 0.90`; a lenient team `≥ 0.60`.
+
+#### Which knob should I change?
+
+| Your situation | Knob | Suggested value |
+|----------------|------|-----------------|
+| **Brand-new deployment; want to wait for real signal** | `AUTOPILOT_TREND_MIN_EVENTS` | Keep at `5`. Lower to `3` if you want a verdict sooner. |
+| **Large org with high gap volume** | `AUTOPILOT_TREND_MIN_EVENTS` | Raise to `20` so a few outlier weeks don't trigger early verdicts. |
+| **Strict definition of "improving"** | `AUTOPILOT_TREND_IMPROVING_THRESHOLD` | Raise to `0.90`. |
+| **Generous "improving" definition** | `AUTOPILOT_TREND_IMPROVING_THRESHOLD` | Lower to `0.60`. |
+| **I want the old (definitive-on-thin-data) formula** | `AUTOPILOT_TREND_V2_ENABLED` | Set to `false`. Not recommended. |
+
+#### Where to set these
+
+In Helm (`values.yaml`):
+
+```yaml
+autopilot:
+  trendMinEvents: 10
+  trendImprovingThreshold: 0.80
+```
+
+Or as environment variables:
+
+```bash
+export AUTOPILOT_TREND_MIN_EVENTS=10
+export AUTOPILOT_TREND_IMPROVING_THRESHOLD=0.80
+```
+
 ---
 
 ## Knowledge Stream

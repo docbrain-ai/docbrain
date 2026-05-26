@@ -210,6 +210,13 @@ autopilot:
   thresholdHigh: 0.55
   thresholdMedium: 0.35
 
+  # Forecast Trend v2 — five-state honest reporting. See
+  # docs/configuration.md § "Forecast Trend methodology".
+  trendV2Enabled: true              # Switch to v2 (recommended)
+  trendMinEvents: 5                 # Floor on total gap events (new + resolved) across 4 weeks before reporting a verdict
+  trendImprovingThreshold: 0.75     # resolved/new ratio at or above this → "improving"
+  trendWorseningThreshold: 0.40     # below this → "worsening"; between → "stable"
+
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
 # and mark the originating gap cluster as resolved.

@@ -165,6 +165,11 @@ data:
   AUTOPILOT_CRITICAL_THRESHOLD: {{ .Values.autopilot.thresholdCritical | default 0.75 | quote }}
   AUTOPILOT_HIGH_THRESHOLD: {{ .Values.autopilot.thresholdHigh | default 0.55 | quote }}
   AUTOPILOT_MEDIUM_THRESHOLD: {{ .Values.autopilot.thresholdMedium | default 0.35 | quote }}
+  # Forecast Trend v2 — see docs/configuration.md § "Forecast Trend methodology".
+  AUTOPILOT_TREND_V2_ENABLED:        {{ if hasKey .Values.autopilot "trendV2Enabled" }}{{ .Values.autopilot.trendV2Enabled | quote }}{{ else }}"true"{{ end }}
+  AUTOPILOT_TREND_MIN_EVENTS:        {{ .Values.autopilot.trendMinEvents          | default 5    | quote }}
+  AUTOPILOT_TREND_IMPROVING_THRESHOLD: {{ .Values.autopilot.trendImprovingThreshold | default 0.75 | quote }}
+  AUTOPILOT_TREND_WORSENING_THRESHOLD: {{ .Values.autopilot.trendWorseningThreshold | default 0.40 | quote }}
   {{- if .Values.draftPublish.target }}
   DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
   {{- end }}
