@@ -1329,10 +1329,162 @@ SELECT source_type, COUNT(*) FROM document_acl GROUP BY source_type;
 
 ## Documentation Analytics
 
+### Velocity & ROI variables
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `VELOCITY_MINUTES_SAVED_PER_QUERY` | `15` | Estimated minutes saved per deflected query |
-| `VELOCITY_HOURLY_RATE` | `75` | Effective hourly rate (USD) for ROI calculation |
+| `VELOCITY_MINUTES_SAVED` | `15` | **v1 only.** Estimated minutes saved per deflected query (single point value). |
+| `VELOCITY_HOURLY_RATE` | `75` | Effective hourly engineer cost (USD) used by both v1 and v2 ROI math. |
+| `VELOCITY_ROI_V2_ENABLED` | `true` | Switch to v2 methodology (recommended for executive reporting). Set `false` to revert to v1. |
+| `VELOCITY_ROI_MIN_MINUTES_LOW` | `5` | **v2 only.** Low end of the per-signal time-saved range, in minutes. |
+| `VELOCITY_ROI_MIN_MINUTES_HIGH` | `25` | **v2 only.** High end of the per-signal time-saved range, in minutes. |
+| `VELOCITY_ROI_MIN_DISTINCT_USERS` | `3` | **v2 only.** Minimum distinct non-admin users with positive feedback before a number is reported. Below this, the dashboard shows "Insufficient signal". |
+| `VELOCITY_ROI_EXCLUDE_ADMIN` | `true` | **v2 only.** Exclude admin users from the ROI population (admins tend to vote on their own answers). |
+| `VELOCITY_ROI_MAX_VOTES_PER_USER` | `10` | **v2 only.** Per-user cap on positive votes counted inside the window. Prevents one power-user from dominating the org-wide number. |
+
+### Documentation ROI — how the number is calculated
+
+The **"Documentation ROI"** card on the dashboard tells you, in dollars
+and hours, how much time the knowledge base has saved your team.
+
+This is the number you'll quote in board meetings and budget reviews,
+so it has to be honest. This section explains, in plain language, how
+DocBrain calculates it, why each knob exists, and how to tune the knobs
+for your organisation. **You do not need to be a developer to follow
+this.**
+
+#### The simple story
+
+Every time someone asks DocBrain a question and gives the answer a 👍,
+that's one "useful answer". DocBrain assumes a useful answer saved that
+person some amount of time they would have spent searching, asking
+colleagues, or rediscovering something they once knew.
+
+```
+hours saved  = (number of useful answers) × (minutes saved per answer) ÷ 60
+money saved  = (hours saved) × (engineer hourly cost)
+```
+
+That's it. The rest of this page is just about **counting "useful
+answers" honestly** and **picking a sensible "minutes saved" number**.
+
+#### Why honest counting matters (the v1 problem)
+
+The first version of DocBrain ROI (called **v1**) counted every 👍
+equally. That sounds fair, but it produces misleading numbers in
+practice:
+
+- **One enthusiastic person can dominate the count.** If the
+  administrator clicks 👍 35 times and 6 other users click 👍 once
+  each, the total is 41. But the system only really helped 7 people
+  — and the admin was rating their own work.
+- **A small deployment looks the same as a large one.** Whether 3
+  people gave feedback or 300, v1 just reports the number. There's
+  no way to tell "this is enough data to trust" from "this is two
+  enthusiastic people".
+
+If you report `$693 saved` to your CFO and they ask
+*"how many actual people benefited?"* and the honest answer is
+*"basically one"* — that's a credibility problem.
+
+#### How v2 fixes it (the recommended default)
+
+The current version (**v2**, on by default) fixes the four ways v1 can
+mislead. Each fix is one of the knobs you can turn:
+
+1. **Need enough people before reporting anything.** If fewer than
+   `VELOCITY_ROI_MIN_DISTINCT_USERS` *different* people gave positive
+   feedback (default: **3 people**), the dashboard shows
+   `"Insufficient signal"` instead of a number. It's better to say
+   "we don't know yet" than to invent a number from too little data.
+
+2. **Don't count the admin's own 👍.** When `VELOCITY_ROI_EXCLUDE_ADMIN`
+   is on (default: **on**), votes from administrators are ignored.
+   You shouldn't get credit for rating your own answers.
+
+3. **Cap how many 👍 one person can contribute.** Even with the admin
+   excluded, one super-enthusiastic user could click 👍 a hundred
+   times. With `VELOCITY_ROI_MAX_VOTES_PER_USER` (default: **10**),
+   we only count their first 10 — the rest still help the system
+   learn, they just don't keep inflating the ROI number.
+
+4. **Report a range, not a single number.** Some questions save you
+   30 seconds (looking up an env var). Others save you an hour
+   (avoiding a wrong deployment). We don't know *which* it was, so
+   we report a **range**: "between 5 minutes and 25 minutes saved
+   per useful answer" (defaults — both adjustable). This gives an
+   honest band, not a fake-precise single dollar figure.
+
+#### A worked example
+
+Suppose your DocBrain has these positive votes in the last 90 days:
+
+- **Alice (engineer)**: 12 👍
+- **Bob (engineer)**: 8 👍
+- **Carol (engineer)**: 3 👍
+- **You (admin)**: 18 👍
+
+With v2 defaults:
+
+| Step | Calculation | Result |
+|------|-------------|--------|
+| Exclude admin | Drop your 18 votes | 12 + 8 + 3 = **23** |
+| Cap each user at 10 | Alice 12 → 10, Bob 8 → 8, Carol 3 → 3 | 10 + 8 + 3 = **21 signals** |
+| Distinct user check | 3 non-admin users, need ≥ 3 | ✅ pass |
+| Hours saved (low) | 21 × 5 min ÷ 60 | **1.75 h** |
+| Hours saved (high) | 21 × 25 min ÷ 60 | **8.75 h** |
+| Money saved (at $75/h) | 1.75 × 75 to 8.75 × 75 | **$131 – $656** |
+
+The dashboard shows: **`1.75 – 8.75 h saved · ~$131 – $656 · 3 users · 21 signals`**.
+
+For comparison, v1 would have shown: `(12+8+3+18) × 15 / 60 = 10.25h × $75 = $769`
+— more than twice as high, but inflated by your own 18 votes and Alice's
+extra 2 (above the cap).
+
+#### Which knob should I change?
+
+This table tells you which environment variable to adjust for the
+situation you're in. **You only need to set the ones you want to
+change** — defaults work for most organisations.
+
+| Your situation | Knob to change | Suggested value |
+|----------------|----------------|-----------------|
+| **My engineers are expensive (FAANG, senior)** | `VELOCITY_HOURLY_RATE` | Raise to `100`–`150`. Use *loaded* cost (salary + benefits + overhead), not just base salary. |
+| **My team is mostly junior / offshore** | `VELOCITY_HOURLY_RATE` | Lower to `40`–`60`. |
+| **Most queries are quick lookups** ("what's the staging URL?") | `VELOCITY_ROI_MIN_MINUTES_HIGH` | Lower to `10`. Don't claim 25 minutes saved on a 1-minute lookup. |
+| **Most queries are deep investigations** (incident postmortems, architecture questions) | `VELOCITY_ROI_MIN_MINUTES_HIGH` | Raise to `45` or `60`. |
+| **I report this number to executives or customers** | `VELOCITY_ROI_MIN_DISTINCT_USERS` | Raise to `10` so you have a more robust statistical base. |
+| **Tiny team (under 20 engineers total)** | `VELOCITY_ROI_MIN_DISTINCT_USERS` | Keep at `3`. Lower is dishonest. |
+| **One or two power-users dominate adoption** | `VELOCITY_ROI_MAX_VOTES_PER_USER` | Lower to `5`. Tighter cap = less skew. |
+| **Adoption is broad and even across the team** | `VELOCITY_ROI_MAX_VOTES_PER_USER` | Raise to `20`. Caps rarely bind. |
+| **I want the old (inflated) number back** | `VELOCITY_ROI_V2_ENABLED` | Set to `false`. v1 reactivates immediately. Not recommended. |
+
+#### Where to set these
+
+In Helm (`values.yaml`):
+
+```yaml
+velocity:
+  hourlyRate: 100
+  roiMinDistinctUsers: 10
+  roiMaxVotesPerUser: 5
+```
+
+Or as environment variables (Docker / direct deploy):
+
+```bash
+export VELOCITY_HOURLY_RATE=100
+export VELOCITY_ROI_MIN_DISTINCT_USERS=10
+export VELOCITY_ROI_MAX_VOTES_PER_USER=5
+```
+
+#### What if v2 makes my number drop?
+
+It probably will. That's the point — v1 was inflated. The v2 number
+is the one you can defend in a board meeting. Past snapshots are kept
+unchanged in the database; v2 only changes what the *live* dashboard
+shows. You can switch back to v1 at any time by setting
+`VELOCITY_ROI_V2_ENABLED=false`.
 
 ---
 

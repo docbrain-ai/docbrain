@@ -262,8 +262,19 @@ freshness:
 # Tracks gap resolution rate, knowledge half-life, tribal knowledge %, and ROI.
 # Snapshots are taken daily during memory consolidation.
 velocity:
+  # v1 inputs (legacy single-point formula, used when roiV2Enabled=false)
   minutesSavedPerQuery: 15   # Estimated engineer time saved per answered query (minutes)
   hourlyRate: 75             # Hourly engineer cost (USD) for ROI calculation
+
+  # v2 inputs — distinct-user gated, admin-excluded, vote-capped, range estimate.
+  # See docs/configuration.md § "Documentation ROI — how the number is calculated"
+  # for plain-language guidance on which knob to turn for which situation.
+  roiV2Enabled: true         # Switch to v2 formula (recommended)
+  roiMinutesSavedLow: 5      # Low end of per-signal time-saved range (minutes)
+  roiMinutesSavedHigh: 25    # High end of per-signal time-saved range (minutes)
+  roiMinDistinctUsers: 3     # Minimum distinct non-admin users with positive feedback before ROI is reported
+  roiExcludeAdmin: true      # Exclude admin votes (operators inflate their own number otherwise)
+  roiMaxVotesPerUser: 10     # Per-user vote cap inside the window (prevents power-user skew)
 
 # -- Knowledge Stream — proactive push intelligence
 # Detects and pushes: incident warnings, knowledge decay risks,

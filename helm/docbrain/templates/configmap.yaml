@@ -194,9 +194,19 @@ data:
   # compared to LLM — safe to raise for large corpora.
   FRESHNESS_LINK_CHECKS_PER_PASS: {{ .Values.freshness.linkChecksPerPass | default 20 | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.consolidation.intervalHours | default 6 | quote }}
-  # Learning Velocity
-  VELOCITY_MINUTES_SAVED: {{ .Values.velocity.minutesSavedPerQuery | default 15 | quote }}
-  VELOCITY_HOURLY_RATE: {{ .Values.velocity.hourlyRate | default 75 | quote }}
+  # Learning Velocity / Documentation ROI
+  # See docs/configuration.md § "Documentation ROI — how the number is calculated"
+  # for a non-technical operator guide on tuning these knobs.
+  VELOCITY_MINUTES_SAVED:           {{ .Values.velocity.minutesSavedPerQuery     | default 15    | quote }}
+  VELOCITY_HOURLY_RATE:             {{ .Values.velocity.hourlyRate               | default 75    | quote }}
+  # Booleans below use `hasKey` rather than Sprig's `default` because the
+  # `default true` filter silently overrides an operator's explicit `false`.
+  VELOCITY_ROI_V2_ENABLED:          {{ if hasKey .Values.velocity "roiV2Enabled"   }}{{ .Values.velocity.roiV2Enabled   | quote }}{{ else }}"true"{{ end }}
+  VELOCITY_ROI_MIN_MINUTES_LOW:     {{ .Values.velocity.roiMinutesSavedLow       | default 5     | quote }}
+  VELOCITY_ROI_MIN_MINUTES_HIGH:    {{ .Values.velocity.roiMinutesSavedHigh      | default 25    | quote }}
+  VELOCITY_ROI_MIN_DISTINCT_USERS:  {{ .Values.velocity.roiMinDistinctUsers      | default 3     | quote }}
+  VELOCITY_ROI_EXCLUDE_ADMIN:       {{ if hasKey .Values.velocity "roiExcludeAdmin" }}{{ .Values.velocity.roiExcludeAdmin | quote }}{{ else }}"true"{{ end }}
+  VELOCITY_ROI_MAX_VOTES_PER_USER:  {{ .Values.velocity.roiMaxVotesPerUser       | default 10    | quote }}
   # Knowledge Stream
   {{- if .Values.stream.enabled }}
   STREAM_ENABLED: "true"
