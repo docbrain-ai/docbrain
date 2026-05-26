@@ -74,9 +74,15 @@ auth:
   # mcp_oauth_tokens(manifest_id='slack_rest') is what the shim looks
   # up at dispatch time. Slack's API is never called by the gateway
   # directly for this manifest — it's the shim that calls Slack.
+  # IMPORTANT: only `service_account` is listed as a DISPATCH mode.
+  # The picker prioritises OAuth when both modes are declared and a
+  # user has a token — but the slack_rest shim only accepts the SA
+  # bearer. Listing both modes caused every dispatch to fail with
+  # 401 / missing Mcp-Session-Id header for users who had connected.
+  # The `oauth:` block below still drives the Connect-button dance
+  # via `auth.oauth` (read directly by routes/oauth_mcp.rs).
   modes:
     - service_account
-    - oauth
   service_account:
     # The shim authenticates the orchestrator (caller) via this bearer.
     # NOT a Slack credential — the shim resolves the user's Slack OAuth
