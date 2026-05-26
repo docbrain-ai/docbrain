@@ -290,6 +290,7 @@ velocity:
   tribalExcludeAdmin: true           # Exclude admin votes from the expert population
   tribalMaxExpertsPerDomain: 2       # Domains with ≤ this many distinct non-admin experts are "tribal"
   tribalMinDomainsWithSignal: 3      # Minimum distinct domains with feedback before the percentage is reported
+  maintenanceTrendMinSnapshots: 4    # Minimum snapshots with flow signal before Maintenance Trend reports a verdict
 
 # -- Knowledge Stream — proactive push intelligence
 # Detects and pushes: incident warnings, knowledge decay risks,

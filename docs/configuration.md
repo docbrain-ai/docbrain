@@ -1639,6 +1639,36 @@ export AUTOPILOT_TREND_MIN_EVENTS=10
 export AUTOPILOT_TREND_IMPROVING_THRESHOLD=0.80
 ```
 
+### Two "Trend" cards — what's the difference?
+
+DocBrain shows trend labels in two places:
+
+- **Home page "Gap Trend"** — measures gap-cluster dynamics (autopilot's
+  view of "are knowledge gaps growing or shrinking?"). Sources from the
+  `autopilot_gap_clusters` table; tunable via `AUTOPILOT_TREND_*` env
+  vars described in the section above.
+- **`/velocity` "Maintenance Trend"** — measures doc maintenance flow
+  vs stale debt across the selected time window. Sources from the
+  `learning_velocity_snapshots` table; tunable via the variable below.
+
+The two can disagree honestly. Gaps can be quiet (no new questions
+that retrieval can't answer) while docs are quietly going stale, or
+vice versa. The labels are distinct so the operator never sees two
+unqualified "Trend:" verdicts that look contradictory.
+
+### Maintenance Trend — insufficient-signal gate
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VELOCITY_MAINTENANCE_TREND_MIN_SNAPSHOTS` | `4` | Minimum daily snapshots that carry any flow signal (docs created/updated, gaps opened/resolved > 0) before the Maintenance Trend reports an accelerating/stable/decelerating verdict. Below this, the card shows "Insufficient signal." Raise on noisy corpora; lower for tiny pilots. |
+
+Helm:
+
+```yaml
+velocity:
+  maintenanceTrendMinSnapshots: 7
+```
+
 ---
 
 ## Knowledge Stream

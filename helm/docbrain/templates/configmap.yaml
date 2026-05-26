@@ -217,6 +217,7 @@ data:
   VELOCITY_TRIBAL_EXCLUDE_ADMIN:    {{ if hasKey .Values.velocity "tribalExcludeAdmin" }}{{ .Values.velocity.tribalExcludeAdmin | quote }}{{ else }}"true"{{ end }}
   VELOCITY_TRIBAL_MAX_EXPERTS:      {{ .Values.velocity.tribalMaxExpertsPerDomain | default 2 | quote }}
   VELOCITY_TRIBAL_MIN_DOMAINS:      {{ .Values.velocity.tribalMinDomainsWithSignal | default 3 | quote }}
+  VELOCITY_MAINTENANCE_TREND_MIN_SNAPSHOTS: {{ .Values.velocity.maintenanceTrendMinSnapshots | default 4 | quote }}
   # Knowledge Stream
   {{- if .Values.stream.enabled }}
   STREAM_ENABLED: "true"
