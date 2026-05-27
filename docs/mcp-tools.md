@@ -511,8 +511,11 @@ Some MCP servers' API-token authentication requires an organization administrato
 
 - Each tool has `latency_budget_ms` (default `7000`).
 - The orchestrator has an 8-second total wall-clock budget across the entire fan-out.
+- The per-tool budget is the **single source of truth** for in-process REST shims (`jira-rest`, `confluence-rest`, `slack-rest`). The gateway injects the budget on every dispatch via an internal `X-DocBrain-Tool-Budget-Ms` header; the shim uses it as its upstream-call timeout. To change a timeout, edit the manifest — no code change required.
 
 A tool that takes longer than its own budget shows `timeout` on the chip. If you're seeing frequent timeouts on a specific tool, tune `latency_budget_ms` in the manifest — but staying under the 8-second orchestrator ceiling is what keeps `/ask` from feeling hung.
+
+**Security note for the budget header.** The header is trusted only because the request already traversed the shim's loopback gate (`127.0.0.1` only) and constant-time bearer compare. The shim additionally clamps the header value to `[1000, 30000]` ms regardless of what it received, so a forged or misbehaving value cannot pin a worker.
 
 ### Egress allow-list is enforced
 

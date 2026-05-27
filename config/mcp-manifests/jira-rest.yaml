@@ -80,6 +80,7 @@ tools:
       required: [key]
       additionalProperties: false
     output_size_cap_bytes: 16384
+    # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 7000
     # D1 invariant: read-only fetch of a single Jira issue by key.
     read_only: true
@@ -105,6 +106,7 @@ tools:
       required: [jql]
       additionalProperties: false
     output_size_cap_bytes: 16384
+    # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 7000
     # D1 invariant: JQL search returns matching issues; never mutates.
     read_only: true

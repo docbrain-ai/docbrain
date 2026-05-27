@@ -75,11 +75,12 @@ auth:
   # up at dispatch time. Slack's API is never called by the gateway
   # directly for this manifest — it's the shim that calls Slack.
   # IMPORTANT: only `service_account` is listed as a DISPATCH mode.
-  # The picker prioritises OAuth when both modes are declared and a
-  # user has a token — but the slack_rest shim only accepts the SA
-  # bearer. Listing both caused every dispatch to fail with 401 /
-  # missing Mcp-Session-Id header for users who had connected. The
-  # `oauth:` block below still drives the Connect-button dance.
+  # See the canonical comment in config/mcp-manifests/slack-rest.yaml.
+  # TL;DR: the picker prioritises OAuth when both are declared, but
+  # the shim only accepts the SA bearer — listing both caused every
+  # dispatch to fail with 401 / missing Mcp-Session-Id header for
+  # users who had connected via OAuth. The `oauth:` block below still
+  # drives the Connect-button dance via `auth.oauth` directly.
   modes:
     - service_account
   service_account:
@@ -174,6 +175,7 @@ tools:
           default: 50
           description: "Max number of replies to include (parent always included). Defaults to 50."
     output_size_cap_bytes: 16384
+    # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 5000
     read_only: true
 
@@ -202,6 +204,7 @@ tools:
           pattern: "^[0-9]+\\.[0-9]+$"
           description: "Message timestamp."
     output_size_cap_bytes: 8192
+    # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 3000
     read_only: true
 

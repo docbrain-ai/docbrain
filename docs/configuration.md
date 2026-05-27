@@ -872,7 +872,7 @@ tool_discovery:
   refresh_seconds: 3600             # poll interval; must be 0 (boot-only) or >= 60
   per_tool_defaults:
     output_size_cap_bytes: 16384    # <= 16384 ceiling
-    latency_budget_ms: 7000         # <= 8000 ceiling
+    latency_budget_ms: 7000         # <= 8000 orchestrator ceiling; shim honours this value per call
 ```
 
 **Read-only invariant (D1).** DocBrain only registers tools where the upstream
