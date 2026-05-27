@@ -15,7 +15,7 @@ If you are using DocBrain, please submit a Pull Request to add your organization
 | Organization | Use Case | Link |
 | :--- | :--- | :--- |
 | **[D360 Bank](https://d360.com/en)** | Powering Slack-based AI answers for SRE on-call rotation. | - |
-| **[Saikpoint](https://sailpoint.com)** | Improving documents health | - |
+| **[Sailpoint](https://sailpoint.com)** | Improving documents health | - |
 | **[Example Project]** | Internal knowledge layer for a large-scale Kubernetes platform. | - |
 
 ## Seeking Adopters
