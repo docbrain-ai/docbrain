@@ -167,9 +167,20 @@ auth:
     authorize_url: "https://auth.atlassian.com/authorize"
     token_url: "https://auth.atlassian.com/oauth/token"
     scopes:
+      # Jira platform REST API
       - "read:jira-work"
       - "read:jira-user"
-      - "offline_access"     # required for refresh tokens
+      # User identity API — required to resolve other users by email
+      - "read:me"
+      - "read:account"
+      # Confluence API — required for cross-product graph traversal
+      - "read:confluence-content.all"
+      - "read:confluence-content.summary"
+      - "read:confluence-space.summary"
+      - "read:confluence-user"
+      - "search:confluence"
+      # Refresh tokens
+      - "offline_access"
     client_id_secret_ref: ATLASSIAN_OAUTH_CLIENT_ID
     client_secret_ref: ATLASSIAN_OAUTH_CLIENT_SECRET
     use_pkce: true
@@ -179,6 +190,17 @@ auth:
 
 !!! tip "Always include `offline_access`"
     Without the `offline_access` scope, Atlassian (and most OAuth providers) issues access tokens that expire in ~1 hour and no refresh token. Users would have to re-click Connect every hour. The reference `jira` manifest includes it; if you author a new OAuth manifest, copy that pattern.
+
+!!! warning "Scope traps when registering the Atlassian app"
+    Atlassian's Developer Console splits scopes across **three separate APIs** — and missing scopes on any of them produce a generic `"You don't have access ..."` error that looks like a permission denial. To enable the full hosted Atlassian MCP surface (Teamwork Graph traversal), in the Developer Console → **Permissions** page:
+
+    1. **User identity API** — Add scopes `read:me` and `read:account`. Without `read:account`, looking up another user by email (`objectType: "AtlassianUser"` on `get_teamwork_graph_context`) fails with an opaque error.
+    2. **Confluence API** — Add `read:confluence-content.all`, `read:confluence-content.summary`, `read:confluence-space.summary`, `read:confluence-user`, `search:confluence`. Both `.all` and `.summary` are required — they are independent gates, not a hierarchy.
+    3. **Jira API** — `read:jira-work` and `read:jira-user`. Beyond these two, the modern Jira REST API does NOT expose a separate Teamwork Graph scope on classic 3LO apps — traversal is gated on having the underlying read scopes across Jira + Confluence + User Identity.
+
+    All scopes above are read-only. **Do NOT add** anything starting with `write:`, `delete:`, `manage:`, or `admin:` — DocBrain's MCP layer is read-only by design (D1 invariant) and would refuse to dispatch a write tool even if one were granted, but extra scopes widen the blast radius if the OAuth token is ever stolen.
+
+    **Existing connected users must reconnect after a scope change.** Adding scopes to the app does not update tokens already in `mcp_oauth_tokens`. Either ask each user to click **Disconnect** → **Connect** on `/integrations`, or as admin delete the relevant rows from `mcp_oauth_tokens` to force a fresh OAuth dance on next dispatch.
 
 The orchestrator picks OAuth when the requesting user has a stored token for that manifest; otherwise it falls back to service-account if the manifest declares it.
 
