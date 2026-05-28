@@ -33,8 +33,8 @@
 
 manifest_version: 1
 id: jira
-display_name: "Atlassian Jira"
-description: "Live Jira ticket status, comments, and JQL search via Atlassian's Remote MCP Server (Teamwork Graph)."
+display_name: "Atlassian"
+description: "Cross-product context from Atlassian's hosted MCP server (Jira issues, Confluence pages, Projects, Goals) via the Teamwork Graph. For free-text Jira/Confluence search the picker uses the separate jira_rest / confluence_rest shims."
 category: "issue-tracking"
 icon: "jira.svg"
 

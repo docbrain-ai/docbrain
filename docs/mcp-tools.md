@@ -103,6 +103,36 @@ If a tool times out or errors, the orchestrator records the failure in the audit
 
 ---
 
+## Hosted vs self-hosted manifests
+
+DocBrain manifests fall into two operational categories. The admin UI at `/admin/tools` labels each manifest with a **Hosted** or **Self** badge so operators can tell at a glance who runs the MCP server.
+
+**Hosted** — the upstream MCP server is operated by the vendor:
+
+- `atlassian` (`mcp.atlassian.com/v1/mcp/authv2`) — Teamwork Graph; covers Jira issues, Confluence pages, Projects, Goals via a single endpoint.
+- `slack` (`mcp.slack.com`) — Slack's hosted MCP server; search across messages, files, channels, users.
+- `github` (`api.githubcopilot.com/mcp`) — GitHub's hosted MCP server; code, PRs, issues, file contents.
+
+For hosted manifests, DocBrain forwards each dispatch to the vendor's endpoint with the calling user's OAuth token. The vendor's server handles dispatch and enforces the user's real permissions on their side. Failures (auth errors, rate limits) show in the audit log with the upstream error body verbatim.
+
+**Self** — the MCP server runs in-process inside the DocBrain pod, as a loopback shim. The shim wraps a vendor REST API as an MCP server:
+
+- `jira_rest` — wraps Jira Cloud REST API (`/rest/api/3/search`, `/rest/api/3/issue/{key}`). JQL search + ticket fetch by key.
+- `confluence_rest` — wraps Confluence Cloud REST API (`/rest/api/content/search`, `/rest/api/content/{id}`). CQL search + page fetch.
+- `slack_rest` — wraps Slack Web API (`/api/conversations.replies`, `/api/conversations.history`). Direct thread + channel reads (vendor's hosted MCP doesn't expose these).
+
+For self-hosted manifests, the gateway dispatches via service-account auth (an internal bearer matched on the loopback hop), and the shim itself calls the vendor REST API using credentials drawn from this deployment's env vars (or, for slack_rest, the user's stored OAuth token resolved internally — see the `shim_internal` section below).
+
+**Naming convention:** `<vendor>` = hosted, `<vendor>_rest` = self-hosted shim. Two manifests for the same vendor are sometimes coexistent (e.g. `slack` + `slack_rest`) because the hosted server doesn't expose every operation we need — DocBrain registers both so the picker can route each question type to the right one.
+
+**Operationally, the hosted/self distinction matters because:**
+
+1. **Hosted manifests fail-mode differently** — Atlassian's hosted endpoint returning *"We are having trouble completing this action"* is an upstream vendor issue; self-hosted shims either succeed or fail at our own code boundary with a precise error.
+2. **Scope semantics differ** — hosted manifest OAuth scopes are granted to the *vendor's MCP server*; self-hosted shim OAuth scopes (the `shim_internal: true` case) are granted to the *shim* which then calls the vendor's regular API.
+3. **Egress allowlists differ** — hosted manifests need outbound HTTPS to the vendor's MCP host; self-hosted shims need outbound HTTPS to the vendor's regular API host. Both are declared in the manifest's `egress_hosts`.
+
+---
+
 ## Auth modes
 
 Each manifest declares one or more `modes` under `auth:`. The orchestrator picks the most specific mode the user is eligible for.
@@ -203,6 +233,63 @@ auth:
     **Existing connected users must reconnect after a scope change.** Adding scopes to the app does not update tokens already in `mcp_oauth_tokens`. Either ask each user to click **Disconnect** → **Connect** on `/integrations`, or as admin delete the relevant rows from `mcp_oauth_tokens` to force a fresh OAuth dance on next dispatch.
 
 The orchestrator picks OAuth when the requesting user has a stored token for that manifest; otherwise it falls back to service-account if the manifest declares it.
+
+### OAuth-for-shim-internal token grants (`shim_internal`)
+
+A small number of manifests use OAuth NOT as a dispatch mode but to grant the user's token to an **in-process shim** which calls the upstream itself. The canonical example is `slack_rest`: the gateway → shim hop runs over loopback using a shared service-account bearer (the shim's auth gate), and the shim then resolves the user's Slack OAuth token from `mcp_oauth_tokens` to call `slack.com/api/conversations.replies` as that user.
+
+For this pattern, set `auth.oauth.shim_internal: true`:
+
+```yaml
+auth:
+  modes:
+    - service_account   # the only DISPATCH mode the gateway will use
+    - oauth             # required so /oauth/mcp/init lets users connect
+  service_account:
+    secret_refs: [DOCBRAIN_INTERNAL_MCP_SECRET]
+    header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+  oauth:
+    provider: generic
+    authorize_url: "https://upstream.example.com/oauth/authorize"
+    token_url:     "https://upstream.example.com/oauth/token"
+    scopes:        ["read:something"]
+    client_id_secret_ref: UPSTREAM_OAUTH_CLIENT_ID
+    client_secret_ref:    UPSTREAM_OAUTH_CLIENT_SECRET
+    use_pkce: true
+    shim_internal: true   # <-- gateway never dispatches OAuth for this manifest
+```
+
+What each piece does:
+
+- **`modes: [service_account, oauth]`** — both modes are declared so the install path auto-seeds enablement rows for both, AND the `/oauth/mcp/init` enablement gate finds an `oauth`-mode row when the user clicks Connect on `/integrations`. Without `oauth` in `modes`, the Connect button silently 403s with *"no OAuth enablement for this manifest"*.
+- **`oauth.shim_internal: true`** — the picker reads this flag (`registry/manifest.rs`) and refuses to ever select OAuth as the dispatch mode. Dispatch always goes via service-account, sending the SA bearer plus an `X-Docbrain-User-Id` header to the shim. The shim then looks up the user's OAuth token internally.
+
+**When NOT to use `shim_internal`**: regular OAuth manifests (`jira`, `slack`, etc.) where the gateway calls the upstream directly with the user's token. For those, leave `shim_internal` unset (defaults to `false`). The picker will then prefer OAuth-mode dispatch when the user has a valid token, falling back to service-account otherwise.
+
+**Rule of thumb:**
+
+| Question | Answer | Then `shim_internal` is… |
+|---|---|---|
+| Does the gateway call the real upstream directly with the user's OAuth token? | Yes | `false` (default) |
+| Does the gateway call a loopback shim that internally resolves the user's token from `mcp_oauth_tokens`? | Yes | `true` |
+
+**Picker behaviour, exhaustively:**
+
+| `modes` | `shim_internal` | User has OAuth token | Picker selects | What gets sent to upstream |
+|---|---|---|---|---|
+| `[oauth]` | `false` | yes | OAuth | User's token in `Authorization: Bearer` |
+| `[oauth]` | `false` | no | — | Not dispatched; UI shows "Connect" |
+| `[oauth]` | `true` | any | — | Picker skips OAuth, no SA available → manifest unusable. **Misconfiguration.** |
+| `[sa]` | n/a | n/a | SA | SA bearer in `Authorization: Bearer` |
+| `[sa, oauth]` | `false` | yes | OAuth | User's token in `Authorization: Bearer` (upstream sees user identity) |
+| `[sa, oauth]` | `false` | no | SA | SA bearer (upstream sees shared identity) |
+| `[sa, oauth]` | `true` | yes | SA | SA bearer + `X-Docbrain-User-Id`; shim looks up user's token internally |
+| `[sa, oauth]` | `true` | no | SA | SA bearer + `X-Docbrain-User-Id`; shim fails to find token, returns "Connect" error |
+
+**Symptom of getting this wrong:**
+
+- `shim_internal: true` but you actually wanted OAuth dispatch → upstream gets your SA bearer instead of the user's token. Either the upstream rejects (401) or the call runs as the SA identity instead of the user (results scoped wrong).
+- `shim_internal: false` (or unset) on an in-process shim that expects the SA bearer → the gateway sends the user's OAuth token to a loopback endpoint that only accepts the internal SA bearer; the shim returns 401 with *"missing Mcp-Session-Id"*. This was the exact slack_rest dispatch bug on 2026-05-26.
 
 ---
 

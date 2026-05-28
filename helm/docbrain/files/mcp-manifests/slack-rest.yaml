@@ -65,24 +65,18 @@ server:
   protocol_version: "2024-11-05"
 
 auth:
-  # Hybrid: SA for the orchestrator→shim hop (jira_rest pattern), OAuth
-  # for the dance that issues the per-user Slack token the SHIM reads
-  # internally. The picker dispatches via SA mode (so gateway/auth.rs
-  # injects the internal bearer + X-Docbrain-User-Id header); the OAuth
-  # config exists ONLY so users can click Connect on /integrations and
-  # grant the conversations-history scopes. The resulting row in
-  # mcp_oauth_tokens(manifest_id='slack_rest') is what the shim looks
-  # up at dispatch time. Slack's API is never called by the gateway
-  # directly for this manifest — it's the shim that calls Slack.
-  # IMPORTANT: only `service_account` is listed as a DISPATCH mode.
-  # See the canonical comment in config/mcp-manifests/slack-rest.yaml.
-  # TL;DR: the picker prioritises OAuth when both are declared, but
-  # the shim only accepts the SA bearer — listing both caused every
-  # dispatch to fail with 401 / missing Mcp-Session-Id header for
-  # users who had connected via OAuth. The `oauth:` block below still
-  # drives the Connect-button dance via `auth.oauth` directly.
+  # Hybrid OAuth-for-shim pattern. See the canonical comment in
+  # config/mcp-manifests/slack-rest.yaml for the full history.
+  #
+  # TL;DR: both modes are declared so install auto-seeds enablements
+  # AND /oauth/mcp/init lets users grant scopes; `auth.oauth.shim_internal:
+  # true` tells the picker "never select OAuth for dispatch" (registry/
+  # manifest.rs honours the flag). Dispatch ALWAYS goes via SA; the
+  # in-process shim resolves the user's Slack OAuth token from
+  # mcp_oauth_tokens at tool-call time.
   modes:
     - service_account
+    - oauth
   service_account:
     # The shim authenticates the orchestrator (caller) via this bearer.
     # NOT a Slack credential — the shim resolves the user's Slack OAuth
@@ -131,6 +125,10 @@ auth:
     client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
     use_pkce: true
+    # See canonical comment in config/mcp-manifests/slack-rest.yaml.
+    # Gateway never dispatches this manifest in OAuth mode; the SHIM
+    # resolves the user's token internally.
+    shim_internal: true
 
 # Static tool catalog — declared here rather than discovered, because the
 # shim's endpoint is in-process and we want explicit, schema-validated
