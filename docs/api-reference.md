@@ -642,7 +642,7 @@ Returns documents semantically related to this gap cluster — these are the doc
     "source_url": "https://confluence.example.com/...",
     "space": "PLATFORM",
     "freshness_score": 23.5,
-    "author": "bhanu@example.com"
+    "author": "author@example.com"
   }
 ]
 ```
@@ -874,7 +874,7 @@ Returns the current weekly digest data (without sending it to Slack).
       "source_url": "https://...",
       "space": "PLATFORM",
       "retrieval_count": 94,
-      "author": "bhanu@example.com"
+      "author": "author@example.com"
     }
   ]
 }

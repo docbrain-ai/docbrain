@@ -9,10 +9,10 @@
 cases:
   - id: pass_simple
     question: "Who owns the docbrain repo?"
-    answer: "The docbrain repo is owned by the platform engineering team. The primary maintainer is Bhanu Sharma."
+    answer: "The docbrain repo is owned by the platform engineering team. The primary maintainer is Sam Rivera."
     expected_facts:
       - "platform engineering team owns it"
-      - "Bhanu Sharma is the primary maintainer"
+      - "Sam Rivera is the primary maintainer"
     forbidden_claims: []
     expected_verdict: pass
 
@@ -31,18 +31,18 @@ cases:
     answer: "AITOOLINTG-35 is currently In Progress."
     expected_facts:
       - "status is In Progress"
-      - "assignee is Hayden"
+      - "assignee is Alex"
     forbidden_claims: []
     expected_verdict: partial
 
   - id: fail_forbidden_claim
     question: "Is the helm migration done?"
-    answer: "Yes, the helm migration is complete and was finished by Devin."
+    answer: "Yes, the helm migration is complete and was finished by Jordan."
     expected_facts:
       - "helm migration is in progress"
     forbidden_claims:
       - "migration is complete"
-      - "Devin worked on it"
+      - "Jordan worked on it"
     expected_verdict: fail
 
   - id: fail_empty_answer
@@ -50,6 +50,6 @@ cases:
     answer: "I don't have information on that."
     expected_facts:
       - "AITOOLINTG-35 is the blocker"
-      - "Hayden is the assignee"
+      - "Alex is the assignee"
     forbidden_claims: []
     expected_verdict: fail

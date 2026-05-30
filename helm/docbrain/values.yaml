@@ -550,7 +550,7 @@ serviceAccount:
 bootstrapKey:
   enabled: true
 
-# ── MCP tool platform (Plan 4) ────────────────────────────────────────────
+# ── MCP tool platform ────────────────────────────────────────────────────
 # Enables answer-time tool dispatch through external MCP servers
 # (Jira, GitHub, Sentry, etc.). Off by default — flip enabled=true once
 # the per-tool manifest credentials below are populated.

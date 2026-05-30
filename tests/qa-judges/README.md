@@ -1,6 +1,6 @@
 # QA judges
 
-LLM-based answer graders for non-deterministic DocBrain answers (Plan 4).
+LLM-based answer graders for non-deterministic DocBrain answers.
 
 ## When to use
 
@@ -8,14 +8,14 @@ LLM-based answer graders for non-deterministic DocBrain answers (Plan 4).
   expected content shifts over time. Substring evals (`crates/docbrain-core/src/eval.rs`)
   are wrong here — they'd flag a correct answer as "missing string X" when X
   is `"In Progress"` but today's true state is `"Done"`.
-- Shadow-run grading (Task 4.11): batch of management questions graded
+- Shadow-run grading: batch of management questions graded
   against rubrics rather than exact strings.
 
 ## Files
 
 - `judge-system-prompt.md` — the verbatim system prompt sent to the judge.
 - `calibration.yaml` — 5 fixed tuples; must pass before any production batch.
-- `golden/` — seed batches authored by Task 4.10b. One YAML file per batch.
+- `golden/` — authored seed batches. One YAML file per batch.
 
 ## Running
 
@@ -26,7 +26,7 @@ RUN_JUDGE_CALIBRATION=1 cargo test -p docbrain-core --test qa_judge_calibration 
 Requires the same LLM env config the server uses (e.g. `ANTHROPIC_API_KEY`,
 provider/model selection in `config/default.yaml`).
 
-## Seed batch — management questions (Task 4.10b)
+## Seed batch — management questions
 
 The v1 ship-gate batch lives at:
 
@@ -35,9 +35,9 @@ tests/qa-judges/golden/management-questions-seed.yaml
 ```
 
 Two cases ship scaffolded (helm_migration_blocker, aitoolintg_35_status).
-The remaining 8 are TODO markers — Bhanu authors them against his
+The remaining 8 are TODO markers — the operator authors them against their
 operational reality (Jira tickets, deployment status, ownership questions
-specific to docbrain/your-org).
+specific to your org).
 
 Run the batch end-to-end against a live DocBrain server:
 
@@ -49,8 +49,8 @@ RUN_SEED_BATCH=1 \
 ```
 
 Output: `tests/qa-judges/runs/seed-batch-<timestamp>.json` with per-case
-verdicts. Compare against `tests/qa-judges/runs/baseline-pre-plan-4.json`
-(captured by Task 4.11 before flipping mcp_tools.enabled).
+verdicts. Compare against `tests/qa-judges/runs/baseline-pre-mcp.json`
+(captured before flipping mcp_tools.enabled).
 
 ## Adding a new batch
 

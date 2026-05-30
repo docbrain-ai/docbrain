@@ -963,6 +963,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hosted-vs-self-hosted-manifests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosted vs self-hosted manifests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#auth-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1007,6 +1018,17 @@
     <span class="md-ellipsis">
       
         OAuth (per-user)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth-for-shim-internal-token-grants-shim_internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth-for-shim-internal token grants (shim_internal)
       
     </span>
   </a>
@@ -1956,6 +1978,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hosted-vs-self-hosted-manifests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosted vs self-hosted manifests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#auth-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2000,6 +2033,17 @@
     <span class="md-ellipsis">
       
         OAuth (per-user)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#oauth-for-shim-internal-token-grants-shim_internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OAuth-for-shim-internal token grants (shim_internal)
       
     </span>
   </a>
@@ -2505,6 +2549,30 @@
 <li><strong>Eligibility model.</strong> Admins control who can use what. Eligibility is checked on the (principal, manifest, auth_mode) triple before the fast LLM ever sees the question — a user who isn't enabled for <code>jira</code> won't have it offered as a candidate.</li>
 </ol>
 <hr />
+<h2 id="hosted-vs-self-hosted-manifests">Hosted vs self-hosted manifests<a class="headerlink" href="#hosted-vs-self-hosted-manifests" title="Permanent link">&para;</a></h2>
+<p>DocBrain manifests fall into two operational categories. The admin UI at <code>/admin/tools</code> labels each manifest with a <strong>Hosted</strong> or <strong>Self</strong> badge so operators can tell at a glance who runs the MCP server.</p>
+<p><strong>Hosted</strong> — the upstream MCP server is operated by the vendor:</p>
+<ul>
+<li><code>atlassian</code> (<code>mcp.atlassian.com/v1/mcp/authv2</code>) — Teamwork Graph; covers Jira issues, Confluence pages, Projects, Goals via a single endpoint.</li>
+<li><code>slack</code> (<code>mcp.slack.com</code>) — Slack's hosted MCP server; search across messages, files, channels, users.</li>
+<li><code>github</code> (<code>api.githubcopilot.com/mcp</code>) — GitHub's hosted MCP server; code, PRs, issues, file contents.</li>
+</ul>
+<p>For hosted manifests, DocBrain forwards each dispatch to the vendor's endpoint with the calling user's OAuth token. The vendor's server handles dispatch and enforces the user's real permissions on their side. Failures (auth errors, rate limits) show in the audit log with the upstream error body verbatim.</p>
+<p><strong>Self</strong> — the MCP server runs in-process inside the DocBrain pod, as a loopback shim. The shim wraps a vendor REST API as an MCP server:</p>
+<ul>
+<li><code>jira_rest</code> — wraps Jira Cloud REST API (<code>/rest/api/3/search</code>, <code>/rest/api/3/issue/{key}</code>). JQL search + ticket fetch by key.</li>
+<li><code>confluence_rest</code> — wraps Confluence Cloud REST API (<code>/rest/api/content/search</code>, <code>/rest/api/content/{id}</code>). CQL search + page fetch.</li>
+<li><code>slack_rest</code> — wraps Slack Web API (<code>/api/conversations.replies</code>, <code>/api/conversations.history</code>). Direct thread + channel reads (vendor's hosted MCP doesn't expose these).</li>
+</ul>
+<p>For self-hosted manifests, the gateway dispatches via service-account auth (an internal bearer matched on the loopback hop), and the shim itself calls the vendor REST API using credentials drawn from this deployment's env vars (or, for slack_rest, the user's stored OAuth token resolved internally — see the <code>shim_internal</code> section below).</p>
+<p><strong>Naming convention:</strong> <code>&lt;vendor&gt;</code> = hosted, <code>&lt;vendor&gt;_rest</code> = self-hosted shim. Two manifests for the same vendor are sometimes coexistent (e.g. <code>slack</code> + <code>slack_rest</code>) because the hosted server doesn't expose every operation we need — DocBrain registers both so the picker can route each question type to the right one.</p>
+<p><strong>Operationally, the hosted/self distinction matters because:</strong></p>
+<ol>
+<li><strong>Hosted manifests fail-mode differently</strong> — Atlassian's hosted endpoint returning <em>"We are having trouble completing this action"</em> is an upstream vendor issue; self-hosted shims either succeed or fail at our own code boundary with a precise error.</li>
+<li><strong>Scope semantics differ</strong> — hosted manifest OAuth scopes are granted to the <em>vendor's MCP server</em>; self-hosted shim OAuth scopes (the <code>shim_internal: true</code> case) are granted to the <em>shim</em> which then calls the vendor's regular API.</li>
+<li><strong>Egress allowlists differ</strong> — hosted manifests need outbound HTTPS to the vendor's MCP host; self-hosted shims need outbound HTTPS to the vendor's regular API host. Both are declared in the manifest's <code>egress_hosts</code>.</li>
+</ol>
+<hr />
 <h2 id="auth-modes">Auth modes<a class="headerlink" href="#auth-modes" title="Permanent link">&para;</a></h2>
 <p>Each manifest declares one or more <code>modes</code> under <code>auth:</code>. The orchestrator picks the most specific mode the user is eligible for.</p>
 <h3 id="service-account">Service-account<a class="headerlink" href="#service-account" title="Permanent link">&para;</a></h3>
@@ -2574,61 +2642,206 @@
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">authorize_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://auth.atlassian.com/authorize&quot;</span>
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">token_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://auth.atlassian.com/oauth/token&quot;</span>
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">scopes</span><span class="p">:</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:jira-work&quot;</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:jira-user&quot;</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;offline_access&quot;</span><span class="w">     </span><span class="c1"># required for refresh tokens</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="nt">client_id_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ATLASSIAN_OAUTH_CLIENT_ID</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="nt">client_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ATLASSIAN_OAUTH_CLIENT_SECRET</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="nt">use_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">      </span><span class="c1"># Jira platform REST API</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:jira-work&quot;</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:jira-user&quot;</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">      </span><span class="c1"># User identity API — required to resolve other users by email</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:me&quot;</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:account&quot;</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">      </span><span class="c1"># Confluence API — required for cross-product graph traversal</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:confluence-content.all&quot;</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:confluence-content.summary&quot;</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:confluence-space.summary&quot;</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;read:confluence-user&quot;</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;search:confluence&quot;</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="w">      </span><span class="c1"># Refresh tokens</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;offline_access&quot;</span>
+</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="w">    </span><span class="nt">client_id_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ATLASSIAN_OAUTH_CLIENT_ID</span>
+</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="w">    </span><span class="nt">client_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ATLASSIAN_OAUTH_CLIENT_SECRET</span>
+</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="w">    </span><span class="nt">use_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </span></code></pre></div>
 <p><strong>When to use:</strong> production multi-user deployments. Each Jira query runs as the asking user — Atlassian enforces their real permissions, and audit trails on the upstream side show who actually asked.</p>
 <div class="admonition tip">
 <p class="admonition-title">Always include <code>offline_access</code></p>
 <p>Without the <code>offline_access</code> scope, Atlassian (and most OAuth providers) issues access tokens that expire in ~1 hour and no refresh token. Users would have to re-click Connect every hour. The reference <code>jira</code> manifest includes it; if you author a new OAuth manifest, copy that pattern.</p>
 </div>
+<div class="admonition warning">
+<p class="admonition-title">Scope traps when registering the Atlassian app</p>
+<p>Atlassian's Developer Console splits scopes across <strong>three separate APIs</strong> — and missing scopes on any of them produce a generic <code>"You don't have access ..."</code> error that looks like a permission denial. To enable the full hosted Atlassian MCP surface (Teamwork Graph traversal), in the Developer Console → <strong>Permissions</strong> page:</p>
+<ol>
+<li><strong>User identity API</strong> — Add scopes <code>read:me</code> and <code>read:account</code>. Without <code>read:account</code>, looking up another user by email (<code>objectType: "AtlassianUser"</code> on <code>get_teamwork_graph_context</code>) fails with an opaque error.</li>
+<li><strong>Confluence API</strong> — Add <code>read:confluence-content.all</code>, <code>read:confluence-content.summary</code>, <code>read:confluence-space.summary</code>, <code>read:confluence-user</code>, <code>search:confluence</code>. Both <code>.all</code> and <code>.summary</code> are required — they are independent gates, not a hierarchy.</li>
+<li><strong>Jira API</strong> — <code>read:jira-work</code> and <code>read:jira-user</code>. Beyond these two, the modern Jira REST API does NOT expose a separate Teamwork Graph scope on classic 3LO apps — traversal is gated on having the underlying read scopes across Jira + Confluence + User Identity.</li>
+</ol>
+<p>All scopes above are read-only. <strong>Do NOT add</strong> anything starting with <code>write:</code>, <code>delete:</code>, <code>manage:</code>, or <code>admin:</code> — DocBrain's MCP layer is read-only by design (D1 invariant) and would refuse to dispatch a write tool even if one were granted, but extra scopes widen the blast radius if the OAuth token is ever stolen.</p>
+<p><strong>Existing connected users must reconnect after a scope change.</strong> Adding scopes to the app does not update tokens already in <code>mcp_oauth_tokens</code>. Either ask each user to click <strong>Disconnect</strong> → <strong>Connect</strong> on <code>/integrations</code>, or as admin delete the relevant rows from <code>mcp_oauth_tokens</code> to force a fresh OAuth dance on next dispatch.</p>
+</div>
 <p>The orchestrator picks OAuth when the requesting user has a stored token for that manifest; otherwise it falls back to service-account if the manifest declares it.</p>
+<h3 id="oauth-for-shim-internal-token-grants-shim_internal">OAuth-for-shim-internal token grants (<code>shim_internal</code>)<a class="headerlink" href="#oauth-for-shim-internal-token-grants-shim_internal" title="Permanent link">&para;</a></h3>
+<p>A small number of manifests use OAuth NOT as a dispatch mode but to grant the user's token to an <strong>in-process shim</strong> which calls the upstream itself. The canonical example is <code>slack_rest</code>: the gateway → shim hop runs over loopback using a shared service-account bearer (the shim's auth gate), and the shim then resolves the user's Slack OAuth token from <code>mcp_oauth_tokens</code> to call <code>slack.com/api/conversations.replies</code> as that user.</p>
+<p>For this pattern, set <code>auth.oauth.shim_internal: true</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">auth</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">modes</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service_account</span><span class="w">   </span><span class="c1"># the only DISPATCH mode the gateway will use</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oauth</span><span class="w">             </span><span class="c1"># required so /oauth/mcp/init lets users connect</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">service_account</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">secret_refs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">DOCBRAIN_INTERNAL_MCP_SECRET</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">header_template</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bearer</span><span class="nv"> </span><span class="s">${DOCBRAIN_INTERNAL_MCP_SECRET}&quot;</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">generic</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="nt">authorize_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://upstream.example.com/oauth/authorize&quot;</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="nt">token_url</span><span class="p">:</span><span class="w">     </span><span class="s">&quot;https://upstream.example.com/oauth/token&quot;</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nt">scopes</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">[</span><span class="s">&quot;read:something&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="nt">client_id_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">UPSTREAM_OAUTH_CLIENT_ID</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">    </span><span class="nt">client_secret_ref</span><span class="p">:</span><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">UPSTREAM_OAUTH_CLIENT_SECRET</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nt">use_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="w">    </span><span class="nt">shim_internal</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># &lt;-- gateway never dispatches OAuth for this manifest</span>
+</span></code></pre></div>
+<p>What each piece does:</p>
+<ul>
+<li><strong><code>modes: [service_account, oauth]</code></strong> — both modes are declared so the install path auto-seeds enablement rows for both, AND the <code>/oauth/mcp/init</code> enablement gate finds an <code>oauth</code>-mode row when the user clicks Connect on <code>/integrations</code>. Without <code>oauth</code> in <code>modes</code>, the Connect button silently 403s with <em>"no OAuth enablement for this manifest"</em>.</li>
+<li><strong><code>oauth.shim_internal: true</code></strong> — the picker reads this flag (<code>registry/manifest.rs</code>) and refuses to ever select OAuth as the dispatch mode. Dispatch always goes via service-account, sending the SA bearer plus an <code>X-Docbrain-User-Id</code> header to the shim. The shim then looks up the user's OAuth token internally.</li>
+</ul>
+<p><strong>When NOT to use <code>shim_internal</code></strong>: regular OAuth manifests (<code>jira</code>, <code>slack</code>, etc.) where the gateway calls the upstream directly with the user's token. For those, leave <code>shim_internal</code> unset (defaults to <code>false</code>). The picker will then prefer OAuth-mode dispatch when the user has a valid token, falling back to service-account otherwise.</p>
+<p><strong>Rule of thumb:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+<th>Then <code>shim_internal</code> is…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Does the gateway call the real upstream directly with the user's OAuth token?</td>
+<td>Yes</td>
+<td><code>false</code> (default)</td>
+</tr>
+<tr>
+<td>Does the gateway call a loopback shim that internally resolves the user's token from <code>mcp_oauth_tokens</code>?</td>
+<td>Yes</td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Picker behaviour, exhaustively:</strong></p>
+<table>
+<thead>
+<tr>
+<th><code>modes</code></th>
+<th><code>shim_internal</code></th>
+<th>User has OAuth token</th>
+<th>Picker selects</th>
+<th>What gets sent to upstream</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[oauth]</code></td>
+<td><code>false</code></td>
+<td>yes</td>
+<td>OAuth</td>
+<td>User's token in <code>Authorization: Bearer</code></td>
+</tr>
+<tr>
+<td><code>[oauth]</code></td>
+<td><code>false</code></td>
+<td>no</td>
+<td>—</td>
+<td>Not dispatched; UI shows "Connect"</td>
+</tr>
+<tr>
+<td><code>[oauth]</code></td>
+<td><code>true</code></td>
+<td>any</td>
+<td>—</td>
+<td>Picker skips OAuth, no SA available → manifest unusable. <strong>Misconfiguration.</strong></td>
+</tr>
+<tr>
+<td><code>[sa]</code></td>
+<td>n/a</td>
+<td>n/a</td>
+<td>SA</td>
+<td>SA bearer in <code>Authorization: Bearer</code></td>
+</tr>
+<tr>
+<td><code>[sa, oauth]</code></td>
+<td><code>false</code></td>
+<td>yes</td>
+<td>OAuth</td>
+<td>User's token in <code>Authorization: Bearer</code> (upstream sees user identity)</td>
+</tr>
+<tr>
+<td><code>[sa, oauth]</code></td>
+<td><code>false</code></td>
+<td>no</td>
+<td>SA</td>
+<td>SA bearer (upstream sees shared identity)</td>
+</tr>
+<tr>
+<td><code>[sa, oauth]</code></td>
+<td><code>true</code></td>
+<td>yes</td>
+<td>SA</td>
+<td>SA bearer + <code>X-Docbrain-User-Id</code>; shim looks up user's token internally</td>
+</tr>
+<tr>
+<td><code>[sa, oauth]</code></td>
+<td><code>true</code></td>
+<td>no</td>
+<td>SA</td>
+<td>SA bearer + <code>X-Docbrain-User-Id</code>; shim fails to find token, returns "Connect" error</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Symptom of getting this wrong:</strong></p>
+<ul>
+<li><code>shim_internal: true</code> but you actually wanted OAuth dispatch → upstream gets your SA bearer instead of the user's token. Either the upstream rejects (401) or the call runs as the SA identity instead of the user (results scoped wrong).</li>
+<li><code>shim_internal: false</code> (or unset) on an in-process shim that expects the SA bearer → the gateway sends the user's OAuth token to a loopback endpoint that only accepts the internal SA bearer; the shim returns 401 with <em>"missing Mcp-Session-Id"</em>. This was the exact slack_rest dispatch bug on 2026-05-26.</li>
+</ul>
 <hr />
 <h2 id="enabling-mcp-tools-in-production">Enabling MCP tools in production<a class="headerlink" href="#enabling-mcp-tools-in-production" title="Permanent link">&para;</a></h2>
 <p>The full env-var and Helm-value reference lives in <a href="../configuration/#mcp-tool-platform">Configuration → MCP Tool Platform</a>. Here's the operator checklist:</p>
 <h3 id="1-generate-the-encryption-key">1. Generate the encryption key<a class="headerlink" href="#1-generate-the-encryption-key" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span>
 </span></code></pre></div>
 <p>Store the output as <code>MCP_OAUTH_ENCRYPTION_KEY</code>. Loss of this key means every per-user OAuth token in <code>mcp_oauth_tokens</code> becomes unreadable and every user has to reconnect. Treat it like a database master key.</p>
 <h3 id="2-set-helm-values">2. Set Helm values<a class="headerlink" href="#2-set-helm-values" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">mcpTools</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">encryptionKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">              </span><span class="c1"># MCP_OAUTH_ENCRYPTION_KEY (from secret)</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">internalShimSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">         </span><span class="c1"># DOCBRAIN_INTERNAL_MCP_SECRET (from secret)</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">manifestDir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/docbrain/mcp-manifests</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">serviceAccount</span><span class="p">:</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">jira</span><span class="p">:</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">apiToken</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">               </span><span class="c1"># JIRA_API_TOKEN (from secret)</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">      </span><span class="nt">cloudId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">                </span><span class="c1"># JIRA_CLOUD_ID (workspace UUID)</span>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="nt">atlassian</span><span class="p">:</span>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">      </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">               </span><span class="c1"># ATLASSIAN_OAUTH_CLIENT_ID (from secret)</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">      </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">           </span><span class="c1"># ATLASSIAN_OAUTH_CLIENT_SECRET (from secret)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">mcpTools</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">encryptionKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">              </span><span class="c1"># MCP_OAUTH_ENCRYPTION_KEY (from secret)</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">internalShimSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">         </span><span class="c1"># DOCBRAIN_INTERNAL_MCP_SECRET (from secret)</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">manifestDir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/etc/docbrain/mcp-manifests</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">serviceAccount</span><span class="p">:</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="nt">jira</span><span class="p">:</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">      </span><span class="nt">apiToken</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">               </span><span class="c1"># JIRA_API_TOKEN (from secret)</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">      </span><span class="nt">cloudId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">                </span><span class="c1"># JIRA_CLOUD_ID (workspace UUID)</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="nt">atlassian</span><span class="p">:</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">      </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">               </span><span class="c1"># ATLASSIAN_OAUTH_CLIENT_ID (from secret)</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">      </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">           </span><span class="c1"># ATLASSIAN_OAUTH_CLIENT_SECRET (from secret)</span>
 </span></code></pre></div>
 <p>In production, leave the string fields empty in <code>values.yaml</code> and inject them via <code>existingSecret</code>. See <a href="../configuration/#mcp-tool-platform">Configuration → MCP Tool Platform</a> for the full env-var table.</p>
 <h3 id="3-register-the-oauth-client-with-your-idp">3. Register the OAuth client with your IdP<a class="headerlink" href="#3-register-the-oauth-client-with-your-idp" title="Permanent link">&para;</a></h3>
 <p>For Atlassian: <strong>Developer Console → OAuth 2.0 (3LO) → Create app</strong>. Set the callback URL to:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>https://&lt;your-domain&gt;/api/v1/oauth/mcp/callback/jira
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>https://&lt;your-domain&gt;/api/v1/oauth/mcp/callback/jira
 </span></code></pre></div>
 <p>The path segment after <code>callback/</code> is the manifest id (<code>jira</code>). If you add a manifest with a different id, the callback path changes accordingly.</p>
 <h3 id="4-helm-upgrade">4. Helm upgrade<a class="headerlink" href="#4-helm-upgrade" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>-f<span class="w"> </span>values.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--namespace<span class="w"> </span>docbrain
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/docbrain-server<span class="w"> </span>--namespace<span class="w"> </span>docbrain<span class="w"> </span>--timeout<span class="o">=</span>5m
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>-f<span class="w"> </span>values.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--namespace<span class="w"> </span>docbrain
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/docbrain-server<span class="w"> </span>--namespace<span class="w"> </span>docbrain<span class="w"> </span>--timeout<span class="o">=</span>5m
 </span></code></pre></div>
 <p>Verify the orchestrator wired up:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>deploy/docbrain-server<span class="w"> </span>--namespace<span class="w"> </span>docbrain<span class="w"> </span>--since<span class="o">=</span>2m<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>mcp
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1"># Expected:</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="c1">#   &quot;MCP_TOOLS_ENABLED=true; constructing orchestrator...&quot;</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1">#   &quot;Loaded N MCP manifest(s) from /etc/docbrain/mcp-manifests&quot;</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="c1">#   &quot;MCP orchestrator: enabled&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>deploy/docbrain-server<span class="w"> </span>--namespace<span class="w"> </span>docbrain<span class="w"> </span>--since<span class="o">=</span>2m<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>mcp
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Expected:</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1">#   &quot;MCP_TOOLS_ENABLED=true; constructing orchestrator...&quot;</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1">#   &quot;Loaded N MCP manifest(s) from /etc/docbrain/mcp-manifests&quot;</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1">#   &quot;MCP orchestrator: enabled&quot;</span>
 </span></code></pre></div>
 <h3 id="5-enable-per-principal">5. Enable per principal<a class="headerlink" href="#5-enable-per-principal" title="Permanent link">&para;</a></h3>
 <p>An admin visits <code>/admin/tools/&lt;manifest-id&gt;/enablements</code> and grants eligibility to user groups or individual users. Until a principal is enabled, the manifest exists but the orchestrator won't offer it to that user's questions.</p>
@@ -2663,58 +2876,58 @@
 <p>The platform is <strong>manifest-driven</strong> — adding GitHub, Sentry, Datadog, PagerDuty, or anything else MCP-compliant requires no Rust code.</p>
 <h3 id="step-1-author-the-manifest">Step 1 — Author the manifest<a class="headerlink" href="#step-1-author-the-manifest" title="Permanent link">&para;</a></h3>
 <p>Drop a new YAML file under <code>config/mcp-manifests/&lt;id&gt;.yaml</code>. Use the shipped <code>jira.yaml</code> and <code>jira-rest.yaml</code> as references — both demonstrate the full manifest schema.</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">manifest_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GitHub&quot;</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Live</span><span class="nv"> </span><span class="s">GitHub</span><span class="nv"> </span><span class="s">PR</span><span class="nv"> </span><span class="s">/</span><span class="nv"> </span><span class="s">issue</span><span class="nv"> </span><span class="s">/</span><span class="nv"> </span><span class="s">repo</span><span class="nv"> </span><span class="s">metadata</span><span class="nv"> </span><span class="s">via</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">official</span><span class="nv"> </span><span class="s">MCP</span><span class="nv"> </span><span class="s">server.&quot;</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;scm&quot;</span>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nt">server</span><span class="p">:</span>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="nt">transport</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http_sse</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.githubcopilot.com/mcp&quot;</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="nt">protocol_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2024-11-05&quot;</span>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="nt">auth</span><span class="p">:</span>
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">  </span><span class="nt">modes</span><span class="p">:</span>
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oauth</span>
-</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
-</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github</span>
-</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="nt">authorize_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://github.com/login/oauth/authorize&quot;</span>
-</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">    </span><span class="nt">token_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://github.com/login/oauth/access_token&quot;</span>
-</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="nt">scopes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;repo&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;read:org&quot;</span><span class="p p-Indicator">]</span>
-</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">    </span><span class="nt">client_id_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GITHUB_MCP_CLIENT_ID</span>
-</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="w">    </span><span class="nt">client_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GITHUB_MCP_CLIENT_SECRET</span>
-</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a><span class="w">    </span><span class="nt">use_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a>
-</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="nt">tools</span><span class="p">:</span>
-</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.get_pull_request</span>
-</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a><span class="w">    </span><span class="nt">upstream_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">get_pull_request</span>
-</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Fetch</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">single</span><span class="nv"> </span><span class="s">PR</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">owner/repo/number...&quot;</span>
-</span><span id="__span-9-28"><a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a><span class="w">    </span><span class="nt">args_schema</span><span class="p">:</span>
-</span><span id="__span-9-29"><a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object</span>
-</span><span id="__span-9-30"><a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a><span class="w">      </span><span class="nt">properties</span><span class="p">:</span>
-</span><span id="__span-9-31"><a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a><span class="w">        </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span><span id="__span-9-32"><a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a><span class="w">        </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span><span id="__span-9-33"><a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a><span class="w">        </span><span class="nt">pull_number</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="w"> </span><span class="p p-Indicator">}</span>
-</span><span id="__span-9-34"><a id="__codelineno-9-34" name="__codelineno-9-34" href="#__codelineno-9-34"></a><span class="w">      </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">owner</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">repo</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pull_number</span><span class="p p-Indicator">]</span>
-</span><span id="__span-9-35"><a id="__codelineno-9-35" name="__codelineno-9-35" href="#__codelineno-9-35"></a><span class="w">    </span><span class="nt">output_size_cap_bytes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16384</span>
-</span><span id="__span-9-36"><a id="__codelineno-9-36" name="__codelineno-9-36" href="#__codelineno-9-36"></a><span class="w">    </span><span class="nt">latency_budget_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7000</span>
-</span><span id="__span-9-37"><a id="__codelineno-9-37" name="__codelineno-9-37" href="#__codelineno-9-37"></a>
-</span><span id="__span-9-38"><a id="__codelineno-9-38" name="__codelineno-9-38" href="#__codelineno-9-38"></a><span class="nt">egress</span><span class="p">:</span>
-</span><span id="__span-9-39"><a id="__codelineno-9-39" name="__codelineno-9-39" href="#__codelineno-9-39"></a><span class="w">  </span><span class="nt">hosts</span><span class="p">:</span>
-</span><span id="__span-9-40"><a id="__codelineno-9-40" name="__codelineno-9-40" href="#__codelineno-9-40"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;api.githubcopilot.com&quot;</span>
-</span><span id="__span-9-41"><a id="__codelineno-9-41" name="__codelineno-9-41" href="#__codelineno-9-41"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;github.com&quot;</span>
-</span><span id="__span-9-42"><a id="__codelineno-9-42" name="__codelineno-9-42" href="#__codelineno-9-42"></a>
-</span><span id="__span-9-43"><a id="__codelineno-9-43" name="__codelineno-9-43" href="#__codelineno-9-43"></a><span class="nt">rbac</span><span class="p">:</span>
-</span><span id="__span-9-44"><a id="__codelineno-9-44" name="__codelineno-9-44" href="#__codelineno-9-44"></a><span class="w">  </span><span class="nt">required_role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">viewer</span>
-</span><span id="__span-9-45"><a id="__codelineno-9-45" name="__codelineno-9-45" href="#__codelineno-9-45"></a>
-</span><span id="__span-9-46"><a id="__codelineno-9-46" name="__codelineno-9-46" href="#__codelineno-9-46"></a><span class="nt">retention</span><span class="p">:</span>
-</span><span id="__span-9-47"><a id="__codelineno-9-47" name="__codelineno-9-47" href="#__codelineno-9-47"></a><span class="w">  </span><span class="nt">audit_log_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">manifest_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;GitHub&quot;</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Live</span><span class="nv"> </span><span class="s">GitHub</span><span class="nv"> </span><span class="s">PR</span><span class="nv"> </span><span class="s">/</span><span class="nv"> </span><span class="s">issue</span><span class="nv"> </span><span class="s">/</span><span class="nv"> </span><span class="s">repo</span><span class="nv"> </span><span class="s">metadata</span><span class="nv"> </span><span class="s">via</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">official</span><span class="nv"> </span><span class="s">MCP</span><span class="nv"> </span><span class="s">server.&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;scm&quot;</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="nt">server</span><span class="p">:</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">  </span><span class="nt">transport</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http_sse</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://api.githubcopilot.com/mcp&quot;</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">  </span><span class="nt">protocol_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2024-11-05&quot;</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="nt">auth</span><span class="p">:</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">  </span><span class="nt">modes</span><span class="p">:</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">oauth</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">    </span><span class="nt">provider</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">    </span><span class="nt">authorize_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://github.com/login/oauth/authorize&quot;</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">    </span><span class="nt">token_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://github.com/login/oauth/access_token&quot;</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">    </span><span class="nt">scopes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;repo&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;read:org&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">    </span><span class="nt">client_id_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GITHUB_MCP_CLIENT_ID</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">    </span><span class="nt">client_secret_ref</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">GITHUB_MCP_CLIENT_SECRET</span>
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">    </span><span class="nt">use_pkce</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="nt">tools</span><span class="p">:</span>
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.get_pull_request</span>
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="w">    </span><span class="nt">upstream_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">get_pull_request</span>
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Fetch</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">single</span><span class="nv"> </span><span class="s">PR</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">owner/repo/number...&quot;</span>
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a><span class="w">    </span><span class="nt">args_schema</span><span class="p">:</span>
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object</span>
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="w">      </span><span class="nt">properties</span><span class="p">:</span>
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="w">        </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="w">        </span><span class="nt">repo</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="w">        </span><span class="nt">pull_number</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="w">      </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">owner</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">repo</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">pull_number</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="w">    </span><span class="nt">output_size_cap_bytes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16384</span>
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a><span class="w">    </span><span class="nt">latency_budget_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7000</span>
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a><span class="nt">egress</span><span class="p">:</span>
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a><span class="w">  </span><span class="nt">hosts</span><span class="p">:</span>
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;api.githubcopilot.com&quot;</span>
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;github.com&quot;</span>
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a><span class="nt">rbac</span><span class="p">:</span>
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a><span class="w">  </span><span class="nt">required_role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">viewer</span>
+</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>
+</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="nt">retention</span><span class="p">:</span>
+</span><span id="__span-10-47"><a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="w">  </span><span class="nt">audit_log_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span>
 </span></code></pre></div>
 <h3 id="step-2-symlink-into-the-helm-chart">Step 2 — Symlink into the Helm chart<a class="headerlink" href="#step-2-symlink-into-the-helm-chart" title="Permanent link">&para;</a></h3>
 <p>The chart ships its own <code>files/mcp-manifests/</code> directory that becomes the mounted ConfigMap. For Helm-packaged deployments, symlink your new manifest in:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">cd</span><span class="w"> </span>helm/docbrain/files/mcp-manifests
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>ln<span class="w"> </span>-s<span class="w"> </span>../../../../config/mcp-manifests/github.yaml<span class="w"> </span>github.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">cd</span><span class="w"> </span>helm/docbrain/files/mcp-manifests
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>ln<span class="w"> </span>-s<span class="w"> </span>../../../../config/mcp-manifests/github.yaml<span class="w"> </span>github.yaml
 </span></code></pre></div>
 <p>The relative path keeps the chart and the config repo in sync — the manifest is a single source of truth.</p>
 <h3 id="step-3-restart-the-server">Step 3 — Restart the server<a class="headerlink" href="#step-3-restart-the-server" title="Permanent link">&para;</a></h3>
@@ -2742,13 +2955,13 @@
 <p>Slack uses granular per-conversation-type scopes — there is no single <code>search:read</code>. Note these are <strong>user-token</strong> scopes (the <code>oauth/v2_user/authorize</code> flow), distinct from a bot token; a <code>xoxb-</code> bot token cannot search. Grab the app's <strong>client id</strong> and <strong>client secret</strong>.</p>
 <h3 id="step-2-set-docbrains-slack-config">Step 2 — Set DocBrain's Slack config<a class="headerlink" href="#step-2-set-docbrains-slack-config" title="Permanent link">&para;</a></h3>
 <p>Only the OAuth app credentials are needed (plus the MCP OAuth encryption key, required for any OAuth manifest):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">mcpTools</span><span class="p">:</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">encryptionKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">        </span><span class="c1"># MCP_OAUTH_ENCRYPTION_KEY — required for OAuth manifests</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="nt">slack</span><span class="p">:</span>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">      </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">         </span><span class="c1"># Slack OAuth app client id</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">      </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">     </span><span class="c1"># Slack OAuth app client secret</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">mcpTools</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">encryptionKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">        </span><span class="c1"># MCP_OAUTH_ENCRYPTION_KEY — required for OAuth manifests</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">slack</span><span class="p">:</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">      </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">         </span><span class="c1"># Slack OAuth app client id</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">      </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">     </span><span class="c1"># Slack OAuth app client secret</span>
 </span></code></pre></div>
 <p>If you use an externally-managed secret (<code>existingSecret</code>), add <code>SLACK_OAUTH_CLIENT_ID</code> and <code>SLACK_OAUTH_CLIENT_SECRET</code> to it instead.</p>
 <h3 id="step-3-restart-and-enable">Step 3 — Restart and enable<a class="headerlink" href="#step-3-restart-and-enable" title="Permanent link">&para;</a></h3>
@@ -2775,38 +2988,38 @@
 </ul>
 <h3 id="install-a-manifest">Install a manifest<a class="headerlink" href="#install-a-manifest" title="Permanent link">&para;</a></h3>
 <p><code>POST /api/v1/admin/mcp/manifests</code> accepts either a <code>yaml</code> body (paste) or a <code>url</code> reference (server-side fetch, HTTPS-only, host-allowlisted, no redirects, 5s timeout, 64KB cap). Secrets are submitted alongside the manifest:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://docbrain.example.com/api/v1/admin/mcp/manifests<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="s1">    &quot;yaml&quot;: &quot;&lt;manifest body&gt;&quot;,</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="s1">    &quot;secrets&quot;: [</span>
-</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="s1">      {&quot;key&quot;: &quot;api_token&quot;, &quot;mode&quot;: &quot;inline&quot;, &quot;value&quot;: &quot;&lt;bearer&gt;&quot;}</span>
-</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="s1">    ],</span>
-</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="s1">    &quot;description&quot;: &quot;Internal status page MCP&quot;</span>
-</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="s1">  }&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://docbrain.example.com/api/v1/admin/mcp/manifests<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="s1">    &quot;yaml&quot;: &quot;&lt;manifest body&gt;&quot;,</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="s1">    &quot;secrets&quot;: [</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="s1">      {&quot;key&quot;: &quot;api_token&quot;, &quot;mode&quot;: &quot;inline&quot;, &quot;value&quot;: &quot;&lt;bearer&gt;&quot;}</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="s1">    ],</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="s1">    &quot;description&quot;: &quot;Internal status page MCP&quot;</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="s1">  }&#39;</span>
 </span></code></pre></div>
 <p>Returns <code>{"manifest_id": "&lt;id&gt;", "version": 1}</code>. The manifest is dispatchable within ~1 second (a <code>LISTEN/NOTIFY</code> channel wakes the resolver).</p>
 <h3 id="rollback-after-a-bad-install">Rollback after a bad install<a class="headerlink" href="#rollback-after-a-bad-install" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># List versions</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>curl<span class="w"> </span>https://.../api/v1/admin/mcp/manifests/&lt;id&gt;/versions<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1"># Activate a prior version</span>
-</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://.../api/v1/admin/mcp/manifests/&lt;id&gt;/activate<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;version&quot;: 3}&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># List versions</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>curl<span class="w"> </span>https://.../api/v1/admin/mcp/manifests/&lt;id&gt;/versions<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="c1"># Activate a prior version</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://.../api/v1/admin/mcp/manifests/&lt;id&gt;/activate<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;version&quot;: 3}&#39;</span>
 </span></code></pre></div>
 <h3 id="manifest-detail-no-secret-values-exposed">Manifest detail (no secret values exposed)<a class="headerlink" href="#manifest-detail-no-secret-values-exposed" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>curl<span class="w"> </span>https://.../api/v1/admin/mcp/manifests/&lt;id&gt;<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>curl<span class="w"> </span>https://.../api/v1/admin/mcp/manifests/&lt;id&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Authorization: Bearer </span><span class="nv">$ADMIN_TOKEN</span><span class="s2">&quot;</span>
 </span></code></pre></div>
 <p>Returns <code>{manifest_id, active_version, secrets: [{key, mode, env_var_name?, rotated_at?}]}</code>. Ciphertext is never included in the response.</p>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <p>The two settings relevant to admin install live under <code>tier2:</code> in <code>config/default.yaml</code>:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">tier2</span><span class="p">:</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">fetch_allowed_hosts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">      </span><span class="c1"># empty = URL install disabled; paste only</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">max_manifest_bytes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">65536</span><span class="w">    </span><span class="c1"># 64 KB hard cap for URL fetches</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">tier2</span><span class="p">:</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">fetch_allowed_hosts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">      </span><span class="c1"># empty = URL install disabled; paste only</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">max_manifest_bytes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">65536</span><span class="w">    </span><span class="c1"># 64 KB hard cap for URL fetches</span>
 </span></code></pre></div>
 <p>The optional master encryption key is sourced from the <code>DOCBRAIN_MCP_SECRET_KEY</code> env var (base64-encoded 32 bytes). Without it, inline-mode secrets fail closed with 503 — env-mode secrets and Tier 1 manifests continue to work.</p>
 <div class="admonition note">
@@ -2823,8 +3036,10 @@
 <ul>
 <li>Each tool has <code>latency_budget_ms</code> (default <code>7000</code>).</li>
 <li>The orchestrator has an 8-second total wall-clock budget across the entire fan-out.</li>
+<li>The per-tool budget is the <strong>single source of truth</strong> for in-process REST shims (<code>jira-rest</code>, <code>confluence-rest</code>, <code>slack-rest</code>). The gateway injects the budget on every dispatch via an internal <code>X-DocBrain-Tool-Budget-Ms</code> header; the shim uses it as its upstream-call timeout. To change a timeout, edit the manifest — no code change required.</li>
 </ul>
 <p>A tool that takes longer than its own budget shows <code>timeout</code> on the chip. If you're seeing frequent timeouts on a specific tool, tune <code>latency_budget_ms</code> in the manifest — but staying under the 8-second orchestrator ceiling is what keeps <code>/ask</code> from feeling hung.</p>
+<p><strong>Security note for the budget header.</strong> The header is trusted only because the request already traversed the shim's loopback gate (<code>127.0.0.1</code> only) and constant-time bearer compare. The shim additionally clamps the header value to <code>[1000, 30000]</code> ms regardless of what it received, so a forged or misbehaving value cannot pin a worker.</p>
 <h3 id="egress-allow-list-is-enforced">Egress allow-list is enforced<a class="headerlink" href="#egress-allow-list-is-enforced" title="Permanent link">&para;</a></h3>
 <p>Every manifest declares <code>egress.hosts</code>. The orchestrator rejects upstream URLs that don't match. This is intentional — a malicious manifest can't be used to probe arbitrary internal services. If you add a manifest whose upstream lives at a new domain, declare it in <code>egress.hosts</code> or the requests will be blocked at dispatch time.</p>
 <hr />

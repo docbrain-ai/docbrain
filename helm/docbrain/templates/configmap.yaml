@@ -319,7 +319,7 @@ data:
   {{- else }}
   LEARNING_ENABLED: "false"
   {{- end }}
-  # MCP tool platform (Plan 4) — answer-time external tool dispatch.
+  # MCP tool platform — answer-time external tool dispatch.
   {{- if .Values.mcpTools.enabled }}
   MCP_TOOLS_ENABLED: "true"
   MCP_MANIFEST_DIR: "/etc/docbrain/mcp-manifests"

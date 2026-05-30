@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#mcp-shadow-run-plan-4-task-411" class="md-skip">
+        <a href="#mcp-shadow-run" class="md-skip">
           Skip to content
         </a>
       
@@ -1181,15 +1181,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#phase-1-capture-baseline-pre-plan-4" class="md-nav__link">
+  <a href="#phase-1-capture-baseline-pre-mcp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 1 — Capture baseline (pre-Plan-4)
+        Phase 1 — Capture baseline (pre-MCP)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase 1 — Capture baseline (pre-Plan-4)">
+    <nav class="md-nav" aria-label="Phase 1 — Capture baseline (pre-MCP)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1209,15 +1209,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#phase-2-flip-the-switch-post-plan-4" class="md-nav__link">
+  <a href="#phase-2-flip-the-switch-post-mcp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2 — Flip the switch (post-Plan-4)
+        Phase 2 — Flip the switch (post-MCP)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase 2 — Flip the switch (post-Plan-4)">
+    <nav class="md-nav" aria-label="Phase 2 — Flip the switch (post-MCP)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1529,15 +1529,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#phase-1-capture-baseline-pre-plan-4" class="md-nav__link">
+  <a href="#phase-1-capture-baseline-pre-mcp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 1 — Capture baseline (pre-Plan-4)
+        Phase 1 — Capture baseline (pre-MCP)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase 1 — Capture baseline (pre-Plan-4)">
+    <nav class="md-nav" aria-label="Phase 1 — Capture baseline (pre-MCP)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1557,15 +1557,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#phase-2-flip-the-switch-post-plan-4" class="md-nav__link">
+  <a href="#phase-2-flip-the-switch-post-mcp" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2 — Flip the switch (post-Plan-4)
+        Phase 2 — Flip the switch (post-MCP)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase 2 — Flip the switch (post-Plan-4)">
+    <nav class="md-nav" aria-label="Phase 2 — Flip the switch (post-MCP)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1643,78 +1643,78 @@
   
 
 
-<h1 id="mcp-shadow-run-plan-4-task-411">MCP shadow run — Plan 4 / Task 4.11<a class="headerlink" href="#mcp-shadow-run-plan-4-task-411" title="Permanent link">&para;</a></h1>
+<h1 id="mcp-shadow-run">MCP shadow run<a class="headerlink" href="#mcp-shadow-run" title="Permanent link">&para;</a></h1>
 <h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h2>
 <p>Capture a baseline of DocBrain answer quality BEFORE enabling the MCP
 tool platform, then re-run AFTER, and confirm pass count ≥ baseline.
-This is the gate Task 4.12 (the retirement commit) waits on.</p>
+This is the gate the retirement commit (removing the legacy enricher
+path) waits on.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] All 8 TODO cases authored in <code>tests/qa-judges/golden/management-questions-seed.yaml</code> (Task 4.10b).</li>
+<li>[ ] All 8 TODO cases authored in <code>tests/qa-judges/golden/management-questions-seed.yaml</code>.</li>
 <li>[ ] Judge calibration suite passing locally: <code>RUN_JUDGE_CALIBRATION=1 cargo test -p docbrain-core --test qa_judge_calibration -- --nocapture</code>. If calibration fails, do NOT proceed — judge has drifted.</li>
-<li>[ ] docbrain-poc cluster is running and healthy.</li>
-<li>[ ] Admin API key for docbrain-poc is available locally.</li>
+<li>[ ] Your DocBrain cluster is running and healthy.</li>
+<li>[ ] Admin API key for the cluster is available locally.</li>
 </ul>
 <h2 id="phase-0-cluster-prep-one-time-before-phase-1">Phase 0 — Cluster prep (one-time, before Phase 1)<a class="headerlink" href="#phase-0-cluster-prep-one-time-before-phase-1" title="Permanent link">&para;</a></h2>
-<p>In the sp-brain repo (<code>/Users/abhishek.sharma/sp/sp-brain/</code>):</p>
+<p>In your private values-overlay repo:</p>
 <ol>
-<li>Add the <code>mcpTools</code> block to <code>helm/docbrain/values-poc.yaml</code>. Place it
+<li>Add the <code>mcpTools</code> block to your <code>values-overlay.yaml</code>. Place it
    after the <code>sources:</code> block ends, near the <code># -- GitHub OAuth</code> section.
    Use this template:</li>
 </ol>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># -- MCP tool platform (Plan 4)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># -- MCP tool platform</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># Enables answer-time tool dispatch through external MCP servers.</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># Shadow-run config: both new orchestrator AND legacy JiraEnricher run</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># in parallel until Task 4.12&#39;s retirement commit deletes the legacy</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># path. Pass count from the judge framework must be ≥ baseline before</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># retirement can proceed.</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># in parallel until the retirement commit deletes the legacy path. Pass</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># count from the judge framework must be ≥ baseline before retirement</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># can proceed.</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nt">mcpTools</span><span class="p">:</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">   </span><span class="c1"># Phase 1 capture happens with this OFF</span>
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="c1"># OAuth: Atlassian credentials reuse the existing docbrain-poc-secret</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="c1"># OAuth: Atlassian credentials reuse the existing cluster secret</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="c1"># for the OAuth dance (per-user grants). Service-account auth picks up</span>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="c1"># JIRA_API_TOKEN that the existing JiraEnricher already uses — same</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="c1"># env var name, no double-config.</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">oauth</span><span class="p">:</span>
 </span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="nt">atlassian</span><span class="p">:</span>
 </span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">      </span><span class="c1"># clientId / clientSecret come from the externally managed</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">      </span><span class="c1"># docbrain-poc-secret as ATLASSIAN_OAUTH_CLIENT_ID /</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">      </span><span class="c1"># ATLASSIAN_OAUTH_CLIENT_SECRET. Leave blank here — Task 4.8&#39;s</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">      </span><span class="c1"># cluster secret as ATLASSIAN_OAUTH_CLIENT_ID /</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">      </span><span class="c1"># ATLASSIAN_OAUTH_CLIENT_SECRET. Leave blank here — the</span>
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">      </span><span class="c1"># secret.yaml template guards against rendering empty values.</span>
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">      </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">      </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
 </span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">  </span><span class="nt">serviceAccount</span><span class="p">:</span>
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">    </span><span class="nt">jira</span><span class="p">:</span>
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">      </span><span class="c1"># JIRA_API_TOKEN + JIRA_CLOUD_ID come from docbrain-poc-secret.</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">      </span><span class="c1"># JIRA_API_TOKEN + JIRA_CLOUD_ID come from the cluster secret.</span>
 </span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">      </span><span class="nt">apiToken</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
 </span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">      </span><span class="nt">cloudId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
 </span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>
 </span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">  </span><span class="c1"># 256-bit master key for at-rest token encryption (mcp_oauth_tokens</span>
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">  </span><span class="c1"># table). Must be set in docbrain-poc-secret as MCP_OAUTH_ENCRYPTION_KEY.</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">  </span><span class="c1"># table). Must be set in the cluster secret as MCP_OAUTH_ENCRYPTION_KEY.</span>
 </span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">  </span><span class="c1"># Generate with: openssl rand -hex 32</span>
 </span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="w">  </span><span class="nt">encryptionKey</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
 </span></code></pre></div>
-<p>Note: <code>values-poc.yaml</code> has <code>existingSecret: "docbrain-poc-secret"</code> set,
-   so helm SKIPS rendering the secret template entirely. The empty strings
-   above are intentional — actual values live in the externally managed
-   <code>docbrain-poc-secret</code> (added manually in Phase 2 Step 1).</p>
+<p>Note: if your overlay has <code>existingSecret</code> set, helm SKIPS rendering the
+   secret template entirely. The empty strings above are intentional —
+   actual values live in the externally managed cluster secret (added
+   manually in Phase 2 Step 1).</p>
 <ol>
-<li>Commit in the sp-brain repo (NOT the docbrain repo):</li>
+<li>Commit in your private values-overlay repo (NOT the DocBrain repo):</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>/Users/abhishek.sharma/sp/sp-brain
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>add<span class="w"> </span>helm/docbrain/values-poc.yaml
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat(docbrain-poc): mcpTools block for Plan 4 shadow run&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>add<span class="w"> </span>helm/docbrain/values-overlay.yaml
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: mcpTools block for shadow run&quot;</span>
 </span></code></pre></div>
 <p>After Phase 1 baseline is captured, flip <code>enabled: false</code> → <code>enabled: true</code>
 and helm upgrade for Phase 2.</p>
-<h2 id="phase-1-capture-baseline-pre-plan-4">Phase 1 — Capture baseline (pre-Plan-4)<a class="headerlink" href="#phase-1-capture-baseline-pre-plan-4" title="Permanent link">&para;</a></h2>
-<p>State at this point: <code>mcpTools.enabled=false</code> in values-poc.yaml. The
-legacy <code>JiraEnricher</code> is the only live-tool path.</p>
+<h2 id="phase-1-capture-baseline-pre-mcp">Phase 1 — Capture baseline (pre-MCP)<a class="headerlink" href="#phase-1-capture-baseline-pre-mcp" title="Permanent link">&para;</a></h2>
+<p>State at this point: <code>mcpTools.enabled=false</code> in the overlay. The legacy
+<code>JiraEnricher</code> is the only live-tool path.</p>
 <ol>
-<li>Confirm the cluster is on the pre-Plan-4 config:</li>
+<li>Confirm the cluster is on the pre-MCP config:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>docbrain-poc-config<span class="w"> </span>-n<span class="w"> </span>your-org<span class="w"> </span><span class="se">\</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>configmap<span class="w"> </span>docbrain-config<span class="w"> </span>-n<span class="w"> </span>your-org<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data.MCP_TOOLS_ENABLED}&#39;</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Expected: &quot;false&quot; or empty (rendered when mcpTools.enabled=false)</span>
 </span></code></pre></div>
@@ -1722,7 +1722,7 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <li>Run the seed batch against the live cluster:</li>
 </ol>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">RUN_SEED_BATCH</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nv">DOCBRAIN_SERVER_URL</span><span class="o">=</span>https://docbrain.poc.your-domain.example<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nv">DOCBRAIN_SERVER_URL</span><span class="o">=</span>https://docbrain.your-domain.example<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nv">DOCBRAIN_API_KEY</span><span class="o">=</span>&lt;admin-key-here&gt;<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-p<span class="w"> </span>docbrain-core<span class="w"> </span>--test<span class="w"> </span>qa_judge_seed_batch<span class="w"> </span>--<span class="w"> </span>--nocapture
 </span></code></pre></div>
@@ -1738,30 +1738,30 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <li>Promote the run to the canonical baseline file:</li>
 </ol>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cp<span class="w"> </span>tests/qa-judges/runs/seed-batch-&lt;latest&gt;.json<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">   </span>tests/qa-judges/runs/baseline-pre-plan-4.json
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>add<span class="w"> </span>tests/qa-judges/runs/baseline-pre-plan-4.json
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs(qa-judges): baseline-pre-plan-4 captured</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">   </span>tests/qa-judges/runs/baseline-pre-mcp.json
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>add<span class="w"> </span>tests/qa-judges/runs/baseline-pre-mcp.json
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs(qa-judges): baseline-pre-mcp captured</span>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s2">N cases graded against docbrain-poc with mcpTools.enabled=false</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="s2">N cases graded against the cluster with mcpTools.enabled=false</span>
 </span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="s2">(legacy JiraEnricher path only). Baseline:</span>
 </span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="s2">  pass: X</span>
 </span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="s2">  partial: Y</span>
 </span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="s2">  fail: Z</span>
 </span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s2">Task 4.12 (retirement commit) gate: post-flip pass count must</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="s2">The retirement commit gate: post-flip pass count must</span>
 </span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="s2">be ≥ X. Captured at: &lt;ISO-8601 timestamp&gt;.&quot;</span>
 </span></code></pre></div>
 <p>(The negation rule in <code>.gitignore</code> lets this specific file be tracked.)</p>
 <h3 id="acceptance-criteria-for-phase-1">Acceptance criteria for Phase 1<a class="headerlink" href="#acceptance-criteria-for-phase-1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Artifact file exists in <code>tests/qa-judges/runs/</code>.</li>
-<li>[ ] <code>baseline-pre-plan-4.json</code> exists at repo root and is committed.</li>
+<li>[ ] <code>baseline-pre-mcp.json</code> exists at repo root and is committed.</li>
 <li>[ ] Pass / partial / fail counts are recorded in the commit message.</li>
 </ul>
-<h2 id="phase-2-flip-the-switch-post-plan-4">Phase 2 — Flip the switch (post-Plan-4)<a class="headerlink" href="#phase-2-flip-the-switch-post-plan-4" title="Permanent link">&para;</a></h2>
+<h2 id="phase-2-flip-the-switch-post-mcp">Phase 2 — Flip the switch (post-MCP)<a class="headerlink" href="#phase-2-flip-the-switch-post-mcp" title="Permanent link">&para;</a></h2>
 <p>State change: enable the MCP platform.</p>
 <ol>
-<li><strong>Add the new env vars to docbrain-poc-secret</strong> (manual one-time setup
+<li><strong>Add the new env vars to the cluster secret</strong> (manual one-time setup
    — externally managed secret, not rendered by helm because
    <code>existingSecret</code> is set):</li>
 </ol>
@@ -1771,7 +1771,7 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Fetch the existing secret, patch in the new keys.</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Replace placeholders with real values from Atlassian admin console</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># and the /accessible-resources API call.</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-poc-secret<span class="w"> </span>-n<span class="w"> </span>your-org<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-secret<span class="w"> </span>-n<span class="w"> </span>your-org<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>--arg<span class="w"> </span>k<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>cat<span class="w"> </span>/tmp/mcp-key<span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">       </span>--arg<span class="w"> </span>cid<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">printf</span><span class="w"> </span><span class="s1">&#39;%s&#39;</span><span class="w"> </span><span class="s1">&#39;&lt;atlassian-client-id&gt;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">       </span>--arg<span class="w"> </span>csec<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">printf</span><span class="w"> </span><span class="s1">&#39;%s&#39;</span><span class="w"> </span><span class="s1">&#39;&lt;atlassian-client-secret&gt;&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -1783,7 +1783,7 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 </span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-
 </span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
 </span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1"># Verify the keys are in place (do NOT print values):</span>
-</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-poc-secret<span class="w"> </span>-n<span class="w"> </span>your-org<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-secret<span class="w"> </span>-n<span class="w"> </span>your-org<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">&#39;{.data}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;keys[]&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;MCP_|ATLASSIAN_|JIRA_&#39;</span>
 </span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
 </span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="c1"># Wipe the temp file:</span>
@@ -1792,20 +1792,19 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <p>Existing <code>JIRA_API_TOKEN</code> in the secret is reused — no action needed.</p>
 <ol>
 <li>
-<p>Flip the helm value. In sp-brain's <code>helm/docbrain/values-poc.yaml</code>,
+<p>Flip the helm value. In your overlay's <code>values-overlay.yaml</code>,
    change <code>mcpTools.enabled: false</code> → <code>mcpTools.enabled: true</code>.</p>
 </li>
 <li>
-<p>Roll out the helm change. From the sp-brain repo:</p>
+<p>Roll out the helm change. From your private values-overlay repo:</p>
 </li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nb">cd</span><span class="w"> </span>/Users/abhishek.sharma/sp/sp-brain
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>helm/docbrain<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values-poc.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--namespace<span class="w"> </span>your-org
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/docbrain-server<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--namespace<span class="w"> </span>your-org<span class="w"> </span>--timeout<span class="o">=</span>5m
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>helm/docbrain<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values-overlay.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>--namespace<span class="w"> </span>your-org
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>kubectl<span class="w"> </span>rollout<span class="w"> </span>status<span class="w"> </span>deploy/docbrain-server<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--namespace<span class="w"> </span>your-org<span class="w"> </span>--timeout<span class="o">=</span>5m
 </span></code></pre></div>
 <ol>
 <li>Verify the orchestrator is wired:</li>
@@ -1821,7 +1820,7 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <li>Run the seed batch AGAIN against the same cluster:</li>
 </ol>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">RUN_SEED_BATCH</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nv">DOCBRAIN_SERVER_URL</span><span class="o">=</span>https://docbrain.poc.your-domain.example<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nv">DOCBRAIN_SERVER_URL</span><span class="o">=</span>https://docbrain.your-domain.example<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nv">DOCBRAIN_API_KEY</span><span class="o">=</span>&lt;admin-key-here&gt;<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-p<span class="w"> </span>docbrain-core<span class="w"> </span>--test<span class="w"> </span>qa_judge_seed_batch<span class="w"> </span>--<span class="w"> </span>--nocapture
 </span></code></pre></div>
@@ -1829,7 +1828,7 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <li>Compare the new artifact against baseline:</li>
 </ol>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>bash<span class="w"> </span>scripts/compare-judge-runs.sh<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>tests/qa-judges/runs/baseline-pre-plan-4.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>tests/qa-judges/runs/baseline-pre-mcp.json<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>tests/qa-judges/runs/seed-batch-&lt;new&gt;.json
 </span></code></pre></div>
 <h3 id="acceptance-criteria-for-phase-2">Acceptance criteria for Phase 2<a class="headerlink" href="#acceptance-criteria-for-phase-2" title="Permanent link">&para;</a></h3>
@@ -1845,12 +1844,12 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <ul>
 <li>
 <p><strong>Exit 0 (PASS count NEW ≥ baseline AND no PASS → FAIL regression)</strong>:
-  Proceed to Task 4.12 (retirement commit). The retirement is safe.</p>
+  Proceed to the retirement commit. The retirement is safe.</p>
 </li>
 <li>
 <p><strong>Exit 2 (a question regressed PASS → FAIL)</strong>:
-  Block Task 4.12. The new platform is producing a wrong answer in a
-  case the old platform handled. Either the tool is returning bad data,
+  Block the retirement commit. The new platform is producing a wrong answer
+  in a case the old platform handled. Either the tool is returning bad data,
   the dispatch decision is wrong, or the block formatter is corrupting
   the prompt.</p>
 </li>
@@ -1871,18 +1870,19 @@ legacy <code>JiraEnricher</code> is the only live-tool path.</p>
 <ul>
 <li>[ ] <code>compare-judge-runs.sh</code> exits 0.</li>
 <li>[ ] Decision (proceed / investigate / block) recorded in the LESSONS.md
-      decision journal entry for Task 4.11.</li>
+      decision journal entry for the shadow run.</li>
 </ul>
 <h2 id="rollback-if-anything-goes-wrong">Rollback (if anything goes wrong)<a class="headerlink" href="#rollback-if-anything-goes-wrong" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Revert to pre-Plan-4 config without code rollback:</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Revert to pre-MCP config without code rollback:</span>
 </span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>helm/docbrain<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values-poc.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>-f<span class="w"> </span>helm/docbrain/values-overlay.yaml<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>--set<span class="w"> </span>mcpTools.enabled<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span>--namespace<span class="w"> </span>your-org
 </span></code></pre></div>
 <p>This disables the orchestrator at the config layer — code stays deployed
-but the runtime path skips the orchestrator entirely (Task 4.4 invariant).</p>
+but the runtime path skips the orchestrator entirely (the runtime
+gating invariant: when the flag is off, no orchestrator is constructed).</p>
 
 
 
