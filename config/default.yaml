@@ -526,6 +526,20 @@ expertise_gate:
   ui_confidently_wrong_bar: ${EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR:-0.0}  # Max audited confidently-wrong rate to show confident attributions
   ui_min_audit_samples: ${EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES:-30}           # Min audited labels before the gate can open
 
+# ── Doc-improvement evidence loop ─────────────────────────────────────────────
+# The autopilot improvement evidence chain reports how far each published fix got
+# along the proven path (published -> content-changed -> re-ingest-confirmed ->
+# human-approved -> measured-delta), each link at its true strength.
+#
+# reingest_confirm_timeout_hours is load-bearing: a published fix whose re-ingest
+# has NOT been confirmed within this window is reported as "stale — published but
+# never confirmed live" (something went wrong downstream) instead of the hopeful
+# "published, not yet confirmed live" (the normal batch sync just hasn't run yet).
+# Default 72h is long enough that a normal sync always lands first, so "stale"
+# reliably signals a real failure, not a slow pipeline.
+improvement:
+  reingest_confirm_timeout_hours: ${IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS:-72}  # Hours before an unconfirmed published fix is flagged stale
+
 # ── CI/CD Pipeline Capture ──────────────────────────────────────────────
 # Automated knowledge extraction from merged PRs and deployments.
 # Uses the fast/cheap LLM model for analysis.

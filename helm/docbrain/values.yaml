@@ -309,6 +309,15 @@ expertiseGate:
   uiConfidentlyWrongBar: 0.0     # Max audited confidently-wrong rate to show confident attributions
   uiMinAuditSamples: 30          # Min audited labels before the gate can open
 
+# -- Doc-improvement evidence loop
+# The autopilot improvement evidence chain reports how far each published fix got
+# along the proven path, each link at its true strength. The re-ingest-confirm
+# timeout is load-bearing: a published fix not confirmed live within this window
+# is reported "stale — published but never confirmed live" (a downstream failure)
+# instead of "published, not yet confirmed live" (the normal in-flight state).
+improvement:
+  reingestConfirmTimeoutHours: 72   # Hours before an unconfirmed published fix is flagged stale
+
 # -- Knowledge Stream — proactive push intelligence
 # Detects and pushes: incident warnings, knowledge decay risks,
 # expertise gaps, and context-aware doc updates.

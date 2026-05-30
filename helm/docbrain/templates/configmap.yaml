@@ -232,6 +232,11 @@ data:
   EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR: {{ .Values.expertiseGate.uiConfidentlyWrongBar | default 0.0 | quote }}
   EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES: {{ .Values.expertiseGate.uiMinAuditSamples | default 30 | quote }}
   {{- end }}
+  # Doc-improvement evidence loop. The re-ingest-confirm timeout distinguishes a
+  # stuck publish ("stale — never confirmed live") from a normal in-flight one.
+  {{- if .Values.improvement }}
+  IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS: {{ .Values.improvement.reingestConfirmTimeoutHours | default 72 | quote }}
+  {{- end }}
   # Knowledge Stream
   {{- if .Values.stream.enabled }}
   STREAM_ENABLED: "true"

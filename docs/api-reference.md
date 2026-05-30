@@ -751,6 +751,49 @@ Publishes an approved draft to the configured target system. Creates a page (Con
 
 ---
 
+### Doc-Improvement Evidence
+
+```
+GET /api/v1/admin/improvement/evidence?limit=50
+```
+
+Returns the labeled evidence chains for auto-published fixes plus an honest aggregate. Each chain reports how far a fix progressed along the proven path — published → content-changed → re-ingest-confirmed → human-approved → measured freshness/quality delta — with every link at its true strength (`proven`, `pending`, `weak`, or `not_applicable`). There is no single "improved" boolean; intent is never reported as outcome, and a freshness/quality delta is shown only when it was actually measurable.
+
+A published fix not confirmed live within the configured re-ingest-confirm timeout (`IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS`, default 72 hours) is reported on its re-ingest link as `weak` with the label "stale — published but never confirmed live", distinguishing a stuck publish from a normal in-flight one (labelled "published, not yet confirmed live").
+
+**Query Parameters:**
+- `limit` (optional, default `50`) — Maximum number of chains to return, newest first. Clamped to a server-side maximum.
+
+**Response:**
+```json
+{
+  "chains": [
+    {
+      "draft_id": "uuid",
+      "target_document_id": "uuid",
+      "proven_depth": 2,
+      "links": [
+        { "key": "published", "state": "proven", "label": "published toward gap", "detail": null },
+        { "key": "content_changed", "state": "pending", "label": "awaiting re-ingest", "detail": null },
+        { "key": "reingest_confirmed", "state": "weak", "label": "stale — published but never confirmed live", "detail": null },
+        { "key": "human_approved", "state": "proven", "label": "approved by human review", "detail": null },
+        { "key": "delta", "state": "not_applicable", "label": "delta not measurable for this fix", "detail": null }
+      ]
+    }
+  ],
+  "aggregate": {
+    "published": 12,
+    "reingest_confirmed": 7,
+    "human_approved": 5,
+    "measured_improvement": 3
+  }
+}
+```
+
+**Auth:** Admin role.
+
+---
+
 ## Publish Targets
 
 Manage per-space publish target routing. Admin-only endpoints.

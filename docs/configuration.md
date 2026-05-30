@@ -1780,6 +1780,16 @@ A second gate controls whether confident ownership attributions are shown to end
 | `EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR` | `0.0` | Maximum audited confidently-wrong rate at which confident attributions may be shown. At the default `0.0`, only a measured 0% wrong rate clears the gate. |
 | `EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES` | `30` | Minimum number of audited labels required before the gate can open. Insufficient evidence never clears the gate — "no evidence" is not "0% wrong". |
 
+## Doc-Improvement Evidence Loop
+
+The doc-improvement evidence chain reports how far each auto-published fix progressed along the proven path (published → content-changed → re-ingest-confirmed → human-approved → measured freshness/quality delta), with each link shown at its true strength rather than as a single "improved" flag.
+
+The re-ingest-confirm timeout is load-bearing: a published fix whose re-ingest has not been confirmed live within this window is reported as "stale — published but never confirmed live" (signalling a downstream failure) rather than the hopeful "published, not yet confirmed live" (the normal in-flight state while the batch sync catches up). The default is long enough that a normal sync always lands first, so "stale" reliably indicates a real problem, not a slow pipeline.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS` | `72` | Hours after publish, with no re-ingest confirmation, before a fix is reported "stale — published but never confirmed live" instead of "published, not yet confirmed live". |
+
 ## External Connectors (HTTP Connector Protocol)
 
 External connectors are stateless HTTP servers that implement a simple REST contract (`GET /health`, `POST /documents/list`, `POST /documents/fetch`). DocBrain calls them on a configurable cron schedule to ingest documents from external systems. Connectors are registered and managed via the admin API.
