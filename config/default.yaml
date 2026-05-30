@@ -507,6 +507,25 @@ governance:
   sla_checker_max_candidates: ${SLA_CHECKER_MAX_CANDIDATES:-5000}           # Max candidate entities per type
   sla_checker_max_events_per_run: ${SLA_CHECKER_MAX_EVENTS_PER_RUN:-50}     # Max SlaBreached events per run
 
+# ── Expertise Ownership Gate ─────────────────────────────────────────────
+# Thresholds the scorer applies before publishing a (subject, team) ownership
+# attribution; all must hold or it abstains. Defaults are an abstain-heavy
+# posture (high precision); tune post-launch from the governance dashboard.
+# An absent section reproduces the conservative defaults exactly.
+expertise_gate:
+  v_min: ${EXPERTISE_GATE_V_MIN:-1.0}                 # Min decayed team_score (volume gate)
+  n_min: ${EXPERTISE_GATE_N_MIN:-5}                   # Min raw signal_count (volume gate)
+  m_askers: ${EXPERTISE_GATE_M_ASKERS:-2}             # Min distinct askers
+  margin_frac: ${EXPERTISE_GATE_MARGIN_FRAC:-0.25}    # Min fraction leader must beat 2nd place
+  diversity_min: ${EXPERTISE_GATE_DIVERSITY_MIN:-2}   # Min distinct signal_type count
+  # UI accuracy gate — confident ownership is shown to users only when measured
+  # accuracy clears the configured bar AND the gate is enabled AND there is
+  # enough audited evidence; disabled by default so a new deployment abstains
+  # until accuracy is proven from the /governance/accuracy risk-coverage curve.
+  ui_gate_enabled: ${EXPERTISE_GATE_UI_ENABLED:-false}                       # Master switch; false = always abstain
+  ui_confidently_wrong_bar: ${EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR:-0.0}  # Max audited confidently-wrong rate to show confident attributions
+  ui_min_audit_samples: ${EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES:-30}           # Min audited labels before the gate can open
+
 # ── CI/CD Pipeline Capture ──────────────────────────────────────────────
 # Automated knowledge extraction from merged PRs and deployments.
 # Uses the fast/cheap LLM model for analysis.

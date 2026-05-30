@@ -218,6 +218,20 @@ data:
   VELOCITY_TRIBAL_MAX_EXPERTS:      {{ .Values.velocity.tribalMaxExpertsPerDomain | default 2 | quote }}
   VELOCITY_TRIBAL_MIN_DOMAINS:      {{ .Values.velocity.tribalMinDomainsWithSignal | default 3 | quote }}
   VELOCITY_MAINTENANCE_TREND_MIN_SNAPSHOTS: {{ .Values.velocity.maintenanceTrendMinSnapshots | default 4 | quote }}
+  # Expertise Ownership Gate — thresholds the scorer clears before publishing a
+  # (subject, team) attribution. UI accuracy gate controls whether confident
+  # attributions reach end users; disabled by default until accuracy is proven.
+  {{- if .Values.expertiseGate }}
+  EXPERTISE_GATE_V_MIN: {{ .Values.expertiseGate.vMin | default 1.0 | quote }}
+  EXPERTISE_GATE_N_MIN: {{ .Values.expertiseGate.nMin | default 5 | quote }}
+  EXPERTISE_GATE_M_ASKERS: {{ .Values.expertiseGate.mAskers | default 2 | quote }}
+  EXPERTISE_GATE_MARGIN_FRAC: {{ .Values.expertiseGate.marginFrac | default 0.25 | quote }}
+  EXPERTISE_GATE_DIVERSITY_MIN: {{ .Values.expertiseGate.diversityMin | default 2 | quote }}
+  # Booleans use hasKey so an explicit `false` is not silently overridden.
+  EXPERTISE_GATE_UI_ENABLED: {{ if hasKey .Values.expertiseGate "uiGateEnabled" }}{{ .Values.expertiseGate.uiGateEnabled | quote }}{{ else }}"false"{{ end }}
+  EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR: {{ .Values.expertiseGate.uiConfidentlyWrongBar | default 0.0 | quote }}
+  EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES: {{ .Values.expertiseGate.uiMinAuditSamples | default 30 | quote }}
+  {{- end }}
   # Knowledge Stream
   {{- if .Values.stream.enabled }}
   STREAM_ENABLED: "true"

@@ -292,6 +292,23 @@ velocity:
   tribalMinDomainsWithSignal: 3      # Minimum distinct domains with feedback before the percentage is reported
   maintenanceTrendMinSnapshots: 4    # Minimum snapshots with flow signal before Maintenance Trend reports a verdict
 
+# -- Expertise Ownership Gate
+# Thresholds the scorer applies before publishing a (subject, team) ownership
+# attribution; all must hold or it abstains. Defaults are abstain-heavy (high
+# precision). See docs/configuration.md § "Expertise Ownership Gate".
+expertiseGate:
+  vMin: 1.0            # Min decayed team score (volume gate)
+  nMin: 5             # Min raw signal count (volume gate)
+  mAskers: 2          # Min distinct askers
+  marginFrac: 0.25    # Min fraction the leading team must beat the runner-up
+  diversityMin: 2     # Min distinct signal types supporting the attribution
+  # UI accuracy gate — confident ownership is shown to users only when measured
+  # accuracy clears the bar AND the gate is enabled AND there is enough audited
+  # evidence. Disabled by default so a new deployment abstains until proven.
+  uiGateEnabled: false           # Master switch; false = UI always abstains
+  uiConfidentlyWrongBar: 0.0     # Max audited confidently-wrong rate to show confident attributions
+  uiMinAuditSamples: 30          # Min audited labels before the gate can open
+
 # -- Knowledge Stream — proactive push intelligence
 # Detects and pushes: incident warnings, knowledge decay risks,
 # expertise gaps, and context-aware doc updates.

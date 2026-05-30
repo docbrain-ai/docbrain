@@ -1405,6 +1405,26 @@ Kubernetes API.
 
 ---
 
+## Admin — Ownership Accuracy Audit
+
+### POST /api/v1/admin/ownership/audit
+
+Run an accuracy audit over the labeled ownership set. This evaluates how often the expertise scorer's confident attributions are wrong, and derives the confidence cutoff that meets a target error rate — the evidence operators use to decide whether to open the UI accuracy gate. Admin role required.
+
+**Request body:**
+```json
+{
+  "target_error": 0.05,
+  "split_frac": 0.5
+}
+```
+- `target_error` — the maximum confidently-wrong rate to target when deriving the confidence cutoff (e.g. `0.0`–`1.0`).
+- `split_frac` — the calibration/test split fraction; clamped internally to `[0.1, 0.9]`.
+
+**Response (200):** an accuracy summary containing the confident and abstain totals, the measured confidently-wrong rate, the area under the risk-coverage curve, the full risk-coverage curve, and the calibrate-then-test report.
+
+---
+
 ## Knowledge Graph
 
 ### GET /api/v1/graph/entity/{name}

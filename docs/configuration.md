@@ -1758,6 +1758,28 @@ The SLA checker runs as a periodic background task that detects breaches across 
 
 See the [API Reference — Governance SLAs](api-reference.md#governance-slas) for endpoint documentation.
 
+## Expertise Ownership Gate
+
+The expertise scorer attributes ownership of a subject area to a team based on captured signals (questions answered, documents authored, reviews, etc.). Before it publishes a `(subject, team)` attribution, it must clear several thresholds; if any fails, it abstains rather than guess. The defaults are deliberately abstain-heavy (high precision over recall) so a fresh deployment does not surface low-confidence attributions.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EXPERTISE_GATE_V_MIN` | `1.0` | Minimum decayed team score (volume gate). |
+| `EXPERTISE_GATE_N_MIN` | `5` | Minimum raw signal count (volume gate). |
+| `EXPERTISE_GATE_M_ASKERS` | `2` | Minimum number of distinct people who asked about the subject. |
+| `EXPERTISE_GATE_MARGIN_FRAC` | `0.25` | Minimum fraction by which the leading team must beat the runner-up. |
+| `EXPERTISE_GATE_DIVERSITY_MIN` | `2` | Minimum number of distinct signal types supporting the attribution. |
+
+### UI accuracy gate
+
+A second gate controls whether confident ownership attributions are shown to end users at all. Confident attributions surface only when the measured (audited) confidently-wrong rate is within the configured bar, the gate is explicitly enabled, and there is enough audited evidence to trust the rate. The gate is disabled by default, so a new deployment abstains in the UI until an operator proves accuracy and sets the bar from the measured risk-coverage curve.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EXPERTISE_GATE_UI_ENABLED` | `false` | Master switch. When `false`, the UI always abstains on confident attributions. |
+| `EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR` | `0.0` | Maximum audited confidently-wrong rate at which confident attributions may be shown. At the default `0.0`, only a measured 0% wrong rate clears the gate. |
+| `EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES` | `30` | Minimum number of audited labels required before the gate can open. Insufficient evidence never clears the gate — "no evidence" is not "0% wrong". |
+
 ## External Connectors (HTTP Connector Protocol)
 
 External connectors are stateless HTTP servers that implement a simple REST contract (`GET /health`, `POST /documents/list`, `POST /documents/fetch`). DocBrain calls them on a configurable cron schedule to ingest documents from external systems. Connectors are registered and managed via the admin API.
