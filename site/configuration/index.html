@@ -1691,6 +1691,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#doc-improvement-evidence-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doc-Improvement Evidence Loop
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#external-connectors-http-connector-protocol" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3913,6 +3924,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doc-improvement-evidence-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doc-Improvement Evidence Loop
+      
+    </span>
+  </a>
   
 </li>
       
@@ -6767,22 +6789,27 @@ as <code>pending</code> → <code>ok</code> (or <code>failed</code> / <code>requ
 <tr>
 <td><code>VELOCITY_TRIBAL_V2_ENABLED</code></td>
 <td><code>true</code></td>
-<td>Switch to v2 tribal-knowledge methodology (admin-excluded, configurable threshold, insufficient-signal gate). Set <code>false</code> for the legacy v1 formula.</td>
-</tr>
-<tr>
-<td><code>VELOCITY_TRIBAL_EXCLUDE_ADMIN</code></td>
-<td><code>true</code></td>
-<td><strong>v2 only.</strong> Exclude admin users from the expert population.</td>
+<td>Switch to v2 tribal-knowledge methodology (real domain entities, configurable threshold, insufficient-signal gate). Set <code>false</code> for the legacy v1 formula.</td>
 </tr>
 <tr>
 <td><code>VELOCITY_TRIBAL_MAX_EXPERTS</code></td>
 <td><code>2</code></td>
-<td><strong>v2 only.</strong> Domains with ≤ this many distinct non-admin experts in the last 90 days are counted as "tribal." Raise for larger orgs.</td>
+<td><strong>v2 only.</strong> Domains with ≤ this many distinct experts are counted as "tribal." Raise for larger orgs.</td>
 </tr>
 <tr>
 <td><code>VELOCITY_TRIBAL_MIN_DOMAINS</code></td>
 <td><code>3</code></td>
 <td><strong>v2 only.</strong> Minimum distinct domains with positive-feedback signal before the percentage is reported. Below this, the dashboard shows "Insufficient signal."</td>
+</tr>
+<tr>
+<td><code>VELOCITY_BULK_UPDATE_MULTIPLE</code></td>
+<td><code>10.0</code></td>
+<td>Bulk re-ingest guard for net knowledge velocity. A week whose updated-doc count exceeds this multiple of the rolling weekly-update norm is treated as a bulk sweep (e.g. a full re-ingest) and capped to the norm, so it cannot inflate the velocity headline or flip the maintenance trend to "accelerating". Lower it on a corpus with very steady authoring to catch smaller sweeps; raise it if legitimate maintenance bursts are being mistaken for sweeps. <strong>Must be finite and <code>&gt;= 1.0</code></strong> — a value of 0, negative, or NaN collapses the bulk-sweep threshold to 0 (every week misclassified as a sweep) and is rejected at startup with a clear error.</td>
+</tr>
+<tr>
+<td><code>VELOCITY_SUBSTANTIVE_UPDATE_CEILING</code></td>
+<td><code>2000</code></td>
+<td>Absolute ceiling on a single week's substantive (bulk-excluded) update contribution. Applied after the rolling-norm cap to guard the case where the entire history is inflated and the rolling median itself is poisoned. A genuine week of hand-authored doc updates does not exceed this. <strong>Must be <code>&gt;= 1</code></strong> — a negative value or 0 silently zeroes all substantive updates and is rejected at startup with a clear error.</td>
 </tr>
 </tbody>
 </table>
@@ -7016,18 +7043,21 @@ on a doc in that domain as an "expert." Two problems:</p>
 </li>
 </ol>
 <h4 id="how-v2-fixes-it-the-recommended-default_1">How v2 fixes it (the recommended default)<a class="headerlink" href="#how-v2-fixes-it-the-recommended-default_1" title="Permanent link">&para;</a></h4>
-<p>Three corrections, mirroring the ROI v2 design:</p>
+<p>Two corrections:</p>
 <ol>
 <li>
-<p><strong>Exclude admin from the expert population.</strong> Same reasoning as
-   ROI: operators rate their own work. Controlled by
-   <code>VELOCITY_TRIBAL_EXCLUDE_ADMIN</code> (default <code>true</code>).</p>
+<p><strong>Count experts from real knowledge domains.</strong> v2 reads the
+   ownership substrate — real domain entities with their attributed
+   contributors — instead of grouping feedback by raw source
+   containers (a Confluence space or Slack channel masquerading as a
+   "domain"). The expert count reflects genuine subject-matter
+   ownership.</p>
 </li>
 <li>
 <p><strong>Make the threshold tunable.</strong> <code>VELOCITY_TRIBAL_MAX_EXPERTS</code>
    (default <code>2</code>) sets the cutoff: domains with ≤ this many distinct
-   non-admin experts in the last 90 days are tribal. A small team
-   might lower to 1; a large org might raise to 5.</p>
+   experts are tribal. A small team might lower to 1; a large org
+   might raise to 5.</p>
 </li>
 <li>
 <p><strong>Require enough domains to draw a conclusion.</strong> If fewer than
@@ -7505,6 +7535,25 @@ unqualified "Trend:" verdicts that look contradictory.</p>
 <td><code>EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES</code></td>
 <td><code>30</code></td>
 <td>Minimum number of audited labels required before the gate can open. Insufficient evidence never clears the gate — "no evidence" is not "0% wrong".</td>
+</tr>
+</tbody>
+</table>
+<h2 id="doc-improvement-evidence-loop">Doc-Improvement Evidence Loop<a class="headerlink" href="#doc-improvement-evidence-loop" title="Permanent link">&para;</a></h2>
+<p>The doc-improvement evidence chain reports how far each auto-published fix progressed along the proven path (published → content-changed → re-ingest-confirmed → human-approved → measured freshness/quality delta), with each link shown at its true strength rather than as a single "improved" flag.</p>
+<p>The re-ingest-confirm timeout is load-bearing: a published fix whose re-ingest has not been confirmed live within this window is reported as "stale — published but never confirmed live" (signalling a downstream failure) rather than the hopeful "published, not yet confirmed live" (the normal in-flight state while the batch sync catches up). The default is long enough that a normal sync always lands first, so "stale" reliably indicates a real problem, not a slow pipeline.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS</code></td>
+<td><code>72</code></td>
+<td>Hours after publish, with no re-ingest confirmation, before a fix is reported "stale — published but never confirmed live" instead of "published, not yet confirmed live".</td>
 </tr>
 </tbody>
 </table>

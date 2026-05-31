@@ -286,9 +286,8 @@ velocity:
   # Tribal Knowledge v2 — applies the same defensive methodology to the
   # tribal-knowledge percentage. See docs/configuration.md §
   # "Tribal Knowledge methodology".
-  tribalV2Enabled: true              # Switch to v2 formula
-  tribalExcludeAdmin: true           # Exclude admin votes from the expert population
-  tribalMaxExpertsPerDomain: 2       # Domains with ≤ this many distinct non-admin experts are "tribal"
+  tribalV2Enabled: true              # Switch to v2 formula (real domain entities, configurable threshold, insufficient-signal gate)
+  tribalMaxExpertsPerDomain: 2       # Domains with ≤ this many distinct experts are "tribal"
   tribalMinDomainsWithSignal: 3      # Minimum distinct domains with feedback before the percentage is reported
   maintenanceTrendMinSnapshots: 4    # Minimum snapshots with flow signal before Maintenance Trend reports a verdict
 

@@ -1341,9 +1341,8 @@ SELECT source_type, COUNT(*) FROM document_acl GROUP BY source_type;
 | `VELOCITY_ROI_MIN_DISTINCT_USERS` | `3` | **v2 only.** Minimum distinct non-admin users with positive feedback before a number is reported. Below this, the dashboard shows "Insufficient signal". |
 | `VELOCITY_ROI_EXCLUDE_ADMIN` | `true` | **v2 only.** Exclude admin users from the ROI population (admins tend to vote on their own answers). |
 | `VELOCITY_ROI_MAX_VOTES_PER_USER` | `10` | **v2 only.** Per-user cap on positive votes counted inside the window. Prevents one power-user from dominating the org-wide number. |
-| `VELOCITY_TRIBAL_V2_ENABLED` | `true` | Switch to v2 tribal-knowledge methodology (admin-excluded, configurable threshold, insufficient-signal gate). Set `false` for the legacy v1 formula. |
-| `VELOCITY_TRIBAL_EXCLUDE_ADMIN` | `true` | **v2 only.** Exclude admin users from the expert population. |
-| `VELOCITY_TRIBAL_MAX_EXPERTS` | `2` | **v2 only.** Domains with ≤ this many distinct non-admin experts in the last 90 days are counted as "tribal." Raise for larger orgs. |
+| `VELOCITY_TRIBAL_V2_ENABLED` | `true` | Switch to v2 tribal-knowledge methodology (real domain entities, configurable threshold, insufficient-signal gate). Set `false` for the legacy v1 formula. |
+| `VELOCITY_TRIBAL_MAX_EXPERTS` | `2` | **v2 only.** Domains with ≤ this many distinct experts are counted as "tribal." Raise for larger orgs. |
 | `VELOCITY_TRIBAL_MIN_DOMAINS` | `3` | **v2 only.** Minimum distinct domains with positive-feedback signal before the percentage is reported. Below this, the dashboard shows "Insufficient signal." |
 | `VELOCITY_BULK_UPDATE_MULTIPLE` | `10.0` | Bulk re-ingest guard for net knowledge velocity. A week whose updated-doc count exceeds this multiple of the rolling weekly-update norm is treated as a bulk sweep (e.g. a full re-ingest) and capped to the norm, so it cannot inflate the velocity headline or flip the maintenance trend to "accelerating". Lower it on a corpus with very steady authoring to catch smaller sweeps; raise it if legitimate maintenance bursts are being mistaken for sweeps. **Must be finite and `>= 1.0`** — a value of 0, negative, or NaN collapses the bulk-sweep threshold to 0 (every week misclassified as a sweep) and is rejected at startup with a clear error. |
 | `VELOCITY_SUBSTANTIVE_UPDATE_CEILING` | `2000` | Absolute ceiling on a single week's substantive (bulk-excluded) update contribution. Applied after the rolling-norm cap to guard the case where the entire history is inflated and the rolling median itself is poisoned. A genuine week of hand-authored doc updates does not exceed this. **Must be `>= 1`** — a negative value or 0 silently zeroes all substantive updates and is rejected at startup with a clear error. |
@@ -1524,16 +1523,19 @@ on a doc in that domain as an "expert." Two problems:
 
 #### How v2 fixes it (the recommended default)
 
-Three corrections, mirroring the ROI v2 design:
+Two corrections:
 
-1. **Exclude admin from the expert population.** Same reasoning as
-   ROI: operators rate their own work. Controlled by
-   `VELOCITY_TRIBAL_EXCLUDE_ADMIN` (default `true`).
+1. **Count experts from real knowledge domains.** v2 reads the
+   ownership substrate — real domain entities with their attributed
+   contributors — instead of grouping feedback by raw source
+   containers (a Confluence space or Slack channel masquerading as a
+   "domain"). The expert count reflects genuine subject-matter
+   ownership.
 
 2. **Make the threshold tunable.** `VELOCITY_TRIBAL_MAX_EXPERTS`
    (default `2`) sets the cutoff: domains with ≤ this many distinct
-   non-admin experts in the last 90 days are tribal. A small team
-   might lower to 1; a large org might raise to 5.
+   experts are tribal. A small team might lower to 1; a large org
+   might raise to 5.
 
 3. **Require enough domains to draw a conclusion.** If fewer than
    `VELOCITY_TRIBAL_MIN_DOMAINS` domains have any positive-feedback
