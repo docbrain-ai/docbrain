@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://docbrainapi.com/docs/rbac/">
+        <link rel="canonical" href="https://docbrainapi.com/docs/trust/">
       
       
-        <link rel="prev" href="../kubernetes/">
+        <link rel="prev" href="../governance/">
       
       
-        <link rel="next" href="../access-control/">
+        <link rel="next" href="../style-policy/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>RBAC & SSO - DocBrain Docs</title>
+        <title>How DocBrain Earns Trust - DocBrain Docs</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#docbrain-rbac-sso-access-control" class="md-skip">
+        <a href="#how-docbrain-earns-trust" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              RBAC & SSO
+              How DocBrain Earns Trust
             
           </span>
         </div>
@@ -461,8 +461,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -473,13 +475,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -500,7 +500,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -627,10 +627,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../trust/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How DocBrain Earns Trust
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -646,6 +673,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-it-abstains-instead-of-guessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. It abstains instead of guessing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-confident-ownership-is-gated-behind-a-real-accuracy-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Confident ownership is gated behind a real accuracy audit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-every-claim-shows-its-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Every claim shows its evidence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-humans-stay-in-the-loop-and-rubber-stamps-dont-count" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Humans stay in the loop — and rubber stamps don't count
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-its-honest-about-its-own-confidence-especially-when-data-is-thin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. It's honest about its own confidence, especially when data is thin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-honest-boundary-of-the-guarantee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The honest boundary of the guarantee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -975,8 +1099,6 @@
       
   
   
-    
-  
   
   
     
@@ -989,11 +1111,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -1014,7 +1138,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1057,37 +1181,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    RBAC & SSO
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
         
   
   
@@ -1103,192 +1200,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#roles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Roles
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuring-sso-providers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuring SSO Providers
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuring SSO Providers">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#github-oauth" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitHub OAuth
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#gitlab-oidc" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitLab OIDC
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#generic-oidc-azure-ad-okta-google-keycloak" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generic OIDC (Azure AD, Okta, Google, Keycloak)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#role-assignment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Role Assignment
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#access-gate-allowlist" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Access Gate (Allowlist)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Access Gate (Allowlist)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#allow-specific-groups-only" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Allow specific groups only
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#allow-specific-email-domains-only" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Allow specific email domains only
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#both-together-or-logic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Both together (OR logic)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#combining-access-gate-with-role-assignment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Combining access gate with role assignment
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#access-control-for-cli-slack-and-webhook-captures" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Access Control for CLI, Slack, and Webhook Captures
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-variables-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment Variables Reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1562,10 +1473,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#roles" class="md-nav__link">
+  <a href="#1-it-abstains-instead-of-guessing" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Roles
+        1. It abstains instead of guessing
       
     </span>
   </a>
@@ -1573,60 +1484,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuring-sso-providers" class="md-nav__link">
+  <a href="#2-confident-ownership-is-gated-behind-a-real-accuracy-audit" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuring SSO Providers
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuring SSO Providers">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#github-oauth" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitHub OAuth
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#gitlab-oidc" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitLab OIDC
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#generic-oidc-azure-ad-okta-google-keycloak" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generic OIDC (Azure AD, Okta, Google, Keycloak)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#role-assignment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Role Assignment
+        2. Confident ownership is gated behind a real accuracy audit
       
     </span>
   </a>
@@ -1634,71 +1495,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#access-gate-allowlist" class="md-nav__link">
+  <a href="#3-every-claim-shows-its-evidence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Access Gate (Allowlist)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Access Gate (Allowlist)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#allow-specific-groups-only" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Allow specific groups only
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#allow-specific-email-domains-only" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Allow specific email domains only
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#both-together-or-logic" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Both together (OR logic)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#combining-access-gate-with-role-assignment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Combining access gate with role assignment
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#access-control-for-cli-slack-and-webhook-captures" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Access Control for CLI, Slack, and Webhook Captures
+        3. Every claim shows its evidence
       
     </span>
   </a>
@@ -1706,10 +1506,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#environment-variables-reference" class="md-nav__link">
+  <a href="#4-humans-stay-in-the-loop-and-rubber-stamps-dont-count" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Environment Variables Reference
+        4. Humans stay in the loop — and rubber stamps don't count
       
     </span>
   </a>
@@ -1717,10 +1517,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
+  <a href="#5-its-honest-about-its-own-confidence-especially-when-data-is-thin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Troubleshooting
+        5. It's honest about its own confidence, especially when data is thin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-honest-boundary-of-the-guarantee" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The honest boundary of the guarantee
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See also
       
     </span>
   </a>
@@ -1747,347 +1569,71 @@
   
 
 
-<h1 id="docbrain-rbac-sso-access-control">DocBrain RBAC &amp; SSO Access Control<a class="headerlink" href="#docbrain-rbac-sso-access-control" title="Permanent link">&para;</a></h1>
-<p>DocBrain supports three SSO providers for login — <strong>GitHub OAuth</strong>, <strong>GitLab OIDC</strong>, and <strong>generic OIDC</strong> (Azure AD, Okta, Google Workspace, Keycloak, etc.) — each with a consistent RBAC model.</p>
+<h1 id="how-docbrain-earns-trust">How DocBrain Earns Trust<a class="headerlink" href="#how-docbrain-earns-trust" title="Permanent link">&para;</a></h1>
+<p>If a tool tells you "Alice owns the payments service" or "documentation improved 12% this month," the only question that matters is: <strong>how do I know that's true and not a confident-sounding guess?</strong></p>
+<p>DocBrain is built around one answer: <strong>it refuses to show you anything it can't stand behind.</strong> Accuracy isn't a promise printed on a dashboard — it's a precondition the system enforces <em>before</em> it displays a number. When DocBrain isn't sure, it says so plainly instead of guessing.</p>
+<p>This page explains, in plain terms, the five mechanisms that make that true.</p>
 <hr />
-<h2 id="roles">Roles<a class="headerlink" href="#roles" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Role</th>
-<th>What they can do</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>viewer</code></td>
-<td>Ask questions, view answers, give feedback, and access all intelligence dashboards (Documentation Analytics, Predictive Gaps, Autonomous Document Maintenance, Knowledge Stream). Default for new SSO users.</td>
-</tr>
-<tr>
-<td><code>editor</code></td>
-<td>Everything viewer can + manage knowledge spaces and captures.</td>
-</tr>
-<tr>
-<td><code>analyst</code></td>
-<td>Everything editor can. Reserved for future role-based scoping; currently equivalent to <code>editor</code>.</td>
-</tr>
-<tr>
-<td><code>admin</code></td>
-<td>Full access: manage users, API keys, RBAC config, trigger ingests.</td>
-</tr>
-</tbody>
-</table>
+<h2 id="1-it-abstains-instead-of-guessing">1. It abstains instead of guessing<a class="headerlink" href="#1-it-abstains-instead-of-guessing" title="Permanent link">&para;</a></h2>
+<p>The most important design choice in DocBrain: <strong>"I don't know" is a first-class answer.</strong></p>
+<p>A confident-but-wrong answer is worse than no answer — it sends someone to the wrong person, or makes a decision on a fabricated number. So DocBrain is built to withhold rather than guess:</p>
+<ul>
+<li><strong>Ownership</strong> — DocBrain only names an owner when the behavioral evidence is strong enough (the accuracy bar is described in the next section). Otherwise it shows <strong>"No confident owner — not enough signal yet,"</strong> with the reason. It never invents a plausible-looking name to fill the space.</li>
+<li><strong>Insights and ROI</strong> — When there isn't enough data to be meaningful, you see <strong>"Not enough signal yet — observing,"</strong> not a made-up percentage. Cost-savings estimates are shown as a <strong>range</strong> (for example, "$18–$93"), never a single false-precision figure.</li>
+<li><strong>Subject matching</strong> — DocBrain matches a question to a known system by exact identity, not fuzzy guessing. If it can't match cleanly, it steps aside and lets normal search answer — it won't risk attaching an answer to the wrong thing.</li>
+</ul>
+<blockquote>
+<p><strong>What you'll notice:</strong> a brand-new DocBrain shows mostly "observing" and "no confident owner." That is the system working correctly — it earns the right to make confident claims as real evidence accumulates. A tool that shows confident numbers on day one is the one to be skeptical of.</p>
+</blockquote>
 <hr />
-<h2 id="configuring-sso-providers">Configuring SSO Providers<a class="headerlink" href="#configuring-sso-providers" title="Permanent link">&para;</a></h2>
-<h3 id="github-oauth">GitHub OAuth<a class="headerlink" href="#github-oauth" title="Permanent link">&para;</a></h3>
+<h2 id="2-confident-ownership-is-gated-behind-a-real-accuracy-audit">2. Confident ownership is gated behind a real accuracy audit<a class="headerlink" href="#2-confident-ownership-is-gated-behind-a-real-accuracy-audit" title="Permanent link">&para;</a></h2>
+<p>This is the strongest guarantee, and it's worth understanding exactly.</p>
+<p>DocBrain will <strong>not display a confident ownership attribution at all</strong> until that capability has been <strong>measured against a human-checked answer key</strong> and passed. The control works like this:</p>
 <ol>
-<li>Create an OAuth App at <strong>GitHub → Settings → Developer settings → OAuth Apps → New OAuth App</strong></li>
-<li>Set <strong>Callback URL</strong>: <code>https://&lt;your-domain&gt;/api/v1/auth/github/callback</code></li>
-<li>Note the <strong>Client ID</strong> and generate a <strong>Client Secret</strong></li>
+<li><strong>It ships turned off.</strong> Out of the box, confident ownership is hidden. The default is "stay quiet until proven," not "show it and hope."</li>
+<li><strong>An operator runs an accuracy audit.</strong> DocBrain compares its own ownership conclusions against a set of human-verified correct answers and measures the <strong>confidently-wrong rate</strong> — how often it would have stated an owner that a human says is wrong.</li>
+<li><strong>The bar is strict.</strong> By default, the gate only opens when the audit shows a <strong>0% confidently-wrong rate</strong> across a minimum sample of audited cases (30 by default). Both numbers are configurable, but the shipped posture is "essentially zero tolerance."</li>
+<li><strong>A human turns it on, having seen the number.</strong> Opening the gate is a deliberate operator action taken <em>after</em> reading the measured accuracy — not an automatic default.</li>
 </ol>
-<p><strong>Helm values:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">githubOAuth</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Iv1.abc123&quot;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret&quot;</span><span class="w">   </span><span class="c1"># stored in the Kubernetes Secret</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">redirectUri</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://docbrain.acme.com/api/v1/auth/github/callback&quot;</span>
-</span></code></pre></div></p>
-<p><strong>CLI login:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docbrain<span class="w"> </span>login<span class="w"> </span>--github
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># Opens browser → authorize → session saved automatically</span>
-</span></code></pre></div></p>
-<p><strong>Group source:</strong> GitHub org memberships (fetched via <code>/user/orgs</code>). The <code>read:org</code> scope is required if you want group-based access control. To add it, go to your OAuth App settings and add <code>read:org</code> to the requested scopes, or set <code>GITHUB_OAUTH_SCOPES=user:email,read:org</code> in <code>server.env</code>.</p>
+<p>The result: the ownership data you see is data that has been <strong>measured to be ~0% confidently wrong on real labeled examples</strong>, and a person flipped the switch knowing that. Until then, the page honestly shows nothing confident.</p>
+<p>The accuracy math underneath is standard statistics for "when is a model allowed to answer" (selective classification / risk-coverage analysis) — not a hand-tuned heuristic.</p>
 <hr />
-<h3 id="gitlab-oidc">GitLab OIDC<a class="headerlink" href="#gitlab-oidc" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Go to <strong>GitLab → Admin Area → Applications → New application</strong> (or user/group-level)</li>
-<li>Enable scopes: <code>openid</code>, <code>profile</code>, <code>email</code>, <code>groups</code></li>
-<li>Set <strong>Redirect URI</strong>: <code>https://&lt;your-domain&gt;/api/v1/auth/gitlab/callback</code></li>
-</ol>
-<p><strong>Helm values:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">gitlabOAuth</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">instanceUrl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://gitlab.com&quot;</span><span class="w">   </span><span class="c1"># or your self-hosted URL</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-app-id&quot;</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret&quot;</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">redirectUri</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://docbrain.acme.com/api/v1/auth/gitlab/callback&quot;</span>
-</span></code></pre></div></p>
-<p><strong>CLI login:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docbrain<span class="w"> </span>login<span class="w"> </span>--gitlab
-</span></code></pre></div></p>
-<p><strong>Group source:</strong> GitLab includes a <code>groups</code> array in the ID token when the <code>groups</code> scope is requested. This contains the full paths of groups the user belongs to (e.g. <code>acme/platform-team</code>).</p>
+<h2 id="3-every-claim-shows-its-evidence">3. Every claim shows its evidence<a class="headerlink" href="#3-every-claim-shows-its-evidence" title="Permanent link">&para;</a></h2>
+<p>DocBrain doesn't ask you to take its word. Each confident claim carries the evidence behind it, so you can check the reasoning yourself.</p>
+<ul>
+<li><strong>Ownership</strong> shows <em>why</em> a team is named — for example, "resolved 3 incidents, merged 5 pull requests, answered 2 reviews" in that area. You can trace it, and every confident attribution has a <strong>"Report incorrect"</strong> control so a human can push back.</li>
+<li><strong>Documentation improvement</strong> is the clearest example of this principle. The improvement page states plainly: <strong>"We never claim improvement we can't show."</strong> For each automated fix, DocBrain displays a labeled chain of evidence:</li>
+</ul>
+<blockquote>
+<p>published → content actually changed → change confirmed live → a human approved it → measured quality/freshness change</p>
+</blockquote>
+<p>Each link is shown at its <strong>true strength</strong>. "We published a draft" is labeled as intent, not outcome. A measured improvement is shown only when it can be cleanly measured — otherwise the number is <strong>omitted, never faked or zeroed</strong>.</p>
+<p>If DocBrain can't show you the evidence for a claim, it doesn't make the claim.</p>
 <hr />
-<h3 id="generic-oidc-azure-ad-okta-google-keycloak">Generic OIDC (Azure AD, Okta, Google, Keycloak)<a class="headerlink" href="#generic-oidc-azure-ad-okta-google-keycloak" title="Permanent link">&para;</a></h3>
-<p><strong>Helm values:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">oidc</span><span class="p">:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">issuerUrl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://login.microsoftonline.com/&lt;tenant&gt;/v2.0&quot;</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">clientId</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-client-id&quot;</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">clientSecret</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-secret&quot;</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">redirectUri</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://docbrain.acme.com/api/v1/auth/oidc/callback&quot;</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">webUiUrl</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://docbrain.acme.com&quot;</span>
-</span></code></pre></div></p>
-<p><strong>CLI login:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docbrain<span class="w"> </span>login<span class="w"> </span>--oidc
-</span></code></pre></div></p>
-<p><strong>Group source:</strong> The <code>groups</code> array claim in the ID token. Each provider surfaces this differently:</p>
-<table>
-<thead>
-<tr>
-<th>Provider</th>
-<th>How to enable groups claim</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Azure AD</td>
-<td>Add "groups" optional claim in App Registration → Token configuration</td>
-</tr>
-<tr>
-<td>Okta</td>
-<td>Add Groups claim to the Authorization Server policy</td>
-</tr>
-<tr>
-<td>Google Workspace</td>
-<td>Use the <code>https://www.googleapis.com/auth/cloud-identity.groups.readonly</code> scope (requires Workspace admin)</td>
-</tr>
-<tr>
-<td>Keycloak</td>
-<td>Add "groups" to the client's mapper config</td>
-</tr>
-</tbody>
-</table>
+<h2 id="4-humans-stay-in-the-loop-and-rubber-stamps-dont-count">4. Humans stay in the loop — and rubber stamps don't count<a class="headerlink" href="#4-humans-stay-in-the-loop-and-rubber-stamps-dont-count" title="Permanent link">&para;</a></h2>
+<p>DocBrain treats human review as real evidence, and it's careful to distinguish genuine review from a formality:</p>
+<ul>
+<li>When a fix is approved, DocBrain records <em>how</em> it was approved. A genuine human review counts as strong evidence; an administrative skip-with-bypass is labeled as <strong>weak</strong> — it does not get counted as verification.</li>
+<li>The <strong>"Report incorrect"</strong> controls and ownership-conflict resolution let people correct the system directly, and those corrections feed back in to improve future conclusions.</li>
+</ul>
+<p>The system is designed so a human can always overrule it, and so that "someone clicked approve to move on" is never mistaken for "someone checked this."</p>
 <hr />
-<h2 id="role-assignment">Role Assignment<a class="headerlink" href="#role-assignment" title="Permanent link">&para;</a></h2>
-<p>Role is computed at login time in this priority order (highest wins):</p>
-<table>
-<thead>
-<tr>
-<th>Priority</th>
-<th>Check</th>
-<th>Config</th>
-<th>Example</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>Email in admin list</td>
-<td><code>rbac.adminEmails</code></td>
-<td><code>alice@acme.com,bob@acme.com</code></td>
-</tr>
-<tr>
-<td>2</td>
-<td>Email domain → admin</td>
-<td><code>rbac.adminDomain</code></td>
-<td><code>acme.com</code></td>
-</tr>
-<tr>
-<td>3</td>
-<td>Member of admin group</td>
-<td><code>rbac.adminGroups</code></td>
-<td><code>platform-team,sre-team</code></td>
-</tr>
-<tr>
-<td>4</td>
-<td>Member of editor group</td>
-<td><code>rbac.editorGroups</code></td>
-<td><code>docs-team</code></td>
-</tr>
-<tr>
-<td>5</td>
-<td>Default</td>
-<td><code>rbac.defaultRole</code></td>
-<td><code>viewer</code> (default)</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Helm example — auto-promote platform team to admin:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">rbac</span><span class="p">:</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">defaultRole</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;viewer&quot;</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">adminGroups</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;platform-team,sre-team&quot;</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">editorGroups</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;docs-writers&quot;</span>
-</span></code></pre></div></p>
+<h2 id="5-its-honest-about-its-own-confidence-especially-when-data-is-thin">5. It's honest about its own confidence, especially when data is thin<a class="headerlink" href="#5-its-honest-about-its-own-confidence-especially-when-data-is-thin" title="Permanent link">&para;</a></h2>
+<p>DocBrain calibrates its confidence to the evidence it actually has. When data is sparse, it deliberately <strong>lowers</strong> its confidence rather than overstating it — pushing toward "observing / abstain" instead of making bold claims on weak signal. As real activity accumulates, confident claims become available <em>because they've been earned</em>, not because a timer ran out.</p>
 <hr />
-<h2 id="access-gate-allowlist">Access Gate (Allowlist)<a class="headerlink" href="#access-gate-allowlist" title="Permanent link">&para;</a></h2>
-<p>By default, <strong>any user who can authenticate</strong> with the configured provider is allowed in. To restrict access to specific groups or domains only:</p>
-<h3 id="allow-specific-groups-only">Allow specific groups only<a class="headerlink" href="#allow-specific-groups-only" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">rbac</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">allowedGroups</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;platform-team,sre-team,docs-team&quot;</span>
-</span></code></pre></div>
-<p>Anyone not in one of those groups gets <code>403 Forbidden</code> at the OAuth callback — <strong>the user is never created in the database</strong>.</p>
-<h3 id="allow-specific-email-domains-only">Allow specific email domains only<a class="headerlink" href="#allow-specific-email-domains-only" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">rbac</span><span class="p">:</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">allowedDomains</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;acme.com,acme.org&quot;</span>
-</span></code></pre></div>
-<p>Users with <code>@acme.com</code> or <code>@acme.org</code> email addresses are allowed; all others are denied.</p>
-<h3 id="both-together-or-logic">Both together (OR logic)<a class="headerlink" href="#both-together-or-logic" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">rbac</span><span class="p">:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">allowedGroups</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;platform-team&quot;</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">allowedDomains</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;acme.com&quot;</span>
-</span></code></pre></div>
-<p>A user passes if they satisfy <strong>either</strong> restriction — member of <code>platform-team</code> <em>or</em> has an <code>@acme.com</code> email. This lets you allow contractors (by domain) while also letting external collaborators in if they're explicitly added to the group.</p>
-<h3 id="combining-access-gate-with-role-assignment">Combining access gate with role assignment<a class="headerlink" href="#combining-access-gate-with-role-assignment" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">rbac</span><span class="p">:</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">allowedDomains</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;acme.com&quot;</span><span class="w">        </span><span class="c1"># only @acme.com users may log in</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">adminGroups</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;platform-team&quot;</span><span class="w">       </span><span class="c1"># @acme.com members of platform-team get admin</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">defaultRole</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;viewer&quot;</span><span class="w">              </span><span class="c1"># everyone else gets viewer</span>
-</span></code></pre></div>
+<h2 id="the-honest-boundary-of-the-guarantee">The honest boundary of the guarantee<a class="headerlink" href="#the-honest-boundary-of-the-guarantee" title="Permanent link">&para;</a></h2>
+<p>Trust is built on being precise about what is and isn't promised. So, plainly:</p>
+<p><strong>What DocBrain guarantees:</strong> it will not <em>show</em> you a confident claim it can't justify from evidence and (for ownership) hasn't passed an accuracy audit. The claims it makes are auditable, evidence-backed, and gated.</p>
+<p><strong>What it does not claim:</strong> to be an oracle for social facts. A team can be genuinely ambiguous; a human can declare the wrong owner. That's why DocBrain frames ownership as <strong>"inferred from real activity and accuracy-audited"</strong> — clearly labeled, never presented as absolute ground truth. The honest claim is <em>"~0% confidently wrong,"</em> which is a meaningfully different and more defensible promise than <em>"always right."</em></p>
+<p>That distinction is the whole point. A tool that promises it's always right is asking for blind trust. DocBrain shows you its evidence, tells you when it doesn't know, and proves its accuracy before it speaks — so the trust is earned, and checkable, every time.</p>
 <hr />
-<h2 id="access-control-for-cli-slack-and-webhook-captures">Access Control for CLI, Slack, and Webhook Captures<a class="headerlink" href="#access-control-for-cli-slack-and-webhook-captures" title="Permanent link">&para;</a></h2>
-<p>The access gate applies uniformly:</p>
-<table>
-<thead>
-<tr>
-<th>Entry point</th>
-<th>How the gate is applied</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>docbrain login --github/--gitlab/--oidc</code></td>
-<td>Checked at OAuth callback; CLI receives 403 if denied</td>
-</tr>
-<tr>
-<td>Web UI login</td>
-<td>Same callback; browser redirected to error page</td>
-</tr>
-<tr>
-<td>Slack <code>/docbrain</code> command</td>
-<td>Slack user must have a linked DocBrain account (created via login); their role governs what they can do</td>
-</tr>
-<tr>
-<td>GitHub/GitLab webhook captures</td>
-<td>These use a <strong>bot API key</strong> (admin-scoped), not user OAuth — the gate does not apply to webhook-initiated ingestion</td>
-</tr>
-<tr>
-<td>MCP server</td>
-<td>Uses a PAT (<code>DOCBRAIN_API_KEY</code>) created by an authorised user via <code>docbrain token create</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="environment-variables-reference">Environment Variables Reference<a class="headerlink" href="#environment-variables-reference" title="Permanent link">&para;</a></h2>
-<p>All values can also be set directly as environment variables (useful for docker-compose or non-Helm deployments).</p>
-<table>
-<thead>
-<tr>
-<th>Env var</th>
-<th>Helm value</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>GITHUB_CLIENT_ID</code></td>
-<td><code>githubOAuth.clientId</code></td>
-<td>GitHub OAuth App client ID</td>
-</tr>
-<tr>
-<td><code>GITHUB_CLIENT_SECRET</code></td>
-<td><code>githubOAuth.clientSecret</code></td>
-<td>GitHub OAuth App client secret</td>
-</tr>
-<tr>
-<td><code>GITHUB_REDIRECT_URI</code></td>
-<td><code>githubOAuth.redirectUri</code></td>
-<td>Must match registered callback URL</td>
-</tr>
-<tr>
-<td><code>GITLAB_INSTANCE_URL</code></td>
-<td><code>gitlabOAuth.instanceUrl</code></td>
-<td>GitLab base URL (default: <code>https://gitlab.com</code>)</td>
-</tr>
-<tr>
-<td><code>GITLAB_CLIENT_ID</code></td>
-<td><code>gitlabOAuth.clientId</code></td>
-<td>GitLab application ID</td>
-</tr>
-<tr>
-<td><code>GITLAB_CLIENT_SECRET</code></td>
-<td><code>gitlabOAuth.clientSecret</code></td>
-<td>GitLab application secret</td>
-</tr>
-<tr>
-<td><code>GITLAB_REDIRECT_URI</code></td>
-<td><code>gitlabOAuth.redirectUri</code></td>
-<td>Must match registered callback URL</td>
-</tr>
-<tr>
-<td><code>OIDC_ISSUER_URL</code></td>
-<td><code>oidc.issuerUrl</code></td>
-<td>OIDC discovery URL (without <code>/.well-known/openid-configuration</code>)</td>
-</tr>
-<tr>
-<td><code>OIDC_CLIENT_ID</code></td>
-<td><code>oidc.clientId</code></td>
-<td>OIDC client/application ID</td>
-</tr>
-<tr>
-<td><code>OIDC_CLIENT_SECRET</code></td>
-<td><code>oidc.clientSecret</code></td>
-<td>OIDC client secret</td>
-</tr>
-<tr>
-<td><code>OIDC_REDIRECT_URI</code></td>
-<td><code>oidc.redirectUri</code></td>
-<td>Must match registered callback URL</td>
-</tr>
-<tr>
-<td><code>OIDC_WEB_UI_URL</code></td>
-<td><code>oidc.webUiUrl</code></td>
-<td>Web UI base URL for post-login redirect</td>
-</tr>
-<tr>
-<td><code>OIDC_DEFAULT_ROLE</code></td>
-<td><code>rbac.defaultRole</code></td>
-<td>Default role for new SSO users (<code>viewer</code>)</td>
-</tr>
-<tr>
-<td><code>OIDC_ADMIN_DOMAIN</code></td>
-<td><code>rbac.adminDomain</code></td>
-<td>Email domain → admin role</td>
-</tr>
-<tr>
-<td><code>OIDC_ADMIN_EMAILS</code></td>
-<td><code>rbac.adminEmails</code></td>
-<td>Specific emails → admin role</td>
-</tr>
-<tr>
-<td><code>OIDC_ADMIN_GROUPS</code></td>
-<td><code>rbac.adminGroups</code></td>
-<td>IdP groups → admin role</td>
-</tr>
-<tr>
-<td><code>OIDC_EDITOR_GROUPS</code></td>
-<td><code>rbac.editorGroups</code></td>
-<td>IdP groups → editor role</td>
-</tr>
-<tr>
-<td><code>OIDC_ALLOWED_GROUPS</code></td>
-<td><code>rbac.allowedGroups</code></td>
-<td><strong>Access gate</strong>: groups allowed to log in</td>
-</tr>
-<tr>
-<td><code>OIDC_ALLOWED_DOMAINS</code></td>
-<td><code>rbac.allowedDomains</code></td>
-<td><strong>Access gate</strong>: email domains allowed to log in</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>User gets 403 at login</strong>
-- Check <code>OIDC_ALLOWED_GROUPS</code> and <code>OIDC_ALLOWED_DOMAINS</code> — the user doesn't satisfy either restriction.
-- For GitHub: verify the user is a <em>public</em> member of the org, or that the OAuth App has <code>read:org</code> scope (private membership requires this).
-- For GitLab: verify the <code>groups</code> scope is enabled on the application and the user is a direct member (not just inherited).
-- For OIDC: check your provider's admin console to confirm the <code>groups</code> claim is populated in the token.</p>
-<p><strong>Groups claim is empty / role assignment not working</strong>
-- Use a JWT decoder (e.g. <a href="https://jwt.io">jwt.io</a>) to inspect the ID token and confirm <code>groups</code> is present.
-- Azure AD: ensure you added the Groups claim and the user is assigned to the app.
-- Okta: the Groups claim must be added to both the Access Token and ID Token policies.</p>
-<p><strong>Existing users not re-evaluated on group change</strong>
-- Role is computed at login time and stored on the user record. If you change <code>adminGroups</code>, users must log out and log back in for the new role to take effect.</p>
+<h2 id="see-also">See also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../governance/">Governance</a> — how ownership, stewardship, and SLAs are defined and enforced</li>
+<li><a href="../autopilot/">Autopilot</a> — how documentation gaps are detected and fixes are drafted</li>
+<li><a href="../knowledge-intelligence/">Knowledge Intelligence</a> — how DocBrain measures coverage, freshness, and quality</li>
+<li><a href="../reviews/">Review Workflows</a> — how human approval works</li>
+</ul>
 
 
 
@@ -2125,7 +1671,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../kubernetes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Kubernetes">
+          <a href="../governance/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Governance">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2135,20 +1681,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Kubernetes
+                Governance
               </div>
             </div>
           </a>
         
         
           
-          <a href="../access-control/" class="md-footer__link md-footer__link--next" aria-label="Next: Access Control (ACL)">
+          <a href="../style-policy/" class="md-footer__link md-footer__link--next" aria-label="Next: Style Policy">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Access Control (ACL)
+                Style Policy
               </div>
             </div>
             <div class="md-footer__button md-icon">
