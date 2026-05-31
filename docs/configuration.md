@@ -1345,6 +1345,8 @@ SELECT source_type, COUNT(*) FROM document_acl GROUP BY source_type;
 | `VELOCITY_TRIBAL_EXCLUDE_ADMIN` | `true` | **v2 only.** Exclude admin users from the expert population. |
 | `VELOCITY_TRIBAL_MAX_EXPERTS` | `2` | **v2 only.** Domains with ≤ this many distinct non-admin experts in the last 90 days are counted as "tribal." Raise for larger orgs. |
 | `VELOCITY_TRIBAL_MIN_DOMAINS` | `3` | **v2 only.** Minimum distinct domains with positive-feedback signal before the percentage is reported. Below this, the dashboard shows "Insufficient signal." |
+| `VELOCITY_BULK_UPDATE_MULTIPLE` | `10.0` | Bulk re-ingest guard for net knowledge velocity. A week whose updated-doc count exceeds this multiple of the rolling weekly-update norm is treated as a bulk sweep (e.g. a full re-ingest) and capped to the norm, so it cannot inflate the velocity headline or flip the maintenance trend to "accelerating". Lower it on a corpus with very steady authoring to catch smaller sweeps; raise it if legitimate maintenance bursts are being mistaken for sweeps. |
+| `VELOCITY_SUBSTANTIVE_UPDATE_CEILING` | `2000` | Absolute ceiling on a single week's substantive (bulk-excluded) update contribution. Applied after the rolling-norm cap to guard the case where the entire history is inflated and the rolling median itself is poisoned. A genuine week of hand-authored doc updates does not exceed this. |
 
 ### Documentation ROI — how the number is calculated
 

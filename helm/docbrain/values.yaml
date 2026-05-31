@@ -292,6 +292,12 @@ velocity:
   tribalMinDomainsWithSignal: 3      # Minimum distinct domains with feedback before the percentage is reported
   maintenanceTrendMinSnapshots: 4    # Minimum snapshots with flow signal before Maintenance Trend reports a verdict
 
+  # Net knowledge velocity — bulk re-ingest exclusion. A re-ingest sweep
+  # (e.g. tens of thousands of docs touched in one day) must not inflate
+  # the velocity headline or flip the trend to "accelerating".
+  bulkUpdateMultiple: 10.0           # A week's updates above this multiple of the rolling norm are treated as a bulk sweep and capped (order-of-magnitude jump = sweep signature)
+  substantiveUpdateCeiling: 2000     # Absolute ceiling on a single week's substantive updates, guarding the all-bulk-history case where the rolling median is itself inflated
+
 # -- Expertise Ownership Gate
 # Thresholds the scorer applies before publishing a (subject, team) ownership
 # attribution; all must hold or it abstains. Defaults are abstain-heavy (high

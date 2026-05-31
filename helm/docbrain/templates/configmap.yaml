@@ -218,6 +218,8 @@ data:
   VELOCITY_TRIBAL_MAX_EXPERTS:      {{ .Values.velocity.tribalMaxExpertsPerDomain | default 2 | quote }}
   VELOCITY_TRIBAL_MIN_DOMAINS:      {{ .Values.velocity.tribalMinDomainsWithSignal | default 3 | quote }}
   VELOCITY_MAINTENANCE_TREND_MIN_SNAPSHOTS: {{ .Values.velocity.maintenanceTrendMinSnapshots | default 4 | quote }}
+  VELOCITY_BULK_UPDATE_MULTIPLE:    {{ .Values.velocity.bulkUpdateMultiple | default 10.0 | quote }}
+  VELOCITY_SUBSTANTIVE_UPDATE_CEILING: {{ .Values.velocity.substantiveUpdateCeiling | default 2000 | quote }}
   # Expertise Ownership Gate — thresholds the scorer clears before publishing a
   # (subject, team) attribution. UI accuracy gate controls whether confident
   # attributions reach end users; disabled by default until accuracy is proven.
