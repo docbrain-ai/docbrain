@@ -90,6 +90,9 @@ rag:
   #   - "current rotation"            # tool data; a prior answer is never reused (so a
   #   - "incident commander"          # rotation that changed since yesterday can't leak
   #                                   # a stale name). Empty list disables the gate.
+  # loop_first_enabled: true          # Loop-first answering — the iterative tool loop is the
+  #                                   # default for every real question. Kill-switch only; set
+  #                                   # false to fall back to the legacy gated path.
   #
   # Compound query decomposition (Phase 5) is gated on RAG_COMPOUND_DECOMPOSE
   # (env only, default true). Not a RagConfig struct field because it's a
