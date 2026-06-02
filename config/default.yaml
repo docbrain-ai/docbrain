@@ -85,6 +85,11 @@ rag:
   # entity_cache_ttl_secs: 300        # Entity → space cache TTL
   # max_rewrites: 2                   # Query rewrites per ask (0 to disable)
   # max_chunks_per_doc_in_retriever: 2  # Phase 2 chunk-flood fix — per-retriever cap
+  # fresh_only_phrases:               # Time-sensitive question phrases — a match means
+  #   - "on call"                     # the answer comes ONLY from this request's live
+  #   - "current rotation"            # tool data; a prior answer is never reused (so a
+  #   - "incident commander"          # rotation that changed since yesterday can't leak
+  #                                   # a stale name). Empty list disables the gate.
   #
   # Compound query decomposition (Phase 5) is gated on RAG_COMPOUND_DECOMPOSE
   # (env only, default true). Not a RagConfig struct field because it's a

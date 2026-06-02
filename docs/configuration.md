@@ -294,6 +294,10 @@ rag:
     - ms_teams_capture
   entity_cache_ttl_secs: 300            # entity → space cache TTL
   max_rewrites: 2                       # query rewrites per ask
+  fresh_only_phrases:                   # time-sensitive question phrases (live-only answers)
+    - "on call"
+    - "current rotation"
+    - "incident commander"
 
   # Retrieval ladder (experimental, off by default). When enabled, an
   # answer is synthesised TWICE in parallel — once from indexed documents
