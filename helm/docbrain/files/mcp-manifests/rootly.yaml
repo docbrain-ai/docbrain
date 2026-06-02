@@ -1,0 +1,108 @@
+# Rootly On-Call via REST API — DocBrain MCP manifest (in-process shim).
+#
+# Why a shim?
+#
+# Incident-response questions ("who is on call for the platform team?",
+# "any upcoming on-call overrides this week?") are answerable from Rootly's
+# standard REST API, but Rootly does not ship a hosted Remote MCP Server we
+# can point the orchestrator at. We wrap Rootly's `/v1/schedules` read
+# surface as a second MCP server served in-process by docbrain-server at
+# /internal/mcp/rootly. Mirrors the established jira_rest / confluence_rest
+# in-process-shim pattern.
+#
+# Architecture: not a special-case bypass. This is an MCP server served by
+# docbrain-server itself. The orchestrator's gateway speaks MCP 2024-11-05
+# Streamable HTTP to it the same way it speaks to any hosted server. Two
+# distinct auth layers:
+#   - Orchestrator → shim:    bearer DOCBRAIN_INTERNAL_MCP_SECRET
+#   - Shim → Rootly REST:     bearer ROOTLY_API_TOKEN (org-level token,
+#                             read by the shim from its own env var)
+#
+# Routing intent: this manifest is authoritative for on-call questions.
+# When it is absent (no token / Rootly unreachable) the agentic loop
+# falls back to reading the team's Slack channel.
+
+manifest_version: 1
+id: rootly
+display_name: "Rootly On-Call"
+description: |
+  Current on-call (primary/secondary by name) and upcoming overrides for a team,
+  from Rootly. Read-only. Authoritative for on-call questions; when absent the
+  agentic loop falls back to reading the team's Slack channel.
+category: "incident-management"
+icon: "rootly.svg"
+
+# DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
+# load time. Local dev: DOCBRAIN_SERVER_PORT=3000. Helm sets it from the
+# service port to keep dev / staging / prod consistent.
+config_refs:
+  - DOCBRAIN_SERVER_PORT
+
+server:
+  transport: http_sse
+  endpoint: "http://localhost:${DOCBRAIN_SERVER_PORT}/internal/mcp/rootly"
+  protocol_version: "2024-11-05"
+
+auth:
+  modes:
+    - service_account
+  service_account:
+    # The shim authenticates the orchestrator (caller) via this bearer.
+    # NOT the Rootly credential — that's read by the shim from its own
+    # ROOTLY_API_TOKEN env var and forwarded as a separate Bearer header
+    # on the outbound REST call.
+    secret_refs:
+      - DOCBRAIN_INTERNAL_MCP_SECRET
+    header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+
+tools:
+  - name: rootly.get_oncall
+    upstream_name: get_oncall
+    description: |
+      Who is currently on call (primary + secondary, by name) for a team.
+      Use for "who is on call for X", "who is paging-primary for team Y".
+    args_schema:
+      type: object
+      properties:
+        team:
+          type: string
+          description: "Team / schedule name (e.g. 'Keel')."
+      required: [team]
+      additionalProperties: false
+    output_size_cap_bytes: 16384
+    # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
+    latency_budget_ms: 7000
+    # D1 invariant: read-only fetch of the current on-call roster.
+    read_only: true
+
+  - name: rootly.list_overrides
+    upstream_name: list_overrides
+    description: |
+      Upcoming on-call overrides (coverage swaps) for a team.
+    args_schema:
+      type: object
+      properties:
+        team:
+          type: string
+          description: "Team / schedule name."
+      required: [team]
+      additionalProperties: false
+    output_size_cap_bytes: 16384
+    # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
+    latency_budget_ms: 7000
+    # D1 invariant: read-only listing of upcoming override shifts.
+    read_only: true
+
+egress:
+  # localhost / 127.0.0.1: the shim itself (orchestrator → docbrain-server).
+  # api.rootly.com: where the shim's own outbound REST calls go.
+  hosts:
+    - "localhost"
+    - "127.0.0.1"
+    - "api.rootly.com"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90
