@@ -182,6 +182,36 @@ tools:
     latency_budget_ms: 5000
     read_only: true
 
+  - name: slack_rest.read_channel
+    upstream_name: read_channel
+    description: |
+      Read the most recent messages of a Slack channel (conversations.history).
+      Returns messages in order with sender, timestamp, text, and an is_bot flag.
+      CRITICAL: surfaces BOT/APP messages (e.g. Rootly on-call + override posts,
+      CI/CD notifications) that slack_search does NOT index — when a search for
+      channel-posted info comes back empty, read the channel directly. Refuses
+      DM / group-DM channels (D-prefix). Single page, limit-bounded.
+    args_schema:
+      type: object
+      properties:
+        url:
+          type: string
+          maxLength: 500
+          description: "Slack archive URL of the channel (…/archives/CHANNELID)."
+        channel_id:
+          type: string
+          pattern: "^[CG][A-Z0-9]{8,12}$"
+          description: "Channel id (C… public / G… private). Use slack_search_channels to resolve a name."
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 30
+          description: "Number of most-recent messages to read."
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 5000
+    read_only: true
+
   - name: slack_rest.get_message
     upstream_name: get_message
     description: |
