@@ -120,6 +120,20 @@ rag:
   #
   # See docs/configuration.md § "Confidence-retry fallback" for tuning
   # guidance and observability.
+  #
+  # Agentic tool loop. Default OFF. Generalizes the confidence-retry
+  # above into a bounded MULTI-round tool loop with per-surface round
+  # and wall-clock budgets. When the master switch is on, the loop
+  # SUBSUMES the confidence-retry (the loop runs instead of the single
+  # retry). Same env-only, no-redeploy contract; unset → silent default,
+  # set-but-invalid → warn + default:
+  #   RAG_AGENTIC_LOOP_ENABLED               true | 1 | yes | on (default false)
+  #   RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK      1–10 (default 5)
+  #   RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB        1–10 (default 3)
+  #   RAG_AGENTIC_LOOP_BUDGET_MS_SLACK       1000–120000 (default 60000)
+  #   RAG_AGENTIC_LOOP_BUDGET_MS_WEB         1000–120000 (default 20000)
+  #   RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD  0.0–1.0 (default 0.7; unset →
+  #                                          falls back to RAG_CONFIDENCE_RETRY_THRESHOLD)
 
 # ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
 #

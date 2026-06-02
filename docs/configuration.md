@@ -332,6 +332,12 @@ rag:
 | — | `RAG_CONFIDENCE_RETRY_ENABLED` | `false` | **Confidence-retry fallback.** Master switch. When `true`, /ask responses with very-low confidence AND unused MCP tools in the user's eligible catalog are re-synthesized once with the picker in widen-mode (encouraging maximal tool selection). The retry's tool set is a strict superset of the first pass; the retry's answer always replaces the first-pass answer when the gate triggers. Default OFF — opt in per deployment. **Doubles worst-case latency on the small fraction of queries that fall below threshold AND have unused tools.** High-confidence answers, queries with all tools already dispatched, and queries that already exceeded the latency budget are never retried. Accepts `true \| 1 \| yes \| on` (case-insensitive). |
 | — | `RAG_CONFIDENCE_RETRY_THRESHOLD` | `0.25` | Confidence (strictly) below this triggers retry when the master switch is on. Bounded `0.0–1.0`; out-of-range values fall back to the default. Lower → fewer retries (only the very worst answers re-run). Higher → more retries (catches borderline answers but doubles latency on them). |
 | — | `RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS` | `12000` | Skip retry when the first pass already took this long. Bounded `1000–60000`; out-of-range values fall back to the default. Protects against pathologically slow queries getting hammered twice. |
+| — | `RAG_AGENTIC_LOOP_ENABLED` | `false` | **Agentic tool loop — master switch.** Generalizes the confidence-retry above into a bounded **multi-round** tool loop: after each round of tool results, a pure stop-or-continue decision runs, bounded by per-surface round and wall-clock budgets. When `true`, this loop **subsumes** the confidence-retry — the loop runs instead of the single retry, and the `RAG_CONFIDENCE_RETRY_*` vars become the disabled-loop fallback. Default OFF — existing deployments are byte-identical until they opt in. Accepts `true \| 1 \| yes \| on` (case-insensitive). Same env-validation contract as the confidence-retry: unset → silent default; set-but-invalid → `warn` log + default (a typo can never silently flip a deployment into an unexpected mode). |
+| — | `RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK` | `5` | Hard cap on tool-dispatch rounds for the Slack surface. Slack posts an @mention when done, so the user isn't blocked synchronously — it tolerates more rounds. Bounded `1–10`; out-of-range values fall back to the default. |
+| — | `RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB` | `3` | Hard cap on tool-dispatch rounds for every non-Slack (web/api) surface. Synchronous HTTP — a client holds the connection open — so the cap is tighter. Bounded `1–10`; out-of-range values fall back to the default. |
+| — | `RAG_AGENTIC_LOOP_BUDGET_MS_SLACK` | `60000` | Overall wall-clock deadline (ms) for the Slack surface; the loop aborts and answers with partial results when exceeded. Bounded `1000–120000`; out-of-range values fall back to the default. |
+| — | `RAG_AGENTIC_LOOP_BUDGET_MS_WEB` | `20000` | Overall wall-clock deadline (ms) for the web/api surface. Tighter than Slack because a human or client is holding a synchronous connection. Bounded `1000–120000`; out-of-range values fall back to the default. |
+| — | `RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD` | `0.7` | Stop-when-confident bar: the loop **continues** while the best answer confidence is below this and rounds/budget remain, and **stops** once confidence reaches it (even with rounds left). Bounded `0.0–1.0`. **Fallback:** when unset, the loop reads the legacy `RAG_CONFIDENCE_RETRY_THRESHOLD` instead, so a deployment that already tuned the confidence-retry threshold keeps that exact value without a second knob; only if both are unset does it fall to `0.7`. |
 
 ### Confidence-retry fallback — when to enable
 
@@ -357,6 +363,23 @@ Any false → retry skipped → first-pass answer returned unchanged.
 **Observability.** A triggered retry emits two structured log lines: `rag::retry triggered — re-synthesizing with all tools` (with the first-pass confidence, tool count, catalog size, elapsed_ms, and configured threshold) and `rag::retry completed` (with the retry's confidence, tool count, and a `retry_helped` boolean comparing first-vs-retry confidence). Operators tune the threshold by measuring the ratio of triggered retries to `retry_helped=true` results; if a deployment's retries rarely improve answers, the threshold is too high and the retry is wasting budget. If too few queries trigger retry but reviewers see weak answers, the threshold is too low.
 
 **Latency.** When the gate triggers, the request makes a second picker call + a second synthesis call. Median latency for the retry is similar to the first pass; worst case approximately doubles. The latency budget gate (`RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS`) protects against the pathological case where the first pass already burned the user-tolerable budget — those queries skip retry and return the first-pass answer unchanged.
+
+### Agentic tool loop — when to enable
+
+The confidence-retry above answers a one-shot question: "the first pass looked weak — should we re-run with all tools forced on, exactly once?" The agentic tool loop generalizes that into a bounded **multi-round** loop. After each round of tool dispatch, a pure stop-or-continue decision runs against the round's results, bounded by a per-surface budget (round count + wall-clock). The "high confidence → stop" insight from the confidence-retry becomes a precedence branch here: a confident answer stops the loop even with rounds left.
+
+**One mechanism, not two.** When `RAG_AGENTIC_LOOP_ENABLED=true`, the loop **subsumes** the confidence-retry — the loop runs *instead of* the single retry, so you never get both. When the loop is disabled (the default), the `RAG_CONFIDENCE_RETRY_*` path remains the active fallback exactly as documented above. This is why the loop honors `RAG_CONFIDENCE_RETRY_THRESHOLD` as the fallback when `RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD` is unset: a deployment that already tuned the retry threshold carries that value into the loop without a second knob.
+
+**Per-surface budgets.** The loop is tuned per delivery surface because the latency contract differs:
+
+| Surface | Max rounds | Wall-clock budget | Why |
+|---|---|---|---|
+| Slack | `5` (`RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK`) | `60000` ms (`RAG_AGENTIC_LOOP_BUDGET_MS_SLACK`) | Slack posts an @mention when done — the user isn't blocked on a synchronous response, so a longer loop is tolerable. |
+| Web / API | `3` (`RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB`) | `20000` ms (`RAG_AGENTIC_LOOP_BUDGET_MS_WEB`) | Synchronous HTTP — a human or client holds the connection open. Tight bounds keep responses snappy. |
+
+**Default OFF.** Existing deployments are byte-identical until they opt in. To enable, set `RAG_AGENTIC_LOOP_ENABLED=true` in the server's env (helm: `server.env.RAG_AGENTIC_LOOP_ENABLED: "true"`).
+
+**Validation.** Every var follows the same contract as the confidence-retry: an **unset** value silently falls back to its documented default; a value that is **set but invalid** (parse failure, out of range, NaN for the threshold) falls back to the default *and* emits a `warn` log, so a typo in a values file can never silently flip a deployment into an unexpected mode.
 
 ### Grounding floors — what lowering actually costs
 
