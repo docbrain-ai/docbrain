@@ -907,6 +907,20 @@ share a name:
 first successful probe completes. Status surfaces in the admin detail endpoint
 as `pending` → `ok` (or `failed` / `requires_probe_user`).
 
+### Rootly on-call shim
+
+The `rootly` manifest is served by an internal shim that exposes two read-only
+tools — `rootly.get_oncall` (who is on call now) and `rootly.list_overrides`
+(scheduled overrides). Unlike OAuth manifests, the shim authenticates to
+Rootly's REST API with an org-level token it reads directly from its own env
+(it is not routed through `config/default.yaml`). Set these as env vars (e.g.
+in the Kubernetes Secret via `mcpTools.serviceAccount.rootly.*` in Helm):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ROOTLY_API_TOKEN` | — | Org-level Rootly API token. Required for the on-call shim; when unset the manifest is absent and on-call questions fall back to other sources. Read-only. |
+| `ROOTLY_BASE_URL` | `https://api.rootly.com` | Rootly REST API base URL. Override only for self-hosted Rootly. |
+
 ## Slack Integration (Optional)
 
 | Variable | Default | Description |

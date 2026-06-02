@@ -430,6 +430,13 @@ sources:
   #   include_transcripts: true
   #   min_replies: 2
 
+  # ── Rootly (on-call shim, NOT an ingest source) ───────────────────────────
+  # The rootly MCP manifest is served by an internal shim, not an ingest
+  # source — so it has NO block here. The shim reads its Rootly token directly
+  # from the env var ROOTLY_API_TOKEN (and optional ROOTLY_BASE_URL, default
+  # https://api.rootly.com), not from this file. See docs/configuration.md
+  # → "Rootly on-call shim".
+
 # ── GitHub Real-Time Capture ───────────────────────────────────────────────
 # Enables `@docbrain capture` on GitHub PRs/issues. Separate from ingestion.
 github_capture:

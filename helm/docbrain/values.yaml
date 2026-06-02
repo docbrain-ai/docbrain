@@ -649,6 +649,14 @@ mcpTools:
       # Shared with ingest / enrichment when those features are enabled.
       baseUrl: ""
       userEmail: ""
+    rootly:
+      # ROOTLY_API_TOKEN — org-level Rootly token the on-call shim reads from
+      # its env and forwards to Rootly's REST API as a Bearer header.
+      # Powers the rootly manifest (get_oncall / list_overrides). Read-only.
+      apiToken: ""
+      # ROOTLY_BASE_URL — override the default https://api.rootly.com only for
+      # self-hosted Rootly. Leave empty to use the public API.
+      baseUrl: ""
 
   # 256-bit master key for at-rest encryption of mcp_oauth_tokens.
   # Generate with: openssl rand -hex 32
