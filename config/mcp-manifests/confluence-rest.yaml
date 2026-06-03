@@ -96,7 +96,7 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
-    latency_budget_ms: 7000
+    latency_budget_ms: 10000
     # D1 invariant: read-only fetch of a single Confluence page by id.
     read_only: true
 
@@ -125,7 +125,7 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
-    latency_budget_ms: 7000
+    latency_budget_ms: 10000
     # D1 invariant: CQL search returns matching pages; never mutates.
     read_only: true
 
