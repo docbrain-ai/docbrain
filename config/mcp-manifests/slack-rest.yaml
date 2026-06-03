@@ -90,6 +90,11 @@ auth:
     secret_refs:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+  # Tool-health: the real credential is the PER-USER OAuth token (resolved inside
+  # the shim). Health is per-caller — a connected user sees these tools
+  # dispatchable, an unconnected user sees them unavailable. Never gated globally.
+  health_check:
+    kind: per_user_oauth
   oauth:
     # Slack's MODERN OAuth v2 endpoints. Different from the `slack`
     # manifest's `v2_user/` legacy variant:

@@ -54,6 +54,14 @@ auth:
     secret_refs:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+  # Tool-health: the UPSTREAM credential is the env var ROOTLY_API_TOKEN (read by
+  # the shim, separate from the orchestrator bearer above). When it is unset, the
+  # tool-health gate marks these tools NON-DISPATCHABLE — the loop never picks
+  # them and the admin panel shows "ROOTLY_API_TOKEN unset" — instead of
+  # dispatching and failing. Single source of truth for the required secret name.
+  health_check:
+    kind: env_secret
+    secret: ROOTLY_API_TOKEN
 
 tools:
   - name: rootly.get_oncall
