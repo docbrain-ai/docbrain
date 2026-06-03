@@ -298,7 +298,6 @@ rag:
     - "on call"
     - "current rotation"
     - "incident commander"
-  loop_first_enabled: true              # loop-first answering (kill-switch, default on)
 
   # Retrieval ladder (experimental, off by default). When enabled, an
   # answer is synthesised TWICE in parallel — once from indexed documents
@@ -328,7 +327,6 @@ rag:
 | — | `RAG_RERANK_TITLE_ENRICH` | `true` | Pass chunk title + heading + source/space to the reranker alongside the content body. Title is the single strongest relevance signal and used to be discarded. Set to `false` to send content only (legacy behavior). |
 | `rag.entity_cache_ttl_secs` | `RAG_ENTITY_CACHE_TTL_SECS` | `300` | TTL for the entity → space resolution cache. New spaces added to the index become discoverable within this window. |
 | `rag.max_rewrites` | `RAG_MAX_REWRITES` | `2` | Maximum alternate queries produced by query rewriting. Each rewrite costs one extra embed call + one extra hybrid search. `0` disables rewriting. |
-| `rag.loop_first_enabled` | `RAG_LOOP_FIRST_ENABLED` | `true` | **Loop-first answering** — the iterative tool loop is the default answering spine for every real question, rather than a fallback gated behind low-confidence checks. This is a kill-switch: set to `false` to fall back to the legacy gated path during an incident. The legacy path is removed after the loop-first rollout, so this is a transitional safety valve, not a long-term tunable. |
 | `rag.retrieval_ladder.enabled` | — | `false` | **Experimental.** Master switch for the retrieval ladder. When `false` (default), DocBrain uses the standard single-synthesis path. When `true`, an answer is synthesised twice in parallel (indexed-only vs. indexed+live-tool data) and an LLM judge picks the winner; low-confidence winners are augmented with knowledge-graph expert routing. Costs an extra synthesis + a judge call per answer, and disables token streaming (the final answer is delivered once the judge decides). |
 | `rag.retrieval_ladder.graph_append_threshold` | — | `0.5` | When the winning answer's confidence is below this, append knowledge-graph "these people may know more" expert routing to the answer. Only applies when the ladder is enabled. |
 | `rag.retrieval_ladder.judge_timeout_ms` | — | `1500` | Hard timeout for the judge LLM call. On timeout the ladder falls back to the higher self-graded confidence between the two answers. |
