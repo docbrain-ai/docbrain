@@ -149,9 +149,9 @@ server:
   # enable, uncomment:
   #     RAG_AGENTIC_LOOP_ENABLED: "true"                   # opt-in; supersedes confidence-retry when on
   #     RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK: "5"             # 1–10
-  #     RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB: "3"               # 1–10
+  #     RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB: "4"               # 1–10
   #     RAG_AGENTIC_LOOP_BUDGET_MS_SLACK: "60000"          # 1000–120000
-  #     RAG_AGENTIC_LOOP_BUDGET_MS_WEB: "20000"            # 1000–120000
+  #     RAG_AGENTIC_LOOP_BUDGET_MS_WEB: "30000"            # 1000–120000
   #     RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD: "0.7"       # 0.0–1.0; falls back to RAG_CONFIDENCE_RETRY_THRESHOLD when unset
   env: {}
 

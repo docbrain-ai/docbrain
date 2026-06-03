@@ -137,9 +137,9 @@ rag:
   # set-but-invalid → warn + default:
   #   RAG_AGENTIC_LOOP_ENABLED               true | 1 | yes | on (default false)
   #   RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK      1–10 (default 5)
-  #   RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB        1–10 (default 3)
+  #   RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB        1–10 (default 4)
   #   RAG_AGENTIC_LOOP_BUDGET_MS_SLACK       1000–120000 (default 60000)
-  #   RAG_AGENTIC_LOOP_BUDGET_MS_WEB         1000–120000 (default 20000)
+  #   RAG_AGENTIC_LOOP_BUDGET_MS_WEB         1000–120000 (default 30000)
   #   RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD  0.0–1.0 (default 0.7; unset →
   #                                          falls back to RAG_CONFIDENCE_RETRY_THRESHOLD)
 
