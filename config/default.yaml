@@ -92,6 +92,7 @@ rag:
   # mcp_output_ceiling_bytes: 32768          # Hard ceiling the manifest validator enforces on any per-tool cap
   # mcp_default_tool_output_cap_bytes: 32768 # Cap inherited by dynamically-discovered tools (must be ≤ ceiling)
   # evidence_buffer_cap_bytes: 65536         # SHARED per-loop-round evidence budget (2x the per-tool cap)
+  # mcp_jql_recency_bound_days: 180          # Recency window appended to unbounded full-text Jira searches (avoids 10s timeouts)
   # freshness_window_days: 7          # Freshness retriever window (0 to disable)
   # entity_cache_ttl_secs: 300        # Entity → space cache TTL
   # max_rewrites: 2                   # Query rewrites per ask (0 to disable)

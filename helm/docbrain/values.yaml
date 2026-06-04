@@ -362,6 +362,9 @@ rag:
   # mcpOutputCeilingBytes: 32768          # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES
   # mcpDefaultToolOutputCapBytes: 32768   # DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES
   # evidenceBufferCapBytes: 65536         # DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES
+  # mcpJqlRecencyBoundDays: 180           # DOCBRAIN_MCP_JQL_RECENCY_BOUND_DAYS — recency
+                                          # window appended to unbounded full-text issue-tracker
+                                          # searches so they hit the date index (avoids timeouts).
   # -- Experimental retrieval ladder. Off by default. When enabled, answers
   # are synthesised twice (indexed vs indexed+live-tool) and an LLM judge
   # picks the winner; low-confidence answers get knowledge-graph expert
