@@ -90,6 +90,25 @@ auth:
       - "read:confluence-space.summary"
       - "read:confluence-user"
       - "search:confluence"
+      # ─── Compass GraphQL API (Teamwork Graph data layer) ─────────────
+      # The get_teamwork_graph_{context,object} tools call Atlassian's
+      # hosted Rovo/Teamwork-Graph MCP endpoint, whose object graph is
+      # backed by Compass. Without a Compass read scope the token has
+      # Jira+Confluence read authority but NO authority over the graph
+      # layer, so those two tools fail ("permission to connect via API
+      # token" on SA mode; "trouble completing this action" on OAuth).
+      # Read-only only — DocBrain's MCP read-only invariant forbids any
+      # write:*:compass scope. `read:component:compass` is the load-bearing
+      # one (components are the core graph node); the other three are read
+      # siblings added to rule out a missing-adjacent-scope failure.
+      # NOTE: a Compass scope may be necessary but NOT sufficient —
+      # Teamwork Graph can additionally require a site-level Rovo/Compass
+      # product entitlement. If these tools still fail after a re-grant,
+      # the residual blocker is the entitlement, not the scope.
+      - "read:component:compass"
+      - "read:scorecard:compass"
+      - "read:event:compass"
+      - "read:metric:compass"
       # ─── Refresh tokens ──────────────────────────────────────────────
       - "offline_access"     # required for refresh tokens
     client_id_secret_ref: ATLASSIAN_OAUTH_CLIENT_ID
