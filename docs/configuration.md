@@ -1209,6 +1209,9 @@ Controls how documents are split before embedding. See [Ingestion Guide](ingesti
 |----------|---------|-------------|
 | `OPENSEARCH_INDEX` | `docbrain-chunks` | Index name for document chunks (vectors + BM25) |
 | `OPENSEARCH_EPISODE_INDEX` | `docbrain-episodes` | Index name for episode vectors (used in episodic memory recall) |
+| `DOCBRAIN_MCP_OUTPUT_CEILING_BYTES` | `32768` | Hard upper bound the live-tool manifest validator enforces on any per-tool output cap. A per-tool cap above this is rejected at load. |
+| `DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES` | `32768` | Output cap inherited by tools discovered dynamically that ship no per-tool cap (e.g. chat search). Must be ≤ the ceiling above. |
+| `DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES` | `65536` | Shared evidence-text budget across **all** tools in one tool-loop round — the real bottleneck. 2× the per-tool cap leaves headroom for other sources. These three caps form a chain: all must rise together, since the smallest truncates regardless of the others. |
 
 Only change these if you run multiple DocBrain instances sharing the same OpenSearch cluster, to avoid index collisions.
 

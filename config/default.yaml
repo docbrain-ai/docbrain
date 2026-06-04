@@ -81,6 +81,17 @@ rag:
   display_floor: 0.50                 # Display floor — chunks below this are never shown as citations. Lowering surfaces more tangential sources (user trust cost).
   confidence_gate: 0.40                # Confidence gate — below this, sources are hidden and the answer is shown as "general knowledge". Lowering shows sources on lower-confidence answers.
   strong_answer_floor: 0.55           # Strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer.
+  # ── Tool-output caps (the truncation chain) ───────────────────────────
+  # Three coordinated caps bound how much raw tool output reaches the
+  # synthesis prompt. They MUST rise together — raising one alone has no
+  # effect because the smallest still truncates. Defaults let a high-volume
+  # search (which can return 43-63KB raw) keep ~32KB instead of being cut to
+  # a fraction. The two mcp_* values are also read from the matching
+  # DOCBRAIN_MCP_* env vars by the manifest validator, so override the env
+  # var (not just this YAML) when tuning them.
+  # mcp_output_ceiling_bytes: 32768          # Hard ceiling the manifest validator enforces on any per-tool cap
+  # mcp_default_tool_output_cap_bytes: 32768 # Cap inherited by dynamically-discovered tools (must be ≤ ceiling)
+  # evidence_buffer_cap_bytes: 65536         # SHARED per-loop-round evidence budget (2x the per-tool cap)
   # freshness_window_days: 7          # Freshness retriever window (0 to disable)
   # entity_cache_ttl_secs: 300        # Entity → space cache TTL
   # max_rewrites: 2                   # Query rewrites per ask (0 to disable)

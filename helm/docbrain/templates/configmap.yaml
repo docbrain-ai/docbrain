@@ -252,6 +252,15 @@ data:
   STREAM_EXPERTISE_GAP_DAYS: {{ .Values.stream.expertiseGapDays | default 90 | quote }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
   RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
+  {{- if .Values.rag.mcpOutputCeilingBytes }}
+  DOCBRAIN_MCP_OUTPUT_CEILING_BYTES: {{ .Values.rag.mcpOutputCeilingBytes | quote }}
+  {{- end }}
+  {{- if .Values.rag.mcpDefaultToolOutputCapBytes }}
+  DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES: {{ .Values.rag.mcpDefaultToolOutputCapBytes | quote }}
+  {{- end }}
+  {{- if .Values.rag.evidenceBufferCapBytes }}
+  DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES: {{ .Values.rag.evidenceBufferCapBytes | quote }}
+  {{- end }}
   {{- if .Values.rag.retrievalLadder }}
   {{- if .Values.rag.retrievalLadder.enabled }}
   RAG_RETRIEVAL_LADDER_ENABLED: {{ .Values.rag.retrievalLadder.enabled | quote }}

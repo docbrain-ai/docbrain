@@ -352,6 +352,16 @@ consolidation:
 rag:
   cacheTtlHours: 24
   cacheThreshold: "0.95"
+  # -- Tool-output caps (the truncation chain). All THREE must rise together —
+  # raising one alone has no effect because the smallest still truncates. The
+  # two outputCap values also gate the manifest validator via the DOCBRAIN_MCP_*
+  # env vars these map to. Defaults let a high-volume search (43-63KB raw) keep
+  # ~32KB instead of being truncated. evidenceBufferCapBytes is the SHARED
+  # per-round budget; size it at 2x the per-tool cap so one maxed source leaves
+  # headroom. Commented = use the built-in defaults (32768 / 32768 / 65536).
+  # mcpOutputCeilingBytes: 32768          # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES
+  # mcpDefaultToolOutputCapBytes: 32768   # DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES
+  # evidenceBufferCapBytes: 65536         # DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES
   # -- Experimental retrieval ladder. Off by default. When enabled, answers
   # are synthesised twice (indexed vs indexed+live-tool) and an LLM judge
   # picks the winner; low-confidence answers get knowledge-graph expert
