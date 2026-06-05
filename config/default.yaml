@@ -152,6 +152,23 @@ rag:
   #   RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD  0.0–1.0 (default 0.7; unset →
   #                                          falls back to RAG_CONFIDENCE_RETRY_THRESHOLD)
 
+  # ── Feedback → source-suppression learning loop ─────────────────────────
+  #
+  # When a user marks a SPECIFIC source within an answer as not-relevant
+  # (per-source thumbs-down on web/CLI/Slack), this down-ranks that document in
+  # retrieval for SIMILAR future questions. "Similar" reuses the episodes
+  # already recalled on the hot path (no extra embedding). Threshold-gated so a
+  # single click can't unilaterally bury a document; a document is suppressed
+  # when it crosses EITHER gate. Set both min_* to 0 to disable entirely.
+  #
+  #   RAG_SUPPRESSION_MIN_FEEDBACK_COUNT   total not-relevant events (default 2)
+  #   RAG_SUPPRESSION_MIN_UNIQUE_USERS     distinct users (default 2)
+  #   RAG_SUPPRESSION_RAG_PENALTY_FACTOR   score multiplier (default 0.1)
+  suppression:
+    min_feedback_count: 2
+    min_unique_users: 2
+    rag_penalty_factor: 0.1
+
 # ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
 #
 # The reranker takes the candidate pool from stage 2 and rescores each
