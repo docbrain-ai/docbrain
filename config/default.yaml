@@ -281,6 +281,10 @@ autopilot:
   threshold_critical: 0.75  # Composite score >= this → "critical"
   threshold_high: 0.55      # Composite score >= this → "high"
   threshold_medium: 0.35    # Composite score >= this → "medium"
+  # Corpus-probe relevance floor: min OpenSearch hybrid (BM25+kNN, unbounded)
+  # probe score a candidate target doc must reach before autopilot auto-picks it
+  # to AUGMENT for a poor_coverage gap. Below this → "needs human pick".
+  target_min_score: 45.0
 
 freshness:
   scheduler_interval_hours: 24

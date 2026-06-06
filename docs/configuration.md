@@ -986,6 +986,7 @@ in the Kubernetes Secret via `mcpTools.serviceAccount.rootly.*` in Helm):
 | `AUTOPILOT_CRITICAL_THRESHOLD` | `0.75` | Composite score cutoff for "critical" severity. |
 | `AUTOPILOT_HIGH_THRESHOLD` | `0.55` | Composite score cutoff for "high" severity. |
 | `AUTOPILOT_MEDIUM_THRESHOLD` | `0.35` | Composite score cutoff for "medium" severity. |
+| `AUTOPILOT_TARGET_MIN_SCORE` | `45.0` | Corpus-probe relevance floor: minimum OpenSearch hybrid (BM25+kNN, unbounded) probe score a candidate target doc must reach before autopilot auto-picks it to augment a `poor_coverage` gap. Below this the cluster is marked "needs human pick". Distinct from `VERIFY_CORPUS_MIN_SCORE`. |
 
 When enabled, Autopilot runs on the configured schedule, exposes management endpoints at `/api/v1/autopilot/*`, and posts critical gap alerts to `SLACK_GAP_NOTIFICATION_CHANNEL` if configured. See the [API Reference](api-reference.md) for endpoint details.
 

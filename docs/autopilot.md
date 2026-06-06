@@ -120,6 +120,14 @@ These control when a gap escalates to "critical" or "high". All are configurable
 | `AUTOPILOT_AUTO_DRAFT` | `false` | When `true`, drafts are generated automatically after each analysis run without human trigger. |
 | `AUTOPILOT_AUTO_DRAFT_SEVERITY` | `critical` | Minimum severity to auto-draft. |
 
+### Target Selection
+
+Controls which existing page autopilot picks to **augment** for a `poor_coverage` gap.
+
+| Variable | Default | Description |
+|---|---|---|
+| `AUTOPILOT_TARGET_MIN_SCORE` | `45.0` | Corpus-probe relevance floor. The minimum OpenSearch hybrid (BM25 + k-NN, unbounded) probe score a candidate target doc must reach before autopilot auto-picks it as the page to augment. Below this the cluster is marked "needs human pick" instead of auto-selecting a weak target. Distinct from `VERIFY_CORPUS_MIN_SCORE` (which controls `missing_doc` vs `poor_coverage` classification). |
+
 ---
 
 ## Tuning for Your Org Size
