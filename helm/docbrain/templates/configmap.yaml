@@ -55,6 +55,12 @@ data:
   {{- if .Values.ingest.confluence }}
   CONFLUENCE_BASE_URL: {{ .Values.ingest.confluence.baseUrl | default "" | quote }}
   CONFLUENCE_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
+  # The code reads CONFLUENCE_USER_EMAIL for Confluence Cloud (v2) Basic auth on
+  # every WRITE (publisher update/create + augment fetch). It was previously only
+  # emitted from confluenceWebhook.email, which is unset when ingest.confluence is
+  # configured — so all v2 writes failed "requires user_email". Source it from the
+  # same ingest account email that already drives reads.
+  CONFLUENCE_USER_EMAIL: {{ .Values.ingest.confluence.email | default "" | quote }}
   CONFLUENCE_SPACE_KEYS: {{ .Values.ingest.confluence.spaceKeys | default "" | quote }}
   CONFLUENCE_API_VERSION: {{ .Values.ingest.confluence.apiVersion | default "v2" | quote }}
   {{- if .Values.ingest.confluence.pageIds }}
