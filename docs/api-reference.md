@@ -217,6 +217,81 @@ to `audit_log`.
 
 ---
 
+### Generate a Document
+
+```
+POST /api/v1/generate
+```
+
+Generate a documentation draft grounded in your org's own knowledge (corpus +
+episodes + live MCP connectors), with per-claim provenance. Returns the markdown
+— it does **not** publish. Stateless. **Requires `editor` role** (same auth as
+`/ask`).
+
+Each `--source-url`-style URL source is a named primary source: if any one
+can't be fetched, the whole generation aborts (`502`) rather than producing a
+doc from a subset.
+
+**Request Body (`GenerateRequest`):**
+```json
+{
+  "ask": "runbook for cert rotation",
+  "sources": [
+    { "kind": "file", "label": "notes.md", "raw": "..." },
+    { "kind": "url",  "label": "https://acme.atlassian.net/wiki/spaces/OPS/pages/123", "raw": "" }
+  ],
+  "target": "optional existing-doc reference to augment",
+  "template": "optional raw template file content (the bytes, not a path)",
+  "doc_type": "runbook",
+  "space": "OPS",
+  "no_enrich": false
+}
+```
+
+- `ask` — required. The natural-language description of the doc to write.
+- `sources` — primary material. `kind` is `file`, `stdin`, or `url`. For `kind: "url"`, the URL goes in `label` and `raw` is `""` — the server fetches it via the connected MCP connector (Confluence page, Jira issue, Slack thread, GitHub PR or file).
+- `target` — augment an existing doc rather than write from scratch.
+- `template` — the raw template **file content** (not a path); shapes structure/tone only, can never disable a safety or quality rule.
+- `space` — applies that Confluence space's quality rules; `no_enrich: true` disables live-MCP enrichment.
+
+**Response (`GeneratedArtifact`):**
+```json
+{
+  "markdown": "# Cert Rotation Runbook\n...",
+  "doc_type": "runbook",
+  "provenance": [
+    { "section": "Overview", "source_ids": ["chunk-1", "chunk-2"] }
+  ],
+  "needs_input": [ "Which CA issues the production certs?" ],
+  "skipped_sources": [
+    { "label": "jira", "reason": "connector not connected" }
+  ],
+  "quality": {
+    "score": 87.0,
+    "violations": [ { "rule_name": "...", "severity": "warning", "message": "..." } ]
+  }
+}
+```
+
+- `provenance` — per-section attribution: `{ section, source_ids }` (`section` is `null` for whole-doc).
+- `needs_input` — questions the doc can't answer from available knowledge (the honesty signal, not a fabrication).
+- `skipped_sources` — sources that were unavailable, each `{ label, reason }`.
+- `quality` — `score` is a 0–100 number; each violation is `{ rule_name, severity, message }`.
+
+**Error responses:**
+
+| Status | Meaning |
+|---|---|
+| `400` | Validation failure / unknown source kind / unsupported or unrecognized URL (incl. a smuggled rule directive in a template) |
+| `403` | Caller is not an `editor` |
+| `413` | Source material over the per-source or aggregate size budget (inline or after fetching links) |
+| `502` | A named URL source could not be fetched (connector not connected/configured, or fetch error) |
+| `503` | Generation not configured |
+
+See the **[Generate guide](generate.md)** for the CLI, the template format, and CI playbooks.
+
+---
+
 ### Submit Feedback
 
 ```

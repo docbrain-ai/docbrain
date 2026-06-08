@@ -52,6 +52,7 @@ nav:
     - Architecture: architecture.md
     - Knowledge Intelligence: knowledge-intelligence.md
     - Autopilot: autopilot.md
+    - Generate (Grounded Docs): generate.md
     - Governance: governance.md
     - How DocBrain Earns Trust: trust.md
     - Style Policy: style-policy.md

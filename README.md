@@ -317,6 +317,35 @@ The autonomous documentation engine that finds and fills gaps without human inte
 
 See [Autopilot Guide](docs/autopilot.md) for configuration and tuning.
 
+### Grounded Doc Generation (`docbrain generate`)
+
+Produce a documentation draft grounded in your org's own reality — your runbooks, incidents, tickets, PRs, and Slack threads — with per-claim provenance, and honest about what it doesn't know. A frontier model with no access to your systems writes fluent, generic prose; `generate` writes what is true *for you*, or says it can't. Where Autopilot is automatic and gap-driven, `generate` is on-demand: *you* name the doc, hand it the source material, and get the markdown back.
+
+- **Provenance, not vibes.** Every section is attributed to the corpus, episode, or live connector it was built from.
+- **Same gates as every other DocBrain doc.** Secret/PII redaction, hostname scrub, prompt-injection quarantine, and structural + style scoring all apply — a template can shape sections and tone but can *never* carry or disable a safety rule.
+- **Honest when it doesn't know.** Instead of fabricating, it emits `needs_input` — the open questions the available knowledge couldn't answer.
+- **Returns, never publishes.** Stateless. stdout is pipe-clean (markdown only); diagnostics go to stderr; non-zero exit on error-severity violations unless `--allow-violations` (CI-native).
+
+```bash
+# Runbook from local notes, redirected to a file (pipe-clean stdout)
+docbrain generate "runbook for cert rotation" --source notes.md > out.md
+
+# Postmortem grounded in a real Slack incident thread
+docbrain generate "postmortem from this incident" \
+  --source-url https://acme.slack.com/archives/C123/p1700000000123 > postmortem.md
+
+# API reference grounded in a GitHub PR's changes
+docbrain generate "API reference for the changed endpoints" \
+  --source-url https://github.com/acme/repo/pull/42 --type reference
+```
+
+- **`--source-url`** (repeatable) names a link as primary material — DocBrain fetches it via the connected MCP connector (Confluence page, Jira issue, Slack thread, GitHub PR or file). It is **all-or-nothing**: if *any* named URL can't be fetched the whole run aborts and names the failed source — never a doc silently built from a subset. Fetched content is size-bounded (per-source + aggregate byte caps) just like inline sources.
+- **`--target`** augments an existing doc instead of rewriting it; **`--template`** points at a plain markdown file that shapes structure and tone only; **`--no-enrich`** turns off live-MCP enrichment for a corpus/seed-only run.
+- **CI-native.** Generate or update a doc straight from a PR URL or a `git diff` and fail the build on bad quality. See **[Using `generate` in CI](docs/generate.md#using-generate-in-ci)**.
+- **API:** `POST /api/v1/generate` (editor role, same auth as `/ask`) returns a `GeneratedArtifact` — `markdown`, `doc_type`, `provenance`, `needs_input`, `skipped_sources`, `quality`. Errors: `400` bad request/unknown source kind/unsupported URL · `403` not editor · `413` source over size budget · `502` a named `--source-url` couldn't be fetched · `503` not configured.
+
+See the full **[Generate guide](docs/generate.md)** for every flag, the template format, and CI playbooks.
+
 ### Fragment Lifecycle
 
 The full journey from captured knowledge to published documentation:

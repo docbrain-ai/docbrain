@@ -238,6 +238,18 @@ docbrain thumbsup
 docbrain thumbsdown
 ```
 
+### Generate a doc
+
+Draft a document grounded in your org's own knowledge (corpus + episodes + live connectors), using a local file as primary material. `generate` returns the markdown — it does not publish.
+
+```bash
+docbrain generate "runbook for cert rotation" --source notes.md --type runbook > runbook.md
+```
+
+stdout carries only the markdown (pipe-clean, redirect-safe). All diagnostics — resolved doc type, quality score, needs-input questions, skipped sources, violations — go to stderr, so the redirect above captures a clean document. Pass `--out runbook.md` instead of the redirect, or `--source-url <link>` to ground the doc in a Confluence page, Jira issue, Slack thread, or GitHub PR. In CI, the process exits non-zero on error-severity quality violations (override with `--allow-violations`).
+
+See the **[Generate guide](generate.md)** for source links, templates, and CI playbooks.
+
 ## Troubleshooting
 
 ### Services won't start
