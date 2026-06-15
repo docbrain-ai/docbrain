@@ -1,16 +1,21 @@
 # DocBrain Template Files
 
-A **template file** shapes the *structure* and *tone* of a document produced by
-`docbrain generate`. Nothing more.
+**A template is just a markdown file your team already has.** Point `--template`
+at an existing runbook, a doc skeleton, or any document whose layout you want new
+docs to match. **There is no special format to learn** — `docbrain generate`
+reads the file's `## Section` headings (in order) plus an optional tone, and
+writes a new doc with **that structure and voice**.
 
-It is a plain markdown/text file with two jobs:
+The files in this folder are ready-to-copy starting points, but **any ordinary
+`.md` works** — see [`runbook.md`](runbook.md) for one with the optional
+`doc_type:`/`tone:` lines, or just hand `generate` a doc you already maintain.
 
-1. Declare an optional `doc_type:` and `tone:` up top.
-2. List the `## Section` headings the generated doc must contain, in order.
-
-That is the whole contract. A template keeps generated docs across your team
-consistent — every runbook has the same skeleton, every API reference reads in
-the same voice — without anyone re-typing the outline each time.
+```bash
+# Use a doc the team already wrote as the shape for a new one — no edits needed
+docbrain generate "runbook for cert rotation" \
+  --template docs/runbooks/EXISTING-runbook.md \
+  --source notes.md > out.md
+```
 
 ## What a template can and cannot do
 
@@ -19,6 +24,10 @@ A template controls **structure and tone only**.
 - It **can** add, remove, reorder, and rename the required sections for a run.
 - It **can** set the writing tone (`concise and operational`, `welcoming and
   step-by-step`, …).
+- It does **not** copy your file's prose into the output. `generate` takes the
+  *skeleton + tone* and writes fresh, grounded content under each heading. (Want
+  the output to reuse a document's actual text? Pass it as a `--source` seed, not
+  a `--template`.)
 - It **cannot** carry, weaken, or disable any quality or safety behaviour. The
   format simply has no field for one. Generated docs always pass the same
   redaction, scrubbing, and scoring gates regardless of the template used.

@@ -1,0 +1,2782 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Shift-left documentation platform — capture knowledge at the source, score quality automatically, publish docs that stay accurate.">
+      
+      
+      
+        <link rel="canonical" href="https://docbrainapi.com/docs/generate/">
+      
+      
+        <link rel="prev" href="../autopilot/">
+      
+      
+        <link rel="next" href="../governance/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Generate (Grounded Docs) - DocBrain Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#generate-grounded-document-generation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="DocBrain Docs" class="md-header__button md-logo" aria-label="DocBrain Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.5c-1.35-.85-3.8-1.5-5.5-1.5-1.65 0-3.35.3-4.75 1.05-.1.05-.15.05-.25.05-.25 0-.5-.25-.5-.5V6c.6-.45 1.25-.75 2-1 1.11-.35 2.33-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.17 0 2.39.15 3.5.5.75.25 1.4.55 2 1v14.6c0 .25-.25.5-.5.5-.1 0-.15 0-.25-.05-1.4-.75-3.1-1.05-4.75-1.05-1.7 0-4.15.65-5.5 1.5M12 8v11.5c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5V7c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5m1 3.5c1.11-.68 2.6-1 4.5-1 .91 0 1.76.09 2.5.28V9.23c-.87-.15-1.71-.23-2.5-.23q-2.655 0-4.5.84zm4.5.17c-1.71 0-3.21.26-4.5.79v1.69c1.11-.65 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24v-1.5c-.87-.16-1.71-.23-2.5-.23m2.5 2.9c-.87-.16-1.71-.24-2.5-.24-1.83 0-3.33.27-4.5.8v1.69c1.11-.66 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DocBrain Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Generate (Grounded Docs)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/docbrain-ai/docbrain" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    docbrain-ai/docbrain
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="DocBrain Docs" class="md-nav__button md-logo" aria-label="DocBrain Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.5c-1.35-.85-3.8-1.5-5.5-1.5-1.65 0-3.35.3-4.75 1.05-.1.05-.15.05-.25.05-.25 0-.5-.25-.5-.5V6c.6-.45 1.25-.75 2-1 1.11-.35 2.33-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.17 0 2.39.15 3.5.5.75.25 1.4.55 2 1v14.6c0 .25-.25.5-.5.5-.1 0-.15 0-.25-.05-1.4-.75-3.1-1.05-4.75-1.05-1.7 0-4.15.65-5.5 1.5M12 8v11.5c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5V7c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5m1 3.5c1.11-.68 2.6-1 4.5-1 .91 0 1.76.09 2.5.28V9.23c-.87-.15-1.71-.23-2.5-.23q-2.655 0-4.5.84zm4.5.17c-1.71 0-3.21.26-4.5.79v1.69c1.11-.65 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24v-1.5c-.87-.16-1.71-.23-2.5-.23m2.5 2.9c-.87-.16-1.71-.24-2.5-.24-1.83 0-3.33.27-4.5.8v1.69c1.11-.66 2.6-.99 4.5-.99 1.04 0 1.88.08 2.5.24z"/></svg>
+
+    </a>
+    DocBrain Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/docbrain-ai/docbrain" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    docbrain-ai/docbrain
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rerank-providers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rerank Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge-intelligence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Intelligence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autopilot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autopilot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate (Grounded Docs)
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate (Grounded Docs)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#io-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I/O contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-material" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source material
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Source material">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-source-url-supported-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --source-url: supported links
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-or-nothing-hard-fail-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-or-nothing hard-fail contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Templates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-template-controls-and-what-it-doesnt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a template controls — and what it doesn't
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#format-every-part-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format (every part optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-an-ordinary-team-runbook-works-as-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: an ordinary team runbook works as-is
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seeded-doc-type-section-sets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeded doc-type section sets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#augmenting-an-existing-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Augmenting an existing doc
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-body-generaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request body — GenerateRequest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-generatedartifact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response — GeneratedArtifact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error codes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-generate-in-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using generate in CI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using generate in CI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#playbook-1-doc-on-merge-update-the-runbook-from-the-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook 1 — Doc-on-merge: update the runbook from the PR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#playbook-2-diff-driven-generate-from-a-git-diff-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook 2 — Diff-driven: generate from a git diff file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#playbook-3-quality-gate-fail-the-build-on-a-bad-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook 3 — Quality gate: fail the build on a bad doc
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-beats-a-generic-llm-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this beats a generic LLM action
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../trust/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How DocBrain Earns Trust
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../style-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Style Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reviews/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Review Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../learning/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Learning Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Integrations
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Integrations
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ingestion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ingestion Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../connectors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Connectors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp-tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MCP Tool Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../slack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gitlab-capture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitLab Capture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../confluence-webhook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Confluence Webhook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kubernetes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kubernetes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC & SSO
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../access-control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Access Control (ACL)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../runbooks/mcp-shadow-run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runbook: MCP Shadow Run
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Security
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/slack-dm-policy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Slack DM Privacy Policy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use it
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#io-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I/O contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-material" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source material
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Source material">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-source-url-supported-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --source-url: supported links
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-or-nothing-hard-fail-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All-or-nothing hard-fail contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Templates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-a-template-controls-and-what-it-doesnt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What a template controls — and what it doesn't
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#format-every-part-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format (every part optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-an-ordinary-team-runbook-works-as-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: an ordinary team runbook works as-is
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seeded-doc-type-section-sets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeded doc-type section sets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#augmenting-an-existing-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Augmenting an existing doc
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-body-generaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request body — GenerateRequest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-generatedartifact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response — GeneratedArtifact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error codes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-generate-in-ci" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using generate in CI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Using generate in CI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#playbook-1-doc-on-merge-update-the-runbook-from-the-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook 1 — Doc-on-merge: update the runbook from the PR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#playbook-2-diff-driven-generate-from-a-git-diff-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook 2 — Diff-driven: generate from a git diff file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#playbook-3-quality-gate-fail-the-build-on-a-bad-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Playbook 3 — Quality gate: fail the build on a bad doc
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-beats-a-generic-llm-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this beats a generic LLM action
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="generate-grounded-document-generation">Generate — Grounded Document Generation<a class="headerlink" href="#generate-grounded-document-generation" title="Permanent link">&para;</a></h1>
+<p><code>docbrain generate</code> produces a documentation draft grounded in your org's own
+knowledge — your corpus, your past episodes, and your live MCP connectors —
+and returns the markdown to you. It does <strong>not</strong> publish anything; it is
+stateless. The moat is grounding: where a frontier model writes fluent generic
+prose, <code>generate</code> writes what is actually true for <em>your</em> org (with per-claim
+provenance), passes every DocBrain quality and safety gate, and is honest when
+it doesn't know rather than fabricating.</p>
+<h2 id="when-to-use-it">When to use it<a class="headerlink" href="#when-to-use-it" title="Permanent link">&para;</a></h2>
+<p><code>generate</code> is the <strong>on-demand, you-drive-it</strong> counterpart to autopilot.</p>
+<ul>
+<li><strong>Autopilot</strong> is automatic and gap-driven: DocBrain detects a documentation
+  gap and proposes a draft on its own schedule. You don't ask for a specific
+  document — the system decides what's missing.</li>
+<li><strong>Generate</strong> is on-demand: <em>you</em> name the document you want, <em>you</em> hand it the
+  primary source material, and <em>you</em> get the markdown back to do with as you
+  please. It runs exactly when you invoke it and produces exactly what you asked
+  for.</li>
+</ul>
+<p>And versus a plain LLM:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Plain frontier model</th>
+<th><code>docbrain generate</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Knows your runbooks, incidents, tickets, PRs, Slack threads</td>
+<td>No</td>
+<td>Yes — grounded in your corpus + episodes + live connectors</td>
+</tr>
+<tr>
+<td>Per-claim provenance</td>
+<td>No</td>
+<td>Yes — every claim attributed to a source</td>
+</tr>
+<tr>
+<td>Passes redaction / PII / hostname / injection gates</td>
+<td>No</td>
+<td>Yes — same gates as every DocBrain doc</td>
+</tr>
+<tr>
+<td>Behaviour when it doesn't know</td>
+<td>Fabricates fluent prose</td>
+<td>Emits <code>needs_input</code> and says it can't</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A frontier model with no access to your systems writes something that
+<em>reads</em> right. <code>generate</code> writes something that <em>is</em> right for you — or
+tells you which questions it can't answer.</p>
+</div>
+<h2 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docbrain generate &lt;ASK&gt; [FLAGS]
+</span></code></pre></div>
+<p><code>&lt;ASK&gt;</code> is the single required positional argument: a plain-language description
+of the document you want written.</p>
+<h3 id="flags">Flags<a class="headerlink" href="#flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;ASK&gt;</code></td>
+<td>string (positional)</td>
+<td><strong>Required.</strong> What to write.</td>
+</tr>
+<tr>
+<td><code>--source</code></td>
+<td><code>&lt;FILE&gt;</code></td>
+<td>Repeatable. A local file read verbatim as <strong>primary</strong> material.</td>
+</tr>
+<tr>
+<td><code>--source-url</code></td>
+<td><code>&lt;URL&gt;</code></td>
+<td>Repeatable. A <strong>link</strong> as primary material; DocBrain <strong>fetches</strong> it via the connected MCP connector. See <a href="#source-material">Source material</a>.</td>
+</tr>
+<tr>
+<td><code>--stdin</code></td>
+<td>—</td>
+<td>Read primary material from stdin.</td>
+</tr>
+<tr>
+<td><code>--target</code></td>
+<td><code>&lt;REF\|URL&gt;</code></td>
+<td>Existing doc to <strong>augment</strong> (not replace). See <a href="#augmenting-an-existing-doc">Augmenting an existing doc</a>.</td>
+</tr>
+<tr>
+<td><code>--template</code></td>
+<td><code>&lt;FILE&gt;</code></td>
+<td>Team template file that shapes sections and tone. <strong>Cannot</strong> affect safety. See <a href="#templates">Templates</a>.</td>
+</tr>
+<tr>
+<td><code>--type</code></td>
+<td><code>&lt;TYPE&gt;</code></td>
+<td>Doc-type hint: <code>runbook</code> | <code>guide</code> | <code>troubleshooting</code> | <code>faq</code> | <code>reference</code>. Inferred if omitted.</td>
+</tr>
+<tr>
+<td><code>--space</code></td>
+<td><code>&lt;SPACE&gt;</code></td>
+<td>Confluence space whose quality rules apply. Falls back to the global floor if omitted.</td>
+</tr>
+<tr>
+<td><code>--out</code></td>
+<td><code>&lt;FILE&gt;</code></td>
+<td>Write markdown to a file instead of stdout.</td>
+</tr>
+<tr>
+<td><code>--no-enrich</code></td>
+<td>—</td>
+<td>Disable live-MCP tool enrichment (corpus/seed only).</td>
+</tr>
+<tr>
+<td><code>--allow-violations</code></td>
+<td>—</td>
+<td>Exit <code>0</code> even on error-severity quality violations (CI override).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="io-contract">I/O contract<a class="headerlink" href="#io-contract" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>stdout carries only the markdown.</strong> It is pipe-clean and redirect-safe — you
+  can <code>&gt; out.md</code> or pipe into another tool without stripping noise.</li>
+<li><strong>All diagnostics go to stderr</strong>: resolved doc type, quality score,
+  needs-input questions, skipped sources, and quality violations.</li>
+<li><strong>Exit code is non-zero on error-severity quality violations</strong> — unless you
+  pass <code>--allow-violations</code>. This is the CI-native behaviour: a bad draft fails
+  the build by default.</li>
+</ul>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Runbook from local notes, redirected to a file (pipe-clean stdout)</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;runbook for cert rotation&quot;</span><span class="w"> </span>--source<span class="w"> </span>notes.md<span class="w"> </span>&gt;<span class="w"> </span>out.md
+</span></code></pre></div>
+<h2 id="source-material">Source material<a class="headerlink" href="#source-material" title="Permanent link">&para;</a></h2>
+<p>You provide <strong>primary</strong> material in one of three ways. All three are repeatable
+and can be combined.</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Flag</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File</td>
+<td><code>--source &lt;FILE&gt;</code></td>
+<td>A local file, read verbatim.</td>
+</tr>
+<tr>
+<td>Stdin</td>
+<td><code>--stdin</code></td>
+<td>Material piped in on standard input.</td>
+</tr>
+<tr>
+<td>URL</td>
+<td><code>--source-url &lt;URL&gt;</code></td>
+<td>A link DocBrain fetches for you via the connected MCP connector.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="-source-url-supported-links"><code>--source-url</code>: supported links<a class="headerlink" href="#-source-url-supported-links" title="Permanent link">&para;</a></h3>
+<p>A <code>--source-url</code> is an explicitly <strong>named</strong> primary source. DocBrain resolves it
+through the connected MCP connector and reads the content for you:</p>
+<ul>
+<li><strong>Confluence page</strong> — <code>…/wiki/…/pages/&lt;id&gt;</code> or <code>…/wiki/spaces/…</code></li>
+<li><strong>Jira issue</strong> — <code>…/browse/KEY-123</code></li>
+<li><strong>Slack thread</strong> — <code>…/archives/C…/p…</code></li>
+<li><strong>GitHub PR</strong> — <code>…/pull/&lt;n&gt;</code></li>
+<li><strong>GitHub file</strong> — <code>…/blob/&lt;ref&gt;/&lt;path&gt;</code></li>
+</ul>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Postmortem grounded in a real Slack incident thread</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;postmortem from this incident&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--source-url<span class="w"> </span>https://acme.slack.com/archives/C123/p1700000000123<span class="w"> </span>&gt;<span class="w"> </span>postmortem.md
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># API reference grounded in a GitHub PR&#39;s changes</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;API reference for the changed endpoints&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--source-url<span class="w"> </span>https://github.com/acme/repo/pull/42<span class="w"> </span>--type<span class="w"> </span>reference
+</span></code></pre></div>
+<h3 id="all-or-nothing-hard-fail-contract">All-or-nothing hard-fail contract<a class="headerlink" href="#all-or-nothing-hard-fail-contract" title="Permanent link">&para;</a></h3>
+<p>Because a <code>--source-url</code> is a source you explicitly named, it is treated as
+load-bearing. <strong>If any one of them can't be fetched, the whole generation
+aborts</strong> — naming the failed source. It will never silently produce a document
+from a subset of the sources you requested.</p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connector not connected / not configured</td>
+<td><code>502</code></td>
+</tr>
+<tr>
+<td>Fetch error</td>
+<td><code>502</code></td>
+</tr>
+<tr>
+<td>Unsupported or unrecognized link</td>
+<td><code>400</code></td>
+</tr>
+</tbody>
+</table>
+<p>Multiple <code>--source-url</code> flags are allowed, and <strong>all must succeed</strong>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Named sources vs. auto-enrichment</p>
+<p>The hard-fail contract applies <strong>only</strong> to sources you named with
+<code>--source-url</code>. Auto-enrichment — the live-MCP context DocBrain pulls on its
+own — is <strong>best-effort</strong>: a connector being down just means <em>less context</em>,
+not a failed run. Named sources fail loud; enrichment degrades quietly.</p>
+</div>
+<p>URL-fetched content is size-bounded exactly like inline sources (per-source
+<strong>and</strong> aggregate byte caps), so a huge linked file or thread can't overflow the
+prompt. Over-budget material returns <code>413</code>.</p>
+<h2 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h2>
+<p><strong>Point <code>--template</code> at a markdown file your team already has.</strong> A template is
+just a plain <code>.md</code>/text file — your existing runbook, your team's doc skeleton,
+any document whose layout you want new docs to match. There is <strong>no
+DocBrain-specific file format to learn</strong>: the engine reads your file's <code>##</code>
+section headings (in order) and an optional tone, and produces a new doc with
+<strong>that structure and voice</strong>.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Use a runbook the team already maintains as the shape for a new one</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;runbook for cert rotation&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--source<span class="w"> </span>notes.md<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--template<span class="w"> </span>docs/runbooks/EXISTING-runbook.md<span class="w"> </span>&gt;<span class="w"> </span>out.md
+</span></code></pre></div>
+<h3 id="what-a-template-controls-and-what-it-doesnt">What a template controls — and what it doesn't<a class="headerlink" href="#what-a-template-controls-and-what-it-doesnt" title="Permanent link">&para;</a></h3>
+<p>A template shapes a document's <strong>structure</strong> (which sections, in what order) and
+<strong>tone</strong> — nothing else.</p>
+<ul>
+<li>It does <strong>not</strong> copy your file's prose into the output. The engine extracts
+  the <em>skeleton + tone</em> and writes fresh, grounded content under each heading.
+  (If you want the output to reuse a document's actual content, pass it as a
+  <code>--source</code> seed, not a <code>--template</code>.)</li>
+<li>It can <strong>never</strong> carry or disable a safety or quality rule: the parser has
+  literally no field for one.</li>
+</ul>
+<h3 id="format-every-part-optional">Format (every part optional)<a class="headerlink" href="#format-every-part-optional" title="Permanent link">&para;</a></h3>
+<p>Your existing markdown already satisfies this — there is nothing to add.</p>
+<ul>
+<li>Every level-2-or-deeper markdown heading (<code>## Section</code>) becomes a <strong>required
+  section</strong>, in document order. Duplicates are de-duped; order is preserved.</li>
+<li>A single <code>#</code> heading is treated as the document <strong>title and ignored</strong> (it is
+  not a section), so your file's <code># Title</code> line is fine.</li>
+<li>An <strong>optional</strong> leading <code>doc_type: &lt;type&gt;</code> line. Omit it and the doc type
+  comes from <code>--type</code> (or is inferred).</li>
+<li>An <strong>optional</strong> leading <code>tone: &lt;free text&gt;</code> line (e.g.
+  <code>tone: concise and operational</code>). Omit it and the seeded tone applies.</li>
+<li><strong>All other text is ignored</strong> by the engine — prose, bullets, code blocks,
+  and blank lines are guidance for the human reading the template, not consumed
+  by generation. An unknown metadata line such as <code>audience: SREs</code> is simply
+  ignored, not an error.</li>
+<li>An empty or section-less file is <strong>fine</strong> (no structure constraint) — not an
+  error.</li>
+<li>The <strong>only</strong> error case: a line whose key is a <em>rule-like</em> directive — one of
+  <code>rules</code>, <code>rule</code>, <code>safety</code>, <code>secret(s)</code>, <code>redaction</code>/<code>redact</code>,
+  <code>quality_rule(s)</code>, <code>policy</code>/<code>policies</code>, <code>allow</code>, <code>deny</code>, <code>disable</code>,
+  <code>override(s)</code> (e.g. <code>safety: off</code>, <code>disable: redaction</code>). The engine
+  <strong>rejects it with <code>400</code></strong>. You cannot smuggle safety config through a
+  structure-only template; everything outside that small denylist is ignored.</li>
+</ul>
+<h3 id="example-an-ordinary-team-runbook-works-as-is">Example: an ordinary team runbook works as-is<a class="headerlink" href="#example-an-ordinary-team-runbook-works-as-is" title="Permanent link">&para;</a></h3>
+<p>No DocBrain front-matter — this is just a doc a team already wrote. <code>generate</code>
+follows its sections and produces a new runbook with the same shape:</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="gh"># TLS Certificate Rotation Runbook</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Owned by the platform team. Reach for this before the gateway cert expires.
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="gu">## Overview</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>What this runbook is for and when an operator reaches for it.
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="gu">## Prerequisites</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>Access, tools, credentials, and preconditions needed before starting.
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="gu">## Steps</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">1.</span> Trigger the renewal.
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="k">2.</span> Wait for the new secret to propagate.
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="gu">## Rollback</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>How to safely undo the change if a step fails.
+</span></code></pre></div>
+<p>You <em>may</em> add <code>doc_type:</code>/<code>tone:</code> lines at the top to pin those explicitly, but
+they are optional sugar — the file above (headings only) is a complete template.</p>
+<h3 id="seeded-doc-type-section-sets">Seeded doc-type section sets<a class="headerlink" href="#seeded-doc-type-section-sets" title="Permanent link">&para;</a></h3>
+<p>Each doc type ships with a built-in section set. A <code>--template</code> file
+overrides/extends these for the run.</p>
+<table>
+<thead>
+<tr>
+<th>Doc type</th>
+<th>Required sections</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runbook</code></td>
+<td>Overview, Prerequisites, Steps, Verification, Rollback</td>
+</tr>
+<tr>
+<td><code>guide</code></td>
+<td>Overview, Prerequisites, Steps <em>(optional: FAQ, Related Guides, Next Steps)</em></td>
+</tr>
+<tr>
+<td><code>troubleshooting</code></td>
+<td>Symptoms, Diagnosis, Resolution</td>
+</tr>
+<tr>
+<td><code>faq</code></td>
+<td>Free-form (no required sections)</td>
+</tr>
+<tr>
+<td><code>reference</code></td>
+<td>Overview, Parameters, Examples</td>
+</tr>
+</tbody>
+</table>
+<h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;runbook for cert rotation&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--source<span class="w"> </span>notes.md<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--template<span class="w"> </span>templates/acme-runbook.md<span class="w"> </span>&gt;<span class="w"> </span>out.md
+</span></code></pre></div>
+<h2 id="augmenting-an-existing-doc">Augmenting an existing doc<a class="headerlink" href="#augmenting-an-existing-doc" title="Permanent link">&para;</a></h2>
+<p><code>--target &lt;REF|URL&gt;</code> points at an existing document and tells <code>generate</code> to
+<strong>augment</strong> it — fill gaps, add sections, fold in new source material — rather
+than rewrite it from scratch. The existing content is the baseline; the run adds
+to it.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Extend an existing runbook with what a new PR changed</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;add the new rollback path&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--target<span class="w"> </span>https://acme.atlassian.net/wiki/spaces/OPS/pages/12345<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--source-url<span class="w"> </span>https://github.com/acme/repo/pull/42
+</span></code></pre></div>
+<h2 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>POST /api/v1/generate
+</span></code></pre></div>
+<p>Editor role; same auth as <code>/ask</code>. Returns <code>200</code> with a <code>GeneratedArtifact</code>.</p>
+<h3 id="request-body-generaterequest">Request body — <code>GenerateRequest</code><a class="headerlink" href="#request-body-generaterequest" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;ask&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string (required)&quot;</span><span class="p">,</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">&quot;sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;notes.md&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;raw&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;file bytes&gt;&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;url&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://github.com/acme/repo/pull/42&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;raw&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">&quot;target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;optional existing-doc reference to augment&quot;</span><span class="p">,</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span><span class="nt">&quot;template&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;optional RAW template file CONTENT (the bytes, not a path)&quot;</span><span class="p">,</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span><span class="nt">&quot;doc_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;optional hint&quot;</span><span class="p">,</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">  </span><span class="nt">&quot;space&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;optional confluence space&quot;</span><span class="p">,</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">  </span><span class="nt">&quot;no_enrich&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="p">}</span>
+</span></code></pre></div>
+<ul>
+<li>For <code>kind: "url"</code>, the URL goes in <code>label</code> and <code>raw</code> is <code>""</code> — <strong>the server
+  fetches it</strong>.</li>
+<li><code>template</code> is the raw template <strong>file content</strong> (the bytes), not a path.</li>
+</ul>
+<h3 id="response-generatedartifact">Response — <code>GeneratedArtifact</code><a class="headerlink" href="#response-generatedartifact" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;markdown&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;the generated document&quot;</span><span class="p">,</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;doc_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;resolved type&quot;</span><span class="p">,</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">&quot;provenance&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;section&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Overview&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;source_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;chunk-1&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;chunk-2&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nt">&quot;needs_input&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;questions the doc can&#39;t answer from available knowledge&quot;</span><span class="w"> </span><span class="p">],</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="nt">&quot;skipped_sources&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;jira&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;connector not connected&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">  </span><span class="nt">&quot;quality&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">87.0</span><span class="p">,</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="nt">&quot;violations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;rule_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;severity&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="p">]</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="p">}</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>markdown</code></td>
+<td>The generated document.</td>
+</tr>
+<tr>
+<td><code>doc_type</code></td>
+<td>The resolved doc type (from <code>--type</code>/<code>doc_type</code> or inferred).</td>
+</tr>
+<tr>
+<td><code>provenance</code></td>
+<td>Per-section source attribution. Each entry is <code>{ section, source_ids }</code> — <code>section</code> is the heading (<code>null</code> = whole-doc), <code>source_ids</code> the evidence chunks it was built from.</td>
+</tr>
+<tr>
+<td><code>needs_input</code></td>
+<td>Questions the doc <strong>can't</strong> answer from available knowledge — the honesty signal.</td>
+</tr>
+<tr>
+<td><code>skipped_sources</code></td>
+<td>Sources that were unavailable, each as <code>{ label, reason }</code> (e.g. <code>{ "label": "jira", "reason": "tool not connected" }</code>).</td>
+</tr>
+<tr>
+<td><code>quality</code></td>
+<td><code>{ score, violations }</code> — <code>score</code> is a 0–100 number; each violation is <code>{ rule_name, severity, message }</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="error-codes">Error codes<a class="headerlink" href="#error-codes" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>400</code></td>
+<td>Bad request / unknown kind / unsupported URL (incl. a smuggled rule directive in a template).</td>
+</tr>
+<tr>
+<td><code>403</code></td>
+<td>Caller is not an editor.</td>
+</tr>
+<tr>
+<td><code>413</code></td>
+<td>Source material is over the size budget.</td>
+</tr>
+<tr>
+<td><code>502</code></td>
+<td>A named URL source could not be fetched (connector not connected, not configured, or fetch error).</td>
+</tr>
+<tr>
+<td><code>503</code></td>
+<td>Generation is not configured.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="using-generate-in-ci">Using <code>generate</code> in CI<a class="headerlink" href="#using-generate-in-ci" title="Permanent link">&para;</a></h2>
+<p><code>docbrain generate</code> is the one doc command worth putting in a pipeline, because
+it is the only one that writes documentation <strong>grounded in your org's real
+knowledge</strong> — your runbooks, past incidents, tickets, PRs, and Slack threads —
+with per-claim provenance, and that is <strong>honest</strong> about what it doesn't know (it
+emits <code>needs_input</code> instead of fabricating). In CI that turns into a concrete
+property: documentation updates ship <em>as a side effect of merging code</em>,
+grounded and quality-gated, with zero extra human work.</p>
+<p>The three playbooks below cover the common shapes. They use <code>acme</code> as a
+placeholder org — swap in your own connector URLs and spaces.</p>
+<h3 id="playbook-1-doc-on-merge-update-the-runbook-from-the-pr">Playbook 1 — Doc-on-merge: update the runbook from the PR<a class="headerlink" href="#playbook-1-doc-on-merge-update-the-runbook-from-the-pr" title="Permanent link">&para;</a></h3>
+<p>The headline case. When a PR lands, regenerate the affected runbook from the PR
+itself plus the existing doc, and hand an engineer a review-ready draft.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># .github/workflows/docs-on-merge.yml</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Update runbook on merge</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nt">on</span><span class="p">:</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">pull_request</span><span class="p">:</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="nt">types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">closed</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nt">paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;services/payments/**&#39;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="nt">jobs</span><span class="p">:</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">  </span><span class="nt">update-runbook</span><span class="p">:</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">    </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.event.pull_request.merged == true</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="nt">env</span><span class="p">:</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">      </span><span class="nt">PR_NUMBER</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.event.pull_request.number }}</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">      </span><span class="nt">DOCBRAIN_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.DOCBRAIN_TOKEN }}</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate runbook draft grounded in the PR</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">          </span><span class="no">docbrain generate &quot;update the deploy runbook for the changes in this PR&quot; \</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">            </span><span class="no">--source-url https://github.com/acme/payments/pull/${PR_NUMBER} \</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">            </span><span class="no">--target https://acme.atlassian.net/wiki/spaces/SRE/pages/12345/Deploy+Runbook \</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">            </span><span class="no">--type runbook --allow-violations --out runbook-draft.md</span>
+</span></code></pre></div>
+<p>What this actually does:</p>
+<ul>
+<li><strong>Fetches the PR through the connected GitHub connector.</strong> The <code>--source-url</code>
+  link is resolved server-side via the MCP connector you already configured —
+  the runner needs no GitHub credentials of its own for the fetch, just a
+  DocBrain token.</li>
+<li><strong>Grounds the draft in <em>both</em> the PR and your org corpus.</strong> The model sees the
+  PR diff <em>and</em> the existing runbook (via <code>--target</code>) <em>and</em> whatever
+  auto-enrichment pulls from related incidents, tickets, and threads. The output
+  is what is true for <em>acme's</em> deploy, not generic prose.</li>
+<li><strong>Augments — it does not overwrite.</strong> <code>--target</code> treats the existing page as
+  the doc being revised, so structure and prior content are preserved and the
+  draft is a coherent next version, not a from-scratch rewrite.</li>
+<li><strong>Every claim carries provenance.</strong> The draft and the API <code>provenance[]</code> array
+  trace assertions back to the sources they came from, so a reviewer can verify
+  rather than trust.</li>
+</ul>
+<p>The <code>runbook-draft.md</code> artifact is the input to a human review step — for
+example, post it as a PR comment or open a docs PR:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Post the draft for review</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gh pr comment ${PR_NUMBER} --body-file runbook-draft.md</span>
+</span></code></pre></div>
+<p>This playbook uses <code>--allow-violations</code> deliberately: a merge-time draft is
+advisory and a human gates it, so you want the draft even if it trips a quality
+rule. Playbook 3 is where you flip that.</p>
+<h3 id="playbook-2-diff-driven-generate-from-a-git-diff-file">Playbook 2 — Diff-driven: generate from a git diff file<a class="headerlink" href="#playbook-2-diff-driven-generate-from-a-git-diff-file" title="Permanent link">&para;</a></h3>
+<p>Not every pipeline has a PR URL to pass — pre-merge jobs, GitLab/Jenkins/
+Buildkite runs, and local pre-commit checks often only have the working tree. In
+that case, hand <code>generate</code> the diff on disk with <code>--source</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate API notes from the diff</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">          </span><span class="no">git diff origin/main...HEAD &gt; changes.diff</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">          </span><span class="no">docbrain generate &quot;document the behavior change in these endpoints&quot; \</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">            </span><span class="no">--source changes.diff --type reference --out api-notes.md</span>
+</span></code></pre></div>
+<p>When to use which form:</p>
+<table>
+<thead>
+<tr>
+<th>Use <code>--source-url &lt;PR&gt;</code> (Playbook 1)</th>
+<th>Use <code>--source &lt;diff&gt;</code> (Playbook 2)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You have a merged/open PR URL</td>
+<td>You only have the working tree</td>
+</tr>
+<tr>
+<td>GitHub, with the connector configured</td>
+<td>Any CI system — no connector needed for the diff</td>
+</tr>
+<tr>
+<td>Post-merge "doc the shipped change"</td>
+<td>Pre-merge "doc the proposed change"</td>
+</tr>
+<tr>
+<td>Connector also pulls PR comments/reviews</td>
+<td>Diff is exactly what's on disk, nothing more</td>
+</tr>
+</tbody>
+</table>
+<p><code>--source</code> is a plain local file read by the runner, so it works anywhere <code>git</code>
+runs and needs no connectivity to your wiki for the diff itself. Auto-enrichment
+still reaches into your org corpus for grounding context unless you pass
+<code>--no-enrich</code>.</p>
+<h3 id="playbook-3-quality-gate-fail-the-build-on-a-bad-doc">Playbook 3 — Quality gate: fail the build on a bad doc<a class="headerlink" href="#playbook-3-quality-gate-fail-the-build-on-a-bad-doc" title="Permanent link">&para;</a></h3>
+<p>Drop <code>--allow-violations</code> and <code>generate</code> becomes a gate. The CLI <strong>exits
+non-zero on error-severity quality violations</strong>, so the doc must clear the bar
+or the build breaks.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate and gate the troubleshooting doc</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">          </span><span class="no">docbrain generate &quot;document the new retry/backoff behavior&quot; \</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">            </span><span class="no">--source changes.diff --type troubleshooting \</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">            </span><span class="no">--space SRE --out incident-doc.md</span>
+</span></code></pre></div>
+<p>If the draft fails a quality rule at error severity, the step's exit code is
+non-zero and the job fails — no human in the loop, the pipeline simply won't
+pass a sub-bar doc. The stdout/stderr contract is what makes this safe to script:</p>
+<ul>
+<li><strong>stdout is <em>only</em> the markdown.</strong> Pipe-clean and redirect-safe — <code>&gt;
+  incident-doc.md</code> captures the document and nothing else. No banners, no
+  progress logs.</li>
+<li><strong>stderr carries every diagnostic.</strong> Doc type, quality score, the <code>needs_input</code>
+  list, <code>skipped_sources</code>, and the specific violations all land on stderr where
+  your CI logs collect them without polluting the artifact.</li>
+<li><strong>The exit code is the CI signal.</strong> A zero exit means the doc met the bar,
+  non-zero means it didn't — you don't parse logs to decide pass/fail.</li>
+</ul>
+<p><code>--space &lt;SPACE&gt;</code> applies that Confluence space's quality rules to the run, so
+the doc is held to the <em>same</em> standard your space enforces for human-authored
+pages — in CI, before anyone sees it.</p>
+<h3 id="why-this-beats-a-generic-llm-action">Why this beats a generic LLM action<a class="headerlink" href="#why-this-beats-a-generic-llm-action" title="Permanent link">&para;</a></h3>
+<p>A frontier model dropped into a generic GitHub Action writes <em>plausible</em> prose.
+<code>docbrain generate</code> writes what is <em>true for your org</em> — or says it can't:</p>
+<ul>
+<li><strong>Grounded in org reality, with provenance.</strong> It reads your actual PRs,
+  runbooks, incidents, tickets, and threads through your connectors, and every
+  claim traces back to a source in <code>provenance[]</code>. A generic action has no
+  access to any of that and invents the specifics.</li>
+<li><strong>Honest <code>needs_input</code> instead of fabrication.</strong> When the corpus doesn't cover
+  something, <code>generate</code> flags it in <code>needs_input[]</code> rather than confidently
+  making it up — you fix gaps on purpose instead of discovering an invented
+  procedure during an incident.</li>
+<li><strong>The same safety gates as every other DocBrain doc, enforced in CI.</strong> Secret
+  and PII redaction, hostname scrubbing, and prompt-injection quarantine run on
+  the generated draft exactly as for human-authored content — your pipeline
+  can't accidentally publish a leaked credential or a poisoned source.</li>
+<li><strong>Quality-gated by exit code.</strong> Without <code>--allow-violations</code>, a sub-bar doc
+  fails the build. A generic LLM action always exits zero and ships whatever it
+  produced; DocBrain makes "good enough to publish" a machine-checkable
+  condition.</li>
+</ul>
+<h2 id="safety">Safety<a class="headerlink" href="#safety" title="Permanent link">&para;</a></h2>
+<p>A generated document passes the <strong>same gates as every other DocBrain doc</strong> —
+there is no weaker path through <code>generate</code>:</p>
+<ul>
+<li><strong>Secret / PII redaction</strong> — credentials and personal data are stripped.</li>
+<li><strong>Hostname scrub</strong> — internal hostnames are removed.</li>
+<li><strong>Injection quarantine</strong> — prompt-injection content in fetched/linked sources
+  is quarantined, not executed.</li>
+<li><strong>Structural + style scoring</strong> — the <code>quality.score</code> and <code>violations</code> that
+  drive the CI exit code.</li>
+</ul>
+<p><strong>Templates cannot weaken safety.</strong> A template shapes structure and tone only;
+the parser has no field for a safety or quality rule, and any rule-like
+directive is rejected with <code>400</code>. There is no template knob that turns off
+redaction, the hostname scrub, or the injection quarantine.</p>
+<p><strong><code>needs_input</code> honesty.</strong> When the document can't answer something from the
+available knowledge, <code>generate</code> says so — it emits the open questions in
+<code>needs_input</code> rather than fabricating a confident-sounding answer. Honest gaps
+over fluent fiction.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../autopilot/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Autopilot">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Autopilot
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../governance/" class="md-footer__link md-footer__link--next" aria-label="Next: Governance">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Governance
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024-2026 DocBrain AI
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/docbrain-ai/docbrain" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.youtube.com/@docbrain-ai" target="_blank" rel="noopener" title="www.youtube.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M549.7 124.1c-6.2-23.7-24.8-42.3-48.3-48.6C458.9 64 288.1 64 288.1 64S117.3 64 74.7 75.5c-23.5 6.3-42 24.9-48.3 48.6C15 167 15 256.4 15 256.4s0 89.4 11.4 132.3c6.3 23.6 24.8 41.5 48.3 47.8C117.3 448 288.1 448 288.1 448s170.8 0 213.4-11.5c23.5-6.3 42-24.2 48.3-47.8 11.4-42.9 11.4-132.3 11.4-132.3s0-89.4-11.4-132.3zM232.2 337.6V175.2l142.7 81.2z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

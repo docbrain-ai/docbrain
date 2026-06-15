@@ -133,20 +133,48 @@ prompt. Over-budget material returns `413`.
 
 ## Templates
 
-A template is a plain markdown/text file that shapes a document's **structure**
-and **tone** — nothing else. It can **never** carry or disable a safety or
-quality rule: the parser has literally no field for one.
+**Point `--template` at a markdown file your team already has.** A template is
+just a plain `.md`/text file — your existing runbook, your team's doc skeleton,
+any document whose layout you want new docs to match. There is **no
+DocBrain-specific file format to learn**: the engine reads your file's `##`
+section headings (in order) and an optional tone, and produces a new doc with
+**that structure and voice**.
 
-### Format
+```bash
+# Use a runbook the team already maintains as the shape for a new one
+docbrain generate "runbook for cert rotation" \
+  --source notes.md \
+  --template docs/runbooks/EXISTING-runbook.md > out.md
+```
 
-- An optional leading `doc_type: <type>` metadata line.
-- An optional leading `tone: <free text>` metadata line.
+### What a template controls — and what it doesn't
+
+A template shapes a document's **structure** (which sections, in what order) and
+**tone** — nothing else.
+
+- It does **not** copy your file's prose into the output. The engine extracts
+  the *skeleton + tone* and writes fresh, grounded content under each heading.
+  (If you want the output to reuse a document's actual content, pass it as a
+  `--source` seed, not a `--template`.)
+- It can **never** carry or disable a safety or quality rule: the parser has
+  literally no field for one.
+
+### Format (every part optional)
+
+Your existing markdown already satisfies this — there is nothing to add.
+
 - Every level-2-or-deeper markdown heading (`## Section`) becomes a **required
   section**, in document order. Duplicates are de-duped; order is preserved.
-- **All other text is ignored** by the engine — prose, bullets, and blank lines
-  are guidance for the human writing the template, not consumed by generation.
-  An unknown metadata line such as `audience: SREs` is simply ignored, not an
-  error.
+- A single `#` heading is treated as the document **title and ignored** (it is
+  not a section), so your file's `# Title` line is fine.
+- An **optional** leading `doc_type: <type>` line. Omit it and the doc type
+  comes from `--type` (or is inferred).
+- An **optional** leading `tone: <free text>` line (e.g.
+  `tone: concise and operational`). Omit it and the seeded tone applies.
+- **All other text is ignored** by the engine — prose, bullets, code blocks,
+  and blank lines are guidance for the human reading the template, not consumed
+  by generation. An unknown metadata line such as `audience: SREs` is simply
+  ignored, not an error.
 - An empty or section-less file is **fine** (no structure constraint) — not an
   error.
 - The **only** error case: a line whose key is a *rule-like* directive — one of
@@ -156,17 +184,32 @@ quality rule: the parser has literally no field for one.
   **rejects it with `400`**. You cannot smuggle safety config through a
   structure-only template; everything outside that small denylist is ignored.
 
-### Example template file
+### Example: an ordinary team runbook works as-is
 
-```text
-doc_type: runbook
-tone: concise and operational
+No DocBrain front-matter — this is just a doc a team already wrote. `generate`
+follows its sections and produces a new runbook with the same shape:
+
+```markdown
+# TLS Certificate Rotation Runbook
+
+Owned by the platform team. Reach for this before the gateway cert expires.
 
 ## Overview
+What this runbook is for and when an operator reaches for it.
+
 ## Prerequisites
+Access, tools, credentials, and preconditions needed before starting.
+
 ## Steps
+1. Trigger the renewal.
+2. Wait for the new secret to propagate.
+
 ## Rollback
+How to safely undo the change if a step fails.
 ```
+
+You *may* add `doc_type:`/`tone:` lines at the top to pin those explicitly, but
+they are optional sugar — the file above (headings only) is a complete template.
 
 ### Seeded doc-type section sets
 
