@@ -289,6 +289,24 @@ data:
   RAG_FUSION_PREFER_FUSED: {{ .Values.rag.fusion.preferFused | quote }}
   {{- end }}
   {{- end }}
+  {{- if hasKey .Values.rag "regenLoopEnabled" }}
+  DOCBRAIN_REGEN_LOOP_ENABLED: {{ .Values.rag.regenLoopEnabled | quote }}
+  {{- end }}
+  {{- if .Values.rag.regenLoopMaxRounds }}
+  DOCBRAIN_REGEN_LOOP_MAX_ROUNDS: {{ .Values.rag.regenLoopMaxRounds | quote }}
+  {{- end }}
+  {{- if .Values.rag.regenLoopMaxRevisions }}
+  DOCBRAIN_REGEN_LOOP_MAX_REVISIONS: {{ .Values.rag.regenLoopMaxRevisions | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "regenLoopMinBudgetMs" }}
+  DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS: {{ .Values.rag.regenLoopMinBudgetMs | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "generateHollowMinSections" }}
+  DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS: {{ .Values.rag.generateHollowMinSections | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "generateHollowRatioPct" }}
+  DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT: {{ .Values.rag.generateHollowRatioPct | quote }}
+  {{- end }}
   IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
   IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
   IMAGE_MAX_PER_PAGE: {{ .Values.imageExtraction.maxPerPage | default 20 | quote }}

@@ -169,6 +169,28 @@ rag:
     min_unique_users: 2
     rag_penalty_factor: 0.1
 
+  # Regenerate-with-feedback loop. Consumes the doc reviewer's flags and
+  # regenerates a draft until they clear. The UI is human-in-loop (each
+  # "Regenerate" click is one round, capped at max_revisions); the CLI/generate
+  # path auto-reviews (capped at max_rounds). Reviewer feedback shapes the
+  # writing prompt only — it can never clear a flagged claim (the reviewer
+  # re-derives flags from the evidence). The round cap is the hard termination
+  # backstop: the loop never runs forever and never silently ships flags.
+  regen_loop_enabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
+  regen_loop_max_rounds: 3                       # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; range 1..=20)
+  regen_loop_max_revisions: 10                  # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; range 1..=100)
+  regen_loop_min_budget_ms: 20000               # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to start a round; 0 disables the guard)
+
+  # Hollow-document guard for generation. Refuses (HTTP 422) a draft that is
+  # mostly unanswered "NEEDS INPUT:" placeholders, by placeholder density: when
+  # the draft has at least this many `##` sections AND the NEEDS-INPUT count is
+  # >= the configured percentage of sections (roughly every section unfilled). A
+  # draft that honestly flags 1-2 of N sections ships untouched. Keys on the
+  # OUTPUT shape, not on the supplied sources. Below the section floor the rule
+  # does not apply (short / free-form docs). Set min_sections to 0 to disable.
+  generate_hollow_min_sections: 3               # DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS (below this `##` count the rule is off)
+  generate_hollow_ratio_pct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT; 50 = half the doc)
+
 # ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
 #
 # The reranker takes the candidate pool from stage 2 and rescores each

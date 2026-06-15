@@ -382,6 +382,22 @@ rag:
   fusion:
     preferFused: false
 
+  # -- Regenerate-with-feedback loop. The doc reviewer flags claims its evidence
+  # contradicts; this loop regenerates the draft until they clear. UI = human-in-
+  # loop (each "Regenerate" click, capped at maxRevisions); CLI/generate = auto-
+  # review (capped at maxRounds). Reviewer feedback shapes the writing prompt only
+  # — it can never clear a flagged claim. Commented = built-in defaults.
+  # regenLoopEnabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
+  # regenLoopMaxRounds: 3                        # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; 1..=20)
+  # regenLoopMaxRevisions: 10                    # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; 1..=100)
+  # regenLoopMinBudgetMs: 20000                  # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to start a round; 0 disables)
+
+  # -- Hollow-document guard for generation. Refuses (HTTP 422) a draft that is
+  # mostly unanswered "NEEDS INPUT:" placeholders, by placeholder density. A draft
+  # that honestly flags 1-2 of N sections ships untouched. Commented = defaults.
+  # generateHollowMinSections: 3                 # DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS (below this `##` count the rule is off; 0 disables)
+  # generateHollowRatioPct: 50                   # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
+
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:
   internal: true
