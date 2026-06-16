@@ -307,6 +307,14 @@ data:
   {{- if hasKey .Values.rag "generateHollowRatioPct" }}
   DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT: {{ .Values.rag.generateHollowRatioPct | quote }}
   {{- end }}
+  {{- /* Support critic (grounding). enabled uses hasKey so an explicit `false`
+       is honored (a bare `if` would drop it). */}}
+  {{- if hasKey .Values.rag "supportCriticEnabled" }}
+  DOCBRAIN_SUPPORT_CRITIC_ENABLED: {{ .Values.rag.supportCriticEnabled | quote }}
+  {{- end }}
+  {{- if .Values.rag.supportCriticMaxClaims }}
+  DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS: {{ .Values.rag.supportCriticMaxClaims | quote }}
+  {{- end }}
   IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
   IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
   IMAGE_MAX_PER_PAGE: {{ .Values.imageExtraction.maxPerPage | default 20 | quote }}

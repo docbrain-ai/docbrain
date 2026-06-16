@@ -190,6 +190,11 @@ rag:
   # does not apply (short / free-form docs). Set min_sections to 0 to disable.
   generate_hollow_min_sections: 3               # DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS (below this `##` count the rule is off)
   generate_hollow_ratio_pct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT; 50 = half the doc)
+  # Support Critic (grounding): flags claims NO supplied source supports (fabrication)
+  # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
+  # never blocks; fail-open. ON by default.
+  support_critic_enabled: true                  # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
+  support_critic_max_claims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
 
 # ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
 #

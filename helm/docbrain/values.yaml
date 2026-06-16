@@ -397,6 +397,11 @@ rag:
   # that honestly flags 1-2 of N sections ships untouched. Commented = defaults.
   # generateHollowMinSections: 3                 # DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS (below this `##` count the rule is off; 0 disables)
   # generateHollowRatioPct: 50                   # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
+  # Support Critic (grounding) — flags claims NO supplied source supports (fabrication)
+  # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
+  # never blocks; fail-OPEN. ON by default.
+  # supportCriticEnabled: true                 # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
+  # supportCriticMaxClaims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
 
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:
