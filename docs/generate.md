@@ -56,6 +56,7 @@ of the document you want written.
 | `--type` | `<TYPE>` | Doc-type hint: `runbook` \| `guide` \| `troubleshooting` \| `faq` \| `reference`. Inferred if omitted. |
 | `--space` | `<SPACE>` | Confluence space whose quality rules apply. Falls back to the global floor if omitted. |
 | `--out` | `<FILE>` | Write markdown to a file instead of stdout. |
+| `--force` | — | Overwrite the `--out` file if it already exists. Interactive runs refuse to clobber an existing file without this; CI/non-interactive runs overwrite automatically. See [I/O contract](#io-contract). |
 | `--no-enrich` | — | Disable live-MCP tool enrichment (corpus/seed only). |
 | `--allow-violations` | — | Exit `0` even on error-severity quality violations (CI override). |
 
@@ -68,6 +69,14 @@ of the document you want written.
 - **Exit code is non-zero on error-severity quality violations** — unless you
   pass `--allow-violations`. This is the CI-native behaviour: a bad draft fails
   the build by default.
+- **`--out` overwrite is interaction-aware.** An interactive run refuses to
+  overwrite an existing `--out` file unless you pass `--force`; a
+  non-interactive run (CI, or stderr redirected) overwrites automatically, so a
+  pipeline that regenerates the same artifact every run is unaffected.
+- **The call is time-bounded.** The client waits up to 180s for a generation
+  (live fetch + drafting + review). Override with the
+  `DOCBRAIN_GENERATE_TIMEOUT_SECS` environment variable (clamped to 30–600); a
+  timeout surfaces a clear message rather than hanging.
 
 ```bash
 # Runbook from local notes, redirected to a file (pipe-clean stdout)
