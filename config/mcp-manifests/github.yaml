@@ -1,102 +1,147 @@
-  manifest_version: 1
-  id: github
-  display_name: "GitHub"
-  description: "Read-only search across code, PRs, issues, and file contents via GitHub Copilot MCP."
-  category: "code"
-  icon: "github.svg"
+# GitHub — DocBrain MCP manifest (via GitHub Copilot MCP)
+#
+# Read-only search across code, PRs, issues, and file contents through the
+# GitHub Copilot remote MCP server (api.githubcopilot.com/mcp/).
+#
+# AUTH: service_account, Bearer ${GITHUB_BOT_TOKEN}. The token's GitHub org
+# membership decides which repos are reachable — NOT this manifest. If a
+# search for a repo in an org the token can't see returns HTTP 422
+# "Validation Failed" (GitHub's response for an unresolvable repo:/org:
+# qualifier), the fix is the TOKEN's org access, not the query text.
+#
+# ORG SCOPING: scope queries with an `org:` or `repo:org/name` qualifier to
+# the org the question is about. A bare PR/issue number with no repo:/org:
+# qualifier will NOT resolve — always pair a number with its repo
+# (e.g. `repo:your-org/your-repo 4972`).
 
-  server:
-    transport: http_sse
-    endpoint: "https://api.githubcopilot.com/mcp/"
-    protocol_version: "2024-11-05"
+manifest_version: 1
+id: github
+display_name: "GitHub"
+description: "Read-only search across code, PRs, issues, and file contents via GitHub Copilot MCP."
+category: "code"
+icon: "github.svg"
 
-  auth:
-    modes:
-      - service_account
-    service_account:
-      secret_refs:
-        - GITHUB_BOT_TOKEN
-      header_template: "Bearer ${GITHUB_BOT_TOKEN}"
+server:
+  transport: http_sse
+  endpoint: "https://api.githubcopilot.com/mcp/"
+  protocol_version: "2024-11-05"
 
-  tools:
-    - name: github.search_code
-      upstream_name: search_code
-      description: "Search code across accessible GitHub repositories. PREFER scoping with 'org:org-name' qualifier first; only widen to
-  all repos when the user explicitly asks for public/external code. Use for 'find X in our repos' / 'where is function Y defined'. Supports
-  qualifiers: 'repo:org/name', 'language:hcl', 'path:terraform/', 'org:org-name'. Pass per_page=5 to keep result metadata under the output
-   cap."
-      args_schema:
-        type: object
-        properties:
-          query:
-            type: string
-            maxLength: 500
-            description: "GitHub code search query. Examples: 'account factory language:hcl org:org-name', 'aft
-  repo:org-name/repo-name', 'multi-account terraform org:org-name'."
-          per_page:
-            type: integer
-            minimum: 1
-            maximum: 10
-            default: 5
-        required: [query]
-      output_size_cap_bytes: 16384
-      latency_budget_ms: 5000
-      read_only: true
+auth:
+  modes:
+    - service_account
+  service_account:
+    secret_refs:
+      - GITHUB_BOT_TOKEN
+    header_template: "Bearer ${GITHUB_BOT_TOKEN}"
 
-    - name: github.search_pull_requests
-      upstream_name: search_issues
-      description: "Search pull requests across accessible repos. PREFER scoping with 'org:org-name' qualifier for internal-org questions.
-   Use for 'open PRs about X' / 'recent PRs to repo Y' / 'who reviewed PR Z'. Pass 'type:pr' in query for PR-only results. Pass per_page=5 to
-  keep result metadata under the output cap."
-      args_schema:
-        type: object
-        properties:
-          query:
-            type: string
-            maxLength: 500
-            description: "GitHub issues/PR search query. Include 'type:pr' for PRs only, 'type:issue' for issues. Examples: 'type:pr is:open
-  author:user-name org:org-name', 'type:issue label:bug repo:org-name/repo-name'."
-          per_page:
-            type: integer
-            minimum: 1
-            maximum: 10
-            default: 5
-        required: [query]
-      output_size_cap_bytes: 16384
-      latency_budget_ms: 5000
-      read_only: true
+tools:
+  - name: github.search_code
+    upstream_name: search_code
+    description: "Search code across accessible GitHub repositories. PREFER scoping with an 'org:your-org' qualifier first; only widen to all repos when the user explicitly asks for public/external code. Use for 'find X in our repos' / 'where is function Y defined'. Supports qualifiers: 'repo:org/name', 'language:hcl', 'path:terraform/', 'org:your-org'. Pass per_page=5 to keep result metadata under the output cap."
+    args_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          maxLength: 500
+          description: "GitHub code search query. Examples: 'account factory language:hcl org:your-org', 'aft repo:your-org/your-repo', 'multi-account terraform org:your-org'."
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+      required: [query]
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 5000
+    read_only: true
 
-    - name: github.get_file_contents
-      upstream_name: get_file_contents
-      description: "Read the contents of a file at a path in a GitHub repository. Use for 'what's in path X of repo Y' / 'show me the README of
-   Z'."
-      args_schema:
-        type: object
-        properties:
-          owner:
-            type: string
-            description: "Repository owner (org or user)."
-          repo:
-            type: string
-            description: "Repository name."
-          path:
-            type: string
-            maxLength: 500
-            description: "File path within the repo, e.g. 'README.md' or 'src/main.rs'."
-          ref:
-            type: string
-            description: "Branch, tag, or commit SHA. Defaults to repo's default branch when omitted."
-        required: [owner, repo, path]
-      output_size_cap_bytes: 16384
-      latency_budget_ms: 5000
-      read_only: true
+  - name: github.search_pull_requests
+    upstream_name: search_issues
+    description: "Search pull requests across accessible repos. PREFER scoping with an 'org:your-org' qualifier for internal-org questions. When the user names a repo or a PR number, ALWAYS pair it with its repo (e.g. 'repo:your-org/your-repo 4972') — a bare number does not resolve. Use for 'open PRs about X' / 'recent PRs to repo Y' / 'who reviewed PR Z'. Pass 'type:pr' in query for PR-only results. Pass per_page=5 to keep result metadata under the output cap."
+    args_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          maxLength: 500
+          description: "GitHub issues/PR search query. Include 'type:pr' for PRs only, 'type:issue' for issues. Examples: 'type:pr is:open author:user-name org:your-org', 'type:pr repo:your-org/your-repo 4972', 'type:issue label:bug repo:your-org/your-repo'."
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+      required: [query]
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 5000
+    read_only: true
 
-  egress:
-    hosts:
-      - "api.githubcopilot.com"
+  - name: github.get_file_contents
+    upstream_name: get_file_contents
+    description: "Read the contents of a file at a path in a GitHub repository. Use for 'what's in path X of repo Y' / 'show me the README of Z'."
+    args_schema:
+      type: object
+      properties:
+        owner:
+          type: string
+          description: "Repository owner (org or user)."
+        repo:
+          type: string
+          description: "Repository name."
+        path:
+          type: string
+          maxLength: 500
+          description: "File path within the repo, e.g. 'README.md' or 'src/main.rs'."
+        ref:
+          type: string
+          description: "Branch, tag, or commit SHA. Defaults to repo's default branch when omitted."
+      required: [owner, repo, path]
+    output_size_cap_bytes: 16384
+    latency_budget_ms: 5000
+    read_only: true
 
-  rbac:
-    required_role: viewer
+  - name: github.pull_request_read
+    upstream_name: pull_request_read
+    description: "Read a single pull request by number: its metadata/intent (method=get → title, body, state) OR its full unified file diff (method=get_diff → the +/- hunks across all changed files) OR the per-file change list (method=get_files). Use when the user names a specific PR by URL or 'owner/repo PR N' and wants the ACTUAL changes — NOT the fuzzy multi-PR search (that's search_pull_requests). 'pullNumber' is the integer PR number. SCOPE to the org the question is about with the owner field."
+    args_schema:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [get, get_diff, get_files]
+          description: "What to read: 'get' = PR metadata/intent (title, body, state); 'get_diff' = the full unified diff of all changed files; 'get_files' = the list of changed files with patch hunks."
+        owner:
+          type: string
+          description: "Repository owner (org or user), e.g. 'your-org'."
+        repo:
+          type: string
+          description: "Repository name, e.g. 'your-repo'."
+        pullNumber:
+          type: integer
+          minimum: 1
+          description: "The pull request NUMBER (integer), e.g. 3. NOT a string."
+        page:
+          type: integer
+          minimum: 1
+          description: "Page number for paginated methods (get_files). Optional."
+        perPage:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: "Items per page for paginated methods (get_files). Optional."
+      required: [method, owner, repo, pullNumber]
+    # Capped at the deployment output ceiling (default 32768 bytes; tunable via
+    # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES). A larger value makes the whole github
+    # manifest fail to load. A big PR diff truncates honestly at this cap.
+    output_size_cap_bytes: 32768
+    latency_budget_ms: 8000
+    read_only: true
 
-  retention:
-    audit_log_days: 90
+egress:
+  hosts:
+    - "api.githubcopilot.com"
+
+rbac:
+  required_role: viewer
+
+retention:
+  audit_log_days: 90
