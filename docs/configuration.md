@@ -995,6 +995,7 @@ in the Kubernetes Secret via `mcpTools.serviceAccount.rootly.*` in Helm):
 | `AUTOPILOT_HIGH_THRESHOLD` | `0.55` | Composite score cutoff for "high" severity. |
 | `AUTOPILOT_MEDIUM_THRESHOLD` | `0.35` | Composite score cutoff for "medium" severity. |
 | `AUTOPILOT_TARGET_MIN_SCORE` | `45.0` | Corpus-probe relevance floor: minimum OpenSearch hybrid (BM25+kNN, unbounded) probe score a candidate target doc must reach before autopilot auto-picks it to augment a `poor_coverage` gap. Below this the cluster is marked "needs human pick". Distinct from `VERIFY_CORPUS_MIN_SCORE`. |
+| `GENERATED_DOCS_RETENTION_DAYS` | `90` | Retention window (days) for persisted ad-hoc `generate` runs shown in the web `/generate` History view (`generated_documents` table). Rows older than this are purged by a daily job, and the History list/detail also filter to this window. Bounds the data-at-rest exposure of the persisted document body, which is **owner-scoped** (you see your own runs; admins see all; machine-key runs are admin-only). Set `0` to keep indefinitely (both the purge and the read-window filter no-op). |
 
 When enabled, Autopilot runs on the configured schedule, exposes management endpoints at `/api/v1/autopilot/*`, and posts critical gap alerts to `SLACK_GAP_NOTIFICATION_CHANNEL` if configured. See the [API Reference](api-reference.md) for endpoint details.
 

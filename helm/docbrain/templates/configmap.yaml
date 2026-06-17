@@ -176,6 +176,9 @@ data:
   AUTOPILOT_TREND_MIN_EVENTS:        {{ .Values.autopilot.trendMinEvents          | default 5    | quote }}
   AUTOPILOT_TREND_IMPROVING_THRESHOLD: {{ .Values.autopilot.trendImprovingThreshold | default 0.75 | quote }}
   AUTOPILOT_TREND_WORSENING_THRESHOLD: {{ .Values.autopilot.trendWorseningThreshold | default 0.40 | quote }}
+  {{- if hasKey .Values.autopilot "generatedDocsRetentionDays" }}
+  GENERATED_DOCS_RETENTION_DAYS: {{ .Values.autopilot.generatedDocsRetentionDays | quote }}
+  {{- end }}
   {{- if .Values.draftPublish.target }}
   DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
   {{- end }}

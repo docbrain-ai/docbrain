@@ -228,6 +228,12 @@ autopilot:
   trendImprovingThreshold: 0.75     # resolved/new ratio at or above this → "improving"
   trendWorseningThreshold: 0.40     # below this → "worsening"; between → "stable"
 
+  # Retention window (days) for persisted ad-hoc `generate` runs shown in the web
+  # /generate History view (the generated_documents table). Rows older are purged
+  # daily and the History list/detail filter to this window — bounds data-at-rest
+  # exposure of the persisted (owner-scoped) body. Commented = built-in default (90).
+  # generatedDocsRetentionDays: 90   # GENERATED_DOCS_RETENTION_DAYS (0 = keep indefinitely)
+
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
 # and mark the originating gap cluster as resolved.

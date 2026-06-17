@@ -312,6 +312,13 @@ autopilot:
   # probe score a candidate target doc must reach before autopilot auto-picks it
   # to AUGMENT for a poor_coverage gap. Below this → "needs human pick".
   target_min_score: 45.0
+  # Retention window (days) for persisted ad-hoc `generate` runs shown in the web
+  # /generate History view (the generated_documents table). Rows older than this
+  # are purged by a daily job, and the History list/detail also filter to this
+  # window. Bounds the data-at-rest exposure of the persisted document body, which
+  # is owner-scoped (you see your own runs; admins see all). Set 0 to keep
+  # indefinitely (the purge and the read-window filter both no-op).
+  generated_docs_retention_days: 90            # GENERATED_DOCS_RETENTION_DAYS (0 = keep indefinitely)
 
 freshness:
   scheduler_interval_hours: 24
