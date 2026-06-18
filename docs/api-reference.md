@@ -251,7 +251,7 @@ doc from a subset.
 - `ask` — required. The natural-language description of the doc to write.
 - `sources` — primary material. `kind` is `file`, `stdin`, or `url`. For `kind: "url"`, the URL goes in `label` and `raw` is `""` — the server fetches it via the connected MCP connector (Confluence page, Jira issue, Slack thread, GitHub PR or file).
 - `target` — augment an existing doc rather than write from scratch.
-- `template` — the raw template **file content** (not a path); shapes structure/tone only, can never disable a safety or quality rule.
+- `template` — the raw template **file content** (not a path); shapes section structure, block shape (table columns, checklists, code-block language, header fields) and tone only — filled from your sources, gaps marked `NEEDS INPUT`, example rows/commands never copied. Can never disable a safety or quality rule.
 - `space` — applies that Confluence space's quality rules; `no_enrich: true` disables live-MCP enrichment.
 
 **Response (`GeneratedArtifact`):**

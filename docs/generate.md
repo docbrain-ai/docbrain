@@ -52,7 +52,7 @@ of the document you want written.
 | `--source-url` | `<URL>` | Repeatable. A **link** as primary material; DocBrain **fetches** it via the connected MCP connector. See [Source material](#source-material). |
 | `--stdin` | — | Read primary material from stdin. |
 | `--target` | `<REF\|URL>` | Existing doc to **augment** (not replace). See [Augmenting an existing doc](#augmenting-an-existing-doc). |
-| `--template` | `<FILE>` | Team template file that shapes sections and tone. **Cannot** affect safety. See [Templates](#templates). |
+| `--template` | `<FILE>` | Team template file that shapes section structure, block shape (table columns, checklists, code blocks, header fields) and tone. Filled from your sources; gaps become `NEEDS INPUT`. **Cannot** affect safety. See [Templates](#templates). |
 | `--type` | `<TYPE>` | Doc-type hint: `runbook` \| `guide` \| `troubleshooting` \| `faq` \| `reference`. Inferred if omitted. |
 | `--space` | `<SPACE>` | Confluence space whose quality rules apply. Falls back to the global floor if omitted. |
 | `--out` | `<FILE>` | Write markdown to a file instead of stdout. |
@@ -146,8 +146,10 @@ prompt. Over-budget material returns `413`.
 just a plain `.md`/text file — your existing runbook, your team's doc skeleton,
 any document whose layout you want new docs to match. There is **no
 DocBrain-specific file format to learn**: the engine reads your file's `##`
-section headings (in order) and an optional tone, and produces a new doc with
-**that structure and voice**.
+section headings (in order), the **block shape** of each section (a table and its
+column headers, a checklist, a fenced code block and its language, a header-field
+block), and an optional tone — then produces a new doc with **that structure,
+shape and voice**, filled from your sources.
 
 ```bash
 # Use a runbook the team already maintains as the shape for a new one
@@ -158,15 +160,24 @@ docbrain generate "runbook for cert rotation" \
 
 ### What a template controls — and what it doesn't
 
-A template shapes a document's **structure** (which sections, in what order) and
-**tone** — nothing else.
+A template shapes a document's **structure** (which sections, in what order),
+each section's **block shape** (table columns, checklist, code-block language,
+header-field labels), and **tone** — nothing else.
 
-- It does **not** copy your file's prose into the output. The engine extracts
-  the *skeleton + tone* and writes fresh, grounded content under each heading.
-  (If you want the output to reuse a document's actual content, pass it as a
-  `--source` seed, not a `--template`.)
-- It can **never** carry or disable a safety or quality rule: the parser has
-  literally no field for one.
+- It does **not** copy your file's content into the output. The engine extracts
+  the *skeleton + shape labels + tone* and writes fresh, grounded content under
+  each heading. Your template's example table rows, sample commands, and
+  placeholder text are **never reproduced** — each cell, list item, and code
+  block is filled from **your sources**, and anything it can't ground is marked
+  `NEEDS INPUT` for you to complete. (If you want the output to reuse a
+  document's actual content, pass it as a `--source` seed, not a `--template`.)
+- **Header-metadata fields** (e.g. `**Version:**`, `**Owner:**`, `**SLA:**`) are
+  reproduced as labels, but their values are document metadata the engine can't
+  ground from your sources — they render as `NEEDS INPUT`, and the response's
+  `skipped_sources` notes this so the gap is explicit, not silent.
+- It can **never** carry or disable a safety or quality rule: the parser captures
+  only structure labels (section names, column names, field names, code-block
+  language) and has literally no field for a rule.
 
 ### Format (every part optional)
 
@@ -180,10 +191,15 @@ Your existing markdown already satisfies this — there is nothing to add.
   comes from `--type` (or is inferred).
 - An **optional** leading `tone: <free text>` line (e.g.
   `tone: concise and operational`). Omit it and the seeded tone applies.
-- **All other text is ignored** by the engine — prose, bullets, code blocks,
-  and blank lines are guidance for the human reading the template, not consumed
-  by generation. An unknown metadata line such as `audience: SREs` is simply
-  ignored, not an error.
+- **Block shapes are captured as scaffolding** — a markdown table's column
+  headers, a `- [ ]` checklist, a fenced code block's language tag, and a
+  `**Label:**` header-metadata row become the *shape* of that section, so the
+  output renders the same kind of block (filled from your sources, `NEEDS INPUT`
+  for gaps). Only the structure **labels** are read — your example rows, list
+  items, commands, and values are never copied into the output.
+- **Plain prose and blank lines are ignored** by the engine — they are guidance
+  for the human reading the template, not consumed by generation. An unknown
+  metadata line such as `audience: SREs` is simply ignored, not an error.
 - An empty or section-less file is **fine** (no structure constraint) — not an
   error.
 - The **only** error case: a line whose key is a *rule-like* directive — one of
@@ -489,10 +505,11 @@ there is no weaker path through `generate`:
 - **Structural + style scoring** — the `quality.score` and `violations` that
   drive the CI exit code.
 
-**Templates cannot weaken safety.** A template shapes structure and tone only;
-the parser has no field for a safety or quality rule, and any rule-like
-directive is rejected with `400`. There is no template knob that turns off
-redaction, the hostname scrub, or the injection quarantine.
+**Templates cannot weaken safety.** A template shapes structure, block shape, and
+tone only — the parser captures just labels (section, column, and field names,
+plus code-block language) and has no field for a safety or quality rule, and any
+rule-like directive is rejected with `400`. There is no template knob that turns
+off redaction, the hostname scrub, or the injection quarantine.
 
 **`needs_input` honesty.** When the document can't answer something from the
 available knowledge, `generate` says so — it emits the open questions in

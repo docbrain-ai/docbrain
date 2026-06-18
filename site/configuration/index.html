@@ -645,6 +645,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#agentic-tool-loop-when-to-enable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agentic tool loop — when to enable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#grounding-floors-what-lowering-actually-costs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -931,6 +942,17 @@
     <span class="md-ellipsis">
       
         Dynamic tool discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rootly-on-call-shim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rootly on-call shim
       
     </span>
   </a>
@@ -1951,6 +1973,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate (Grounded Docs)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../governance/" class="md-nav__link">
         
   
@@ -2910,6 +2960,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#agentic-tool-loop-when-to-enable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agentic tool loop — when to enable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#grounding-floors-what-lowering-actually-costs" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3196,6 +3257,17 @@
     <span class="md-ellipsis">
       
         Dynamic tool discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rootly-on-call-shim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rootly on-call shim
       
     </span>
   </a>
@@ -4618,17 +4690,21 @@ only when you have query latency or quality data to justify a change.</p>
 </span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ms_teams_capture</span>
 </span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">  </span><span class="nt">entity_cache_ttl_secs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">300</span><span class="w">            </span><span class="c1"># entity → space cache TTL</span>
 </span><span id="__span-6-26"><a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="w">  </span><span class="nt">max_rewrites</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">                       </span><span class="c1"># query rewrites per ask</span>
-</span><span id="__span-6-27"><a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>
-</span><span id="__span-6-28"><a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="w">  </span><span class="c1"># Retrieval ladder (experimental, off by default). When enabled, an</span>
-</span><span id="__span-6-29"><a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">  </span><span class="c1"># answer is synthesised TWICE in parallel — once from indexed documents</span>
-</span><span id="__span-6-30"><a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="w">  </span><span class="c1"># only, once also incorporating live tool (MCP) data — and a fast LLM</span>
-</span><span id="__span-6-31"><a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="w">  </span><span class="c1"># &quot;judge&quot; picks the better answer. Low-confidence winners are augmented</span>
-</span><span id="__span-6-32"><a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">  </span><span class="c1"># with knowledge-graph expert routing (&quot;these people may know more&quot;).</span>
-</span><span id="__span-6-33"><a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">  </span><span class="nt">retrieval_ladder</span><span class="p">:</span>
-</span><span id="__span-6-34"><a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                      </span><span class="c1"># master switch (default off = legacy single-synth)</span>
-</span><span id="__span-6-35"><a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="w">    </span><span class="nt">graph_append_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span><span class="w">         </span><span class="c1"># below this confidence, append graph experts</span>
-</span><span id="__span-6-36"><a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="w">    </span><span class="nt">judge_timeout_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1500</span><span class="w">              </span><span class="c1"># hard timeout for the judge LLM call</span>
-</span><span id="__span-6-37"><a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="w">    </span><span class="c1"># judge_model_id: null              # null = use the configured fast model</span>
+</span><span id="__span-6-27"><a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="w">  </span><span class="nt">fresh_only_phrases</span><span class="p">:</span><span class="w">                   </span><span class="c1"># time-sensitive question phrases (live-only answers)</span>
+</span><span id="__span-6-28"><a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;on</span><span class="nv"> </span><span class="s">call&quot;</span>
+</span><span id="__span-6-29"><a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;current</span><span class="nv"> </span><span class="s">rotation&quot;</span>
+</span><span id="__span-6-30"><a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;incident</span><span class="nv"> </span><span class="s">commander&quot;</span>
+</span><span id="__span-6-31"><a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>
+</span><span id="__span-6-32"><a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">  </span><span class="c1"># Retrieval ladder (experimental, off by default). When enabled, an</span>
+</span><span id="__span-6-33"><a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">  </span><span class="c1"># answer is synthesised TWICE in parallel — once from indexed documents</span>
+</span><span id="__span-6-34"><a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">  </span><span class="c1"># only, once also incorporating live tool (MCP) data — and a fast LLM</span>
+</span><span id="__span-6-35"><a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="w">  </span><span class="c1"># &quot;judge&quot; picks the better answer. Low-confidence winners are augmented</span>
+</span><span id="__span-6-36"><a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="w">  </span><span class="c1"># with knowledge-graph expert routing (&quot;these people may know more&quot;).</span>
+</span><span id="__span-6-37"><a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="w">  </span><span class="nt">retrieval_ladder</span><span class="p">:</span>
+</span><span id="__span-6-38"><a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                      </span><span class="c1"># master switch (default off = legacy single-synth)</span>
+</span><span id="__span-6-39"><a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a><span class="w">    </span><span class="nt">graph_append_threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span><span class="w">         </span><span class="c1"># below this confidence, append graph experts</span>
+</span><span id="__span-6-40"><a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a><span class="w">    </span><span class="nt">judge_timeout_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1500</span><span class="w">              </span><span class="c1"># hard timeout for the judge LLM call</span>
+</span><span id="__span-6-41"><a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a><span class="w">    </span><span class="c1"># judge_model_id: null              # null = use the configured fast model</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -4778,6 +4854,126 @@ only when you have query latency or quality data to justify a change.</p>
 <td><code>12000</code></td>
 <td>Skip retry when the first pass already took this long. Bounded <code>1000–60000</code>; out-of-range values fall back to the default. Protects against pathologically slow queries getting hammered twice.</td>
 </tr>
+<tr>
+<td>—</td>
+<td><code>RAG_AGENTIC_LOOP_ENABLED</code></td>
+<td><code>false</code></td>
+<td><strong>Agentic tool loop — master switch.</strong> Generalizes the confidence-retry above into a bounded <strong>multi-round</strong> tool loop: after each round of tool results, a pure stop-or-continue decision runs, bounded by per-surface round and wall-clock budgets. When <code>true</code>, this loop <strong>subsumes</strong> the confidence-retry — the loop runs instead of the single retry, and the <code>RAG_CONFIDENCE_RETRY_*</code> vars become the disabled-loop fallback. Default OFF — existing deployments are byte-identical until they opt in. Accepts <code>true \| 1 \| yes \| on</code> (case-insensitive). Same env-validation contract as the confidence-retry: unset → silent default; set-but-invalid → <code>warn</code> log + default (a typo can never silently flip a deployment into an unexpected mode).</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK</code></td>
+<td><code>5</code></td>
+<td>Hard cap on tool-dispatch rounds for the Slack surface. Slack posts an @mention when done, so the user isn't blocked synchronously — it tolerates more rounds. Bounded <code>1–10</code>; out-of-range values fall back to the default.</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB</code></td>
+<td><code>4</code></td>
+<td>Hard cap on tool-dispatch rounds for every non-Slack (web/api) surface. Synchronous HTTP — a client holds the connection open — so the cap is tighter than Slack. Sized to the canonical dependency-chain depth (a dead-source attempt, a search that surfaces a reference, the read that resolves it, then synthesis). Bounded <code>1–10</code>; out-of-range values fall back to the default.</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>RAG_AGENTIC_LOOP_BUDGET_MS_SLACK</code></td>
+<td><code>60000</code></td>
+<td>Overall wall-clock deadline (ms) for the Slack surface; the loop aborts and answers with partial results when exceeded. Bounded <code>1000–120000</code>; out-of-range values fall back to the default.</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>RAG_AGENTIC_LOOP_BUDGET_MS_WEB</code></td>
+<td><code>30000</code></td>
+<td>Overall wall-clock deadline (ms) for the web/api surface. Tighter than Slack because a human or client is holding a synchronous connection, but wide enough for a multi-step retrieval chain to complete. Bounded <code>1000–120000</code>; out-of-range values fall back to the default.</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD</code></td>
+<td><code>0.7</code></td>
+<td>Stop-when-confident bar: the loop <strong>continues</strong> while the best answer confidence is below this and rounds/budget remain, and <strong>stops</strong> once confidence reaches it (even with rounds left). Bounded <code>0.0–1.0</code>. <strong>Fallback:</strong> when unset, the loop reads the legacy <code>RAG_CONFIDENCE_RETRY_THRESHOLD</code> instead, so a deployment that already tuned the confidence-retry threshold keeps that exact value without a second knob; only if both are unset does it fall to <code>0.7</code>.</td>
+</tr>
+<tr>
+<td><code>rag.suppression.min_feedback_count</code></td>
+<td><code>RAG_SUPPRESSION_MIN_FEEDBACK_COUNT</code></td>
+<td><code>2</code></td>
+<td><strong>Source-suppression learning loop — event gate.</strong> When a user marks a <em>specific</em> source within an answer as not-relevant (the per-source thumbs-down on web/CLI/Slack), DocBrain records the event and, once enough accumulates, down-ranks that document in retrieval for <strong>similar future questions</strong>. This is the minimum number of total not-relevant events on a document (across the episodes recalled for the live query) before it is suppressed. A document is suppressed when it crosses <em>either</em> this gate or the distinct-user gate, so a single click can never unilaterally bury a document. Set to <code>0</code> to disable this gate.</td>
+</tr>
+<tr>
+<td><code>rag.suppression.min_unique_users</code></td>
+<td><code>RAG_SUPPRESSION_MIN_UNIQUE_USERS</code></td>
+<td><code>2</code></td>
+<td><strong>Source-suppression — distinct-user gate.</strong> Minimum number of distinct users who flagged a document not-relevant before it is suppressed. Anonymous (no user id) events count toward the event gate above but never toward this distinct-user quorum, so an anonymous click cannot manufacture a majority. Set to <code>0</code> to disable this gate.</td>
+</tr>
+<tr>
+<td><code>rag.suppression.rag_penalty_factor</code></td>
+<td><code>RAG_SUPPRESSION_RAG_PENALTY_FACTOR</code></td>
+<td><code>0.1</code></td>
+<td><strong>Source-suppression — penalty strength.</strong> Multiplier applied to a suppressed document's retrieval score. Range <code>(0, 1]</code>: <code>1.0</code> means no penalty, smaller is a stronger down-rank. It is a down-rank, never a hard drop, so a suppressed document that is the only available evidence still surfaces (with an empty-answer floor guard) rather than producing an empty answer. A document that <em>every</em> match is suppressed is never resurrected above the relevance floor.</td>
+</tr>
+<tr>
+<td><code>rag.regen_loop_enabled</code></td>
+<td><code>DOCBRAIN_REGEN_LOOP_ENABLED</code></td>
+<td><code>true</code></td>
+<td><strong>Regenerate-with-feedback loop — master kill-switch.</strong> The doc reviewer flags claims its evidence contradicts; this loop consumes those flags and regenerates the draft until they clear. The UI is human-in-loop (each "Regenerate" click is one round); the CLI/generate path auto-reviews. Reviewer feedback shapes the <strong>writing prompt only</strong> — it can never clear a flagged claim, because the reviewer re-derives flags from the evidence alone, so a "ship it anyway" instruction cannot override a contradicted claim. Disable only with <code>false \| 0 \| no \| off</code>.</td>
+</tr>
+<tr>
+<td><code>rag.regen_loop_max_rounds</code></td>
+<td><code>DOCBRAIN_REGEN_LOOP_MAX_ROUNDS</code></td>
+<td><code>3</code></td>
+<td><strong>Auto-review round cap (CLI / generate).</strong> Hard upper bound on automatic regenerate rounds on the non-interactive path. The loop also stops early once the flags stop decreasing (a plateau) and exits honestly with the unresolved flags attached, so it never runs forever and never silently ships flags. Range <code>1..=20</code>.</td>
+</tr>
+<tr>
+<td><code>rag.regen_loop_max_revisions</code></td>
+<td><code>DOCBRAIN_REGEN_LOOP_MAX_REVISIONS</code></td>
+<td><code>10</code></td>
+<td><strong>Human-in-loop revision cap (UI).</strong> Maximum number of regenerations a reviewer can chain on a single draft from the UI. Each regeneration is preserved as a new revision linked to the original — the original is never overwritten — so the full feedback history stays auditable. Range <code>1..=100</code>.</td>
+</tr>
+<tr>
+<td><code>rag.regen_loop_min_budget_ms</code></td>
+<td><code>DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS</code></td>
+<td><code>20000</code></td>
+<td><strong>Minimum wall-clock headroom to start a round.</strong> A regenerate round costs a gather + write + review pass; this guard refuses to start a round that cannot plausibly finish, so the loop degrades to an honest exit rather than a half-finished write. Set to <code>0</code> to disable the guard.</td>
+</tr>
+<tr>
+<td><code>rag.generate_hollow_min_sections</code></td>
+<td><code>DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS</code></td>
+<td><code>3</code></td>
+<td><strong>Hollow-document guard — section floor.</strong> Generation refuses (HTTP 422) a draft that is mostly unanswered <code>NEEDS INPUT:</code> placeholders, by placeholder <em>density</em>: the guard applies only when the draft has at least this many <code>##</code> sections. Below the floor (short / free-form docs) the rule is off. Set to <code>0</code> to disable the guard entirely.</td>
+</tr>
+<tr>
+<td><code>rag.generate_hollow_ratio_pct</code></td>
+<td><code>DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT</code></td>
+<td><code>50</code></td>
+<td><strong>Hollow-document guard — density threshold.</strong> Refuse when at least this percentage of the draft's <code>##</code> sections are <code>NEEDS INPUT:</code> placeholders (<code>50</code> = half the doc). A draft that honestly flags 1-2 of N sections ships untouched; the guard keys on the <em>output shape</em>, not on whether sources were supplied, so a generic corpus match that still yields a hollow doc is caught.</td>
+</tr>
+<tr>
+<td><code>rag.support_critic_enabled</code></td>
+<td><code>DOCBRAIN_SUPPORT_CRITIC_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Master kill-switch for the <strong>support critic</strong> — the doc-generation GROUNDING reviewer. It extracts the draft's claims and flags the ones <strong>no supplied source supports</strong> (fabrication), plus <code>NEEDS INPUT:</code> markers the sources actually cover (the inverted self-flag). Distinct from the freshness critic (which flags only CONTRADICTED claims): the support critic flags UNSUPPORTED ones. <strong>Advisory</strong> — never blocks generation; findings are surfaced in the grounding report for the reviewer. <strong>ON by default</strong>. Disable only with <code>false</code>/<code>0</code>/<code>no</code>/<code>off</code>. Fail-open: any critic error ships the draft unchanged.</td>
+</tr>
+<tr>
+<td><code>rag.support_critic_max_claims</code></td>
+<td><code>DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS</code></td>
+<td><code>40</code></td>
+<td>Hard cap on the number of claims grounding-checked per draft. Bounds the worst-case LLM cost of the support critic. Range <code>1..=200</code>.</td>
+</tr>
+<tr>
+<td><code>rag.merge_enabled</code></td>
+<td><code>DOCBRAIN_MERGE_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Master kill-switch for the <strong>merged-doc update</strong>. When generating against an existing target document, the output is the <strong>full merged document</strong> — unchanged sections preserved byte-exact, changed sections rewritten, new sections surfaced — plus a per-section change manifest, so the result can replace the whole doc with confidence about what changed. Defaults ON (unchanged sections are byte-exact, an unsafe splice bails, nothing is ever published). Disable only with <code>false</code>/<code>0</code>/<code>no</code>/<code>off</code>.</td>
+</tr>
+<tr>
+<td><code>rag.merge_max_sections</code></td>
+<td><code>DOCBRAIN_MERGE_MAX_SECTIONS</code></td>
+<td><code>60</code></td>
+<td>Max existing sections fed to the merge decision in one pass. Sections beyond the cap are kept verbatim, so the cap limits cost, not correctness. Range <code>1..=500</code>.</td>
+</tr>
+<tr>
+<td><code>rag.merge_max_tokens</code></td>
+<td><code>DOCBRAIN_MERGE_MAX_TOKENS</code></td>
+<td><code>4096</code></td>
+<td>Max output tokens for the merge decision call (the model returns only the changed spans). Range <code>512..=32768</code>.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="confidence-retry-fallback-when-to-enable">Confidence-retry fallback — when to enable<a class="headerlink" href="#confidence-retry-fallback-when-to-enable" title="Permanent link">&para;</a></h3>
@@ -4799,6 +4995,36 @@ only when you have query latency or quality data to justify a change.</p>
 <p>Any false → retry skipped → first-pass answer returned unchanged.</p>
 <p><strong>Observability.</strong> A triggered retry emits two structured log lines: <code>rag::retry triggered — re-synthesizing with all tools</code> (with the first-pass confidence, tool count, catalog size, elapsed_ms, and configured threshold) and <code>rag::retry completed</code> (with the retry's confidence, tool count, and a <code>retry_helped</code> boolean comparing first-vs-retry confidence). Operators tune the threshold by measuring the ratio of triggered retries to <code>retry_helped=true</code> results; if a deployment's retries rarely improve answers, the threshold is too high and the retry is wasting budget. If too few queries trigger retry but reviewers see weak answers, the threshold is too low.</p>
 <p><strong>Latency.</strong> When the gate triggers, the request makes a second picker call + a second synthesis call. Median latency for the retry is similar to the first pass; worst case approximately doubles. The latency budget gate (<code>RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS</code>) protects against the pathological case where the first pass already burned the user-tolerable budget — those queries skip retry and return the first-pass answer unchanged.</p>
+<h3 id="agentic-tool-loop-when-to-enable">Agentic tool loop — when to enable<a class="headerlink" href="#agentic-tool-loop-when-to-enable" title="Permanent link">&para;</a></h3>
+<p>The confidence-retry above answers a one-shot question: "the first pass looked weak — should we re-run with all tools forced on, exactly once?" The agentic tool loop generalizes that into a bounded <strong>multi-round</strong> loop. After each round of tool dispatch, a pure stop-or-continue decision runs against the round's results, bounded by a per-surface budget (round count + wall-clock). The "high confidence → stop" insight from the confidence-retry becomes a precedence branch here: a confident answer stops the loop even with rounds left.</p>
+<p><strong>One mechanism, not two.</strong> When <code>RAG_AGENTIC_LOOP_ENABLED=true</code>, the loop <strong>subsumes</strong> the confidence-retry — the loop runs <em>instead of</em> the single retry, so you never get both. When the loop is disabled (the default), the <code>RAG_CONFIDENCE_RETRY_*</code> path remains the active fallback exactly as documented above. This is why the loop honors <code>RAG_CONFIDENCE_RETRY_THRESHOLD</code> as the fallback when <code>RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD</code> is unset: a deployment that already tuned the retry threshold carries that value into the loop without a second knob.</p>
+<p><strong>Per-surface budgets.</strong> The loop is tuned per delivery surface because the latency contract differs:</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Max rounds</th>
+<th>Wall-clock budget</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slack</td>
+<td><code>5</code> (<code>RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK</code>)</td>
+<td><code>60000</code> ms (<code>RAG_AGENTIC_LOOP_BUDGET_MS_SLACK</code>)</td>
+<td>Slack posts an @mention when done — the user isn't blocked on a synchronous response, so a longer loop is tolerable.</td>
+</tr>
+<tr>
+<td>Web / API</td>
+<td><code>4</code> (<code>RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB</code>)</td>
+<td><code>30000</code> ms (<code>RAG_AGENTIC_LOOP_BUDGET_MS_WEB</code>)</td>
+<td>Synchronous HTTP — a human or client holds the connection open. Sized to the canonical retrieval dependency-chain depth while keeping responses bounded.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Default OFF.</strong> Existing deployments are byte-identical until they opt in. To enable, set <code>RAG_AGENTIC_LOOP_ENABLED=true</code> in the server's env (helm: <code>server.env.RAG_AGENTIC_LOOP_ENABLED: "true"</code>).</p>
+<p><strong>Validation.</strong> Every var follows the same contract as the confidence-retry: an <strong>unset</strong> value silently falls back to its documented default; a value that is <strong>set but invalid</strong> (parse failure, out of range, NaN for the threshold) falls back to the default <em>and</em> emits a <code>warn</code> log, so a typo in a values file can never silently flip a deployment into an unexpected mode.</p>
 <h3 id="grounding-floors-what-lowering-actually-costs">Grounding floors — what lowering actually costs<a class="headerlink" href="#grounding-floors-what-lowering-actually-costs" title="Permanent link">&para;</a></h3>
 <p>The four floor values above (<code>min_relevance_score</code>, <code>display_floor</code>, <code>confidence_gate</code>, <code>strong_answer_floor</code>) are the single biggest quality lever in DocBrain. They all gate on the reranker's calibrated <code>[0, 1]</code> score, which is the output of stage 3 of the retrieval pipeline. Their defaults are tuned for a real cross-encoder (Cohere Rerank v3.5, Voyage rerank-2, Jina reranker-v2, or equivalent).</p>
 <p><strong>The calibration insight.</strong> A well-tuned cross-encoder's <code>[0, 1]</code> scores are <strong>not</strong> a percentage and <strong>not</strong> a uniform distribution. In practice, for Cohere Rerank v3.5 and similar models:</p>
@@ -5846,6 +6072,34 @@ share a name:</p>
 <p><strong>Boot behaviour.</strong> Dynamic manifests are excluded from eligibility until the
 first successful probe completes. Status surfaces in the admin detail endpoint
 as <code>pending</code> → <code>ok</code> (or <code>failed</code> / <code>requires_probe_user</code>).</p>
+<h3 id="rootly-on-call-shim">Rootly on-call shim<a class="headerlink" href="#rootly-on-call-shim" title="Permanent link">&para;</a></h3>
+<p>The <code>rootly</code> manifest is served by an internal shim that exposes two read-only
+tools — <code>rootly.get_oncall</code> (who is on call now) and <code>rootly.list_overrides</code>
+(scheduled overrides). Unlike OAuth manifests, the shim authenticates to
+Rootly's REST API with an org-level token it reads directly from its own env
+(it is not routed through <code>config/default.yaml</code>). Set these as env vars (e.g.
+in the Kubernetes Secret via <code>mcpTools.serviceAccount.rootly.*</code> in Helm):</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROOTLY_API_TOKEN</code></td>
+<td>—</td>
+<td>Org-level Rootly API token. Required for the on-call shim; when unset the manifest is absent and on-call questions fall back to other sources. Read-only.</td>
+</tr>
+<tr>
+<td><code>ROOTLY_BASE_URL</code></td>
+<td><code>https://api.rootly.com</code></td>
+<td>Rootly REST API base URL. Override only for self-hosted Rootly.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="slack-integration-optional">Slack Integration (Optional)<a class="headerlink" href="#slack-integration-optional" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -5984,6 +6238,16 @@ as <code>pending</code> → <code>ok</code> (or <code>failed</code> / <code>requ
 <td><code>AUTOPILOT_MEDIUM_THRESHOLD</code></td>
 <td><code>0.35</code></td>
 <td>Composite score cutoff for "medium" severity.</td>
+</tr>
+<tr>
+<td><code>AUTOPILOT_TARGET_MIN_SCORE</code></td>
+<td><code>45.0</code></td>
+<td>Corpus-probe relevance floor: minimum OpenSearch hybrid (BM25+kNN, unbounded) probe score a candidate target doc must reach before autopilot auto-picks it to augment a <code>poor_coverage</code> gap. Below this the cluster is marked "needs human pick". Distinct from <code>VERIFY_CORPUS_MIN_SCORE</code>.</td>
+</tr>
+<tr>
+<td><code>GENERATED_DOCS_RETENTION_DAYS</code></td>
+<td><code>90</code></td>
+<td>Retention window (days) for persisted ad-hoc <code>generate</code> runs shown in the web <code>/generate</code> History view (<code>generated_documents</code> table). Rows older than this are purged by a daily job, and the History list/detail also filter to this window. Bounds the data-at-rest exposure of the persisted document body, which is <strong>owner-scoped</strong> (you see your own runs; admins see all; machine-key runs are admin-only). Set <code>0</code> to keep indefinitely (both the purge and the read-window filter no-op).</td>
 </tr>
 </tbody>
 </table>
@@ -6443,6 +6707,26 @@ as <code>pending</code> → <code>ok</code> (or <code>failed</code> / <code>requ
 <td><code>docbrain-episodes</code></td>
 <td>Index name for episode vectors (used in episodic memory recall)</td>
 </tr>
+<tr>
+<td><code>DOCBRAIN_MCP_OUTPUT_CEILING_BYTES</code></td>
+<td><code>32768</code></td>
+<td>Hard upper bound the live-tool manifest validator enforces on any per-tool output cap. A per-tool cap above this is rejected at load.</td>
+</tr>
+<tr>
+<td><code>DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES</code></td>
+<td><code>32768</code></td>
+<td>Output cap inherited by tools discovered dynamically that ship no per-tool cap (e.g. chat search). Must be ≤ the ceiling above.</td>
+</tr>
+<tr>
+<td><code>DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES</code></td>
+<td><code>65536</code></td>
+<td>Shared evidence-text budget across <strong>all</strong> tools in one tool-loop round — the real bottleneck. 2× the per-tool cap leaves headroom for other sources. These three caps form a chain: all must rise together, since the smallest truncates regardless of the others.</td>
+</tr>
+<tr>
+<td><code>DOCBRAIN_MCP_JQL_RECENCY_BOUND_DAYS</code></td>
+<td><code>180</code></td>
+<td>Recency window (in days) the gateway appends to an <strong>unbounded full-text</strong> issue-tracker search. When a search query uses the full-text operator with no time window and no project/key clause, the gateway adds a recency bound so the upstream hits its date index instead of scanning the whole instance (which times out at the tool budget). Already-bounded queries are left untouched.</td>
+</tr>
 </tbody>
 </table>
 <p>Only change these if you run multiple DocBrain instances sharing the same OpenSearch cluster, to avoid index collisions.</p>
@@ -6524,6 +6808,11 @@ as <code>pending</code> → <code>ok</code> (or <code>failed</code> / <code>requ
 <td><code>OIDC_WEB_UI_URL</code></td>
 <td><code>http://localhost:3001</code></td>
 <td>Where to redirect after successful login</td>
+</tr>
+<tr>
+<td><code>DOCBRAIN_WEB_BASE_URL</code></td>
+<td>—</td>
+<td>Public origin of the DocBrain <strong>web UI</strong>. Drives the MCP-OAuth landing redirect AND the <strong>"view in browser"</strong> deep link the CLI prints after a <code>generate</code> (plus the shareable per-document link). Set to the user-facing web origin — <strong>not</strong> the API host if they differ. Unset → no link is offered (never guessed or hardcoded). Trailing slash trimmed.</td>
 </tr>
 <tr>
 <td><code>OIDC_ACCEPT_INVALID_CERTS</code></td>

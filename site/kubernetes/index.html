@@ -602,6 +602,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate (Grounded Docs)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../governance/" class="md-nav__link">
         
   
@@ -2499,9 +2527,20 @@ documents): <code>local</code>, <code>confluence</code>, <code>github</code>, <c
 </span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span>--set<span class="w"> </span>ingress.className<span class="o">=</span>nginx<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span>--set<span class="w"> </span>ingress.host<span class="o">=</span>docbrain.yourcompany.com<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tls<span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tlsSecretName<span class="o">=</span>docbrain-tls
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">  </span>--set<span class="w"> </span>ingress.tlsSecretName<span class="o">=</span>docbrain-tls<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">  </span>--set<span class="w"> </span>ingress.proxyReadTimeout<span class="o">=</span><span class="m">600</span>
 </span></code></pre></div>
 <p>The Ingress routes <code>/api/*</code> to the server (port 3000) and everything else to the web UI (port 3001).</p>
+<p><strong>Request timeout for document generation.</strong> <code>POST /api/v1/generate</code> is a long
+synchronous call — it runs gather → reasoning → writing → quality + freshness/grounding
+critics, which takes minutes for a broad or tool-heavy ask. The <code>ingress.proxyReadTimeout</code>
+value (default <code>600</code> seconds) drives the nginx <code>proxy-read-timeout</code>; if you front the
+cluster with an AWS ALB, set its <code>idle_timeout</code> to the <strong>same</strong> value (via
+<code>ingress.annotations</code> → <code>alb.ingress.kubernetes.io/load-balancer-attributes:
+idle_timeout.timeout_seconds=600</code>) so the lower of the two can't silently cut the request
+off with a 502. <strong>Raise it to <code>900</code> or higher when live tools / agentic generation are
+enabled</strong> — tool-enabled generation makes multiple LLM + tool round-trips and runs longer
+than a from-scratch draft.</p>
 <h3 id="sso-oauth">SSO / OAuth<a class="headerlink" href="#sso-oauth" title="Permanent link">&para;</a></h3>
 <p>See <a href="../rbac/">docs/rbac.md</a> for full SSO setup. Quick example for GitHub OAuth:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>helm<span class="w"> </span>install<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span><span class="se">\</span>

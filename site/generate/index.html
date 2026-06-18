@@ -2131,7 +2131,7 @@ of the document you want written.</p>
 <tr>
 <td><code>--template</code></td>
 <td><code>&lt;FILE&gt;</code></td>
-<td>Team template file that shapes sections and tone. <strong>Cannot</strong> affect safety. See <a href="#templates">Templates</a>.</td>
+<td>Team template file that shapes section structure, block shape (table columns, checklists, code blocks, header fields) and tone. Filled from your sources; gaps become <code>NEEDS INPUT</code>. <strong>Cannot</strong> affect safety. See <a href="#templates">Templates</a>.</td>
 </tr>
 <tr>
 <td><code>--type</code></td>
@@ -2147,6 +2147,11 @@ of the document you want written.</p>
 <td><code>--out</code></td>
 <td><code>&lt;FILE&gt;</code></td>
 <td>Write markdown to a file instead of stdout.</td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>—</td>
+<td>Overwrite the <code>--out</code> file if it already exists. Interactive runs refuse to clobber an existing file without this; CI/non-interactive runs overwrite automatically. See <a href="#io-contract">I/O contract</a>.</td>
 </tr>
 <tr>
 <td><code>--no-enrich</code></td>
@@ -2169,6 +2174,14 @@ of the document you want written.</p>
 <li><strong>Exit code is non-zero on error-severity quality violations</strong> — unless you
   pass <code>--allow-violations</code>. This is the CI-native behaviour: a bad draft fails
   the build by default.</li>
+<li><strong><code>--out</code> overwrite is interaction-aware.</strong> An interactive run refuses to
+  overwrite an existing <code>--out</code> file unless you pass <code>--force</code>; a
+  non-interactive run (CI, or stderr redirected) overwrites automatically, so a
+  pipeline that regenerates the same artifact every run is unaffected.</li>
+<li><strong>The call is time-bounded.</strong> The client waits up to 180s for a generation
+  (live fetch + drafting + review). Override with the
+  <code>DOCBRAIN_GENERATE_TIMEOUT_SECS</code> environment variable (clamped to 30–600); a
+  timeout surfaces a clear message rather than hanging.</li>
 </ul>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Runbook from local notes, redirected to a file (pipe-clean stdout)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;runbook for cert rotation&quot;</span><span class="w"> </span>--source<span class="w"> </span>notes.md<span class="w"> </span>&gt;<span class="w"> </span>out.md
@@ -2263,23 +2276,34 @@ prompt. Over-budget material returns <code>413</code>.</p>
 just a plain <code>.md</code>/text file — your existing runbook, your team's doc skeleton,
 any document whose layout you want new docs to match. There is <strong>no
 DocBrain-specific file format to learn</strong>: the engine reads your file's <code>##</code>
-section headings (in order) and an optional tone, and produces a new doc with
-<strong>that structure and voice</strong>.</p>
+section headings (in order), the <strong>block shape</strong> of each section (a table and its
+column headers, a checklist, a fenced code block and its language, a header-field
+block), and an optional tone — then produces a new doc with <strong>that structure,
+shape and voice</strong>, filled from your sources.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Use a runbook the team already maintains as the shape for a new one</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;runbook for cert rotation&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--source<span class="w"> </span>notes.md<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--template<span class="w"> </span>docs/runbooks/EXISTING-runbook.md<span class="w"> </span>&gt;<span class="w"> </span>out.md
 </span></code></pre></div>
 <h3 id="what-a-template-controls-and-what-it-doesnt">What a template controls — and what it doesn't<a class="headerlink" href="#what-a-template-controls-and-what-it-doesnt" title="Permanent link">&para;</a></h3>
-<p>A template shapes a document's <strong>structure</strong> (which sections, in what order) and
-<strong>tone</strong> — nothing else.</p>
+<p>A template shapes a document's <strong>structure</strong> (which sections, in what order),
+each section's <strong>block shape</strong> (table columns, checklist, code-block language,
+header-field labels), and <strong>tone</strong> — nothing else.</p>
 <ul>
-<li>It does <strong>not</strong> copy your file's prose into the output. The engine extracts
-  the <em>skeleton + tone</em> and writes fresh, grounded content under each heading.
-  (If you want the output to reuse a document's actual content, pass it as a
-  <code>--source</code> seed, not a <code>--template</code>.)</li>
-<li>It can <strong>never</strong> carry or disable a safety or quality rule: the parser has
-  literally no field for one.</li>
+<li>It does <strong>not</strong> copy your file's content into the output. The engine extracts
+  the <em>skeleton + shape labels + tone</em> and writes fresh, grounded content under
+  each heading. Your template's example table rows, sample commands, and
+  placeholder text are <strong>never reproduced</strong> — each cell, list item, and code
+  block is filled from <strong>your sources</strong>, and anything it can't ground is marked
+  <code>NEEDS INPUT</code> for you to complete. (If you want the output to reuse a
+  document's actual content, pass it as a <code>--source</code> seed, not a <code>--template</code>.)</li>
+<li><strong>Header-metadata fields</strong> (e.g. <code>**Version:**</code>, <code>**Owner:**</code>, <code>**SLA:**</code>) are
+  reproduced as labels, but their values are document metadata the engine can't
+  ground from your sources — they render as <code>NEEDS INPUT</code>, and the response's
+  <code>skipped_sources</code> notes this so the gap is explicit, not silent.</li>
+<li>It can <strong>never</strong> carry or disable a safety or quality rule: the parser captures
+  only structure labels (section names, column names, field names, code-block
+  language) and has literally no field for a rule.</li>
 </ul>
 <h3 id="format-every-part-optional">Format (every part optional)<a class="headerlink" href="#format-every-part-optional" title="Permanent link">&para;</a></h3>
 <p>Your existing markdown already satisfies this — there is nothing to add.</p>
@@ -2292,10 +2316,15 @@ section headings (in order) and an optional tone, and produces a new doc with
   comes from <code>--type</code> (or is inferred).</li>
 <li>An <strong>optional</strong> leading <code>tone: &lt;free text&gt;</code> line (e.g.
   <code>tone: concise and operational</code>). Omit it and the seeded tone applies.</li>
-<li><strong>All other text is ignored</strong> by the engine — prose, bullets, code blocks,
-  and blank lines are guidance for the human reading the template, not consumed
-  by generation. An unknown metadata line such as <code>audience: SREs</code> is simply
-  ignored, not an error.</li>
+<li><strong>Block shapes are captured as scaffolding</strong> — a markdown table's column
+  headers, a <code>- [ ]</code> checklist, a fenced code block's language tag, and a
+  <code>**Label:**</code> header-metadata row become the <em>shape</em> of that section, so the
+  output renders the same kind of block (filled from your sources, <code>NEEDS INPUT</code>
+  for gaps). Only the structure <strong>labels</strong> are read — your example rows, list
+  items, commands, and values are never copied into the output.</li>
+<li><strong>Plain prose and blank lines are ignored</strong> by the engine — they are guidance
+  for the human reading the template, not consumed by generation. An unknown
+  metadata line such as <code>audience: SREs</code> is simply ignored, not an error.</li>
 <li>An empty or section-less file is <strong>fine</strong> (no structure constraint) — not an
   error.</li>
 <li>The <strong>only</strong> error case: a line whose key is a <em>rule-like</em> directive — one of
@@ -2641,10 +2670,11 @@ there is no weaker path through <code>generate</code>:</p>
 <li><strong>Structural + style scoring</strong> — the <code>quality.score</code> and <code>violations</code> that
   drive the CI exit code.</li>
 </ul>
-<p><strong>Templates cannot weaken safety.</strong> A template shapes structure and tone only;
-the parser has no field for a safety or quality rule, and any rule-like
-directive is rejected with <code>400</code>. There is no template knob that turns off
-redaction, the hostname scrub, or the injection quarantine.</p>
+<p><strong>Templates cannot weaken safety.</strong> A template shapes structure, block shape, and
+tone only — the parser captures just labels (section, column, and field names,
+plus code-block language) and has no field for a safety or quality rule, and any
+rule-like directive is rejected with <code>400</code>. There is no template knob that turns
+off redaction, the hostname scrub, or the injection quarantine.</p>
 <p><strong><code>needs_input</code> honesty.</strong> When the document can't answer something from the
 available knowledge, <code>generate</code> says so — it emits the open questions in
 <code>needs_input</code> rather than fabricating a confident-sounding answer. Honest gaps

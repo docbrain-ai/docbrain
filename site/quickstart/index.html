@@ -518,6 +518,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Use the CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-a-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate a doc
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -867,6 +884,34 @@
     
   
     Autopilot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Generate (Grounded Docs)
   
 
     
@@ -1747,6 +1792,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Use the CLI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-a-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generate a doc
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2070,27 +2132,33 @@ channels, teams) must always be non-empty.</p>
 </span><span id="__span-17-17"><a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a>docbrain<span class="w"> </span>thumbsup
 </span><span id="__span-17-18"><a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>docbrain<span class="w"> </span>thumbsdown
 </span></code></pre></div>
+<h3 id="generate-a-doc">Generate a doc<a class="headerlink" href="#generate-a-doc" title="Permanent link">&para;</a></h3>
+<p>Draft a document grounded in your org's own knowledge (corpus + episodes + live connectors), using a local file as primary material. <code>generate</code> returns the markdown — it does not publish.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">&quot;runbook for cert rotation&quot;</span><span class="w"> </span>--source<span class="w"> </span>notes.md<span class="w"> </span>--type<span class="w"> </span>runbook<span class="w"> </span>&gt;<span class="w"> </span>runbook.md
+</span></code></pre></div>
+<p>stdout carries only the markdown (pipe-clean, redirect-safe). All diagnostics — resolved doc type, quality score, needs-input questions, skipped sources, violations — go to stderr, so the redirect above captures a clean document. Pass <code>--out runbook.md</code> instead of the redirect, or <code>--source-url &lt;link&gt;</code> to ground the doc in a Confluence page, Jira issue, Slack thread, or GitHub PR. In CI, the process exits non-zero on error-severity quality violations (override with <code>--allow-violations</code>).</p>
+<p>See the <strong><a href="../generate/">Generate guide</a></strong> for source links, templates, and CI playbooks.</p>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="services-wont-start">Services won't start<a class="headerlink" href="#services-wont-start" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Check which services are failing</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>ps
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># View logs for the failing service</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>server
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>opensearch
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Check which services are failing</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>ps
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># View logs for the failing service</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>server
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>opensearch
 </span></code></pre></div>
 <p><strong>Common causes:</strong>
 - <strong>OpenSearch crashes:</strong> Not enough memory. OpenSearch needs ~1GB. Check <code>docker stats</code>.
 - <strong>Server exits immediately:</strong> Usually a missing or malformed <code>.env</code>. Re-copy from <code>.env.example</code>.</p>
 <h3 id="connection-refused-when-asking-questions">"Connection refused" when asking questions<a class="headerlink" href="#connection-refused-when-asking-questions" title="Permanent link">&para;</a></h3>
 <p>The server takes 10-20 seconds to start. Wait and retry:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Check if the server is ready</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>curl<span class="w"> </span>http://localhost:3000/api/v1/config
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Check if the server is ready</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>curl<span class="w"> </span>http://localhost:3000/api/v1/config
 </span></code></pre></div>
 <p>If using Ollama, make sure it's running: <code>ollama list</code> should show your models.</p>
 <h3 id="empty-answers-or-no-relevant-documents-found">Empty answers or "no relevant documents found"<a class="headerlink" href="#empty-answers-or-no-relevant-documents-found" title="Permanent link">&para;</a></h3>
 <p>You need to run ingestion first:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <p>If ingestion completed but answers are still empty, check:
 - Are your documents in a format DocBrain supports? (<code>.md</code>, <code>.txt</code>, or Confluence/GitHub)
@@ -2113,9 +2181,9 @@ channels, teams) must always be non-empty.</p>
 </ul>
 <h3 id="resetting-everything">Resetting everything<a class="headerlink" href="#resetting-everything" title="Permanent link">&para;</a></h3>
 <p>If you want to start fresh:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v<span class="w">    </span><span class="c1"># stops services and deletes all data</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w">      </span><span class="c1"># start fresh</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest<span class="w">   </span><span class="c1"># re-ingest</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v<span class="w">    </span><span class="c1"># stops services and deletes all data</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w">      </span><span class="c1"># start fresh</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest<span class="w">   </span><span class="c1"># re-ingest</span>
 </span></code></pre></div>
 <h2 id="explore-the-web-ui">Explore the Web UI<a class="headerlink" href="#explore-the-web-ui" title="Permanent link">&para;</a></h2>
 <p>Open <strong>http://localhost:3001</strong> and log in with your API key. Here's what you'll find:</p>
