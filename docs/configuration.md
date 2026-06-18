@@ -353,6 +353,9 @@ rag:
 | `rag.generate_hollow_ratio_pct` | `DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT` | `50` | **Hollow-document guard — density threshold.** Refuse when at least this percentage of the draft's `##` sections are `NEEDS INPUT:` placeholders (`50` = half the doc). A draft that honestly flags 1-2 of N sections ships untouched; the guard keys on the *output shape*, not on whether sources were supplied, so a generic corpus match that still yields a hollow doc is caught. |
 | `rag.support_critic_enabled` | `DOCBRAIN_SUPPORT_CRITIC_ENABLED` | `true` | Master kill-switch for the **support critic** — the doc-generation GROUNDING reviewer. It extracts the draft's claims and flags the ones **no supplied source supports** (fabrication), plus `NEEDS INPUT:` markers the sources actually cover (the inverted self-flag). Distinct from the freshness critic (which flags only CONTRADICTED claims): the support critic flags UNSUPPORTED ones. **Advisory** — never blocks generation; findings are surfaced in the grounding report for the reviewer. **ON by default**. Disable only with `false`/`0`/`no`/`off`. Fail-open: any critic error ships the draft unchanged. |
 | `rag.support_critic_max_claims` | `DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS` | `40` | Hard cap on the number of claims grounding-checked per draft. Bounds the worst-case LLM cost of the support critic. Range `1..=200`. |
+| `rag.merge_enabled` | `DOCBRAIN_MERGE_ENABLED` | `true` | Master kill-switch for the **merged-doc update**. When generating against an existing target document, the output is the **full merged document** — unchanged sections preserved byte-exact, changed sections rewritten, new sections surfaced — plus a per-section change manifest, so the result can replace the whole doc with confidence about what changed. Defaults ON (unchanged sections are byte-exact, an unsafe splice bails, nothing is ever published). Disable only with `false`/`0`/`no`/`off`. |
+| `rag.merge_max_sections` | `DOCBRAIN_MERGE_MAX_SECTIONS` | `60` | Max existing sections fed to the merge decision in one pass. Sections beyond the cap are kept verbatim, so the cap limits cost, not correctness. Range `1..=500`. |
+| `rag.merge_max_tokens` | `DOCBRAIN_MERGE_MAX_TOKENS` | `4096` | Max output tokens for the merge decision call (the model returns only the changed spans). Range `512..=32768`. |
 
 ### Confidence-retry fallback — when to enable
 
@@ -1252,6 +1255,7 @@ Only change these if you run multiple DocBrain instances sharing the same OpenSe
 | `OIDC_CLIENT_SECRET` | — | OAuth client secret |
 | `OIDC_REDIRECT_URI` | — | Callback URI (e.g. `https://docbrain.example.com/api/v1/auth/oidc/callback`) |
 | `OIDC_WEB_UI_URL` | `http://localhost:3001` | Where to redirect after successful login |
+| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin — **not** the API host if they differ. Unset → no link is offered (never guessed or hardcoded). Trailing slash trimmed. |
 | `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` to skip TLS verification — use for corporate/self-signed CAs |
 
 ### GitLab OIDC

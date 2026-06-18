@@ -7,7 +7,12 @@ metadata:
     {{- include "docbrain.labels" . | nindent 4 }}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    # The generate path runs gather → (live-tool dispatch) → reasoning → writing →
+    # freshness critic — a tool-heavy / agentic generation takes minutes, so 120
+    # was too tight (the slowest enriched generations 502'd). Set the ALB
+    # idle_timeout to the SAME value via ingress.annotations so the lower can't
+    # silently win. Raise to 900+ for agentic / live-tool mode.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ .Values.ingress.proxyReadTimeout | default 600 | quote }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
   {{- if .Values.ingress.tls }}

@@ -366,10 +366,22 @@ helm install docbrain ./helm/docbrain \
   --set ingress.className=nginx \
   --set ingress.host=docbrain.yourcompany.com \
   --set ingress.tls=true \
-  --set ingress.tlsSecretName=docbrain-tls
+  --set ingress.tlsSecretName=docbrain-tls \
+  --set ingress.proxyReadTimeout=600
 ```
 
 The Ingress routes `/api/*` to the server (port 3000) and everything else to the web UI (port 3001).
+
+**Request timeout for document generation.** `POST /api/v1/generate` is a long
+synchronous call — it runs gather → reasoning → writing → quality + freshness/grounding
+critics, which takes minutes for a broad or tool-heavy ask. The `ingress.proxyReadTimeout`
+value (default `600` seconds) drives the nginx `proxy-read-timeout`; if you front the
+cluster with an AWS ALB, set its `idle_timeout` to the **same** value (via
+`ingress.annotations` → `alb.ingress.kubernetes.io/load-balancer-attributes:
+idle_timeout.timeout_seconds=600`) so the lower of the two can't silently cut the request
+off with a 502. **Raise it to `900` or higher when live tools / agentic generation are
+enabled** — tool-enabled generation makes multiple LLM + tool round-trips and runs longer
+than a from-scratch draft.
 
 ### SSO / OAuth
 

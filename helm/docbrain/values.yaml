@@ -197,6 +197,15 @@ ingress:
   tls: false
   # tlsSecretName: docbrain-tls
   # annotations: {}    # extra annotations merged into both Ingress objects
+  # -- Proxy read timeout (seconds) for the API ingress. The generate path runs
+  # gather → (live-tool dispatch) → reasoning → writing → freshness critic, which
+  # takes minutes for a tool-heavy / broad multi-source ask; 120 was too tight
+  # (the slowest enriched generations 502'd). Set the ALB idle_timeout to the SAME
+  # value via `annotations` so the lower of the two can't silently win:
+  #   annotations:
+  #     alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=600
+  # Raise to 900+ when live tools / agentic generation are enabled (more round-trips).
+  proxyReadTimeout: 600
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
 # Enabled by default. Set enabled: false to opt out.
@@ -408,6 +417,14 @@ rag:
   # never blocks; fail-OPEN. ON by default.
   # supportCriticEnabled: true                 # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
   # supportCriticMaxClaims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
+  # Merged-doc update: when generating against an existing target doc, return the FULL
+  # merged document — unchanged sections preserved byte-exact, changed sections rewritten,
+  # additions surfaced — plus a per-section change manifest, so the output can replace the
+  # whole doc with confidence about what changed. Kill-switch defaults ON (unchanged
+  # sections are byte-exact, an unsafe splice bails, and nothing is ever published).
+  # mergeEnabled: true                         # DOCBRAIN_MERGE_ENABLED (disable only with false/0/no/off)
+  # mergeMaxSections: 60                        # DOCBRAIN_MERGE_MAX_SECTIONS (max existing sections fed to the merge pass; range 1..=500)
+  # mergeMaxTokens: 4096                        # DOCBRAIN_MERGE_MAX_TOKENS (max output tokens for the merge decision; range 512..=32768)
 
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:
@@ -485,6 +502,13 @@ oidc:
   # redirectUri: ""
   # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
   #                     # The backend redirects here after OAuth completes.
+
+# -- Public base URL of the DocBrain WEB UI (DOCBRAIN_WEB_BASE_URL).
+# Drives the MCP-OAuth landing redirect AND the "view in browser" deep link the CLI
+# prints after a generate (and the shareable per-doc link). Set to the user-facing
+# web origin — NOT the API host if they differ. Unset → no link is offered (never
+# guessed/hardcoded). Trailing slash is trimmed server-side.
+# webBaseUrl: "https://docbrain.mycompany.com"
 
 # -- Source-System ACL Mirroring (RFC-001)
 # Controls query-time enforcement of per-document ACLs derived from source

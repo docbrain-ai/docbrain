@@ -118,6 +118,14 @@ data:
   OIDC_REDIRECT_URI: {{ .Values.oidc.redirectUri | default "" | quote }}
   {{- end }}
 
+  # Public base URL of the WEB UI. Drives the MCP-OAuth landing redirect AND the
+  # "view in browser" deep link the CLI prints after a generate. Unset → no link
+  # offered (never guessed/hardcoded). Set to the user-facing web origin (NOT the
+  # API host if they differ). Emitted only when set, so the code default holds.
+  {{- if .Values.webBaseUrl }}
+  DOCBRAIN_WEB_BASE_URL: {{ .Values.webBaseUrl | quote }}
+  {{- end }}
+
   # Source-System ACL Mirroring (RFC-001)
   ACL_MODE: {{ .Values.acl.mode | default "off" | quote }}
   ACL_UNKNOWN_POLICY: {{ .Values.acl.unknownPolicy | default "deny" | quote }}
@@ -317,6 +325,15 @@ data:
   {{- end }}
   {{- if .Values.rag.supportCriticMaxClaims }}
   DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS: {{ .Values.rag.supportCriticMaxClaims | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "mergeEnabled" }}
+  DOCBRAIN_MERGE_ENABLED: {{ .Values.rag.mergeEnabled | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "mergeMaxSections" }}
+  DOCBRAIN_MERGE_MAX_SECTIONS: {{ .Values.rag.mergeMaxSections | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "mergeMaxTokens" }}
+  DOCBRAIN_MERGE_MAX_TOKENS: {{ .Values.rag.mergeMaxTokens | quote }}
   {{- end }}
   IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
   IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
