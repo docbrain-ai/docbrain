@@ -36,6 +36,11 @@ id: jira
 display_name: "Atlassian"
 description: "Cross-product context from Atlassian's hosted MCP server (Jira issues, Confluence pages, Projects, Goals) via the Teamwork Graph. For free-text Jira/Confluence search the picker uses the separate jira_rest / confluence_rest shims."
 category: "issue-tracking"
+# trust_tier: live results from this connector are STRUCTURED, AUTHORED records
+# (e.g. a Jira issue, a Confluence page) — the doc-generation support critic MAY
+# count them toward VERIFIED grounding, same as their ingested form. See
+# docbrain-core safety/tier.rs::tier_from_declared. Default (absent) = low.
+trust_tier: "high"
 icon: "jira.svg"
 
 # Non-secret env vars referenced from arg_defaults below. JIRA_CLOUD_ID

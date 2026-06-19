@@ -36,6 +36,11 @@ description: |
   Teamwork Graph manifest only when the question explicitly asks about
   cross-product relationships.
 category: "issue-tracking"
+# trust_tier: live results from this connector are STRUCTURED, AUTHORED records
+# (e.g. a Jira issue, a Confluence page) — the doc-generation support critic MAY
+# count them toward VERIFIED grounding, same as their ingested form. See
+# docbrain-core safety/tier.rs::tier_from_declared. Default (absent) = low.
+trust_tier: "high"
 icon: "jira.svg"
 
 # DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest

@@ -45,6 +45,11 @@ description: |
   'search Confluence for Y' questions; use the Teamwork Graph manifest only
   when the question explicitly asks about cross-product relationships.
 category: "documentation"
+# trust_tier: live results from this connector are STRUCTURED, AUTHORED records
+# (e.g. a Jira issue, a Confluence page) — the doc-generation support critic MAY
+# count them toward VERIFIED grounding, same as their ingested form. See
+# docbrain-core safety/tier.rs::tier_from_declared. Default (absent) = low.
+trust_tier: "high"
 icon: "confluence.svg"
 
 # DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
@@ -96,7 +101,7 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
-    latency_budget_ms: 10000
+    latency_budget_ms: 7000
     # D1 invariant: read-only fetch of a single Confluence page by id.
     read_only: true
 
@@ -125,7 +130,7 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
-    latency_budget_ms: 10000
+    latency_budget_ms: 7000
     # D1 invariant: CQL search returns matching pages; never mutates.
     read_only: true
 

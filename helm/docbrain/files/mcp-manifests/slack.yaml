@@ -24,6 +24,10 @@ id: slack
 display_name: "Slack"
 description: "Search Slack messages, files, channels, and people via Slack's hosted MCP server. Read-only; runs as the connected user (their channels + all public)."
 category: "chat"
+# trust_tier: live results from this connector are CONVERSATION / unreviewed
+# (chat, incident chatter) — used in docs but NOT counted toward verified
+# grounding. Default (absent) = low; declared here for explicitness.
+trust_tier: "low"
 icon: "slack.svg"
 
 server:
@@ -43,11 +47,27 @@ auth:
     token_url: "https://slack.com/api/oauth.v2.user.access"
     # Granular read scopes for message/file/people/channel search. Slack does
     # not use a single search:read scope — each conversation type is separate.
+    #
+    # DM scopes (search:read.im and search:read.mpim) are INTENTIONALLY omitted.
+    # DocBrain captures Slack tool results into episodes.cached_sources_json
+    # and episodes.answer_text, which then feed memory consolidation, expert
+    # routing, and the knowledge stream — any DM content surfaced through a
+    # DocBrain query becomes part of DocBrain's persistent corpus and may
+    # reach other surfaces beyond the single /ask that retrieved it. Slack's
+    # own user-token scoping prevents A from reading B's DMs, but it does
+    # NOT prevent A's DocBrain from materializing A's own DMs into the
+    # broader DocBrain knowledge graph. Dropping the scope is the only way
+    # to ensure Slack itself refuses to return DM content to DocBrain's
+    # tool calls, regardless of how the picker constructs the query.
+    #
+    # Private CHANNELS (e.g. #eng-leads) stay reachable via search:read.private —
+    # that scope grants access to channels the user is a member of, not DMs.
+    # The slack_search_public_and_private tool stays in the catalog; once
+    # the DM scopes are gone, Slack's API refuses DM content to that tool
+    # regardless of picker behaviour.
     scopes:
       - "search:read.public"
       - "search:read.private"
-      - "search:read.mpim"
-      - "search:read.im"
       - "search:read.files"
     client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET

@@ -24,6 +24,10 @@ id: slack
 display_name: "Slack"
 description: "Search Slack messages, files, channels, and people via Slack's hosted MCP server. Read-only; runs as the connected user (their channels + all public)."
 category: "chat"
+# trust_tier: live results from this connector are CONVERSATION / unreviewed
+# (chat, incident chatter) — used in docs but NOT counted toward verified
+# grounding. Default (absent) = low; declared here for explicitness.
+trust_tier: "low"
 icon: "slack.svg"
 
 server:

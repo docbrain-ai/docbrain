@@ -51,6 +51,10 @@ description: |
   DOES NOT support DM threads: D-prefix channel IDs are explicitly refused
   per DocBrain's privacy policy (see docs/security/slack-dm-policy.md).
 category: "chat"
+# trust_tier: live results from this connector are CONVERSATION / unreviewed
+# (chat, incident chatter) — used in docs but NOT counted toward verified
+# grounding. Default (absent) = low; declared here for explicitness.
+trust_tier: "low"
 icon: "slack.svg"
 
 # DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
@@ -153,9 +157,11 @@ tools:
       `channel_id` and `ts`. The shim parses the URL when present.
     args_schema:
       type: object
+      additionalProperties: false
       properties:
         url:
           type: string
+          pattern: "^https://[^/]+\\.slack\\.com/archives/.+"
           description: "Slack archive URL like 'https://example.slack.com/archives/C123/p1779711358604539'. Mutually exclusive with channel_id + ts."
           maxLength: 500
         channel_id:
@@ -172,6 +178,9 @@ tools:
           maximum: 200
           default: 50
           description: "Max number of replies to include (parent always included). Defaults to 50."
+      anyOf:
+        - required: [url]
+        - required: [channel_id, ts]
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 5000
@@ -188,9 +197,11 @@ tools:
       DM / group-DM channels (D-prefix). Single page, limit-bounded.
     args_schema:
       type: object
+      additionalProperties: false
       properties:
         url:
           type: string
+          pattern: "^https://[^/]+\\.slack\\.com/archives/.+"
           maxLength: 500
           description: "Slack archive URL of the channel (…/archives/CHANNELID)."
         channel_id:
@@ -203,6 +214,9 @@ tools:
           maximum: 200
           default: 30
           description: "Number of most-recent messages to read."
+      anyOf:
+        - required: [url]
+        - required: [channel_id]
     output_size_cap_bytes: 16384
     latency_budget_ms: 5000
     read_only: true
@@ -218,9 +232,11 @@ tools:
       policy.
     args_schema:
       type: object
+      additionalProperties: false
       properties:
         url:
           type: string
+          pattern: "^https://[^/]+\\.slack\\.com/archives/.+"
           description: "Slack archive URL. Mutually exclusive with channel_id + ts."
           maxLength: 500
         channel_id:
@@ -231,6 +247,9 @@ tools:
           type: string
           pattern: "^[0-9]+\\.[0-9]+$"
           description: "Message timestamp."
+      anyOf:
+        - required: [url]
+        - required: [channel_id, ts]
     output_size_cap_bytes: 8192
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 3000

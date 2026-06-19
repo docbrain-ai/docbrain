@@ -51,6 +51,10 @@ description: |
   DOES NOT support DM threads: D-prefix channel IDs are explicitly refused
   per DocBrain's privacy policy (see docs/security/slack-dm-policy.md).
 category: "chat"
+# trust_tier: live results from this connector are CONVERSATION / unreviewed
+# (chat, incident chatter) — used in docs but NOT counted toward verified
+# grounding. Default (absent) = low; declared here for explicitness.
+trust_tier: "low"
 icon: "slack.svg"
 
 # DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
@@ -65,20 +69,15 @@ server:
   protocol_version: "2024-11-05"
 
 auth:
-  # Hybrid OAuth-for-shim pattern. Both modes are declared so the install
-  # path auto-seeds enablement rows AND `/oauth/mcp/init` lets users
-  # grant scopes via the Connect button on /integrations. The
-  # `auth.oauth.shim_internal: true` flag below tells the picker "never
-  # select OAuth mode for dispatch" — dispatch ALWAYS goes via SA
-  # (gateway → loopback shim with the internal bearer +
-  # X-Docbrain-User-Id header), and the shim itself resolves the user's
-  # Slack OAuth token from mcp_oauth_tokens at tool-call time.
+  # Hybrid OAuth-for-shim pattern. See the canonical comment in
+  # config/mcp-manifests/slack-rest.yaml for the full history.
   #
-  # Why the flag and not "drop oauth from modes": dropping oauth from
-  # modes also drops the enablement row (no row, no /oauth/mcp/init),
-  # which UX-breaks the Connect button silently. The shim_internal flag
-  # keeps the Connect button working while preventing wrong-key
-  # dispatch (shim expects SA bearer, would 401 on user's Slack token).
+  # TL;DR: both modes are declared so install auto-seeds enablements
+  # AND /oauth/mcp/init lets users grant scopes; `auth.oauth.shim_internal:
+  # true` tells the picker "never select OAuth for dispatch" (registry/
+  # manifest.rs honours the flag). Dispatch ALWAYS goes via SA; the
+  # in-process shim resolves the user's Slack OAuth token from
+  # mcp_oauth_tokens at tool-call time.
   modes:
     - service_account
     - oauth
@@ -90,11 +89,6 @@ auth:
     secret_refs:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
-  # Tool-health: the real credential is the PER-USER OAuth token (resolved inside
-  # the shim). Health is per-caller — a connected user sees these tools
-  # dispatchable, an unconnected user sees them unavailable. Never gated globally.
-  health_check:
-    kind: per_user_oauth
   oauth:
     # Slack's MODERN OAuth v2 endpoints. Different from the `slack`
     # manifest's `v2_user/` legacy variant:
@@ -135,9 +129,9 @@ auth:
     client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
     use_pkce: true
+    # See canonical comment in config/mcp-manifests/slack-rest.yaml.
     # Gateway never dispatches this manifest in OAuth mode; the SHIM
-    # resolves the user's token internally. See the comment at the
-    # top of `auth:` for the full design notes.
+    # resolves the user's token internally.
     shim_internal: true
 
 # Static tool catalog — declared here rather than discovered, because the

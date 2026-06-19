@@ -30,6 +30,10 @@ description: |
   from Rootly. Read-only. Authoritative for on-call questions; when absent the
   agentic loop falls back to reading the team's Slack channel.
 category: "incident-management"
+# trust_tier: live results from this connector are CONVERSATION / unreviewed
+# (chat, incident chatter) — used in docs but NOT counted toward verified
+# grounding. Default (absent) = low; declared here for explicitness.
+trust_tier: "low"
 icon: "rootly.svg"
 
 # DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest

@@ -45,6 +45,11 @@ description: |
   'search Confluence for Y' questions; use the Teamwork Graph manifest only
   when the question explicitly asks about cross-product relationships.
 category: "documentation"
+# trust_tier: live results from this connector are STRUCTURED, AUTHORED records
+# (e.g. a Jira issue, a Confluence page) — the doc-generation support critic MAY
+# count them toward VERIFIED grounding, same as their ingested form. See
+# docbrain-core safety/tier.rs::tier_from_declared. Default (absent) = low.
+trust_tier: "high"
 icon: "confluence.svg"
 
 # DOCBRAIN_SERVER_PORT is substituted into the endpoint URL at manifest
@@ -115,7 +120,7 @@ tools:
         cql:
           type: string
           maxLength: 500
-          description: "Confluence Query Language. Example: 'type=page AND space=ENG AND text ~ \"redis OOM\" ORDER BY lastmodified DESC'"
+          description: "Confluence Query Language. Default to RELEVANCE — OMIT 'ORDER BY' for find-the-doc searches (recency-ordering buries the most on-topic page). Relevance example: 'type=page AND text ~ \"redis OOM\"'. Add 'ORDER BY lastmodified DESC' ONLY when the question asks for the most-recently-updated page."
         max_results:
           type: integer
           minimum: 1
