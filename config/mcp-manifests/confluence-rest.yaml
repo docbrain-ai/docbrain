@@ -115,7 +115,7 @@ tools:
         cql:
           type: string
           maxLength: 500
-          description: "Confluence Query Language. Example: 'type=page AND space=ENG AND text ~ \"redis OOM\" ORDER BY lastmodified DESC'"
+          description: "Confluence Query Language. Default to RELEVANCE — OMIT 'ORDER BY' for find-the-doc searches (recency-ordering buries the most on-topic page). Relevance example: 'type=page AND text ~ \"redis OOM\"'. Add 'ORDER BY lastmodified DESC' ONLY when the question asks for the most-recently-updated page."
         max_results:
           type: integer
           minimum: 1
