@@ -318,6 +318,9 @@ data:
   {{- if hasKey .Values.autopilot "sourceStalenessWarnDays" }}
   DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS: {{ .Values.autopilot.sourceStalenessWarnDays | quote }}
   {{- end }}
+  {{- if hasKey .Values.autopilot "maxSectionAsks" }}
+  DOCBRAIN_GENERATE_MAX_SECTION_ASKS: {{ .Values.autopilot.maxSectionAsks | quote }}
+  {{- end }}
   {{- /* Support critic (grounding). enabled uses hasKey so an explicit `false`
        is honored (a bare `if` would drop it). */}}
   {{- if hasKey .Values.rag "supportCriticEnabled" }}

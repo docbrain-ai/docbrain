@@ -248,6 +248,13 @@ autopilot:
   # date -> UNKNOWN (distinct from fresh). Env: DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS.
   sourceStalenessWarnDays: 365
 
+  # Retrieval-parity: max per-section retrievals a single `generate` run fires.
+  # The doc is decomposed into sections and the same retrieval engine `/ask` uses is
+  # driven once per section to gather grounded, high-tier, on-topic content; sections
+  # past the cap are reported not-asked. Clamped 0..=24; 0 disables per-section
+  # retrieval (single corpus gather). Env: DOCBRAIN_GENERATE_MAX_SECTION_ASKS.
+  maxSectionAsks: 8
+
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
 # and mark the originating gap cluster as resolved.
