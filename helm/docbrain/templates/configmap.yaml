@@ -326,6 +326,10 @@ data:
   {{- if .Values.rag.supportCriticMaxClaims }}
   DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS: {{ .Values.rag.supportCriticMaxClaims | quote }}
   {{- end }}
+  {{- /* NoFab enforcement: ON by default; hasKey so an explicit `false` is honored. */}}
+  {{- if hasKey .Values.rag "supportCriticNoFabEnforce" }}
+  DOCBRAIN_SUPPORT_CRITIC_NOFAB_ENFORCE: {{ .Values.rag.supportCriticNoFabEnforce | quote }}
+  {{- end }}
   {{- if hasKey .Values.rag "mergeEnabled" }}
   DOCBRAIN_MERGE_ENABLED: {{ .Values.rag.mergeEnabled | quote }}
   {{- end }}

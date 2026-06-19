@@ -424,6 +424,7 @@ rag:
   # never blocks; fail-OPEN. ON by default.
   # supportCriticEnabled: true                 # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
   # supportCriticMaxClaims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
+  # supportCriticNoFabEnforce: true            # DOCBRAIN_SUPPORT_CRITIC_NOFAB_ENFORCE (ON by default: degrade ungrounded FRESH sections to NEEDS INPUT in place so fabrication can't reach the reader; disable only with false/0/no/off)
   # Merged-doc update: when generating against an existing target doc, return the FULL
   # merged document — unchanged sections preserved byte-exact, changed sections rewritten,
   # additions surfaced — plus a per-section change manifest, so the output can replace the
