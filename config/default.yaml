@@ -181,14 +181,13 @@ rag:
   regen_loop_max_revisions: 10                  # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; range 1..=100)
   regen_loop_min_budget_ms: 20000               # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to start a round; 0 disables the guard)
 
-  # Hollow-document guard for generation. Refuses (HTTP 422) a draft that is
-  # mostly unanswered "NEEDS INPUT:" placeholders, by placeholder density: when
-  # the draft has at least this many `##` sections AND the NEEDS-INPUT count is
-  # >= the configured percentage of sections (roughly every section unfilled). A
-  # draft that honestly flags 1-2 of N sections ships untouched. Keys on the
-  # OUTPUT shape, not on the supplied sources. Below the section floor the rule
-  # does not apply (short / free-form docs). Set min_sections to 0 to disable.
-  generate_hollow_min_sections: 3               # DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS (below this `##` count the rule is off)
+  # Hollow-document guard for generation. Refuses (HTTP 422) a draft ONLY when it
+  # has no inline seed, no High-tier authoritative corpus grounding, AND no
+  # Low-tier live-tool grounding either, AND is mostly unanswered "NEEDS INPUT:"
+  # placeholders (>= this % of its `##` sections). A no-seed/no-High draft that
+  # DOES have live/Low grounding ships UNVERIFIED (barred from auto-publish) rather
+  # than refusing. The guard now applies to SHORT docs too — the only floor left is
+  # `section_count > 0`. Keys on the OUTPUT shape plus the grounding tier.
   generate_hollow_ratio_pct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT; 50 = half the doc)
   # Support Critic (grounding): flags claims NO supplied source supports (fabrication)
   # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
@@ -319,6 +318,12 @@ autopilot:
   # is owner-scoped (you see your own runs; admins see all). Set 0 to keep
   # indefinitely (the purge and the read-window filter both no-op).
   generated_docs_retention_days: 90            # GENERATED_DOCS_RETENTION_DAYS (0 = keep indefinitely)
+  # Staleness warn window (days) for a generation's GROUNDING sources. A grounding
+  # source whose DocBrain-controlled ingest date is older than this is flagged
+  # STALE in the trust headline ("grounded in a 2023 page"); within it, FRESH; an
+  # unknown / unparseable date renders UNKNOWN (distinct from fresh, never assumed).
+  # Env: DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS.
+  source_staleness_warn_days: 365
 
 freshness:
   scheduler_interval_hours: 24
@@ -374,6 +379,29 @@ semantic_quality:
 
 memory:
   consolidation_interval_hours: 6
+
+# Answer-time external tool dispatch. When enabled, the orchestrator runs after
+# retrieval and fans out across the full live-tool catalog, injecting live-tool
+# blocks into the synthesis prompt. The knobs below bound that always-on fan-out.
+mcp_tools:
+  enabled: false   # MCP_TOOLS_ENABLED
+  # Max concurrent gateway dispatches in one fan-out pass (clamped 1..=64).
+  # Bounds the always-on full-catalog fan-out so it can't become a spawn
+  # storm under many concurrent users. Total wall-clock budget is separate.
+  fanout_max_concurrent: 8   # MCP_TOOLS_FANOUT_MAX_CONCURRENT
+  # Max TOTAL chars of live-tool evidence admitted into one generate
+  # fan-out (clamped 1000..=200000). Bounds the always-on per-tool live
+  # evidence so a verbose catalog can't stuff the writing prompt; whole
+  # lowest-priority chunks past the budget are DROPPED at chunk boundaries
+  # (never truncated mid-chunk). Applies only to live chunks.
+  fanout_max_admitted_chars: 24000   # MCP_TOOLS_FANOUT_MAX_ADMITTED_CHARS
+  # Per-connector cooldown TTL in seconds (0 disables, clamped 0..=600).
+  # When a connector returns a 429 / timeout / transient failure, skip
+  # dispatching it for this TTL ACROSS requests so the always-on full-catalog
+  # fan-out can't re-hammer a flaky connector on every generate + regenerate.
+  # Keyed on the connector's OWN recent failures; CLEARED the moment it
+  # succeeds (a recovered connector is never suppressed).
+  fanout_cooldown_secs: 30   # MCP_TOOLS_FANOUT_COOLDOWN_SECS
 
 auth:
   session_ttl_hours: 720   # 30 days. Set to 0 for non-expiring sessions.

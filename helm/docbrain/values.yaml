@@ -243,6 +243,11 @@ autopilot:
   # exposure of the persisted (owner-scoped) body. Commented = built-in default (90).
   # generatedDocsRetentionDays: 90   # GENERATED_DOCS_RETENTION_DAYS (0 = keep indefinitely)
 
+  # Staleness warn window (days) for a generation's grounding sources. Older
+  # DocBrain-ingest date -> STALE in the trust headline; within -> FRESH; unknown
+  # date -> UNKNOWN (distinct from fresh). Env: DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS.
+  sourceStalenessWarnDays: 365
+
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
 # and mark the originating gap cluster as resolved.
@@ -407,10 +412,12 @@ rag:
   # regenLoopMaxRevisions: 10                    # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; 1..=100)
   # regenLoopMinBudgetMs: 20000                  # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to start a round; 0 disables)
 
-  # -- Hollow-document guard for generation. Refuses (HTTP 422) a draft that is
-  # mostly unanswered "NEEDS INPUT:" placeholders, by placeholder density. A draft
-  # that honestly flags 1-2 of N sections ships untouched. Commented = defaults.
-  # generateHollowMinSections: 3                 # DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS (below this `##` count the rule is off; 0 disables)
+  # -- Hollow-document guard for generation. Refuses (HTTP 422) a draft ONLY when it
+  # has no seed, no High-tier authoritative grounding, AND no Low-tier live-tool
+  # grounding either, AND is mostly NEEDS-INPUT placeholders (>= this % of `##`
+  # sections). A no-seed/no-High draft WITH live/Low grounding ships unverified
+  # (barred from auto-publish). Applies to short docs too (min-sections floor removed).
+  # Commented = defaults.
   # generateHollowRatioPct: 50                   # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
   # Support Critic (grounding) — flags claims NO supplied source supports (fabrication)
   # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
@@ -651,6 +658,29 @@ bootstrapKey:
 # .Files.Glob.
 mcpTools:
   enabled: false
+
+  # -- Max concurrent gateway dispatches in a single fan-out pass
+  # (clamped 1..=64 in code). Bounds how many tool calls are in flight at
+  # once so an always-on full-catalog fan-out under many concurrent users
+  # can't become a spawn storm. The total wall-clock budget is a separate,
+  # fixed bound. Default 8.
+  fanoutMaxConcurrent: 8
+
+  # -- Max TOTAL chars of live-tool evidence admitted into a single
+  # generate fan-out (clamped 1000..=200000 in code). Bounds the always-on
+  # per-tool live evidence so a verbose catalog can't stuff the writing
+  # prompt; whole lowest-priority chunks past the budget are dropped at
+  # chunk boundaries (never truncated mid-chunk). Applies only to live
+  # chunks; corpus chunks keep their own budget. Default 24000.
+  fanoutMaxAdmittedChars: 24000
+
+  # -- Per-connector cooldown TTL in seconds (0 disables; clamped 0..=600 in
+  # code). On a 429 / timeout / transient failure, a connector is skipped from
+  # dispatch for this TTL ACROSS requests so the always-on full-catalog fan-out
+  # can't re-hammer a flaky / rate-limited connector on every generate +
+  # regenerate. Keyed ONLY on the connector's OWN recent failures and cleared
+  # the moment it succeeds (a recovered connector is never suppressed). Default 30.
+  fanoutCooldownSecs: 30
 
   # -- DM redactor policy (Slack today; designed for any privacy-classified
   # MCP source). Controls whether tool-result entries identified as DMs

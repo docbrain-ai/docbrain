@@ -312,11 +312,11 @@ data:
   {{- if hasKey .Values.rag "regenLoopMinBudgetMs" }}
   DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS: {{ .Values.rag.regenLoopMinBudgetMs | quote }}
   {{- end }}
-  {{- if hasKey .Values.rag "generateHollowMinSections" }}
-  DOCBRAIN_GENERATE_HOLLOW_MIN_SECTIONS: {{ .Values.rag.generateHollowMinSections | quote }}
-  {{- end }}
   {{- if hasKey .Values.rag "generateHollowRatioPct" }}
   DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT: {{ .Values.rag.generateHollowRatioPct | quote }}
+  {{- end }}
+  {{- if hasKey .Values.autopilot "sourceStalenessWarnDays" }}
+  DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS: {{ .Values.autopilot.sourceStalenessWarnDays | quote }}
   {{- end }}
   {{- /* Support critic (grounding). enabled uses hasKey so an explicit `false`
        is honored (a bare `if` would drop it). */}}
@@ -418,6 +418,13 @@ data:
   {{- else }}
   MCP_TOOLS_ENABLED: "false"
   {{- end }}
+  # Max concurrent gateway dispatches per fan-out pass (clamped 1..=64 in code).
+  # Bounds in-flight tool calls so an always-on full-catalog fan-out can't
+  # become a spawn storm under many concurrent users. Emitted unconditionally;
+  # only read when the orchestrator is constructed (mcpTools.enabled = true).
+  MCP_TOOLS_FANOUT_MAX_CONCURRENT: {{ .Values.mcpTools.fanoutMaxConcurrent | default 8 | quote }}
+  MCP_TOOLS_FANOUT_MAX_ADMITTED_CHARS: {{ .Values.mcpTools.fanoutMaxAdmittedChars | default 24000 | quote }}
+  MCP_TOOLS_FANOUT_COOLDOWN_SECS: {{ .Values.mcpTools.fanoutCooldownSecs | default 30 | quote }}
   # MCP tool-result redactor policy. Controls how DocBrain handles
   # privacy-classified content returned by MCP tools (today: Slack DMs).
   # Defaults to `strict` — DM-bearing entries are stripped from tool
