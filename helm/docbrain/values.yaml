@@ -255,6 +255,24 @@ autopilot:
   # retrieval (single corpus gather). Env: DOCBRAIN_GENERATE_MAX_SECTION_ASKS.
   maxSectionAsks: 8
 
+  # ── Verification engine (generate). Defaults preserve the built behavior;
+  #    disabling any of these FAILS TOWARD HONESTY (a claim is never flagged stale).
+  # Enable the per-section retrieval-query LLM rewrite (T-QGEN). false -> a
+  # deterministic doc-meta-stripped fallback query. Env: DOCBRAIN_GENERATE_VERIFY_SECTION_QUERY_LLM.
+  verifySectionQueryLlmEnabled: true
+  # Enable the per-claim LIVE cross-check. false (or budget 0) -> claims not
+  # live-verified (NotFound, never Contradicted/stale). Env: DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK.
+  verifyCrossCheckEnabled: true
+  # Per-document cross-check wall-clock budget (seconds). 0 disables it (same
+  # honest path as verifyCrossCheckEnabled: false). Env: DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS.
+  verifyCrossCheckBudgetSecs: 120
+  # top_k for the corpus probes that confirm a false gap before NEEDS INPUT.
+  # Floored at 1. Env: DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K.
+  verifyBroadProbeTopK: 12
+  # Max review send-back rounds. HARD-clamped to 2 (the documented max).
+  # Env: DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS.
+  verifyReviewMaxRounds: 2
+
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
 # and mark the originating gap cluster as resolved.

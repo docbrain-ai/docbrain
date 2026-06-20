@@ -321,6 +321,24 @@ data:
   {{- if hasKey .Values.autopilot "maxSectionAsks" }}
   DOCBRAIN_GENERATE_MAX_SECTION_ASKS: {{ .Values.autopilot.maxSectionAsks | quote }}
   {{- end }}
+  {{- /* Verification engine (generate) knobs (T-CONFIG). The two enabled flags
+       use hasKey so an explicit `false` is honored (a bare `if` would drop a
+       false). The numeric knobs default to the built-in values when omitted. */}}
+  {{- if hasKey .Values.autopilot "verifySectionQueryLlmEnabled" }}
+  DOCBRAIN_GENERATE_VERIFY_SECTION_QUERY_LLM: {{ .Values.autopilot.verifySectionQueryLlmEnabled | quote }}
+  {{- end }}
+  {{- if hasKey .Values.autopilot "verifyCrossCheckEnabled" }}
+  DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK: {{ .Values.autopilot.verifyCrossCheckEnabled | quote }}
+  {{- end }}
+  {{- if hasKey .Values.autopilot "verifyCrossCheckBudgetSecs" }}
+  DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS: {{ .Values.autopilot.verifyCrossCheckBudgetSecs | quote }}
+  {{- end }}
+  {{- if hasKey .Values.autopilot "verifyBroadProbeTopK" }}
+  DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K: {{ .Values.autopilot.verifyBroadProbeTopK | quote }}
+  {{- end }}
+  {{- if hasKey .Values.autopilot "verifyReviewMaxRounds" }}
+  DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS: {{ .Values.autopilot.verifyReviewMaxRounds | quote }}
+  {{- end }}
   {{- /* Support critic (grounding). enabled uses hasKey so an explicit `false`
        is honored (a bare `if` would drop it). */}}
   {{- if hasKey .Values.rag "supportCriticEnabled" }}
