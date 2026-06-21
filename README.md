@@ -113,11 +113,11 @@ docker compose exec server cat /app/admin-bootstrap-key.txt
 # Open the web dashboard
 open http://localhost:3001
 
-# Or ask a question via API
+# Or ask a question via API (same origin as the UI — /api/* is proxied to the server)
 curl -H "Authorization: Bearer <key>" \
      -H "Content-Type: application/json" \
      -d '{"question":"How do I deploy to production?"}' \
-     http://localhost:3000/api/v1/ask
+     http://localhost:3001/api/v1/ask
 ```
 
 The **Web UI** at `http://localhost:3001` gives you the full experience: dashboard, knowledge capture, governance, quality scores, review workflows, predictive analytics, and more. Full setup guide: [docs/quickstart.md](docs/quickstart.md)
@@ -637,7 +637,7 @@ See [Provider Setup](docs/providers.md) for detailed configuration including mod
 docker compose up -d
 ```
 
-Starts the API server (`localhost:3000`), web UI (`localhost:3001`), PostgreSQL, OpenSearch, and Redis. Migrations run automatically on first boot.
+Starts everything behind a single-origin reverse proxy at `localhost:3001` — the web UI at `/` and the API at `/api/*` (this same-origin setup is required by the web app's strict CSP). The API server, web UI, PostgreSQL, OpenSearch, and Redis run on the internal compose network. Migrations run automatically on first boot.
 
 ### Kubernetes
 

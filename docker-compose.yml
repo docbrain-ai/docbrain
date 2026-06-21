@@ -67,8 +67,12 @@ services:
     image: ghcr.io/docbrain-ai/docbrain:latest
     pull_policy: always
     platform: linux/amd64
-    ports:
-      - "${SERVER_PORT:-3000}:3000"
+    # No host port: the proxy is the single front door (same-origin /api/* + /*).
+    # Publishing the API on its own host origin re-introduces the cross-origin
+    # fetch that the web image's CSP `connect-src 'self'` blocks (login fails).
+    # `expose` keeps the API reachable to the proxy on the compose network only.
+    expose:
+      - "3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,8 +91,12 @@ services:
       OPENSEARCH_URL: http://opensearch:9200
       REDIS_URL: redis://redis:6379
       SERVER_BIND: 0.0.0.0
-      # CORS — set to your web UI domain in production
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3001}
+      # CORS — the single proxy origin the browser actually talks to. The web app
+      # and API are same-origin behind the proxy, so this matters only for any
+      # non-simple request; it must equal PROXY_ORIGIN (the published proxy URL).
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${PROXY_ORIGIN:-http://localhost:3001}}
+      # Absolute base for links the server emits (e.g. generated-doc view_url).
+      DOCBRAIN_WEB_BASE_URL: ${DOCBRAIN_WEB_BASE_URL:-${PROXY_ORIGIN:-http://localhost:3001}}
       # Auth session lifetime (30 days default)
       LOGIN_SESSION_TTL_HOURS: ${LOGIN_SESSION_TTL_HOURS:-720}
       # Scheduler intervals (can be overridden in .env)
@@ -149,13 +157,45 @@ services:
     image: ghcr.io/docbrain-ai/docbrain-web:latest
     pull_policy: always
     platform: linux/amd64
-    ports:
-      - "${WEB_PORT:-3001}:3001"
+    # No host port: served through the proxy at the same origin as /api/*.
+    expose:
+      - "3001"
     depends_on:
       - server
     environment:
-      NEXT_PUBLIC_DOCBRAIN_API_URL: http://localhost:${SERVER_PORT:-3000}
+      # Intentionally NO NEXT_PUBLIC_DOCBRAIN_API_URL: when it is unset the web
+      # client falls back to window.location.origin (the proxy origin), so the
+      # browser calls /api/* SAME-ORIGIN and the baked-in CSP `connect-src 'self'`
+      # is satisfied. Setting it to a different host re-breaks login.
       PORT: 3001
+    restart: unless-stopped
+
+  # ── Reverse proxy: one origin for the browser ────────────────────────────────
+  # The web image ships a strict CSP (`connect-src 'self'`) that assumes the API
+  # is same-origin (as it is behind the production Helm ingress). This proxy
+  # reproduces that single-origin shape for `docker compose`: /api/* → server,
+  # everything else → web. Without it the two services sit on separate host
+  # origins and the browser's login fetch is blocked by CSP.
+  proxy:
+    image: caddy:2-alpine
+    pull_policy: always
+    depends_on:
+      - server
+      - web
+    environment:
+      # Caddy binds this port INSIDE the container; keep it equal to the
+      # container side of the mapping below. Upstreams resolve by service DNS.
+      PROXY_LISTEN: ${PROXY_LISTEN:-3001}
+      PROXY_SERVER_UPSTREAM: ${PROXY_SERVER_UPSTREAM:-server:3000}
+      PROXY_WEB_UPSTREAM: ${PROXY_WEB_UPSTREAM:-web:3001}
+    # Default 3001 — the same port the web UI was served on before this proxy,
+    # so existing bookmarks (http://localhost:3001) keep working and now reach
+    # both the app and /api/* same-origin. Override host side with PROXY_PORT.
+    ports:
+      - "${PROXY_PORT:-3001}:${PROXY_LISTEN:-3001}"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
     restart: unless-stopped
 
   # ── Embedding fine-tuning sidecar (Tier 2 — disabled by default) ──────────
@@ -228,4 +268,5 @@ volumes:
   postgres_data:
   opensearch_data:
   redis_data:
+  caddy_data:           # reverse-proxy state (Caddy)
   # trainer_models:     # Uncomment when trainer service is enabled

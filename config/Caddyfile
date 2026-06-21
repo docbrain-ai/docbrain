@@ -1,0 +1,37 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# DocBrain reverse proxy — one origin for the browser
+#
+# The web image ships a strict CSP (`connect-src 'self'`) that assumes the API
+# is same-origin (as it is behind the production Helm ingress). This proxy
+# reproduces that single-origin shape for `docker compose`:
+#   /api/*  → server   (the Rust backend)
+#   /*      → web      (the Next.js UI)
+# so the browser only ever talks to ONE origin and the CSP is satisfied.
+#
+# Everything is env-driven (Caddy {$VAR:default} syntax) — override in .env:
+#   PROXY_LISTEN   the in-container port Caddy binds (matches the compose
+#                  port mapping's container side; default 3001)
+#   PROXY_SERVER_UPSTREAM   server service:port on the compose network
+#   PROXY_WEB_UPSTREAM      web service:port on the compose network
+# ═══════════════════════════════════════════════════════════════════════════
+
+{
+	# Local/dev: no automatic HTTPS (single plain-HTTP origin on the host).
+	# For an internet-facing deployment, front this with TLS termination
+	# (ingress / load balancer) or switch to a site address with a hostname.
+	auto_https off
+	admin off
+}
+
+:{$PROXY_LISTEN:3001} {
+	# API first — most specific match wins. No prefix stripping: the backend
+	# already serves /api/v1/*, so the path is forwarded verbatim.
+	handle /api/* {
+		reverse_proxy {$PROXY_SERVER_UPSTREAM:server:3000}
+	}
+
+	# Everything else → the Next.js UI.
+	handle {
+		reverse_proxy {$PROXY_WEB_UPSTREAM:web:3001}
+	}
+}
