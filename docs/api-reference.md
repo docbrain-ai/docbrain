@@ -263,6 +263,9 @@ doc from a subset.
     { "section": "Overview", "source_ids": ["chunk-1", "chunk-2"] }
   ],
   "needs_input": [ "Which CA issues the production certs?" ],
+  "needs_input_items": [
+    { "heading": "Certificate authority", "reason": "Which CA issues the production certs?" }
+  ],
   "skipped_sources": [
     { "label": "jira", "reason": "connector not connected" }
   ],
@@ -275,6 +278,7 @@ doc from a subset.
 
 - `provenance` — per-section attribution: `{ section, source_ids }` (`section` is `null` for whole-doc).
 - `needs_input` — questions the doc can't answer from available knowledge (the honesty signal, not a fabrication).
+- `needs_input_items` — the same gaps as `needs_input`, but structured as `{ heading, reason }` so a UI can render each as a clickable item (jump to the section, or feed it back into a regenerate). Omitted when there are no gaps; `needs_input` remains the flat list for back-compatibility.
 - `skipped_sources` — sources that were unavailable, each `{ label, reason }`.
 - `quality` — `score` is a 0–100 number; each violation is `{ rule_name, severity, message }`.
 
@@ -282,7 +286,7 @@ doc from a subset.
 
 | Status | Meaning |
 |---|---|
-| `400` | Validation failure / unknown source kind / unsupported or unrecognized URL (incl. a smuggled rule directive in a template) |
+| `400` | Validation failure / unknown source kind / unsupported or unrecognized URL (incl. a smuggled rule directive in a template). Also returned when `target` is a fetchable source URL (a Slack thread, GitHub PR/file, Jira issue, or Confluence page) and no other sources are given — `target` is the existing doc to *augment*, not source material, so this almost always means you meant to pass it as a source instead. |
 | `403` | Caller is not an `editor` |
 | `413` | Source material over the per-source or aggregate size budget (inline or after fetching links) |
 | `502` | A named URL source could not be fetched (connector not connected/configured, or fetch error) |

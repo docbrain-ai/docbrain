@@ -271,6 +271,13 @@ docbrain generate "add the new rollback path" \
   --source-url https://github.com/acme/repo/pull/42
 ```
 
+`--target` is the *existing doc to augment*, not source material — DocBrain does
+not read it as content to write from. If you point `--target` at a fetchable
+source link (a Slack thread, GitHub PR/file, Jira issue, or Confluence page) and
+supply no other sources, `generate` stops with a clear error and suggests
+`--source-url` instead — so a confused flag never silently produces a doc built
+from nothing. To write a *new* doc *from* that link, pass it as `--source-url`.
+
 ## API
 
 ```
