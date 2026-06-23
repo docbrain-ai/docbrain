@@ -16,6 +16,15 @@ llm:
   #                        # Falls back to modelId if not set
   # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
   #                        # does NOT apply to fastModelId or ingestModelId
+  #                        # NOTE: ignored by NEWER Bedrock Claude (Opus 4.7+/4.8) — those use
+  #                        # adaptive thinking; tune `effort` below instead. Still applies to
+  #                        # older models (Sonnet/Haiku) that use the classic budget.
+  # effort: high           # reasoning effort for NEWER Bedrock Claude (Opus 4.7+/4.8) on the
+  #                        # draft/critic/answer paths: low|medium|high|xhigh|max (default high).
+  #                        # Higher = deeper reasoning but more latency+cost. 'high' is the
+  #                        # product default — for grounded docs, source coverage (not raw
+  #                        # reasoning depth) is the quality ceiling. (DOCBRAIN_LLM_EFFORT)
+  #                        # No effect on classic-thinking models (Sonnet/Haiku).
   # draftModelId: ""       # model for autopilot draft generation (two-phase reasoning + writing)
   #                        # Falls back to modelId if not set. Use a high-capability model here.
   # draftProvider: ""      # provider for draft generation. Falls back to llm.provider if not set.

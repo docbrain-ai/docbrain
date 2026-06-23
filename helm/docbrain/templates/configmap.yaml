@@ -22,6 +22,9 @@ data:
   {{- if .Values.llm.thinkingBudget }}
   LLM_THINKING_BUDGET: {{ .Values.llm.thinkingBudget | quote }}
   {{- end }}
+  {{- if .Values.llm.effort }}
+  DOCBRAIN_LLM_EFFORT: {{ .Values.llm.effort | quote }}
+  {{- end }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
   INGEST_SOURCES: {{ .Values.ingest.sources | quote }}
