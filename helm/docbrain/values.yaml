@@ -400,13 +400,16 @@ rag:
   # -- Tool-output caps (the truncation chain). All THREE must rise together —
   # raising one alone has no effect because the smallest still truncates. The
   # two outputCap values also gate the manifest validator via the DOCBRAIN_MCP_*
-  # env vars these map to. Defaults let a high-volume search (43-63KB raw) keep
-  # ~32KB instead of being truncated. evidenceBufferCapBytes is the SHARED
-  # per-round budget; size it at 2x the per-tool cap so one maxed source leaves
-  # headroom. Commented = use the built-in defaults (32768 / 32768 / 65536).
-  # mcpOutputCeilingBytes: 32768          # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES
-  # mcpDefaultToolOutputCapBytes: 32768   # DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES
-  # evidenceBufferCapBytes: 65536         # DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES
+  # env vars these map to. evidenceBufferCapBytes is the SHARED per-round budget;
+  # size it at 2x the per-tool cap so one maxed source leaves headroom. The
+  # built-in defaults are sized so a high-volume hosted search (which can return
+  # 100-145KB of raw results) passes through whole instead of being truncated.
+  # Commented = use the built-in defaults (262144 / 262144 / 524288). Cost: a
+  # maxed search result adds up to 256KB to the grounding prompt; lower these if
+  # prompt token cost matters more than search recall in your deployment.
+  # mcpOutputCeilingBytes: 262144         # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES
+  # mcpDefaultToolOutputCapBytes: 262144  # DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES
+  # evidenceBufferCapBytes: 524288        # DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES
   # mcpJqlRecencyBoundDays: 180           # DOCBRAIN_MCP_JQL_RECENCY_BOUND_DAYS — recency
                                           # window appended to unbounded full-text issue-tracker
                                           # searches so they hit the date index (avoids timeouts).
