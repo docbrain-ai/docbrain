@@ -205,7 +205,7 @@ ingress:
   #   annotations:
   #     alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=600
   # Raise to 900+ when live tools / agentic generation are enabled (more round-trips).
-  proxyReadTimeout: 600
+  proxyReadTimeout: 900
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
 # Enabled by default. Set enabled: false to opt out.
