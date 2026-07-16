@@ -725,4 +725,5 @@ To report a security vulnerability, see [SECURITY.md](SECURITY.md). Do **not** f
 
 ## Code of Conduct
 
-[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Report concerns to [hello@docbrainapi.com](mailto:hello@docbrainapi.com).
+[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). 
+Report concerns to [hello@docbrainapi.com](mailto:hello@docbrainapi.com).
