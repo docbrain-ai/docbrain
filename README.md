@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Stop writing docs after the fact. Capture knowledge where it happens.</strong><br/>
-  DocBrain intercepts knowledge at the moment of creation (from PRs, Slack threads, CI pipelines, and IDE sessions), then scores, reviews, and publishes it before anyone has to ask "where's the doc for this?"
+  <strong>The institutional memory layer for your organization.</strong><br/>
+  DocBrain captures the decisions, fixes, and expertise that live in conversations, tickets, incidents, and people's heads — connects them across the tools you already use, keeps them accurate, and preserves them when people leave. Self-hosted. Read-only. Every answer cited to its source.
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
   <a href="https://docbrainapi.com/docs"><strong>Docs</strong></a> &bull;
   <a href="#quickstart">Quickstart</a> &bull;
   <a href="#the-problem">The Problem</a> &bull;
-  <a href="#how-docbrain-fixes-it">How It Works</a> &bull;
+  <a href="#how-docbrain-works">How It Works</a> &bull;
   <a href="#features">Features</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
   <a href="#security-architecture">Security</a>
@@ -34,61 +34,56 @@
 
 ## The Problem
 
-You know this cycle. Every engineering team does.
+Every organization runs on knowledge that never gets written down.
 
-**Monday:** Senior engineer explains the retry logic in a PR review. Three people learn it. The knowledge lives in a GitHub comment thread that nobody will ever find again.
+The decision made in a meeting. The fix someone found at 2am. The workaround only one person knows. The reason it was built *this* way and not the obvious way. It lives in PRs, chat threads, tickets, and people's heads — and it was never going to end up in a wiki.
 
-**Wednesday:** New hire asks "how do I deploy to staging?" in Slack. Someone writes a 4-paragraph answer. It's accurate today. In three months it'll be wrong, and nobody will update it.
+Then it leaves. Someone changes teams or quits, and years of context walk out with them. A new hire spends months re-asking questions that were answered long ago. Two teams solve the same problem a quarter apart because neither could find the other's work. During an incident, the one runbook that matters is six months stale and the person who wrote it is gone.
 
-**Friday:** Incident war room. The team discovers that the runbook is 6 months stale. The person who wrote it left the company. Tribal knowledge saves the day, but only because the right people were online.
+**The root cause isn't laziness, and it isn't missing docs.** Knowledge written down *after* the work is done is written from memory, without context, under competing priorities — a tax nobody wants to pay, and the result decays the moment it's written.
 
-**Next quarter:** Leadership says "we need to invest in documentation." You schedule a doc sprint. Engineers write docs for two weeks. Six months later, 40% of those docs are stale. The ones that aren't stale are the ones nobody needed to change because nothing changed.
+Every tool in the market solves the wrong half of the problem. They index the knowledge you *already* wrote down and put a chatbot on top. Now you retrieve your stale, incomplete, scattered wiki slightly faster.
 
-**The root cause isn't laziness. It's timing.**
+**The knowledge that actually runs your organization was never captured in the first place.** And it's getting worse: people change roles faster, teams are distributed, and AI now produces work faster than any human can absorb the reasoning behind it. The gap between what your organization does and what it remembers widens every quarter.
 
-Documentation written after the work is done is documentation written from memory, without context, under competing priorities. It's a tax that nobody wants to pay, and when they do pay it, the result decays immediately.
-
-Every tool in the market solves the wrong problem. They index your existing docs and build a chatbot on top. Now you have a chatbot that surfaces your stale, incomplete, scattered documentation slightly faster.
-
-**The actual problem is that the knowledge was never captured in the first place.**
+This isn't only an engineering problem. The same amnesia hits operations, support, and any team whose expertise lives in its people. DocBrain starts where knowledge decays fastest, and its language-agnostic [Connector SDK](docs/connectors.md) extends the same memory layer to any source you have.
 
 ---
 
-## How DocBrain Fixes It
+## How DocBrain Works
 
-DocBrain doesn't wait for someone to write a doc. It **intercepts knowledge at the point of creation** and turns it into documentation automatically. We call this **shift-left documentation**, the same principle that made shift-left testing work. Move the capture upstream, to where the knowledge actually exists.
+DocBrain is a **memory layer**. It doesn't wait for someone to write a doc — it captures knowledge at the point of creation, connects it into one searchable memory, preserves the reasoning behind it, and keeps it accurate over time. Capture happens *at the source*, the same principle that made shift-left testing work: move the capture upstream, to where the knowledge actually exists.
 
 ```
-                         WHERE KNOWLEDGE IS CREATED
-                         ─────────────────────────
+                    WHERE KNOWLEDGE IS CREATED
+                    ─────────────────────────
 
-  Developer merges a PR      ──→  DocBrain extracts decisions, caveats, procedures
-  Team discusses in Slack    ──→  DocBrain distills fragments from the conversation
-  CI pipeline deploys        ──→  DocBrain captures deployment context and changes
-  Engineer codes in IDE      ──→  DocBrain links knowledge to the exact code location
-  On-call resolves incident  ──→  DocBrain captures resolution steps and root cause
+  Someone merges a change      ──→  DocBrain extracts the decisions, caveats, procedures
+  A team works through chat    ──→  DocBrain distills the answer from the conversation
+  A deploy goes out            ──→  DocBrain captures what changed and why
+  On-call resolves an incident ──→  DocBrain captures the fix and the root cause
+  Any other system you run     ──→  DocBrain ingests it via the Connector SDK
 
                               │
                               ▼
 
-                    HOW KNOWLEDGE BECOMES DOCS
-                    ─────────────────────────
+                   HOW KNOWLEDGE BECOMES MEMORY
+                   ────────────────────────────
 
       ┌─────────┐    ┌──────────┐    ┌───────────┐    ┌──────────┐
-      │ Capture │───→│ Quality  │───→│ Cluster & │───→│ Review & │
-      │ & Route │    │ Score    │    │ Compose   │    │ Publish  │
+      │ Capture │───→│ Connect  │───→│ Preserve  │───→│  Keep    │
+      │         │    │          │    │           │    │ current  │
       └─────────┘    └──────────┘    └───────────┘    └──────────┘
 
-  Confidence-based       3-layer scoring     Similar fragments    Multi-stage
-  routing: auto-index    (structural +       grouped by DBSCAN   approval with
-  high-confidence,       style + semantic)   → auto-composed     threaded comments
-  queue low for review,  on every fragment   into full docs      → published
-  discard noise          and document        when cluster ready  to your wiki
+  At the source,      Linked into        Decisions and       Freshness
+  the moment it's     one graph by       the "why" kept      tracked; stale
+  created — no        topic, people,     with provenance     and conflicting
+  wiki to maintain    and dependencies                       knowledge flagged
 ```
 
-**This is what makes DocBrain different.** Other tools index existing docs and answer questions about them. DocBrain captures the knowledge that was never written down (the PR decisions, the Slack explanations, the deployment gotchas, the incident resolutions) and turns it into documentation that meets your team's quality standards.
+**This is what makes DocBrain different.** Other tools organize the knowledge you already wrote down and answer questions about it. DocBrain captures the knowledge you *didn't* — the PR decisions, the chat explanations, the deployment gotchas, the incident resolutions — and turns it into memory your whole organization can draw on.
 
-The result: documentation that's **born from real work**, not written from memory. Documentation that's **quality-scored the moment it exists**, not left to rot. Documentation that **gets better as your team works**, not worse.
+The result: knowledge **born from real work**, not written from memory. **Connected** into one memory, not scattered across ten tools. **Preserved with its context**, so the *why* survives the people who knew it. And **kept current**, so you can trust what it tells you.
 
 ---
 
@@ -132,13 +127,13 @@ The **Web UI** at `http://localhost:3001` gives you the full experience: dashboa
 - **Quality gates in CI.** Lint docs with custom style rules, enforce structure, catch stale content before it ships. `POST /api/v1/quality/lint` plugs into any CI pipeline.
 - **Ask, don't search.** Query your entire knowledge base with confidence-scored answers that cite sources. No more digging through Confluence.
 
-### For Engineering Managers
+### For Team Leads & Managers
 - **Know what's documented and what isn't.** Governance dashboards show coverage per space, per team. See exactly where the gaps are.
 - **SLA enforcement.** Per-space policies ensure gaps are acknowledged within 24h and resolved within 7 days. Automated breach detection with notifications.
 - **ROI tracking.** Documentation velocity, time saved per query, resolution rates, and knowledge half-life, per team, in dollars.
 - **Review workflows.** Multi-stage approval pipelines (SME Review → Writer Review → Publish) with threaded comments, so nothing goes live without oversight.
 
-### For Platform Teams
+### For Platform & Operations
 - **Self-hosted, single binary.** Rust backend, no JVM, no Python dependency hell. Docker, Kubernetes, or bare metal. Sub-100ms API responses.
 - **14 LLM providers.** Anthropic, OpenAI, AWS Bedrock, Ollama (fully local), Gemini, and 9 more. Swap providers without changing a line of code.
 - **13+ knowledge sources.** Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, and more. Connector SDK for anything else.
@@ -159,13 +154,13 @@ Fair question. Cursor and Claude Code can hit your tools over MCP too. The diffe
 | Turns answers into durable, quality-scored docs | No | Yes |
 | Scope | One developer's session | One shared brain for the org, with RBAC |
 
-An IDE asks your tools a question. DocBrain turns every question your org has ever asked into a system that gets smarter. The 100th person asking about Kubernetes gets a better answer because of the first 99.
+An IDE asks your tools a question. DocBrain turns every question your organization has ever asked into a system that gets smarter. The 100th person asking about a topic gets a better answer because of the first 99.
 
 ---
 
 ## Features
 
-### Shift-Left Knowledge Capture
+### Knowledge Capture at the Source
 
 The core of DocBrain. Every integration point captures knowledge where it's created, before anyone has to remember to document it.
 
