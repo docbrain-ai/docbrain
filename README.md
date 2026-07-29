@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fdocbrain-ai%2Fdocbrain.svg)](https://mcptoplist.com/server/glama%2Fdocbrain-ai%2Fdocbrain)
+
 <p align="center">
   <img src="assets/banner.png" alt="DocBrain" width="600" />
 </p>
