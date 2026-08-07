@@ -694,7 +694,6 @@ Environment variables always override config files. See [Configuration Guide](do
 
 ## Community
 
-- **Adopters:** [Who runs DocBrain](ADOPTERS.md) — including [D360 Bank](https://d360.com/en) (Slack-based AI answers for SRE on-call) and [SailPoint](https://sailpoint.com). Running it yourself? Add your org via PR.
 - **GitHub Issues:** [Bug reports and feature requests](https://github.com/docbrain-ai/docbrain/issues)
 - **GitHub Discussions:** [Questions and community conversation](https://github.com/docbrain-ai/docbrain/discussions)
 - **Email:** [hello@docbrainapi.com](mailto:hello@docbrainapi.com)
