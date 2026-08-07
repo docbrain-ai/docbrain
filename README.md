@@ -28,7 +28,7 @@
 
 ---
 
-> **Project Status: pre-source release.** What's open right now: production Docker images, full Helm charts, complete configuration, the [threat model](THREAT_MODEL.md), and all the docs you need to self-host and run DocBrain in production today. What's not open yet: the source code. We're publishing it once a few internal APIs stabilize, targeting the first half of 2026, under the BSL 1.1 terms below. Until then, contributions land best as documentation fixes, configuration improvements, and bug reports. We'd rather tell you this plainly than dress it up.
+> **Project Status: source not published — and an honest update.** We originally targeted the first half of 2026 to publish the source code. We missed that date. Rather than quietly moving the goalposts, here it is plainly: the source stays closed for now, and we won't post a new date until we're certain we can hit it. What's open today is everything you need to run DocBrain in production: free production Docker images (BSL 1.1 permits production use), full Helm charts, complete configuration, the [threat model](THREAT_MODEL.md), and all the docs. If closed source is a dealbreaker for you, that's a rational position and we respect it — it's on us to earn trust other ways: [how DocBrain earns trust](https://docbrainapi.com/docs/trust/). Contributions land best as documentation fixes, configuration improvements, and bug reports. When the source does publish, it will be under the BSL 1.1 terms below.
 
 ---
 
@@ -694,6 +694,7 @@ Environment variables always override config files. See [Configuration Guide](do
 
 ## Community
 
+- **Adopters:** [Who runs DocBrain](ADOPTERS.md) — including [D360 Bank](https://d360.com/en) (Slack-based AI answers for SRE on-call) and [SailPoint](https://sailpoint.com). Running it yourself? Add your org via PR.
 - **GitHub Issues:** [Bug reports and feature requests](https://github.com/docbrain-ai/docbrain/issues)
 - **GitHub Discussions:** [Questions and community conversation](https://github.com/docbrain-ai/docbrain/discussions)
 - **Email:** [hello@docbrainapi.com](mailto:hello@docbrainapi.com)
