@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to DocBrain. This document provides guidelines and information for contributors.
 
-> **Note:** DocBrain is currently distributed as pre-built Docker images and deployment artifacts. Source code is not yet published. Contributions are currently welcome for documentation, configuration, Helm charts, and bug reports against the published artifacts. This guide will be expanded with build-from-source and development workflow instructions when the source code is released.
+> **Note:** The client tooling source ([`crates/docbrain-cli`](crates/docbrain-cli), [`crates/docbrain-mcp`](crates/docbrain-mcp)) is published in this repo and accepts code PRs — build with `cargo build --workspace`. The DocBrain server is distributed as pre-built Docker images and deployment artifacts; its source is not yet published. Server-side contributions are welcome as documentation, configuration, Helm charts, and bug reports against the published artifacts.
 
 ## How to Contribute
 

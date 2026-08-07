@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+
+members = [
+  "crates/docbrain-cli",
+  "crates/docbrain-mcp",
+]
+
+[workspace.package]
+version = "1.5.6"
