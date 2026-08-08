@@ -25,6 +25,13 @@ async fn main() -> Result<()> {
     if server.api_key.is_none() {
         eprintln!("[docbrain-mcp] ERROR: DOCBRAIN_API_KEY is not set.");
         eprintln!(
+            "[docbrain-mcp] This binary is the editor connector, not the product — it needs a"
+        );
+        eprintln!(
+            "[docbrain-mcp] self-hosted DocBrain server to talk to. Deploy one in ~5 minutes:"
+        );
+        eprintln!("[docbrain-mcp]   https://github.com/docbrain-ai/docbrain#quickstart");
+        eprintln!(
             "[docbrain-mcp] Create a key with: docbrain token create --name \"MCP Key\" --role viewer"
         );
         eprintln!("[docbrain-mcp] Then add DOCBRAIN_API_KEY to your MCP config env block.");
@@ -43,6 +50,11 @@ async fn main() -> Result<()> {
         }
         Err(msg) => {
             eprintln!("[docbrain-mcp] ERROR: {}", msg);
+            eprintln!(
+                "[docbrain-mcp] Is a DocBrain server running at {}? This connector requires one:",
+                server.server_url
+            );
+            eprintln!("[docbrain-mcp]   https://github.com/docbrain-ai/docbrain#quickstart");
             std::process::exit(1);
         }
     }
