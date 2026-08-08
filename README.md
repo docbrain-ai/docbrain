@@ -92,6 +92,18 @@ curl -H "Authorization: Bearer <key>" \
 
 Full setup guide: [docs/quickstart.md](docs/quickstart.md)
 
+## Teach Your Agent
+
+If your team uses Claude Code or Cursor, the [`docbrain-mcp`](crates/docbrain-mcp) server already gives your agent capture tools — most teams just never tell the agent to use them. Three lines in your `CLAUDE.md` turn every debugging session into documentation:
+
+```markdown
+When we resolve an error or discover non-obvious behavior, call
+docbrain_suggest_capture for the files involved. If a gap exists, draft a
+3–5 line capture and ask me to approve it before calling docbrain_capture.
+```
+
+Your agent fixes something, checks whether the org already knows it, and — with your approval — files what's missing into the review queue. The knowledge gets captured at the only moment it's free: seconds after the fix. Full guide, including Cursor setup and the privacy model: [docs/agents.md](docs/agents.md)
+
 ## What You Get
 
 - **Capture from 13 built-in sources** — Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, Linear, OpsGenie, Rootly, Zendesk, Intercom, and local files, plus a language-agnostic [Connector SDK](docs/connectors.md) for anything else. [Ingestion guide →](docs/ingestion.md)
@@ -182,6 +194,7 @@ helm install docbrain ./helm/docbrain \
 | [Knowledge Intelligence](docs/knowledge-intelligence.md) | Graph, analytics, predictive intelligence |
 | [Autopilot](docs/autopilot.md) | Gap detection, draft generation, feedback loop |
 | [Generate](docs/generate.md) | Grounded on-demand doc generation |
+| [Coding Agents](docs/agents.md) | Teaching Claude Code / Cursor to file docs via MCP |
 | [API Reference](docs/api-reference.md) | Full REST API documentation |
 | [RBAC](docs/rbac.md) | Role-based access control and SSO |
 | [Slack Integration](docs/slack.md) | Slash commands, message shortcuts, thread capture |
