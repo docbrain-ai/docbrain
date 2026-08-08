@@ -28,6 +28,16 @@
 
 ---
 
+<p align="center">
+  <a href="https://youtu.be/zZ7WdjmOXHU">
+    <img src="assets/quickstart-preview.gif" alt="docbrain ask answering with per-claim citations — click to watch the full unedited quickstart" width="720" />
+  </a>
+  <br/>
+  <em>real recording, no edits — <a href="https://youtu.be/zZ7WdjmOXHU">watch the full 90-second quickstart ▶</a></em>
+</p>
+
+---
+
 > **Project Status: client source open, server closed.** The source for everything DocBrain runs on *your* side of the network boundary — the `docbrain` CLI and the IDE MCP server — is in this repo under [`crates/`](crates/), MIT-licensed, built and tested in public CI. Audit exactly what runs in your environment and what leaves it. The server ships as free production Docker images (BSL 1.1 permits production use) with full Helm charts, complete configuration, the [threat model](THREAT_MODEL.md), and all the docs to self-host in production. The server source stays closed for now — we originally targeted the first half of 2026 to publish it, we missed that date, and we won't post a new date until we're certain we can hit it. If a closed server is a dealbreaker for you, that's a rational position and we respect it: [how DocBrain earns trust](https://docbrainapi.com/docs/trust/). Contributions: code PRs for the client crates, plus documentation, configuration, and bug reports. When the server source publishes, it will be under the BSL 1.1 terms below.
 
 ---
@@ -180,14 +190,6 @@ helm install docbrain ./helm/docbrain \
 ## See It In Action
 
 **▶ [The quickstart, recorded unedited](https://youtu.be/zZ7WdjmOXHU)** — install → ingest → cited answer → `generate` turning raw on-call notes into a runbook that cites its sources. 90 seconds, shipped images, 100% local models, nothing staged.
-
-<p align="center">
-  <a href="https://youtu.be/zZ7WdjmOXHU">
-    <img src="assets/quickstart-preview.gif" alt="docbrain ask answering with per-claim citations — click to watch the full unedited quickstart" width="720" />
-  </a>
-  <br/>
-  <em>↑ real recording (docbrain ask, 2× speed) — click for the full 90-second video</em>
-</p>
 
 | | |
 |---|---|
