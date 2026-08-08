@@ -44,9 +44,9 @@
 
 ## The Problem
 
-Every organization runs on knowledge that never gets written down. The decision made in a meeting. The fix someone found at 2am. The workaround only one person knows. It lives in PRs, chat threads, tickets, and people's heads — and then someone changes teams or quits, and years of context walk out with them.
+Every organization runs on knowledge that never gets written down: the decision from a meeting, the fix someone found at 2am, the workaround only one person knows. It lives in PRs, chat threads, tickets, and people's heads. When that person changes teams or quits, years of context walk out the door with them.
 
-Tools that "index your docs and add a chatbot" solve the wrong half of the problem: they retrieve your stale, incomplete wiki slightly faster. The knowledge that actually runs your organization was never captured in the first place. And it's getting worse — AI now produces code, changes, and fluent documentation faster than any human can absorb, and your agents read those docs too. The scarce thing isn't more documentation. It's documentation your organization can trust.
+Tools that "index your docs and add a chatbot" solve the wrong half of the problem: they retrieve your stale, incomplete wiki slightly faster. The knowledge that actually runs your organization was never captured in the first place. And it's getting worse now that AI produces code, changes, and fluent documentation faster than any human can absorb — your agents read those docs too. More documentation is easy. Documentation your organization can trust is the scarce thing.
 
 ## How DocBrain Works
 
@@ -94,13 +94,13 @@ Full setup guide: [docs/quickstart.md](docs/quickstart.md)
 
 ## What You Get
 
-- **Capture from 13+ sources** — Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, and more, plus a language-agnostic [Connector SDK](docs/connectors.md) for anything else. [Ingestion guide →](docs/ingestion.md)
+- **Capture from 13 built-in sources** — Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, Linear, OpsGenie, Rootly, Zendesk, Intercom, and local files, plus a language-agnostic [Connector SDK](docs/connectors.md) for anything else. [Ingestion guide →](docs/ingestion.md)
 - **Ask, with citations** — hybrid vector + keyword search, confidence-scored answers; low confidence asks clarifying questions instead of guessing. [API →](docs/api-reference.md)
 - **`docbrain generate`** — on-demand docs grounded in your own runbooks, incidents, threads, and PRs, with per-claim provenance and honest `needs_input` for what the knowledge can't answer. [Generate guide →](docs/generate.md)
 - **Quality gates on every doc** — structural, style (your style guide, enforced automatically), and semantic scoring; nothing unscored enters the system. [Style policy →](docs/style-policy.md)
 - **Review workflows and ownership** — multi-stage approvals, space owners, SLAs, and governance dashboards, so documentation has accountability. [Governance →](docs/governance.md) · [Reviews →](docs/reviews.md)
 - **Autopilot** — clusters unanswered questions into gaps, drafts grounded fixes, and routes them to human review. Nothing publishes without oversight. [Autopilot →](docs/autopilot.md)
-- **Freshness and contradiction detection** — stale docs flagged, conflicting docs surfaced, cascade effects predicted. [Knowledge intelligence →](docs/knowledge-intelligence.md)
+- **Freshness and contradiction detection** — stale docs flagged, conflicting docs surfaced, cascade staleness traced across dependent docs. [Knowledge intelligence →](docs/knowledge-intelligence.md)
 - **Source-system ACL mirroring** — Confluence restrictions, Slack channel membership, and repo visibility enforced at query time. [Access control →](docs/access-control.md)
 - **RBAC, SSO, audit logging** — 4-tier roles, GitHub/GitLab/OIDC SSO, per-space isolation. [RBAC →](docs/rbac.md)
 - **Everywhere your team works** — web dashboard, Slack commands, CLI, CI hooks, and MCP tools for Claude Code, Cursor, and any MCP-compatible editor. [Slack →](docs/slack.md)
@@ -175,7 +175,7 @@ helm install docbrain ./helm/docbrain \
 | [Configuration](docs/configuration.md) | All environment variables and options |
 | [Provider Setup](docs/providers.md) | LLM and embedding provider configuration |
 | [Architecture](docs/architecture.md) | System design, data flow, memory, freshness |
-| [Ingestion Guide](docs/ingestion.md) | Connecting 13+ knowledge sources |
+| [Ingestion Guide](docs/ingestion.md) | Connecting the 13 built-in knowledge sources |
 | [External Connectors](docs/connectors.md) | Build custom connectors for any knowledge source |
 | [Governance](docs/governance.md) | Ownership, SLAs, breach detection, dashboards |
 | [Review Workflows](docs/reviews.md) | Multi-stage approval pipelines |

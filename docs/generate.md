@@ -36,6 +36,14 @@ And versus a plain LLM:
 
 ## CLI
 
+!!! warning "Enable drafting first"
+    `generate` shares the drafting subsystem with autopilot: until
+    `AUTOPILOT_ENABLED=true` is set, every call returns
+    **`503` "generation is not configured"**. On Ollama you must also set
+    `DRAFT_LLM_PROVIDER=ollama` and `DRAFT_MODEL_ID=<your model>` — the
+    baked-in draft-model default targets Bedrock and 404s otherwise. Both
+    are covered in the Ollama block of `.env.example`.
+
 ```
 docbrain generate <ASK> [FLAGS]
 ```
