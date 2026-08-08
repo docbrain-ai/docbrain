@@ -181,6 +181,14 @@ helm install docbrain ./helm/docbrain \
 
 **▶ [The quickstart, recorded unedited](https://youtu.be/zZ7WdjmOXHU)** — install → ingest → cited answer → `generate` turning raw on-call notes into a runbook that cites its sources. 90 seconds, shipped images, 100% local models, nothing staged.
 
+<p align="center">
+  <a href="https://youtu.be/zZ7WdjmOXHU">
+    <img src="assets/quickstart-preview.gif" alt="docbrain ask answering with per-claim citations — click to watch the full unedited quickstart" width="720" />
+  </a>
+  <br/>
+  <em>↑ real recording (docbrain ask, 2× speed) — click for the full 90-second video</em>
+</p>
+
 | | |
 |---|---|
 | [What is DocBrain?](https://youtu.be/S4aSTmevvOQ), 5-min overview | [Deep Dive Podcast](https://youtu.be/GN4SC6L8YmI), 20-min deep dive |
