@@ -6,9 +6,9 @@ hide:
 
 # DocBrain Documentation
 
-**Stop writing docs after the fact. Capture knowledge where it happens.**
+**Organizational memory is lost at the source. That is where DocBrain captures it.**
 
-DocBrain intercepts knowledge at the moment of creation — from PRs, Slack threads, CI pipelines, and IDE sessions — then scores, reviews, and publishes it before anyone has to ask "where's the doc for this?"
+DocBrain captures what your organization learns at the moment it is learned — from tickets, threads, incidents, support conversations and code changes — then scores it, routes it through review, and keeps it accurate as reality moves. Every answer cites the claim it came from, and says so plainly when your record has no answer.
 
 ---
 
