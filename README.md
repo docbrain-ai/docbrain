@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>The institutional memory layer for your organization.</strong><br/>
-  DocBrain captures the knowledge your teams create in PRs, chat threads, deploys, and incidents — turns it into documentation with per-claim citations, and keeps it accurate as reality changes. Self-hosted. Read-only. Every answer cited to its source.
+  <strong>The memory layer for humans and AI agents.</strong><br/>
+  Every other tool retrieves what someone remembered to write down. DocBrain captures what nobody did — from tickets, threads, incidents and code changes — cites every individual claim to its source, and says so plainly when your record has no answer. Self-hosted. Read-only. Zero data egress.
 </p>
 
 <p align="center">
@@ -60,6 +60,8 @@ DocBrain captures knowledge **at the source**, the moment it's created:
   Any other system you run     ──→  ingested via the Connector SDK
 ```
 
+**On day one it also reads backwards.** Point it at systems you have been using for years — archived Slack channels, closed tickets, merged pull requests, the wiki nobody has opened since 2022 — and it ingests them in place, read-only. Your first answer can come from a thread nobody remembers writing. Nothing is migrated and nobody has to refile anything.
+
 Captured fragments are confidence-scored, connected into one memory, and composed into documentation with **per-claim provenance**. Drafts route through human review before anything publishes. Then DocBrain keeps the result honest: freshness tracking, contradiction detection, and staleness alerts as reality changes. Ask a question, get a cited answer — or an honest "I don't know" instead of a guess.
 
 ## Quickstart
@@ -112,7 +114,10 @@ Your agent fixes something, checks whether the org already knows it, and — wit
 - **Quality gates on every doc** — structural, style (your style guide, enforced automatically), and semantic scoring; nothing unscored enters the system. [Style policy →](docs/style-policy.md)
 - **Review workflows and ownership** — multi-stage approvals, space owners, SLAs, and governance dashboards, so documentation has accountability. [Governance →](docs/governance.md) · [Reviews →](docs/reviews.md)
 - **Autopilot** — clusters unanswered questions into gaps, drafts grounded fixes, and routes them to human review. Nothing publishes without oversight. [Autopilot →](docs/autopilot.md)
+- **Live intelligence** — reads connected systems *at the moment you ask*, then reconciles that with indexed history in one cited answer. Write-capable tools are dropped at discovery, so it never holds the capability to change anything. [MCP tools →](docs/mcp-tools.md)
 - **Freshness and contradiction detection** — stale docs flagged, conflicting docs surfaced, cascade staleness traced across dependent docs. [Knowledge intelligence →](docs/knowledge-intelligence.md)
+- **Learning pipeline (optional, off by default)** — feedback on answers can fine-tune the embedding model on *your* corpus, so retrieval learns what "similar" means in your codebase. Versions are gated on quality before promotion and roll back automatically if they regress. Runs entirely on your infrastructure. [Learning →](docs/learning.md)
+- **Predictive intelligence** — onboarding-gap detection from what new joiners ask in their first 30 days, seasonal query forecasting, and code-change-triggered doc review. [Knowledge intelligence →](docs/knowledge-intelligence.md)
 - **Source-system ACL mirroring** — Confluence restrictions, Slack channel membership, and repo visibility enforced at query time. [Access control →](docs/access-control.md)
 - **RBAC, SSO, audit logging** — 4-tier roles, GitHub/GitLab/OIDC SSO, per-space isolation. [RBAC →](docs/rbac.md)
 - **Everywhere your team works** — web dashboard, Slack commands, CLI, CI hooks, and MCP tools for Claude Code, Cursor, and any MCP-compatible editor. [Slack →](docs/slack.md)
@@ -208,6 +213,24 @@ helm install docbrain ./helm/docbrain \
 |---|---|
 | [What is DocBrain?](https://youtu.be/S4aSTmevvOQ), 5-min overview | [Deep Dive Podcast](https://youtu.be/GN4SC6L8YmI), 20-min deep dive |
 | [MCP Preview](https://youtu.be/9mZLoQnGLl8), 30-sec IDE demo | [Full Proof Demo](https://youtu.be/yqj5BCVOLHw), Downvote → Gap → Draft |
+
+## Independent Assessment
+
+We opened Atlassian's own AI assistant, asked it to compare itself with DocBrain, and published the full response unedited — including where it wins.
+
+> **"DocBrain's 'capture knowledge that was never written down' is solving a problem I fundamentally can't."**
+> — Rovo, answering a direct comparison prompt
+
+Where Rovo wins: native Atlassian integration, zero setup for existing Atlassian Cloud teams, broad work execution, and 3M+ users. [Full transcript →](https://docbrainapi.com/rovo-comparison.html)
+
+## What We Haven't Proven Yet
+
+A project built on refusing to overclaim shouldn't overclaim about itself.
+
+- **The server is closed source.** The client that runs inside your network is MIT and auditable, in [`crates/`](crates/). The server isn't published. We targeted the first half of 2026, missed it, and won't name a new date until we're certain of it.
+- **We publish no measured accuracy benchmark.** Grounding is measured internally and gates every model promotion, but no number goes in this README until it's measured across real customer corpora and we can publish the methodology with it.
+- **Self-hosting isn't unique to us.** Open-source alternatives exist and several are genuinely good at retrieval — some more permissively licensed than we are. What they don't do is capture what was never written down. Judge us on that.
+- **Our evidence base is strongest for software teams.** The mechanism generalises across support, operations and the rest of the business; the published statistics haven't been measured everywhere, and we won't imply otherwise.
 
 ## Community
 
