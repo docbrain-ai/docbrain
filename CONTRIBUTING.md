@@ -87,7 +87,7 @@ All contributors are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md
 
 ## License
 
-By contributing to DocBrain, you agree that your contributions will be licensed under the same [BSL 1.1 License](LICENSE) that covers the project.
+By contributing to DocBrain, you agree that your contributions will be licensed under the [MIT License](LICENSE) that covers this repository. The DocBrain server binaries and container images are distributed separately under the [Business Source License 1.1](LICENSE-SERVER).
 
 ## Questions?
 
