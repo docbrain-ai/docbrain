@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! DocBrain MCP server binary entry point.
 //!
 //! All server logic lives in `docbrain_mcp` (lib target). This binary is a

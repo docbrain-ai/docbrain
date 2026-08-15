@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use futures_util::StreamExt;

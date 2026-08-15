@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Verifies that every outbound HTTP call from `docbrain-mcp` carries
 //! `X-DocBrain-Caller: mcp-host`.
 //!
