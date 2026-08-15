@@ -1,7 +1,6 @@
 # DocBrain Roadmap 2026
 
 ## Q2 2026: Foundation & Integration
-* [ ] Convert license from BSL 1.1 to Apache 2.0.
 * [ ] Official Helm Chart for Kubernetes deployment.
 * [ ] Support for S3-compatible storage for index backups.
 

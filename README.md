@@ -253,8 +253,7 @@ charts, configuration, examples and documentation.
 
 The **DocBrain server binaries and container images** are distributed under the
 [Business Source License 1.1](LICENSE-SERVER). Production use is permitted, except offering
-DocBrain as a hosted service. Converts to [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
-on January 1, 2028. For alternative licensing:
+DocBrain as a hosted service. For alternative licensing:
 [licensing@docbrainapi.com](mailto:licensing@docbrainapi.com).
 
 ## Code of Conduct
