@@ -26,7 +26,7 @@ theme:
     code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
-    logo: material/book-open-variant
+    logo: docbrain/logo
   features:
     - navigation.instant
     - navigation.tracking

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.png" alt="DocBrain" width="600" />
+  <img src="assets/logo.png" alt="DocBrain" width="520" />
 </p>
 
 <p align="center">
