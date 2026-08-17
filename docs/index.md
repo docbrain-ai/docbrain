@@ -62,7 +62,9 @@ GitHub, GitLab, and OIDC SSO with role-based access control.
 
 ## What makes DocBrain different?
 
-Most documentation tools index existing docs and answer questions. DocBrain captures the knowledge that was **never written down** — from PRs, Slack threads, CI pipelines, and IDE sessions — and turns it into documentation that meets your team's quality standards.
+Other tools help you search what was already documented. DocBrain captures what your organization actually learned — the decisions, the caveats, the procedures and the context around them — from PRs, Slack threads, CI pipelines, and IDE sessions, and flags that knowledge when something newer contradicts it.
+
+**Documentation is one output. Organizational memory is the product.**
 
 ```
 Developer merges a PR           → DocBrain extracts decisions, caveats, procedures
