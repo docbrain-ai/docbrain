@@ -127,7 +127,7 @@ confluenceWebhook:
 # -- DocBrain API Server
 server:
   image:
-    repository: ghcr.io/docbrain/docbrain
+    repository: ghcr.io/docbrain-ai/docbrain
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
@@ -168,7 +168,7 @@ server:
 web:
   enabled: true
   image:
-    repository: ghcr.io/docbrain/docbrain-web
+    repository: ghcr.io/docbrain-ai/docbrain-web
     tag: latest
     pullPolicy: IfNotPresent
   replicas: 1
