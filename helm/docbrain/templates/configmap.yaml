@@ -270,6 +270,9 @@ data:
   STREAM_ALERT_CHANNEL: {{ .Values.stream.alertChannel | quote }}
   {{- end }}
   STREAM_EXPERTISE_GAP_DAYS: {{ .Values.stream.expertiseGapDays | default 90 | quote }}
+  {{- /* `default` treats false as empty, so `| default true` would make this
+       flag impossible to switch off. Test for nil explicitly instead. */}}
+  RAG_CLAIM_VERIFICATION: {{ if kindIs "invalid" .Values.rag.claimVerification }}"true"{{ else }}{{ .Values.rag.claimVerification | quote }}{{ end }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
   RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
   {{- if .Values.rag.mcpOutputCeilingBytes }}

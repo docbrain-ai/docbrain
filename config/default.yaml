@@ -46,6 +46,9 @@ embeddings:
   # model_id: ~   # defaults to provider-appropriate model
 
 rag:
+  claim_verification: true  # Check file paths an answer cites against ingest-recorded
+                            # listings before returning it. No LLM call; inert until
+                            # a git source records a listing.
   cache_threshold: 0.95   # Min cosine similarity for cache hit
   cache_ttl_hours: 24     # Cache max age in hours
   # search_min_score: ~   # Min relevance for search results (default: 0.0)

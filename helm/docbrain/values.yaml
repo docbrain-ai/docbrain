@@ -404,6 +404,11 @@ consolidation:
 
 # -- RAG (Retrieval-Augmented Generation) cache
 rag:
+  # -- Verify mechanically-checkable claims (file paths) an answer cites against
+  # the file listings recorded at ingest, before returning it. Deterministic — no
+  # LLM call. Inert until a git source records a listing, so enabling it costs
+  # nothing on a deployment with no code sources connected.
+  claimVerification: true
   cacheTtlHours: 24
   cacheThreshold: "0.95"
   # -- Tool-output caps (the truncation chain). All THREE must rise together —

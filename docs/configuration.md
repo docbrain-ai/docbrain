@@ -1218,6 +1218,7 @@ This makes `allowed_spaces` ACL filtering work correctly — a key scoped to `["
 | `RAG_TOP_K` | `10` | Chunks retrieved per query. Higher = more context passed to the LLM, at the cost of more tokens per call. Raise to `15`–`20` if answers are missing obvious information; lower to `5` to reduce cost on simple corpora. |
 | `RAG_BM25_BOOST` | `1.0` | Weight of keyword (BM25) search relative to vector search in hybrid retrieval. Raise to `2.0`–`3.0` for corpora heavy with exact-match queries — error codes, CLI commands, ticket IDs, specific tool names. Leave at `1.0` for general prose documentation. |
 | `SEARCH_MIN_SCORE` | `0.0` | Drop retrieved chunks below this relevance score before sending context to the LLM. `0.0` keeps everything. Set to `0.3`–`0.4` if you notice irrelevant chunks contaminating answers; leave at `0.0` for small corpora where recall matters more than precision. |
+| `RAG_CLAIM_VERIFICATION` | `true` | Before returning an answer, check any file paths it cites against the file listings recorded when your git sources were ingested. A path that has moved is corrected; one that has been deleted is flagged, dated to the commit the listing came from. Deterministic — no extra LLM call — and inert until a git source has recorded a listing, so it costs nothing if you have only wiki-style sources connected. |
 | `RAG_CACHE_TTL_HOURS` | `24` | How long to cache semantically identical answers |
 | `RAG_CACHE_THRESHOLD` | `0.95` | Cosine similarity threshold for a query to count as a cache hit |
 
