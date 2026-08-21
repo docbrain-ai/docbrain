@@ -101,7 +101,7 @@ If your team uses Claude Code or Cursor, the [`docbrain-mcp`](crates/docbrain-mc
 ```markdown
 When we resolve an error or discover non-obvious behavior, call
 docbrain_suggest_capture for the files involved. If a gap exists, draft a
-3–5 line capture and ask me to approve it before calling docbrain_capture.
+3–5 line capture and ask me to approve it before calling docbrain_annotate.
 ```
 
 Your agent fixes something, checks whether the org already knows it, and — with your approval — files what's missing into the review queue. The knowledge gets captured at the only moment it's free: seconds after the fix. Full guide, including Cursor setup and the privacy model: [docs/agents.md](docs/agents.md)

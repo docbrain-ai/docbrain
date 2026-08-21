@@ -29,7 +29,7 @@ Create a scoped key with `docbrain token create --name "MCP Key" --role viewer` 
 |------|-----------|--------------|
 | `docbrain_ask` | read | Cited answers from your org's memory, in the editor |
 | `docbrain_suggest_capture` | read | Checks for documentation gaps around a file or function |
-| `docbrain_capture` | write | Files a fix/decision/caveat as a fragment into the review queue |
+| `docbrain_annotate` | write | Files a fix/decision/caveat as a fragment into the review queue |
 | `docbrain_commit_capture` | write | Captures the *why* behind a change at commit time |
 
 Write tools are permission-gated server-side; a read-only key can `ask` but cannot capture.

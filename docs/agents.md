@@ -6,7 +6,7 @@ Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://git
 |------|-----------|--------------|
 | `docbrain_ask` | read | Cited answers from your org's memory, in the editor |
 | `docbrain_suggest_capture` | read | Checks whether documentation gaps exist for a file or function |
-| `docbrain_capture` | write | Files a knowledge fragment (a decision, fix, or caveat) tied to a file and line range |
+| `docbrain_annotate` | write | Files a knowledge fragment (a decision, fix, or caveat) tied to a file and line range |
 | `docbrain_commit_capture` | write | Captures the *why* behind a change at commit time |
 
 Most teams wire these up and only ever use `ask`. The write path is where the leverage is: **the moment your agent helps you fix something is the one moment the knowledge exists, is fresh, and costs nothing to keep.** Sessions end, terminal scrollback dies, and the fix your agent found never reaches the teammate who hits the same error next month — unless the agent files it.
@@ -40,7 +40,7 @@ future engineer would need, do this before the task ends:
 1. Call docbrain_suggest_capture for the files involved.
 2. If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
    trap to avoid — and show it to me for approval before calling
-   docbrain_capture.
+   docbrain_annotate.
 Never include secrets, tokens, hostnames from .env files, or customer data in
 a capture. When in doubt, leave it out.
 ```

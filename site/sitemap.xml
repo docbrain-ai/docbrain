@@ -2,106 +2,110 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://docbrainapi.com/docs/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/access-control/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
+    </url>
+    <url>
+         <loc>https://docbrainapi.com/docs/agents/</loc>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/api-reference/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/architecture/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/autopilot/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/configuration/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/confluence-webhook/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/connectors/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/generate/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/gitlab-capture/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/governance/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/ingestion/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/knowledge-intelligence/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/kubernetes/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/learning/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/mcp-tools/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/providers/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/quickstart/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/rbac/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/rerank-providers/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/reviews/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/slack/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/style-policy/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/trust/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/runbooks/mcp-shadow-run/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
     <url>
          <loc>https://docbrainapi.com/docs/security/slack-dm-policy/</loc>
-         <lastmod>2026-06-18</lastmod>
+         <lastmod>2026-08-21</lastmod>
     </url>
 </urlset>

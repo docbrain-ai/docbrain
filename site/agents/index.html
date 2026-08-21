@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://docbrainapi.com/docs/slack/">
+        <link rel="canonical" href="https://docbrainapi.com/docs/agents/">
       
       
-        <link rel="prev" href="../mcp-tools/">
-      
-      
-        <link rel="next" href="../gitlab-capture/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Slack - DocBrain Docs</title>
+        <title>Coding Agents — Teach Your Agent to File Docs - DocBrain Docs</title>
       
     
     
@@ -80,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#slack-integration" class="md-skip">
+        <a href="#coding-agents-teach-your-agent-to-file-docs" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +112,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Slack
+              Coding Agents — Teach Your Agent to File Docs
             
           </span>
         </div>
@@ -774,8 +770,6 @@
       
   
   
-    
-  
   
   
     
@@ -788,11 +782,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -813,7 +809,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -912,37 +908,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Slack
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../slack/" class="md-nav__link">
         
   
   
@@ -958,285 +927,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#what-you-get" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What You Get
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-1-create-the-slack-app" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 1: Create the Slack App
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-2-configure-the-slash-command" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2: Configure the Slash Command
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-3-enable-interactivity" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3: Enable Interactivity
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-3b-add-message-shortcut" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3b: Add Message Shortcut
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-3c-enable-event-subscriptions-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3c: Enable Event Subscriptions (optional)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-4-add-oauth-scopes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 4: Add OAuth Scopes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-5-get-the-signing-secret" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 5: Get the Signing Secret
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-6-configure-docbrain" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 6: Configure DocBrain
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-7-verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 7: Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#capture-a-thread" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Capture a thread
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ask-a-question" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ask a question
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#incident-triage-at-2am" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Incident triage at 2am
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#check-documentation-freshness" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Check documentation freshness
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nudge-doc-owners" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nudge doc owners
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#onboard-a-new-hire" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Onboard a new hire
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#conversation-memory-auto-listen" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conversation memory &amp; auto-listen
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#proactive-notifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Proactive Notifications
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-feedback-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How Feedback Works
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1683,10 +1373,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-you-get" class="md-nav__link">
+  <a href="#setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What You Get
+        Setup
       
     </span>
   </a>
@@ -1694,10 +1384,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#the-snippet" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        The snippet
       
     </span>
   </a>
@@ -1705,10 +1395,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-1-create-the-slack-app" class="md-nav__link">
+  <a href="#what-happens" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Create the Slack App
+        What happens
       
     </span>
   </a>
@@ -1716,10 +1406,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-configure-the-slash-command" class="md-nav__link">
+  <a href="#privacy-properties" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2: Configure the Slash Command
+        Privacy properties
       
     </span>
   </a>
@@ -1727,214 +1417,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-enable-interactivity" class="md-nav__link">
+  <a href="#honest-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Enable Interactivity
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-3b-add-message-shortcut" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3b: Add Message Shortcut
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-3c-enable-event-subscriptions-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3c: Enable Event Subscriptions (optional)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-4-add-oauth-scopes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 4: Add OAuth Scopes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-5-get-the-signing-secret" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 5: Get the Signing Secret
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-6-configure-docbrain" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 6: Configure DocBrain
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-7-verify" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 7: Verify
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#capture-a-thread" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Capture a thread
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#ask-a-question" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Ask a question
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#incident-triage-at-2am" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Incident triage at 2am
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#check-documentation-freshness" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Check documentation freshness
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nudge-doc-owners" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nudge doc owners
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#onboard-a-new-hire" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Onboard a new hire
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#conversation-memory-auto-listen" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Conversation memory &amp; auto-listen
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#proactive-notifications" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Proactive Notifications
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-feedback-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How Feedback Works
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
+        Honest limitations
       
     </span>
   </a>
@@ -1961,388 +1447,83 @@
   
 
 
-<h1 id="slack-integration">Slack Integration<a class="headerlink" href="#slack-integration" title="Permanent link">&para;</a></h1>
-<p>Connect DocBrain to Slack so your team can query documentation, triage incidents, and get proactive notifications — all without leaving their workspace.</p>
-<h2 id="what-you-get">What You Get<a class="headerlink" href="#what-you-get" title="Permanent link">&para;</a></h2>
+<h1 id="coding-agents-teach-your-agent-to-file-docs">Coding Agents — Teach Your Agent to File Docs<a class="headerlink" href="#coding-agents-teach-your-agent-to-file-docs" title="Permanent link">&para;</a></h1>
+<p>Your coding agent already has DocBrain's tools. The <a href="https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp"><code>docbrain-mcp</code></a> server (MIT, in <code>crates/</code>) gives Claude Code, Cursor, and any MCP-compatible editor four tools:</p>
 <table>
 <thead>
 <tr>
-<th>Command</th>
+<th>Tool</th>
+<th>Direction</th>
 <th>What it does</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>/docbrain ask &lt;question&gt;</code></td>
-<td>Ask any documentation question — get a sourced, confidence-rated answer</td>
+<td><code>docbrain_ask</code></td>
+<td>read</td>
+<td>Cited answers from your org's memory, in the editor</td>
 </tr>
 <tr>
-<td><code>/docbrain incident &lt;description&gt;</code></td>
-<td>Incident mode — prioritizes runbooks and past incident docs</td>
+<td><code>docbrain_suggest_capture</code></td>
+<td>read</td>
+<td>Checks whether documentation gaps exist for a file or function</td>
 </tr>
 <tr>
-<td><code>/docbrain freshness [space]</code></td>
-<td>Freshness report for a Confluence space (or all spaces)</td>
+<td><code>docbrain_annotate</code></td>
+<td>write</td>
+<td>Files a knowledge fragment (a decision, fix, or caveat) tied to a file and line range</td>
 </tr>
 <tr>
-<td><code>/docbrain notify [space]</code></td>
-<td>DM stale doc owners to review their content</td>
-</tr>
-<tr>
-<td><code>/docbrain onboard &lt;space&gt;</code></td>
-<td>AI-curated reading list for new team members</td>
-</tr>
-<tr>
-<td><code>/docbrain help</code></td>
-<td>Show available commands</td>
+<td><code>docbrain_commit_capture</code></td>
+<td>write</td>
+<td>Captures the <em>why</em> behind a change at commit time</td>
 </tr>
 </tbody>
 </table>
-<p>Answers include feedback buttons (Helpful / Not helpful) that feed back into DocBrain's learning loop — the same way the web UI and API do.</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>Most teams wire these up and only ever use <code>ask</code>. The write path is where the leverage is: <strong>the moment your agent helps you fix something is the one moment the knowledge exists, is fresh, and costs nothing to keep.</strong> Sessions end, terminal scrollback dies, and the fix your agent found never reaches the teammate who hits the same error next month — unless the agent files it.</p>
+<p>The missing piece is not a feature. It's standing instructions.</p>
+<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
+<p>Register the MCP server in your editor (Claude Code shown; Cursor and others use their equivalent MCP config):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>docbrain<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--env<span class="w"> </span><span class="nv">DOCBRAIN_API_KEY</span><span class="o">=</span>db_sk_...<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--env<span class="w"> </span><span class="nv">DOCBRAIN_SERVER_URL</span><span class="o">=</span>https://docbrain.your-org.internal<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--<span class="w"> </span>docbrain-mcp
+</span></code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Use a scoped key</p>
+<p>Give the agent a key with capture permission but nothing more. Write tools
+are permission-gated server-side — a read-only key can <code>ask</code> but cannot
+file captures.</p>
+</div>
+<h2 id="the-snippet">The snippet<a class="headerlink" href="#the-snippet" title="Permanent link">&para;</a></h2>
+<p>Add this to your project's <code>CLAUDE.md</code> (or global <code>~/.claude/CLAUDE.md</code>):</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gu">## DocBrain</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>When we resolve an error, discover non-obvious behavior, or make a decision a
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>future engineer would need, do this before the task ends:
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">1.</span> Call docbrain_suggest_capture for the files involved.
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">2.</span> If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>   trap to avoid — and show it to me for approval before calling
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>   docbrain_annotate.
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>Never include secrets, tokens, hostnames from .env files, or customer data in
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>a capture. When in doubt, leave it out.
+</span></code></pre></div>
+<p>Cursor users: the same text goes in <code>.cursor/rules/docbrain.mdc</code> with <code>alwaysApply: true</code>.</p>
+<h2 id="what-happens">What happens<a class="headerlink" href="#what-happens" title="Permanent link">&para;</a></h2>
+<ol>
+<li>You and your agent fix something real.</li>
+<li>The agent asks DocBrain whether that knowledge already exists (<code>docbrain_suggest_capture</code> — a corpus check, not a guess).</li>
+<li>If the org doesn't have it, the agent drafts a capture and <strong>asks you first</strong>. You see exactly what leaves the machine.</li>
+<li>Approved captures land as fragments in the normal review pipeline — space owners, quality gates, nothing auto-publishes.</li>
+</ol>
+<h2 id="privacy-properties">Privacy properties<a class="headerlink" href="#privacy-properties" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A running DocBrain server accessible via a <strong>public HTTPS URL</strong> (e.g. <code>https://docbrain.yourcompany.com</code>). Slack needs to reach your server over the internet.</li>
-<li>Admin access to your Slack workspace.</li>
+<li><strong>Nothing is automatic.</strong> The agent proposes; a human approves every capture, visibly, in the session.</li>
+<li><strong>The session never uploads.</strong> Only the approved 3–5 line capture crosses the wire — not your transcript, not your code, not your prompts.</li>
+<li><strong>The client is auditable.</strong> Every line of code that touches your session is MIT-licensed in <a href="https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp"><code>crates/docbrain-mcp</code></a>.</li>
+<li><strong>Captures are attributed and reviewed</strong> like any other fragment — the same governance that applies to Slack captures applies here.</li>
 </ul>
-<h2 id="step-1-create-the-slack-app">Step 1: Create the Slack App<a class="headerlink" href="#step-1-create-the-slack-app" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Go to <a href="https://api.slack.com/apps">https://api.slack.com/apps</a> and click <strong>Create New App</strong> → <strong>From scratch</strong>.</li>
-<li>Name it <code>DocBrain</code> (or whatever your team prefers).</li>
-<li>Select your workspace.</li>
-</ol>
-<h2 id="step-2-configure-the-slash-command">Step 2: Configure the Slash Command<a class="headerlink" href="#step-2-configure-the-slash-command" title="Permanent link">&para;</a></h2>
-<ol>
-<li>In the left sidebar, click <strong>Slash Commands</strong> → <strong>Create New Command</strong>.</li>
-<li>Fill in:</li>
-</ol>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Command</td>
-<td><code>/docbrain</code></td>
-</tr>
-<tr>
-<td>Request URL</td>
-<td><code>https://&lt;your-domain&gt;/slack/commands</code></td>
-</tr>
-<tr>
-<td>Short Description</td>
-<td>Query your documentation</td>
-</tr>
-<tr>
-<td>Usage Hint</td>
-<td><code>ask &lt;question&gt;</code> or <code>incident &lt;description&gt;</code> or <code>help</code></td>
-</tr>
-</tbody>
-</table>
-<ol>
-<li>Click <strong>Save</strong>.</li>
-</ol>
-<h2 id="step-3-enable-interactivity">Step 3: Enable Interactivity<a class="headerlink" href="#step-3-enable-interactivity" title="Permanent link">&para;</a></h2>
-<p>This is required for the feedback buttons (Helpful / Not helpful) on answers.</p>
-<ol>
-<li>In the left sidebar, click <strong>Interactivity &amp; Shortcuts</strong> → toggle <strong>On</strong>.</li>
-<li>Set the <strong>Request URL</strong> to:</li>
-</ol>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>https://&lt;your-domain&gt;/slack/interactions
-</span></code></pre></div>
-<ol>
-<li>Click <strong>Save Changes</strong>.</li>
-</ol>
-<h2 id="step-3b-add-message-shortcut">Step 3b: Add Message Shortcut<a class="headerlink" href="#step-3b-add-message-shortcut" title="Permanent link">&para;</a></h2>
-<p>This allows users to capture Slack threads via a right-click shortcut — useful because Slack blocks slash commands inside threads.</p>
-<ol>
-<li>In the left sidebar, click <strong>Interactivity &amp; Shortcuts</strong> → <strong>Shortcuts</strong> → <strong>Create New Shortcut</strong>.</li>
-<li>Select <strong>On messages</strong>.</li>
-<li>Fill in:</li>
-</ol>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Name</td>
-<td><code>Capture to DocBrain</code></td>
-</tr>
-<tr>
-<td>Callback ID</td>
-<td><code>docbrain_capture</code></td>
-</tr>
-<tr>
-<td>Short Description</td>
-<td><code>Index this thread into DocBrain</code></td>
-</tr>
-</tbody>
-</table>
-<ol>
-<li>Click <strong>Save</strong>.</li>
-</ol>
-<h2 id="step-3c-enable-event-subscriptions-optional">Step 3c: Enable Event Subscriptions (optional)<a class="headerlink" href="#step-3c-enable-event-subscriptions-optional" title="Permanent link">&para;</a></h2>
-<p>This enables <code>@DocBrain capture</code> mentions as an alternative way to trigger thread capture, and unlocks <strong>auto-listen in threads</strong> — un-mentioned follow-ups inside a thread the bot already replied in are treated as continued questions, so users don't have to re-mention the bot every turn.</p>
-<ol>
-<li>In the left sidebar, click <strong>Event Subscriptions</strong> → toggle <strong>On</strong>.</li>
-<li>Set the <strong>Request URL</strong> to:</li>
-</ol>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>https://&lt;your-domain&gt;/slack/events
-</span></code></pre></div>
-<ol>
-<li>Under <strong>Subscribe to bot events</strong>, add:</li>
-</ol>
-<table>
-<thead>
-<tr>
-<th>Event</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>app_mention</code></td>
-<td>Explicit <code>@DocBrain</code> mentions</td>
-</tr>
-<tr>
-<td><code>message.channels</code></td>
-<td>Auto-listen follow-ups in public-channel threads</td>
-</tr>
-<tr>
-<td><code>message.groups</code></td>
-<td>Auto-listen follow-ups in private channels</td>
-</tr>
-<tr>
-<td><code>message.im</code></td>
-<td>Auto-listen follow-ups in DMs</td>
-</tr>
-<tr>
-<td><code>message.mpim</code></td>
-<td>Auto-listen follow-ups in group DMs</td>
-</tr>
-</tbody>
-</table>
-<p>The <code>message.*</code> events are only needed if you want auto-listen; <code>app_mention</code> alone is enough for explicit-mention-only behavior.
-4. Go to <strong>OAuth &amp; Permissions</strong> → <strong>Bot Token Scopes</strong> and add <code>app_mentions:read</code> and the <code>*:history</code> scopes (see Step 4) if not already present.
-5. Click <strong>Save Changes</strong>.</p>
-<h2 id="step-4-add-oauth-scopes">Step 4: Add OAuth Scopes<a class="headerlink" href="#step-4-add-oauth-scopes" title="Permanent link">&para;</a></h2>
-<ol>
-<li>In the left sidebar, click <strong>OAuth &amp; Permissions</strong>.</li>
-<li>Under <strong>Bot Token Scopes</strong>, add:</li>
-</ol>
-<table>
-<thead>
-<tr>
-<th>Scope</th>
-<th>Why</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>commands</code></td>
-<td>Handle <code>/docbrain</code> slash commands</td>
-</tr>
-<tr>
-<td><code>chat:write</code></td>
-<td>Post answers and notifications</td>
-</tr>
-<tr>
-<td><code>users:read.email</code></td>
-<td>Look up doc authors by email for stale-doc DMs</td>
-</tr>
-<tr>
-<td><code>app_mentions:read</code></td>
-<td>Handle <code>@DocBrain capture</code> mentions in threads</td>
-</tr>
-<tr>
-<td><code>channels:history</code></td>
-<td>Read thread messages for auto-listen / capture in public channels</td>
-</tr>
-<tr>
-<td><code>groups:history</code></td>
-<td>Read thread messages for auto-listen / capture in private channels</td>
-</tr>
-<tr>
-<td><code>im:history</code></td>
-<td>Read thread messages for auto-listen / capture in DMs</td>
-</tr>
-<tr>
-<td><code>mpim:history</code></td>
-<td>Read thread messages for auto-listen / capture in group DMs</td>
-</tr>
-</tbody>
-</table>
-<ol>
-<li>Click <strong>Install to Workspace</strong> (or <strong>Reinstall</strong> if already installed).</li>
-<li>Copy the <strong>Bot User OAuth Token</strong> (<code>xoxb-...</code>) — you'll need this in the next step.</li>
-</ol>
-<h2 id="step-5-get-the-signing-secret">Step 5: Get the Signing Secret<a class="headerlink" href="#step-5-get-the-signing-secret" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Go to <strong>Basic Information</strong> in the left sidebar.</li>
-<li>Under <strong>App Credentials</strong>, copy the <strong>Signing Secret</strong>.</li>
-</ol>
-<h2 id="step-6-configure-docbrain">Step 6: Configure DocBrain<a class="headerlink" href="#step-6-configure-docbrain" title="Permanent link">&para;</a></h2>
-<p>Add these environment variables to your <code>.env</code> or deployment config:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Required — without SLACK_SIGNING_SECRET, Slack routes are not mounted</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">SLACK_SIGNING_SECRET</span><span class="o">=</span>your-signing-secret-here
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nv">SLACK_BOT_TOKEN</span><span class="o">=</span>xoxb-your-bot-token-here
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Optional — channel for critical gap alerts (e.g. #docs-alerts)</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nv">SLACK_GAP_NOTIFICATION_CHANNEL</span><span class="o">=</span><span class="c1">#docs-alerts</span>
-</span></code></pre></div>
-<p>Restart DocBrain. On startup you should see:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>[startup] Slack integration enabled
-</span></code></pre></div>
-<p>If <code>SLACK_SIGNING_SECRET</code> is not set, the Slack routes will not be registered and you'll see no Slack-related startup message.</p>
-<h2 id="step-7-verify">Step 7: Verify<a class="headerlink" href="#step-7-verify" title="Permanent link">&para;</a></h2>
-<p>In any Slack channel, type:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/docbrain help
-</span></code></pre></div>
-<p>You should see the list of available commands. Then try a real query:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/docbrain ask how do we deploy to production?
-</span></code></pre></div>
-<p>You'll see a "Searching documentation..." acknowledgement, followed by the full answer with sources and feedback buttons.</p>
-<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
-<h3 id="capture-a-thread">Capture a thread<a class="headerlink" href="#capture-a-thread" title="Permanent link">&para;</a></h3>
-<p>Slack blocks slash commands in threads, so <code>/docbrain capture</code> only works as a top-level command. Use one of these alternatives to capture a thread:</p>
-<p><strong>Message shortcut (recommended):</strong> Right-click any message in a thread → <strong>Shortcuts</strong> → <strong>Capture to DocBrain</strong></p>
-<p><strong>Bot mention:</strong> Type <code>@DocBrain capture</code> in a thread (requires Event Subscriptions — see Step 3c)</p>
-<p><strong>Slash command (top-level only):</strong> <code>/docbrain capture</code> works outside of threads but is blocked by Slack inside threads.</p>
-<h3 id="ask-a-question">Ask a question<a class="headerlink" href="#ask-a-question" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/docbrain ask what's the runbook for Redis OOM errors?
-</span></code></pre></div>
-<p>Returns a sourced answer with confidence rating, freshness indicators on each source, and thumbs up/down buttons.</p>
-<h3 id="incident-triage-at-2am">Incident triage at 2am<a class="headerlink" href="#incident-triage-at-2am" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/docbrain incident payments service returning 502 after deploy
-</span></code></pre></div>
-<p>Prioritizes runbooks and rollback procedures. The response is posted to the channel (visible to everyone) so the whole on-call team can see it.</p>
-<h3 id="check-documentation-freshness">Check documentation freshness<a class="headerlink" href="#check-documentation-freshness" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>/docbrain freshness PLATFORM
-</span></code></pre></div>
-<p>Returns a summary: how many docs are fresh, stale, or outdated in the PLATFORM space.</p>
-<h3 id="nudge-doc-owners">Nudge doc owners<a class="headerlink" href="#nudge-doc-owners" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>/docbrain notify SRE
-</span></code></pre></div>
-<p>Sends a Slack DM to every author in the SRE space whose docs are stale (freshness score &lt; 40). The DM includes the doc title, how old it is, and how many times it was cited recently.</p>
-<h3 id="onboard-a-new-hire">Onboard a new hire<a class="headerlink" href="#onboard-a-new-hire" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>/docbrain onboard ENG
-</span></code></pre></div>
-<p>Generates an AI-curated reading list of the most important docs in the ENG space, sorted by relevance and freshness — takes about 30 seconds.</p>
-<h3 id="conversation-memory-auto-listen">Conversation memory &amp; auto-listen<a class="headerlink" href="#conversation-memory-auto-listen" title="Permanent link">&para;</a></h3>
-<p>DocBrain remembers prior turns in a conversation, so follow-up questions resolve in context instead of starting from scratch:</p>
-<ul>
-<li><strong>Threaded mentions</strong> share history within the thread — everyone in the thread builds on the same conversation.</li>
-<li><strong>Top-level mentions</strong> share history per <code>(channel, user)</code> — your follow-ups continue your own conversation.</li>
-</ul>
-<p><strong>Auto-listen.</strong> Once the <code>message.*</code> events are subscribed (Step 3c) and the bot is a member of the channel, you no longer need to re-mention it on every turn — DocBrain answers un-mentioned follow-ups in any thread it already participated in. Top-level (non-thread) messages still require an explicit <code>@mention</code> to start a conversation.</p>
-<p><strong>Safety.</strong> The bot ignores its own and other bots' messages (no reply loops) and only responds in threads it actually joined. It must be a member of the channel to receive messages at all.</p>
-<p>This conversation-memory behavior is consistent across surfaces — the same follow-up-in-context experience applies on the web UI and the CLI.</p>
-<h2 id="proactive-notifications">Proactive Notifications<a class="headerlink" href="#proactive-notifications" title="Permanent link">&para;</a></h2>
-<p>When configured, DocBrain sends automatic notifications without anyone running a command:</p>
-<table>
-<thead>
-<tr>
-<th>Notification</th>
-<th>Trigger</th>
-<th>Where</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Stale doc DMs</td>
-<td>Background scheduler (every <code>NOTIFICATION_INTERVAL_HOURS</code>, default 24h)</td>
-<td>DM to doc authors</td>
-</tr>
-<tr>
-<td>Critical gap alerts</td>
-<td>After each autopilot gap analysis run</td>
-<td><code>SLACK_GAP_NOTIFICATION_CHANNEL</code></td>
-</tr>
-<tr>
-<td>Draft ready</td>
-<td>When autopilot generates a new draft</td>
-<td><code>SLACK_GAP_NOTIFICATION_CHANNEL</code></td>
-</tr>
-</tbody>
-</table>
-<p>To restrict notifications to specific spaces:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">NOTIFICATION_SPACE_FILTER</span><span class="o">=</span>PLATFORM,SRE
-</span></code></pre></div>
-<h2 id="configuration-reference">Configuration Reference<a class="headerlink" href="#configuration-reference" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Variable</th>
-<th>Required</th>
-<th>Default</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>SLACK_SIGNING_SECRET</code></td>
-<td>Yes</td>
-<td>—</td>
-<td>Signing secret from <strong>Basic Information</strong> → <strong>App Credentials</strong></td>
-</tr>
-<tr>
-<td><code>SLACK_BOT_TOKEN</code></td>
-<td>Yes</td>
-<td>—</td>
-<td>Bot token (<code>xoxb-...</code>) from <strong>OAuth &amp; Permissions</strong></td>
-</tr>
-<tr>
-<td><code>SLACK_GAP_NOTIFICATION_CHANNEL</code></td>
-<td>No</td>
-<td>—</td>
-<td>Channel for gap/draft alerts (e.g. <code>#docs-alerts</code>)</td>
-</tr>
-<tr>
-<td><code>NOTIFICATION_INTERVAL_HOURS</code></td>
-<td>No</td>
-<td><code>24</code></td>
-<td>How often the stale-doc notification scheduler runs</td>
-</tr>
-<tr>
-<td><code>NOTIFICATION_SPACE_FILTER</code></td>
-<td>No</td>
-<td>—</td>
-<td>Comma-separated spaces to limit notifications</td>
-</tr>
-</tbody>
-</table>
-<h2 id="how-feedback-works">How Feedback Works<a class="headerlink" href="#how-feedback-works" title="Permanent link">&para;</a></h2>
-<p>When DocBrain posts an answer, it includes two buttons:</p>
-<ul>
-<li><strong>Helpful</strong> — records positive feedback on that answer's episode</li>
-<li><strong>Not helpful</strong> — records negative feedback</li>
-</ul>
-<p>This feedback feeds into:
-- <strong>Procedural memory</strong> — adjusts retrieval rule success rates so future searches are better
-- <strong>Autopilot</strong> — negative feedback contributes to gap detection and clustering
-- <strong>Consolidation</strong> — patterns from feedback influence entity extraction and rule creation</p>
-<p>The buttons are replaced with an acknowledgement after you click, so each person can only vote once.</p>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<p><strong>"Dispatch failed" or command not working</strong>
-- Verify your Request URL is reachable from the internet: <code>curl -I https://&lt;your-domain&gt;/slack/commands</code>
-- Check that <code>SLACK_SIGNING_SECRET</code> is set — without it, the routes aren't mounted</p>
-<p><strong>"Slack bot token not configured"</strong>
-- Set <code>SLACK_BOT_TOKEN</code> in your environment. The signing secret enables the routes, but the bot token is needed to post messages and send DMs.</p>
-<p><strong>Feedback buttons not appearing</strong>
-- Buttons only appear when the answer has an <code>episode_id</code> (i.e., the question was stored as an episode). Greetings, unclear queries, and cache hits don't produce episodes, so no buttons are shown.</p>
-<p><strong>Notifications not sending</strong>
-- Stale-doc DMs require <code>SLACK_BOT_TOKEN</code> and the <code>users:read.email</code> scope. The author's email in Confluence must match their Slack email.
-- Gap alerts require <code>SLACK_GAP_NOTIFICATION_CHANNEL</code> to be set and <code>AUTOPILOT_ENABLED=true</code>.</p>
-<p><strong>Slow responses</strong>
-- <code>/docbrain ask</code> and <code>/docbrain incident</code> return an immediate acknowledgement and post the full answer asynchronously (within a few seconds depending on your LLM provider).
-- <code>/docbrain onboard</code> can take up to 30 seconds.
-- <code>/docbrain freshness</code> returns synchronously and should be under 3 seconds.</p>
+<h2 id="honest-limitations">Honest limitations<a class="headerlink" href="#honest-limitations" title="Permanent link">&para;</a></h2>
+<p>Agents follow standing instructions probabilistically — some sessions will forget to check. Treat the snippet as a habit-builder, not a guarantee: teams that also mention it in code review ("did the agent capture this?") see far higher capture rates. If your editor supports session-end hooks, a one-line reminder hook makes the check near-deterministic.</p>
 
 
 
@@ -2375,44 +1556,6 @@
       
         <footer class="md-footer">
   
-    
-      
-      <nav class="md-footer__inner md-grid" aria-label="Footer" >
-        
-          
-          <a href="../mcp-tools/" class="md-footer__link md-footer__link--prev" aria-label="Previous: MCP Tool Platform">
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
-            </div>
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Previous
-              </span>
-              <div class="md-ellipsis">
-                MCP Tool Platform
-              </div>
-            </div>
-          </a>
-        
-        
-          
-          <a href="../gitlab-capture/" class="md-footer__link md-footer__link--next" aria-label="Next: GitLab Capture">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                GitLab Capture
-              </div>
-            </div>
-            <div class="md-footer__button md-icon">
-              
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
-            </div>
-          </a>
-        
-      </nav>
     
   
   <div class="md-footer-meta md-typeset">
