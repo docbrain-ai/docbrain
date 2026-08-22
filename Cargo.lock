@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "docbrain-cli"
-version = "1.5.15"
+version = "1.5.16"
 dependencies = [
  "anyhow",
  "chrono",
@@ -346,7 +346,7 @@ dependencies = [
 
 [[package]]
 name = "docbrain-mcp"
-version = "1.5.15"
+version = "1.5.16"
 dependencies = [
  "anyhow",
  "axum",
