@@ -13,6 +13,22 @@ The whole pipeline is deterministic: no LLM call, no extra network request in an
 A premise check is a set lookup against the file listing your git ingest already records.
 It behaves identically on a laptop and in production.
 
+## In plain terms
+
+Every guide and runbook quietly depends on real things — "run this script", "edit that
+file". When those things move or get deleted, the document doesn't know. It keeps giving
+the old answer, confidently.
+
+DocBrain writes down, at the moment knowledge is saved, exactly which real things it
+depends on. Then a watchman checks that list against your actual repositories, every five
+minutes, forever. The moment a fact your knowledge relies on disappears, that specific
+piece of knowledge is flagged — with proof: *what* vanished, *when*, and where it went if
+that can be determined. Your team gets a message; nobody has to reread anything.
+
+And it never cries wolf: it only watches facts it has personally confirmed were true, it
+never guesses between possibilities, and when it can't check something it says "can't
+check" — never "broken".
+
 ## Where premises come from
 
 1. **Automatic extraction.** When a fragment is indexed, path-shaped tokens in inline code
@@ -110,6 +126,25 @@ its first path segment — and are deliberate trade-offs in favor of precision:
   than ten missed ones. That asymmetry drives every rule above: deterministic oracles only,
   dated absences, no guessing between candidates, and silence whenever the evidence is
   incomplete.
+
+## What the monitor costs to run
+
+Almost nothing, and document count is the wrong variable to worry about:
+
+- **Documents are not monitored — captured claims are.** A thousand ingested documents
+  create zero premises; only knowledge fragments carry them, and only their path-shaped
+  claims. Large corpora typically produce hundreds of premises, not thousands.
+- **Each check is an in-memory set lookup** — microseconds. A sweep is one small database
+  read, one lookup per premise, and writes only for rows whose state or verdict actually
+  changed. A sweep over an unchanged world writes nothing and emits nothing. A thousand
+  premises is roughly a millisecond of comparison every five minutes; even a hundred
+  thousand stays well under a second.
+- **The file inventory lives in memory** and refreshes only when your repositories sync.
+  The Kubernetes repository's ~31,000 paths measure a few megabytes. The monitor never
+  clones anything, never reads document bodies, and never calls a model.
+
+The heavy work — cloning repositories, embedding documents — happens at ingest time, where
+it always did. The monitor adds a five-minute heartbeat of list-against-list comparison.
 
 ## Configuration
 

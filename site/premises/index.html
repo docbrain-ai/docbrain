@@ -746,6 +746,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#in-plain-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In plain terms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-premises-come-from" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -805,6 +816,17 @@
     <span class="md-ellipsis">
       
         Behaviors worth knowing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-monitor-costs-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the monitor costs to run
       
     </span>
   </a>
@@ -1529,6 +1551,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#in-plain-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In plain terms
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#where-premises-come-from" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1595,6 +1628,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#what-the-monitor-costs-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the monitor costs to run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1636,6 +1680,18 @@ cycle, and a claim whose premise died tells you so, with evidence.</p>
 <p>The whole pipeline is deterministic: no LLM call, no extra network request in any check.
 A premise check is a set lookup against the file listing your git ingest already records.
 It behaves identically on a laptop and in production.</p>
+<h2 id="in-plain-terms">In plain terms<a class="headerlink" href="#in-plain-terms" title="Permanent link">&para;</a></h2>
+<p>Every guide and runbook quietly depends on real things — "run this script", "edit that
+file". When those things move or get deleted, the document doesn't know. It keeps giving
+the old answer, confidently.</p>
+<p>DocBrain writes down, at the moment knowledge is saved, exactly which real things it
+depends on. Then a watchman checks that list against your actual repositories, every five
+minutes, forever. The moment a fact your knowledge relies on disappears, that specific
+piece of knowledge is flagged — with proof: <em>what</em> vanished, <em>when</em>, and where it went if
+that can be determined. Your team gets a message; nobody has to reread anything.</p>
+<p>And it never cries wolf: it only watches facts it has personally confirmed were true, it
+never guesses between possibilities, and when it can't check something it says "can't
+check" — never "broken".</p>
 <h2 id="where-premises-come-from">Where premises come from<a class="headerlink" href="#where-premises-come-from" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Automatic extraction.</strong> When a fragment is indexed, path-shaped tokens in inline code
@@ -1751,6 +1807,23 @@ its first path segment — and are deliberate trade-offs in favor of precision:<
   dated absences, no guessing between candidates, and silence whenever the evidence is
   incomplete.</li>
 </ul>
+<h2 id="what-the-monitor-costs-to-run">What the monitor costs to run<a class="headerlink" href="#what-the-monitor-costs-to-run" title="Permanent link">&para;</a></h2>
+<p>Almost nothing, and document count is the wrong variable to worry about:</p>
+<ul>
+<li><strong>Documents are not monitored — captured claims are.</strong> A thousand ingested documents
+  create zero premises; only knowledge fragments carry them, and only their path-shaped
+  claims. Large corpora typically produce hundreds of premises, not thousands.</li>
+<li><strong>Each check is an in-memory set lookup</strong> — microseconds. A sweep is one small database
+  read, one lookup per premise, and writes only for rows whose state or verdict actually
+  changed. A sweep over an unchanged world writes nothing and emits nothing. A thousand
+  premises is roughly a millisecond of comparison every five minutes; even a hundred
+  thousand stays well under a second.</li>
+<li><strong>The file inventory lives in memory</strong> and refreshes only when your repositories sync.
+  The Kubernetes repository's ~31,000 paths measure a few megabytes. The monitor never
+  clones anything, never reads document bodies, and never calls a model.</li>
+</ul>
+<p>The heavy work — cloning repositories, embedding documents — happens at ingest time, where
+it always did. The monitor adds a five-minute heartbeat of list-against-list comparison.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
