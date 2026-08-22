@@ -1384,6 +1384,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#capturing-knowledge-with-premises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capturing Knowledge with Premises
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#the-snippet" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1495,17 +1506,42 @@
 are permission-gated server-side — a read-only key can <code>ask</code> but cannot
 file captures.</p>
 </div>
+<h2 id="capturing-knowledge-with-premises">Capturing Knowledge with Premises<a class="headerlink" href="#capturing-knowledge-with-premises" title="Permanent link">&para;</a></h2>
+<p>When calling <code>docbrain_annotate</code>, agents may include an optional <code>premises</code> array to link captured knowledge to verifiable facts about your codebase:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">"file_path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"src/handlers/payment.rs"</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">"annotation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"This API expects a Stripe webhook signature in X-Stripe-Signature header..."</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">"premises"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">"premise_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">"expression"</span><span class="p">:</span><span class="w"> </span><span class="s2">"src/config/stripe_keys.env"</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="nt">"premise_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"path"</span><span class="p">,</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">      </span><span class="nt">"expression"</span><span class="p">:</span><span class="w"> </span><span class="s2">"docs/webhook-integration.md"</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Premise Types (v1):</strong></p>
+<ul>
+<li><code>path</code> — A file path that must exist in a connected source. DocBrain monitors this path against your git sources' file listings (see <code>PREMISE_MONITOR_ENABLED</code>). If the path is verified at capture and later disappears, the annotation fires a <code>premise.broken</code> event. Paths never found at capture remain <code>dormant</code> — they do not alert.</li>
+</ul>
+<p><strong>Other Premise Types:</strong></p>
+<p>Other <code>premise_type</code> values are accepted and recorded but not currently validated. They remain in <code>dormant</code> state and never trigger alerts. This allows agents to encode additional premise types for future validation.</p>
+<p><strong>Malformed Premises:</strong></p>
+<p>If an array item is missing required fields (<code>premise_type</code>, <code>expression</code>) or has invalid types, it is skipped silently — the capture does not fail. This allows robust agent capture even if premise formatting is incorrect.</p>
 <h2 id="the-snippet">The snippet<a class="headerlink" href="#the-snippet" title="Permanent link">&para;</a></h2>
 <p>Add this to your project's <code>CLAUDE.md</code> (or global <code>~/.claude/CLAUDE.md</code>):</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gu">## DocBrain</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>When we resolve an error, discover non-obvious behavior, or make a decision a
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>future engineer would need, do this before the task ends:
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">1.</span> Call docbrain_suggest_capture for the files involved.
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">2.</span> If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>   trap to avoid — and show it to me for approval before calling
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>   docbrain_annotate.
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>Never include secrets, tokens, hostnames from .env files, or customer data in
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>a capture. When in doubt, leave it out.
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gu">## DocBrain</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>When we resolve an error, discover non-obvious behavior, or make a decision a
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>future engineer would need, do this before the task ends:
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">1.</span> Call docbrain_suggest_capture for the files involved.
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">2.</span> If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>   trap to avoid — and show it to me for approval before calling
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>   docbrain_annotate.
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>Never include secrets, tokens, hostnames from .env files, or customer data in
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>a capture. When in doubt, leave it out.
 </span></code></pre></div>
 <p>Cursor users: the same text goes in <code>.cursor/rules/docbrain.mdc</code> with <code>alwaysApply: true</code>.</p>
 <h2 id="what-happens">What happens<a class="headerlink" href="#what-happens" title="Permanent link">&para;</a></h2>

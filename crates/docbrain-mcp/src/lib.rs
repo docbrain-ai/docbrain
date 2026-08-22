@@ -324,6 +324,18 @@ impl McpServer {
                             "space": {
                                 "type": "string",
                                 "description": "Documentation space to associate with (e.g. team or project name). Optional."
+                            },
+                            "premises": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "premise_type": { "type": "string" },
+                                        "expression": { "type": "string" }
+                                    },
+                                    "required": ["premise_type", "expression"]
+                                },
+                                "description": "Optional machine-checkable premises this annotation rests on; v1 checks type 'path'"
                             }
                         },
                         "required": ["file_path", "annotation"]
@@ -915,6 +927,9 @@ impl McpServer {
         if let Some(s) = space {
             body["space"] = json!(s);
         }
+        if let Some(premises) = args["premises"].as_array() {
+            body["premises"] = json!(premises);
+        }
 
         match self.create_fragment(&body).await? {
             Ok(result) => {
@@ -1409,6 +1424,17 @@ mod tests {
         let req_strs: Vec<&str> = required.iter().filter_map(|v| v.as_str()).collect();
         assert!(req_strs.contains(&"file_path"));
         assert!(req_strs.contains(&"annotation"));
+
+        // premises is optional metadata, not required on the wire.
+        assert!(!req_strs.contains(&"premises"));
+        let premises_schema = &annotate["inputSchema"]["properties"]["premises"];
+        assert_eq!(premises_schema["type"], "array");
+        let item_required = premises_schema["items"]["required"]
+            .as_array()
+            .expect("premises items should declare required fields");
+        let item_req_strs: Vec<&str> = item_required.iter().filter_map(|v| v.as_str()).collect();
+        assert!(item_req_strs.contains(&"premise_type"));
+        assert!(item_req_strs.contains(&"expression"));
     }
 
     #[tokio::test]

@@ -29,6 +29,39 @@ claude mcp add docbrain \
     are permission-gated server-side — a read-only key can `ask` but cannot
     file captures.
 
+## Capturing Knowledge with Premises
+
+When calling `docbrain_annotate`, agents may include an optional `premises` array to link captured knowledge to verifiable facts about your codebase:
+
+```json
+{
+  "file_path": "src/handlers/payment.rs",
+  "annotation": "This API expects a Stripe webhook signature in X-Stripe-Signature header...",
+  "premises": [
+    {
+      "premise_type": "path",
+      "expression": "src/config/stripe_keys.env"
+    },
+    {
+      "premise_type": "path",
+      "expression": "docs/webhook-integration.md"
+    }
+  ]
+}
+```
+
+**Premise Types (v1):**
+
+- `path` — A file path that must exist in a connected source. DocBrain monitors this path against your git sources' file listings (see `PREMISE_MONITOR_ENABLED`). If the path is verified at capture and later disappears, the annotation fires a `premise.broken` event. Paths never found at capture remain `dormant` — they do not alert.
+
+**Other Premise Types:**
+
+Other `premise_type` values are accepted and recorded but not currently validated. They remain in `dormant` state and never trigger alerts. This allows agents to encode additional premise types for future validation.
+
+**Malformed Premises:**
+
+If an array item is missing required fields (`premise_type`, `expression`) or has invalid types, it is skipped silently — the capture does not fail. This allows robust agent capture even if premise formatting is incorrect.
+
 ## The snippet
 
 Add this to your project's `CLAUDE.md` (or global `~/.claude/CLAUDE.md`):

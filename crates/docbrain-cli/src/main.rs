@@ -202,6 +202,15 @@ enum Commands {
         #[command(subcommand)]
         action: AdminAction,
     },
+    /// Subscription status and identity reporting (admin only).
+    ///
+    /// Reports what your DocBrain server sees: subscription state, organisation
+    /// and expiry. DocBrain does not change how it behaves based on any of it —
+    /// nothing here can disable or limit the product.
+    License {
+        #[command(subcommand)]
+        action: LicenseAction,
+    },
     /// CI/CD pipeline knowledge capture — analyze PRs and deployments
     Ci {
         #[command(subcommand)]
@@ -217,6 +226,32 @@ enum AdminAction {
     Ingest {
         #[command(subcommand)]
         action: AdminIngestAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum LicenseAction {
+    /// Show current subscription certificate status
+    Show,
+    /// Identity report — how many people your connected sources account for.
+    ///
+    /// Breaks the count down per source, and gives a lower and upper bound on
+    /// distinct people, because the same person can appear in more than one
+    /// source and DocBrain does not try to merge them. Useful for checking your
+    /// own figures before a renewal, and with --export it produces the signed
+    /// report to send with one.
+    ///
+    /// Read-only. It reports and never changes anything, including how DocBrain
+    /// behaves.
+    Attest {
+        /// Write the signed report to a file instead of printing it. This is the
+        /// file to send with a renewal — it is signed so the figures in it can be
+        /// checked without being taken on trust.
+        #[arg(long)]
+        export: bool,
+        /// Where to write the signed report. Required with --export.
+        #[arg(short = 'o', long = "output", value_name = "FILE")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -1278,6 +1313,12 @@ async fn main() -> Result<()> {
                 "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
             ))?;
             handle_admin(&server_url, action, &key).await?;
+        }
+        Commands::License { action } => {
+            let key = api_key.ok_or_else(|| anyhow::anyhow!(
+                "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
+            ))?;
+            handle_license(&server_url, action, &key).await?;
         }
         Commands::Version => {
             show_version(&server_url).await?;
@@ -3737,6 +3778,362 @@ async fn admin_ingest_trigger(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Subscription license status
+//
+// A dumb HTTP passthrough: GET the server's answer, print it. No
+// verification, counting or signing logic belongs here — the server already
+// did that and this just relays what it said (spec §8.4).
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[derive(serde::Deserialize)]
+struct LicenseSourceResponse {
+    kind: String,
+    path: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct LicenseCertificateResponse {
+    org_name: String,
+    band: String,
+    declared_engineers: i64,
+    expires_at: i64,
+}
+
+#[derive(serde::Deserialize)]
+struct RenewalNoticeResponse {
+    days_remaining: i64,
+    urgency: String,
+}
+
+#[derive(serde::Deserialize)]
+struct LicenseResponse {
+    state: String,
+    source: LicenseSourceResponse,
+    warning: Option<String>,
+    reason: Option<String>,
+    certificate: Option<LicenseCertificateResponse>,
+    renewal_notice: Option<RenewalNoticeResponse>,
+}
+
+async fn handle_license(server_url: &str, action: LicenseAction, api_key: &str) -> Result<()> {
+    match action {
+        LicenseAction::Show => license_show(server_url, api_key).await,
+        LicenseAction::Attest { export, output } => match (export, output) {
+            (true, Some(path)) => attest_export(server_url, api_key, &path).await,
+            (true, None) => anyhow::bail!("--export requires -o/--output FILE"),
+            (false, _) => attest_show(server_url, api_key).await,
+        },
+    }
+}
+
+/// Prints whatever the server reports. No non-`valid` state is treated as an
+/// error here — an absent, expired or invalid certificate is a normal,
+/// reportable state, not a CLI failure. This command exits non-zero only for
+/// actual failures: unreachable server, non-2xx response, unparseable body.
+async fn license_show(server_url: &str, api_key: &str) -> Result<()> {
+    use anyhow::Context;
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/api/v1/admin/license", server_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+        .context("failed to reach the DocBrain server")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        anyhow::bail!("Server error ({}): {}", status, body);
+    }
+
+    let license: LicenseResponse = response
+        .json()
+        .await
+        .context("failed to parse license response from server")?;
+
+    let source = match license.source.path.as_deref() {
+        Some(path) => format!("{} ({})", license.source.kind, path),
+        None => license.source.kind,
+    };
+
+    println!();
+    println!("  Subscription: {}", license.state);
+    if let Some(cert) = &license.certificate {
+        let expiry = chrono::DateTime::from_timestamp(cert.expires_at, 0)
+            .map(|dt| dt.format("%Y-%m-%d").to_string())
+            .unwrap_or_else(|| cert.expires_at.to_string());
+        println!("  Org:          {}", cert.org_name);
+        println!("  Band:         {}", cert.band);
+        println!("  Expires:      {}", expiry);
+        println!("  Engineers:    {}", cert.declared_engineers);
+    }
+    if let Some(reason) = &license.reason {
+        println!("  Reason:       {}", reason);
+    }
+    println!("  Source:       {}", source);
+    if let Some(warning) = &license.warning {
+        println!("  Warning:      {}", warning);
+    }
+    if let Some(notice) = &license.renewal_notice {
+        println!(
+            "  Renewal:      {} days remaining ({} urgency)",
+            notice.days_remaining, notice.urgency
+        );
+    }
+    println!();
+
+    Ok(())
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Identity attestation report (Licensing Phase 2, spec §7)
+//
+// A dumb HTTP passthrough, same as license_show above: GET the server's
+// answer, print it (or write it to a file for --export). No counting,
+// classification or signing logic belongs here — the server computed the
+// report and signed the export; this only relays what it said.
+//
+// Exit 0 for every state the report can describe — never_computed, a stale
+// snapshot, a count that disagrees with the declared figure — same reasoning
+// as license_show: a non-zero exit here would invite wiring attestation into
+// a CI gate or deploy check, which is the exact thing this phase is built not
+// to do. Non-zero is reserved for genuine failures: unreachable server,
+// non-2xx, unparseable body, or a file-write error for --export.
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[derive(serde::Deserialize)]
+struct AttestationSourceCountResponse {
+    source: String,
+    raw: i64,
+    bots: i64,
+    inactive: i64,
+    excluded: i64,
+    counted: i64,
+}
+
+#[derive(serde::Deserialize)]
+struct AttestationSourceNoLongerCountedResponse {
+    source: String,
+    last_counted_at: String,
+    last_counted: i64,
+}
+
+#[derive(serde::Deserialize)]
+struct AttestationStatusResponse {
+    state: String,
+    computed_at: Option<String>,
+    stale: Option<bool>,
+    stale_after_days: Option<i64>,
+    per_source: Option<Vec<AttestationSourceCountResponse>>,
+    floor_count: Option<i64>,
+    ceiling_count: Option<i64>,
+    sources_no_longer_counted: Option<Vec<AttestationSourceNoLongerCountedResponse>>,
+    declared_engineers: Option<i64>,
+    consistent_with_declared: Option<bool>,
+    instance_public_key: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct AttestationExportResponse {
+    export: String,
+    computed_at: String,
+    install_id: String,
+}
+
+/// Names every field required when `state == "ok"` that came back `None`.
+/// Every field on `AttestationStatusResponse` is `Option<T>` (states other
+/// than `"ok"` legitimately omit most of them), so a server-side rename of
+/// e.g. `floor_count` would otherwise deserialize silently into `None` and
+/// the CLI would just print a shorter report instead of failing — exactly
+/// the quiet-truncation risk this function exists to catch. An empty
+/// result means the response is well-formed for the `"ok"` state.
+fn missing_ok_fields(report: &AttestationStatusResponse) -> Vec<&'static str> {
+    if report.state != "ok" {
+        return Vec::new();
+    }
+    let checks: [(&'static str, bool); 7] = [
+        ("computed_at", report.computed_at.is_some()),
+        ("stale", report.stale.is_some()),
+        ("stale_after_days", report.stale_after_days.is_some()),
+        ("per_source", report.per_source.is_some()),
+        ("floor_count", report.floor_count.is_some()),
+        ("ceiling_count", report.ceiling_count.is_some()),
+        ("sources_no_longer_counted", report.sources_no_longer_counted.is_some()),
+    ];
+    checks.into_iter().filter(|(_, present)| !present).map(|(name, _)| name).collect()
+}
+
+/// Formats an RFC3339 timestamp the way `license_show` formats an epoch —
+/// falls back to the raw string if the server ever sends something this
+/// can't parse, since a display glitch isn't worth failing the command over.
+fn format_attest_timestamp(iso: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(iso)
+        .map(|dt| dt.format("%Y-%m-%d %H:%M UTC").to_string())
+        .unwrap_or_else(|_| iso.to_string())
+}
+
+/// Prints whatever the server reports. `never_computed` is a normal,
+/// reportable state (a fresh install has nothing to show yet), not a CLI
+/// failure — see the module-level exit-code note above.
+async fn attest_show(server_url: &str, api_key: &str) -> Result<()> {
+    use anyhow::Context;
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/api/v1/admin/attestation", server_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+        .context("failed to reach the DocBrain server")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        anyhow::bail!("Server error ({}): {}", status, body);
+    }
+
+    let report: AttestationStatusResponse = response
+        .json()
+        .await
+        .context("failed to parse attestation response from server")?;
+
+    let missing = missing_ok_fields(&report);
+    if !missing.is_empty() {
+        anyhow::bail!(
+            "Server reported state \"ok\" but is missing expected field(s): {}. This usually \
+             means the server renamed a field this CLI does not recognise yet — upgrade the CLI \
+             rather than trust a partial report.",
+            missing.join(", ")
+        );
+    }
+
+    println!();
+
+    if let Some(key) = &report.instance_public_key {
+        println!("  Instance public key: {}", key);
+        println!("    Give this to your vendor so they can verify your exports.");
+        println!();
+    }
+
+    if report.state == "never_computed" {
+        println!("  Attestation: not yet computed.");
+        println!("  This is normal on a fresh install — recompute to generate the first snapshot.");
+        if let Some(declared) = report.declared_engineers {
+            println!("  Declared engineers: {} (nothing counted yet to compare against this)", declared);
+        }
+        println!();
+        return Ok(());
+    }
+
+    if let Some(computed_at) = &report.computed_at {
+        println!("  Computed at: {}", format_attest_timestamp(computed_at));
+    }
+    if report.stale == Some(true) {
+        println!(
+            "  Stale: snapshot is older than {} days — recompute for a current figure.",
+            report.stale_after_days.unwrap_or(0)
+        );
+    }
+    println!();
+
+    println!(
+        "  {:<20} {:>6} {:>6} {:>10} {:>10} {:>10}",
+        "Source", "Raw", "Bots", "Inactive", "Excluded", "Counted"
+    );
+    println!("  {}", "-".repeat(70));
+    for row in report.per_source.unwrap_or_default() {
+        println!(
+            "  {:<20} {:>6} {:>6} {:>10} {:>10} {:>10}",
+            row.source, row.raw, row.bots, row.inactive, row.excluded, row.counted
+        );
+    }
+    println!();
+
+    if let Some(floor) = report.floor_count {
+        println!("  Floor (largest single source): {}", floor);
+    }
+    if let Some(ceiling) = report.ceiling_count {
+        println!("  Ceiling (sum across sources):   {}", ceiling);
+    }
+
+    if let Some(declared) = report.declared_engineers {
+        println!("  Declared engineers:             {}", declared);
+        match report.consistent_with_declared {
+            Some(true) => println!("  Consistent with the declared figure."),
+            Some(false) => println!("  Not consistent with the declared figure."),
+            None => {}
+        }
+    }
+
+    if let Some(sources_no_longer_counted) = &report.sources_no_longer_counted {
+        if !sources_no_longer_counted.is_empty() {
+            println!();
+            println!("  Counted previously, nothing counted now:");
+            println!("  (This can mean the source was disconnected, or simply that nothing was seen in the window.)");
+            for d in sources_no_longer_counted {
+                println!(
+                    "    - {} — last counted {}, contributed {}",
+                    d.source,
+                    format_attest_timestamp(&d.last_counted_at),
+                    d.last_counted
+                );
+            }
+        }
+    }
+    println!();
+
+    Ok(())
+}
+
+/// Writes the signed export blob to `path`. The endpoint 409s when no
+/// snapshot exists yet (spec §7.1c forbids computing one inline with the
+/// request) — that is reported as a plain message, not a crash, matching
+/// the module-level exit-code note above.
+async fn attest_export(server_url: &str, api_key: &str, path: &std::path::Path) -> Result<()> {
+    use anyhow::Context;
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(format!("{}/api/v1/admin/attestation/export", server_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+        .context("failed to reach the DocBrain server")?;
+
+    if response.status() == reqwest::StatusCode::CONFLICT {
+        println!("No attestation snapshot exists yet. Run a recompute, then retry the export.");
+        return Ok(());
+    }
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        anyhow::bail!("Server error ({}): {}", status, body);
+    }
+
+    let export: AttestationExportResponse = response
+        .json()
+        .await
+        .context("failed to parse attestation export response from server")?;
+
+    std::fs::write(path, &export.export)
+        .with_context(|| format!("writing attestation export to {}", path.display()))?;
+
+    println!(
+        "Wrote {} bytes of signed attestation export to {} (computed at {}).",
+        export.export.len(),
+        path.display(),
+        format_attest_timestamp(&export.computed_at)
+    );
+    // §7.3's anti-splitting story rests on this: an operator running more
+    // than one instance cannot tell their exports apart without it.
+    println!("Instance id: {}", export.install_id);
+
+    Ok(())
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CI/CD Pipeline Capture commands
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -4496,6 +4893,90 @@ mod tests {
             serde_json::from_value(json).expect("artifact without reconcile deserializes");
         assert!(artifact.reconcile_patch.is_none());
         assert!(artifact.reconcile_base_version.is_none());
+    }
+
+    fn ok_attestation_response() -> AttestationStatusResponse {
+        AttestationStatusResponse {
+            state: "ok".to_string(),
+            computed_at: Some("2026-08-01T00:00:00Z".to_string()),
+            stale: Some(false),
+            stale_after_days: Some(30),
+            per_source: Some(vec![]),
+            floor_count: Some(1),
+            ceiling_count: Some(1),
+            sources_no_longer_counted: Some(vec![]),
+            declared_engineers: None,
+            consistent_with_declared: None,
+            instance_public_key: Some("key".to_string()),
+        }
+    }
+
+    /// A server rename (e.g. `floor_count` -> something else) deserializes
+    /// silently into `None` on this all-`Option` struct — this is the guard
+    /// that turns that into a named, reported failure instead of a quietly
+    /// truncated report.
+    #[test]
+    fn missing_ok_fields_flags_a_renamed_field() {
+        let mut report = ok_attestation_response();
+        report.floor_count = None;
+        assert_eq!(missing_ok_fields(&report), vec!["floor_count"]);
+    }
+
+    #[test]
+    fn missing_ok_fields_flags_every_absent_field_at_once() {
+        let report = AttestationStatusResponse {
+            state: "ok".to_string(),
+            computed_at: None,
+            stale: None,
+            stale_after_days: None,
+            per_source: None,
+            floor_count: None,
+            ceiling_count: None,
+            sources_no_longer_counted: None,
+            declared_engineers: None,
+            consistent_with_declared: None,
+            instance_public_key: None,
+        };
+        assert_eq!(
+            missing_ok_fields(&report),
+            vec![
+                "computed_at",
+                "stale",
+                "stale_after_days",
+                "per_source",
+                "floor_count",
+                "ceiling_count",
+                "sources_no_longer_counted",
+            ]
+        );
+    }
+
+    /// `declared_engineers`/`consistent_with_declared` are legitimately
+    /// `None` even in the `"ok"` state (no certificate installed) — they
+    /// must never be flagged as missing.
+    #[test]
+    fn missing_ok_fields_is_empty_for_a_well_formed_ok_response() {
+        assert!(missing_ok_fields(&ok_attestation_response()).is_empty());
+    }
+
+    /// `never_computed` legitimately omits every one of these fields — the
+    /// check must be scoped to `state == "ok"` only.
+    #[test]
+    fn missing_ok_fields_is_empty_for_never_computed() {
+        let report = AttestationStatusResponse {
+            state: "never_computed".to_string(),
+            computed_at: None,
+            stale: None,
+            stale_after_days: None,
+            per_source: None,
+            floor_count: None,
+            ceiling_count: None,
+            sources_no_longer_counted: None,
+            declared_engineers: None,
+            consistent_with_declared: None,
+            instance_public_key: Some("key".to_string()),
+        };
+        assert!(missing_ok_fields(&report).is_empty());
     }
 }
 

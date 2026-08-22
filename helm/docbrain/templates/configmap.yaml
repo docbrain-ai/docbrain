@@ -182,14 +182,13 @@ data:
   AUTOPILOT_CRITICAL_THRESHOLD: {{ .Values.autopilot.thresholdCritical | default 0.75 | quote }}
   AUTOPILOT_HIGH_THRESHOLD: {{ .Values.autopilot.thresholdHigh | default 0.55 | quote }}
   AUTOPILOT_MEDIUM_THRESHOLD: {{ .Values.autopilot.thresholdMedium | default 0.35 | quote }}
-  # Forecast Trend v2 — see docs/configuration.md § "Forecast Trend methodology".
+  # Forecast Trend v2 — five-state honest reporting. Boolean uses
+  # hasKey to honor explicit `false` override (Sprig's `default true`
+  # trap).
   AUTOPILOT_TREND_V2_ENABLED:        {{ if hasKey .Values.autopilot "trendV2Enabled" }}{{ .Values.autopilot.trendV2Enabled | quote }}{{ else }}"true"{{ end }}
   AUTOPILOT_TREND_MIN_EVENTS:        {{ .Values.autopilot.trendMinEvents          | default 5    | quote }}
   AUTOPILOT_TREND_IMPROVING_THRESHOLD: {{ .Values.autopilot.trendImprovingThreshold | default 0.75 | quote }}
   AUTOPILOT_TREND_WORSENING_THRESHOLD: {{ .Values.autopilot.trendWorseningThreshold | default 0.40 | quote }}
-  {{- if hasKey .Values.autopilot "generatedDocsRetentionDays" }}
-  GENERATED_DOCS_RETENTION_DAYS: {{ .Values.autopilot.generatedDocsRetentionDays | quote }}
-  {{- end }}
   {{- if .Values.draftPublish.target }}
   DRAFT_PUBLISH_TARGET: {{ .Values.draftPublish.target | quote }}
   {{- end }}
@@ -211,53 +210,36 @@ data:
   FRESHNESS_ENGAGEMENT_MIN_RETRIEVERS: {{ .Values.freshness.engagementMinRetrievers | default 3 | quote }}
   FRESHNESS_ENGAGEMENT_MIN_VOTERS: {{ .Values.freshness.engagementMinVoters | default 3 | quote }}
   FRESHNESS_ENGAGEMENT_WINDOW_DAYS: {{ .Values.freshness.engagementWindowDays | default 180 | quote }}
-  # Pass 2: LLM content-currency analysis. Default 50 docs per scheduler tick.
-  # Raise for larger corpora — at 50/day, 10k docs would take ~200 days to cover.
-  # Each call costs LLM tokens proportional to doc length.
-  FRESHNESS_LLM_CALLS_PER_PASS: {{ .Values.freshness.llmCallsPerPass | default 50 | quote }}
-  # Pass 3: HTTP HEAD link-health checks. Default 20 docs per tick. Cheap
-  # compared to LLM — safe to raise for large corpora.
-  FRESHNESS_LINK_CHECKS_PER_PASS: {{ .Values.freshness.linkChecksPerPass | default 20 | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.consolidation.intervalHours | default 6 | quote }}
   # Learning Velocity / Documentation ROI
-  # See docs/configuration.md § "Documentation ROI — how the number is calculated"
-  # for a non-technical operator guide on tuning these knobs.
+  #
+  # v1 (legacy): single point estimate (raw_positive_count × 15min × $75/h).
+  # A single user's votes can dominate this number — keep flag off for
+  # executive reporting.
+  #
+  # v2 (recommended): distinct-user gated, admin-excluded, per-user
+  # vote cap, range estimate. See docs/configuration.md §
+  # "Documentation ROI methodology" for the full derivation.
   VELOCITY_MINUTES_SAVED:           {{ .Values.velocity.minutesSavedPerQuery     | default 15    | quote }}
   VELOCITY_HOURLY_RATE:             {{ .Values.velocity.hourlyRate               | default 75    | quote }}
   # Booleans below use `hasKey` rather than Sprig's `default` because the
-  # `default true` filter silently overrides an operator's explicit `false`.
+  # `default true` filter silently overrides an operator's explicit `false`
+  # (Go templates treat `false` as the empty value). The documented
+  # contract — "set roiV2Enabled: false to revert to v1" — requires the
+  # hasKey form to actually honour the override.
   VELOCITY_ROI_V2_ENABLED:          {{ if hasKey .Values.velocity "roiV2Enabled"   }}{{ .Values.velocity.roiV2Enabled   | quote }}{{ else }}"true"{{ end }}
   VELOCITY_ROI_MIN_MINUTES_LOW:     {{ .Values.velocity.roiMinutesSavedLow       | default 5     | quote }}
   VELOCITY_ROI_MIN_MINUTES_HIGH:    {{ .Values.velocity.roiMinutesSavedHigh      | default 25    | quote }}
   VELOCITY_ROI_MIN_DISTINCT_USERS:  {{ .Values.velocity.roiMinDistinctUsers      | default 3     | quote }}
   VELOCITY_ROI_EXCLUDE_ADMIN:       {{ if hasKey .Values.velocity "roiExcludeAdmin" }}{{ .Values.velocity.roiExcludeAdmin | quote }}{{ else }}"true"{{ end }}
   VELOCITY_ROI_MAX_VOTES_PER_USER:  {{ .Values.velocity.roiMaxVotesPerUser       | default 10    | quote }}
-  # Tribal Knowledge v2 — same hasKey pattern for booleans.
+  # Tribal Knowledge v2 — same hasKey pattern for booleans to honor explicit `false`.
   VELOCITY_TRIBAL_V2_ENABLED:       {{ if hasKey .Values.velocity "tribalV2Enabled"    }}{{ .Values.velocity.tribalV2Enabled    | quote }}{{ else }}"true"{{ end }}
   VELOCITY_TRIBAL_MAX_EXPERTS:      {{ .Values.velocity.tribalMaxExpertsPerDomain | default 2 | quote }}
   VELOCITY_TRIBAL_MIN_DOMAINS:      {{ .Values.velocity.tribalMinDomainsWithSignal | default 3 | quote }}
   VELOCITY_MAINTENANCE_TREND_MIN_SNAPSHOTS: {{ .Values.velocity.maintenanceTrendMinSnapshots | default 4 | quote }}
   VELOCITY_BULK_UPDATE_MULTIPLE:    {{ .Values.velocity.bulkUpdateMultiple | default 10.0 | quote }}
   VELOCITY_SUBSTANTIVE_UPDATE_CEILING: {{ .Values.velocity.substantiveUpdateCeiling | default 2000 | quote }}
-  # Expertise Ownership Gate — thresholds the scorer clears before publishing a
-  # (subject, team) attribution. UI accuracy gate controls whether confident
-  # attributions reach end users; disabled by default until accuracy is proven.
-  {{- if .Values.expertiseGate }}
-  EXPERTISE_GATE_V_MIN: {{ .Values.expertiseGate.vMin | default 1.0 | quote }}
-  EXPERTISE_GATE_N_MIN: {{ .Values.expertiseGate.nMin | default 5 | quote }}
-  EXPERTISE_GATE_M_ASKERS: {{ .Values.expertiseGate.mAskers | default 2 | quote }}
-  EXPERTISE_GATE_MARGIN_FRAC: {{ .Values.expertiseGate.marginFrac | default 0.25 | quote }}
-  EXPERTISE_GATE_DIVERSITY_MIN: {{ .Values.expertiseGate.diversityMin | default 2 | quote }}
-  # Booleans use hasKey so an explicit `false` is not silently overridden.
-  EXPERTISE_GATE_UI_ENABLED: {{ if hasKey .Values.expertiseGate "uiGateEnabled" }}{{ .Values.expertiseGate.uiGateEnabled | quote }}{{ else }}"false"{{ end }}
-  EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR: {{ .Values.expertiseGate.uiConfidentlyWrongBar | default 0.0 | quote }}
-  EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES: {{ .Values.expertiseGate.uiMinAuditSamples | default 30 | quote }}
-  {{- end }}
-  # Doc-improvement evidence loop. The re-ingest-confirm timeout distinguishes a
-  # stuck publish ("stale — never confirmed live") from a normal in-flight one.
-  {{- if .Values.improvement }}
-  IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS: {{ .Values.improvement.reingestConfirmTimeoutHours | default 72 | quote }}
-  {{- end }}
   # Knowledge Stream
   {{- if .Values.stream.enabled }}
   STREAM_ENABLED: "true"
@@ -273,6 +255,7 @@ data:
   {{- /* `default` treats false as empty, so `| default true` would make this
        flag impossible to switch off. Test for nil explicitly instead. */}}
   RAG_CLAIM_VERIFICATION: {{ if kindIs "invalid" .Values.rag.claimVerification }}"true"{{ else }}{{ .Values.rag.claimVerification | quote }}{{ end }}
+  PREMISE_MONITOR_ENABLED: {{ if kindIs "invalid" .Values.premises.monitorEnabled }}"true"{{ else }}{{ .Values.premises.monitorEnabled | quote }}{{ end }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
   RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
   {{- if .Values.rag.mcpOutputCeilingBytes }}
@@ -287,24 +270,55 @@ data:
   {{- if .Values.rag.mcpJqlRecencyBoundDays }}
   DOCBRAIN_MCP_JQL_RECENCY_BOUND_DAYS: {{ .Values.rag.mcpJqlRecencyBoundDays | quote }}
   {{- end }}
-  {{- if .Values.rag.retrievalLadder }}
-  {{- if .Values.rag.retrievalLadder.enabled }}
-  RAG_RETRIEVAL_LADDER_ENABLED: {{ .Values.rag.retrievalLadder.enabled | quote }}
+  {{- /* Sufficiency critic. ENABLED uses hasKey (NOT a falsy `if`) so an explicit
+         `false` is actually emitted to disable — a bare `if` would skip on false
+         and the binary would fall back to its ON default, silently re-enabling. */}}
+  {{- if hasKey .Values.rag "sufficiencyCriticEnabled" }}
+  DOCBRAIN_SUFFICIENCY_CRITIC_ENABLED: {{ .Values.rag.sufficiencyCriticEnabled | quote }}
   {{- end }}
-  {{- if .Values.rag.retrievalLadder.graphAppendThreshold }}
-  RAG_RETRIEVAL_LADDER_GRAPH_THRESHOLD: {{ .Values.rag.retrievalLadder.graphAppendThreshold | quote }}
+  {{- if .Values.rag.sufficiencyCriticMaxRecoveryRounds }}
+  DOCBRAIN_SUFFICIENCY_CRITIC_MAX_RECOVERY_ROUNDS: {{ .Values.rag.sufficiencyCriticMaxRecoveryRounds | quote }}
   {{- end }}
-  {{- if .Values.rag.retrievalLadder.judgeTimeoutMs }}
-  RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS: {{ .Values.rag.retrievalLadder.judgeTimeoutMs | quote }}
+  {{- if .Values.rag.sufficiencyCriticSkipAboveConfidence }}
+  DOCBRAIN_SUFFICIENCY_CRITIC_SKIP_ABOVE_CONFIDENCE: {{ .Values.rag.sufficiencyCriticSkipAboveConfidence | quote }}
   {{- end }}
-  {{- if .Values.rag.retrievalLadder.judgeModelId }}
-  RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ .Values.rag.retrievalLadder.judgeModelId | quote }}
+  {{- if .Values.rag.sufficiencyCriticMinCoverage }}
+  DOCBRAIN_SUFFICIENCY_CRITIC_MIN_COVERAGE: {{ .Values.rag.sufficiencyCriticMinCoverage | quote }}
   {{- end }}
+  {{- if hasKey .Values.rag "sufficiencyCriticMinRecoveryBudgetMs" }}
+  DOCBRAIN_SUFFICIENCY_CRITIC_MIN_RECOVERY_BUDGET_MS: {{ .Values.rag.sufficiencyCriticMinRecoveryBudgetMs | quote }}
   {{- end }}
-  {{- if .Values.rag.fusion }}
-  {{- if .Values.rag.fusion.preferFused }}
-  RAG_FUSION_PREFER_FUSED: {{ .Values.rag.fusion.preferFused | quote }}
+  {{/* Freshness Critic (doc-generation reviewer). `enabled` uses hasKey so an
+       explicit `false` is emitted to disable — a bare `if` would skip on false
+       and the binary would fall back to its ON default, silently re-enabling.
+       minBudgetMs likewise uses hasKey because 0 is a valid value (disables the
+       budget guard) that a bare `if` would drop. */}}
+  {{- if hasKey .Values.rag "freshnessCriticEnabled" }}
+  DOCBRAIN_FRESHNESS_CRITIC_ENABLED: {{ .Values.rag.freshnessCriticEnabled | quote }}
   {{- end }}
+  {{- if .Values.rag.freshnessCriticMaxClaims }}
+  DOCBRAIN_FRESHNESS_CRITIC_MAX_CLAIMS: {{ .Values.rag.freshnessCriticMaxClaims | quote }}
+  {{- end }}
+  {{- if .Values.rag.freshnessCriticBatchSize }}
+  DOCBRAIN_FRESHNESS_CRITIC_BATCH_SIZE: {{ .Values.rag.freshnessCriticBatchSize | quote }}
+  {{- end }}
+  {{- if .Values.rag.freshnessCriticEvidencePerClaim }}
+  DOCBRAIN_FRESHNESS_CRITIC_EVIDENCE_PER_CLAIM: {{ .Values.rag.freshnessCriticEvidencePerClaim | quote }}
+  {{- end }}
+  {{- if hasKey .Values.rag "freshnessCriticMinBudgetMs" }}
+  DOCBRAIN_FRESHNESS_CRITIC_MIN_BUDGET_MS: {{ .Values.rag.freshnessCriticMinBudgetMs | quote }}
+  {{- end }}
+  {{- /* Support critic (grounding). enabled uses hasKey so an explicit `false`
+       is honored (a bare `if` would drop it). */}}
+  {{- if hasKey .Values.rag "supportCriticEnabled" }}
+  DOCBRAIN_SUPPORT_CRITIC_ENABLED: {{ .Values.rag.supportCriticEnabled | quote }}
+  {{- end }}
+  {{- if .Values.rag.supportCriticMaxClaims }}
+  DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS: {{ .Values.rag.supportCriticMaxClaims | quote }}
+  {{- end }}
+  {{- /* NoFab enforcement: ON by default; hasKey so an explicit `false` is honored. */}}
+  {{- if hasKey .Values.rag "supportCriticNoFabEnforce" }}
+  DOCBRAIN_SUPPORT_CRITIC_NOFAB_ENFORCE: {{ .Values.rag.supportCriticNoFabEnforce | quote }}
   {{- end }}
   {{- if hasKey .Values.rag "regenLoopEnabled" }}
   DOCBRAIN_REGEN_LOOP_ENABLED: {{ .Values.rag.regenLoopEnabled | quote }}
@@ -327,35 +341,11 @@ data:
   {{- if hasKey .Values.autopilot "maxSectionAsks" }}
   DOCBRAIN_GENERATE_MAX_SECTION_ASKS: {{ .Values.autopilot.maxSectionAsks | quote }}
   {{- end }}
-  {{- /* Verification engine (generate) knobs (T-CONFIG). The two enabled flags
-       use hasKey so an explicit `false` is honored (a bare `if` would drop a
-       false). The numeric knobs default to the built-in values when omitted. */}}
-  {{- if hasKey .Values.autopilot "verifySectionQueryLlmEnabled" }}
-  DOCBRAIN_GENERATE_VERIFY_SECTION_QUERY_LLM: {{ .Values.autopilot.verifySectionQueryLlmEnabled | quote }}
+  {{- if hasKey .Values.rag "reconcileEnabled" }}
+  DOCBRAIN_RECONCILE_ENABLED: {{ .Values.rag.reconcileEnabled | quote }}
   {{- end }}
-  {{- if hasKey .Values.autopilot "verifyCrossCheckEnabled" }}
-  DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK: {{ .Values.autopilot.verifyCrossCheckEnabled | quote }}
-  {{- end }}
-  {{- if hasKey .Values.autopilot "verifyCrossCheckBudgetSecs" }}
-  DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS: {{ .Values.autopilot.verifyCrossCheckBudgetSecs | quote }}
-  {{- end }}
-  {{- if hasKey .Values.autopilot "verifyBroadProbeTopK" }}
-  DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K: {{ .Values.autopilot.verifyBroadProbeTopK | quote }}
-  {{- end }}
-  {{- if hasKey .Values.autopilot "verifyReviewMaxRounds" }}
-  DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS: {{ .Values.autopilot.verifyReviewMaxRounds | quote }}
-  {{- end }}
-  {{- /* Support critic (grounding). enabled uses hasKey so an explicit `false`
-       is honored (a bare `if` would drop it). */}}
-  {{- if hasKey .Values.rag "supportCriticEnabled" }}
-  DOCBRAIN_SUPPORT_CRITIC_ENABLED: {{ .Values.rag.supportCriticEnabled | quote }}
-  {{- end }}
-  {{- if .Values.rag.supportCriticMaxClaims }}
-  DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS: {{ .Values.rag.supportCriticMaxClaims | quote }}
-  {{- end }}
-  {{- /* NoFab enforcement: ON by default; hasKey so an explicit `false` is honored. */}}
-  {{- if hasKey .Values.rag "supportCriticNoFabEnforce" }}
-  DOCBRAIN_SUPPORT_CRITIC_NOFAB_ENFORCE: {{ .Values.rag.supportCriticNoFabEnforce | quote }}
+  {{- if hasKey .Values.rag "reconcileMaxSections" }}
+  DOCBRAIN_RECONCILE_MAX_SECTIONS: {{ .Values.rag.reconcileMaxSections | quote }}
   {{- end }}
   {{- if hasKey .Values.rag "mergeEnabled" }}
   DOCBRAIN_MERGE_ENABLED: {{ .Values.rag.mergeEnabled | quote }}
@@ -366,25 +356,34 @@ data:
   {{- if hasKey .Values.rag "mergeMaxTokens" }}
   DOCBRAIN_MERGE_MAX_TOKENS: {{ .Values.rag.mergeMaxTokens | quote }}
   {{- end }}
+  {{- if .Values.rag.emptyResultFloorBytes }}
+  DOCBRAIN_EMPTY_RESULT_FLOOR_BYTES: {{ .Values.rag.emptyResultFloorBytes | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder }}
+  {{- if .Values.rag.retrievalLadder.enabled }}
+  RAG_RETRIEVAL_LADDER_ENABLED: {{ .Values.rag.retrievalLadder.enabled | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.graphAppendThreshold }}
+  RAG_RETRIEVAL_LADDER_GRAPH_THRESHOLD: {{ .Values.rag.retrievalLadder.graphAppendThreshold | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.judgeTimeoutMs }}
+  RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS: {{ .Values.rag.retrievalLadder.judgeTimeoutMs | quote }}
+  {{- end }}
+  {{- if .Values.rag.retrievalLadder.judgeModelId }}
+  RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ .Values.rag.retrievalLadder.judgeModelId | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.rag.fusion }}
+  {{- if .Values.rag.fusion.preferFused }}
+  RAG_FUSION_PREFER_FUSED: {{ .Values.rag.fusion.preferFused | quote }}
+  {{- end }}
+  {{- end }}
   IMAGE_TIMEOUT_SECS: {{ .Values.imageExtraction.timeoutSecs | default 30 | quote }}
   IMAGE_LLM_TIMEOUT_SECS: {{ .Values.imageExtraction.llmTimeoutSecs | default 120 | quote }}
   IMAGE_MAX_PER_PAGE: {{ .Values.imageExtraction.maxPerPage | default 20 | quote }}
   IMAGE_MIN_SIZE_BYTES: {{ .Values.imageExtraction.minSizeBytes | default 5120 | quote }}
   IMAGE_MAX_SIZE_BYTES: {{ .Values.imageExtraction.maxSizeBytes | default 10485760 | quote }}
   LOGIN_SESSION_TTL_HOURS: {{ .Values.auth.sessionTtlHours | default 720 | quote }}
-  # Idle timeout: API keys whose last_used_at is older than this are rejected.
-  # 0 = disabled (default). Recommended 24 for production deployments.
-  IDLE_TIMEOUT_HOURS: {{ .Values.auth.idleTimeoutHours | default 0 | quote }}
-  # Per-IP cap on public auth attempts (Auth#4/#16). Higher than per-email
-  # because corporate NATs share IPs.
-  IP_LOGIN_MAX_FAILURES: {{ .Values.auth.ipLoginMaxFailures | default 100 | quote }}
-  IP_LOGIN_LOCKOUT_WINDOW_SECS: {{ .Values.auth.ipLoginLockoutWindowSecs | default 600 | quote }}
-  # Trusted-proxy-hops for IP attribution. MUST be set to the number of
-  # proxies/load-balancers in front of DocBrain or the per-IP rate limit will
-  # key on the proxy's IP and lock out everyone behind it. Set to 1 for a
-  # single nginx/ALB hop, 2 for nginx+CDN, etc. Leave at 0 only when running
-  # without any reverse proxy.
-  TRUSTED_PROXY_HOPS: {{ .Values.auth.trustedProxyHops | default 0 | quote }}
   {{- if .Values.auth.corsAllowedOrigins }}
   CORS_ALLOWED_ORIGINS: {{ .Values.auth.corsAllowedOrigins | quote }}
   {{- end }}
@@ -420,7 +419,7 @@ data:
   {{- else }}
   LEARNING_ENABLED: "false"
   {{- end }}
-  # MCP tool platform — answer-time external tool dispatch.
+  # MCP tool platform (Plan 4) — answer-time external tool dispatch.
   {{- if .Values.mcpTools.enabled }}
   MCP_TOOLS_ENABLED: "true"
   MCP_MANIFEST_DIR: "/etc/docbrain/mcp-manifests"
@@ -434,18 +433,6 @@ data:
   # the audit endpoint embeds <set DOCBRAIN_K8S_*> placeholders when unset.
   DOCBRAIN_K8S_SECRET_NAME: {{ .Values.mcpTools.k8s.secretName | default "" | quote }}
   DOCBRAIN_K8S_NAMESPACE: {{ .Values.mcpTools.k8s.namespace | default "" | quote }}
-  # OAuth callback + web-UI redirect base. Atlassian (and any IdP) sends the
-  # user's browser back to {publicBaseUrl}/api/v1/oauth/mcp/callback/<manifest>;
-  # the callback handler then redirects to {webBaseUrl}/integrations?connected=<id>.
-  # MUST be set when MCP OAuth is in use behind an ingress — defaults to
-  # localhost otherwise, which makes Atlassian-redirect callbacks unreachable.
-  {{- if .Values.server.publicBaseUrl }}
-  DOCBRAIN_PUBLIC_BASE_URL: {{ .Values.server.publicBaseUrl | quote }}
-  {{- end }}
-  {{- if .Values.server.webBaseUrl }}
-  DOCBRAIN_WEB_BASE_URL: {{ .Values.server.webBaseUrl | quote }}
-  {{- end }}
-  DOCBRAIN_SERVER_PORT: {{ .Values.server.port | quote }}
   {{- else }}
   MCP_TOOLS_ENABLED: "false"
   {{- end }}

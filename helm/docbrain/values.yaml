@@ -141,10 +141,10 @@ server:
       memory: 512Mi
   # env is a catch-all map: every key/value flows through to the
   # server container as an environment variable via the helm
-  # configmap (templates/configmap.yaml).
+  # configmap (templates/configmap.yaml:277).
   #
-  # Confidence-retry fallback. Default OFF. When enabled, /ask
-  # responses with very-low confidence AND unused MCP tools in the
+  # #86 Confidence-retry fallback. Default OFF. When enabled, /ask
+  # responses with very-low confidence AND unused tools in the
   # catalog re-run once with the picker in widen-mode. Doubles
   # worst-case latency on misses. To enable, uncomment:
   #   env:
@@ -152,16 +152,28 @@ server:
   #     RAG_CONFIDENCE_RETRY_THRESHOLD: "0.25"           # 0.0–1.0
   #     RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS: "12000"  # 1000–60000
   #
-  # Agentic retrieval loop. Default OFF. When enabled, supersedes the
-  # confidence-retry fallback: low-confidence answers drive a bounded
-  # multi-round tool loop (separate round/budget caps per surface). To
-  # enable, uncomment:
-  #     RAG_AGENTIC_LOOP_ENABLED: "true"                   # opt-in; supersedes confidence-retry when on
-  #     RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK: "5"             # 1–10
-  #     RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB: "4"               # 1–10
-  #     RAG_AGENTIC_LOOP_BUDGET_MS_SLACK: "60000"          # 1000–120000
-  #     RAG_AGENTIC_LOOP_BUDGET_MS_WEB: "30000"            # 1000–120000
-  #     RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD: "0.7"       # 0.0–1.0; falls back to RAG_CONFIDENCE_RETRY_THRESHOLD when unset
+  # Agentic tool loop. Default OFF. Generalizes the confidence-retry
+  # into a bounded MULTI-round tool loop with per-surface round and
+  # wall-clock budgets. When RAG_AGENTIC_LOOP_ENABLED is "true" the
+  # loop SUBSUMES the confidence-retry above (loop runs instead of the
+  # single retry). To enable, uncomment:
+  #   env:
+  #     RAG_AGENTIC_LOOP_ENABLED: "true"
+  #     RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK: "5"            # 1–10
+  #     RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB: "4"              # 1–10
+  #     RAG_AGENTIC_LOOP_BUDGET_MS_SLACK: "60000"         # 1000–120000
+  #     RAG_AGENTIC_LOOP_BUDGET_MS_WEB: "30000"           # 1000–120000
+  #     RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD: "0.7"      # 0.0–1.0; unset →
+  #                                                       # falls back to
+  #                                                       # RAG_CONFIDENCE_RETRY_THRESHOLD
+  #
+  # Subscription certificate. Default unset (Community tier). Points at a
+  # certificate file mounted from a Helm-managed Secret — GitOps-friendly,
+  # since the path itself is safe to commit even though the file's contents
+  # are not. Takes precedence over any certificate uploaded through the
+  # admin UI. To enable, uncomment (and mount the Secret at this path):
+  #   env:
+  #     DOCBRAIN_LICENSE_FILE: "/etc/docbrain/license.jws"
   env: {}
 
 # -- DocBrain Web UI
@@ -209,11 +221,17 @@ ingress:
   # -- Proxy read timeout (seconds) for the API ingress. The generate path runs
   # gather → (live-tool dispatch) → reasoning → writing → freshness critic, which
   # takes minutes for a tool-heavy / broad multi-source ask; 120 was too tight
-  # (the slowest enriched generations 502'd). Set the ALB idle_timeout to the SAME
-  # value via `annotations` so the lower of the two can't silently win:
+  # (the slowest enriched generations 502'd). Drives the nginx proxy-read-timeout;
+  # set the ALB idle_timeout to the SAME value via `annotations` so the lower of
+  # the two can't silently win, e.g.:
   #   annotations:
   #     alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=600
   # Raise to 900+ when live tools / agentic generation are enabled (more round-trips).
+  # 2026-06-23: raised 600→900 because the `--target` AUGMENT path (enrich-aware merge,
+  # commit 7cb26d2) does agentic gather + per-section enrich + merge LLM, which exceeds
+  # 600s for a multi-section doc → the ingress killed the request and nothing persisted.
+  # NOTE (follow-up): the deeper fix is to stop the redundant SECOND agentic gather on
+  # the merge path (the draft already exists) — this 900 is the unblock, not the root fix.
   proxyReadTimeout: 900
 
 # -- Documentation Autopilot (AI-driven gap analysis + draft generation)
@@ -239,48 +257,25 @@ autopilot:
   thresholdHigh: 0.55
   thresholdMedium: 0.35
 
-  # Forecast Trend v2 — five-state honest reporting. See
+  # Forecast Trend v2 — five-state honest reporting (improving / stable /
+  # worsening / insufficient_signal / no_gaps_open). See
   # docs/configuration.md § "Forecast Trend methodology".
-  trendV2Enabled: true              # Switch to v2 (recommended)
-  trendMinEvents: 5                 # Floor on total gap events (new + resolved) across 4 weeks before reporting a verdict
-  trendImprovingThreshold: 0.75     # resolved/new ratio at or above this → "improving"
-  trendWorseningThreshold: 0.40     # below this → "worsening"; between → "stable"
-
-  # Retention window (days) for persisted ad-hoc `generate` runs shown in the web
-  # /generate History view (the generated_documents table). Rows older are purged
-  # daily and the History list/detail filter to this window — bounds data-at-rest
-  # exposure of the persisted (owner-scoped) body. Commented = built-in default (90).
-  # generatedDocsRetentionDays: 90   # GENERATED_DOCS_RETENTION_DAYS (0 = keep indefinitely)
+  trendV2Enabled: true              # Switch to v2 (recommended). v1 reported definitive verdicts on thin data.
+  trendMinEvents: 5                 # Minimum gap events (new + resolved) across the 4-week window before a verdict is reported.
+  trendImprovingThreshold: 0.75     # ratio (resolved/new) ≥ this → "improving"
+  trendWorseningThreshold: 0.40     # ratio < this → "worsening"; between thresholds → "stable"
 
   # Staleness warn window (days) for a generation's grounding sources. Older
   # DocBrain-ingest date -> STALE in the trust headline; within -> FRESH; unknown
   # date -> UNKNOWN (distinct from fresh). Env: DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS.
   sourceStalenessWarnDays: 365
 
-  # Retrieval-parity: max per-section retrievals a single `generate` run fires.
-  # The doc is decomposed into sections and the same retrieval engine `/ask` uses is
-  # driven once per section to gather grounded, high-tier, on-topic content; sections
-  # past the cap are reported not-asked. Clamped 0..=24; 0 disables per-section
-  # retrieval (single corpus gather). Env: DOCBRAIN_GENERATE_MAX_SECTION_ASKS.
+  # Retrieval-parity: max per-section /ask retrievals a single `generate` run fires.
+  # The doc is decomposed into sections and the /ask engine is driven once per section
+  # to gather grounded, high-tier, on-topic content; sections past the cap are reported
+  # not-asked. Clamped 0..=24; 0 disables the section-ask strategy (legacy gather only).
+  # Env: DOCBRAIN_GENERATE_MAX_SECTION_ASKS.
   maxSectionAsks: 8
-
-  # ── Verification engine (generate). Defaults preserve the built behavior;
-  #    disabling any of these FAILS TOWARD HONESTY (a claim is never flagged stale).
-  # Enable the per-section retrieval-query LLM rewrite (T-QGEN). false -> a
-  # deterministic doc-meta-stripped fallback query. Env: DOCBRAIN_GENERATE_VERIFY_SECTION_QUERY_LLM.
-  verifySectionQueryLlmEnabled: true
-  # Enable the per-claim LIVE cross-check. false (or budget 0) -> claims not
-  # live-verified (NotFound, never Contradicted/stale). Env: DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK.
-  verifyCrossCheckEnabled: true
-  # Per-document cross-check wall-clock budget (seconds). 0 disables it (same
-  # honest path as verifyCrossCheckEnabled: false). Env: DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS.
-  verifyCrossCheckBudgetSecs: 120
-  # top_k for the corpus probes that confirm a false gap before NEEDS INPUT.
-  # Floored at 1. Env: DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K.
-  verifyBroadProbeTopK: 12
-  # Max review send-back rounds. HARD-clamped to 2 (the documented max).
-  # Env: DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS.
-  verifyReviewMaxRounds: 2
 
 # -- Draft Publishing — closes the feedback loop by publishing AI drafts to Confluence
 # When configured, the Publish button (and auto-draft if enabled) will create Confluence pages
@@ -322,71 +317,37 @@ freshness:
   engagementMinRetrievers: 3
   engagementMinVoters: 3
   engagementWindowDays: 180
-  # Pass 2: LLM content-currency budget per scheduler tick.
-  # Default 50 — at this rate, 10k docs take ~200 days to cover; raise as needed.
-  # Each call costs LLM tokens proportional to doc length.
-  llmCallsPerPass: 50
-  # Pass 3: HTTP HEAD link-health budget per tick. Default 20; cheap vs LLM,
-  # safe to raise for large corpora.
-  linkChecksPerPass: 20
 
 # -- Learning Velocity — org-level documentation health metrics
 # Tracks gap resolution rate, knowledge half-life, tribal knowledge %, and ROI.
 # Snapshots are taken daily during memory consolidation.
 velocity:
-  # v1 inputs (legacy single-point formula, used when roiV2Enabled=false)
+  # v1 inputs (still applied when roiV2Enabled=false)
   minutesSavedPerQuery: 15   # Estimated engineer time saved per answered query (minutes)
   hourlyRate: 75             # Hourly engineer cost (USD) for ROI calculation
 
-  # v2 inputs — distinct-user gated, admin-excluded, vote-capped, range estimate.
-  # See docs/configuration.md § "Documentation ROI — how the number is calculated"
-  # for plain-language guidance on which knob to turn for which situation.
-  roiV2Enabled: true         # Switch to v2 formula (recommended)
-  roiMinutesSavedLow: 5      # Low end of per-signal time-saved range (minutes)
-  roiMinutesSavedHigh: 25    # High end of per-signal time-saved range (minutes)
-  roiMinDistinctUsers: 3     # Minimum distinct non-admin users with positive feedback before ROI is reported
-  roiExcludeAdmin: true      # Exclude admin votes (operators inflate their own number otherwise)
-  roiMaxVotesPerUser: 10     # Per-user vote cap inside the window (prevents power-user skew)
+  # v2 inputs — defensible methodology for executive reporting.
+  # See docs/configuration.md § "Documentation ROI methodology".
+  roiV2Enabled: true         # Switch to v2 formula (distinct-user gated, admin-excluded, vote-capped, range)
+  roiMinutesSavedLow: 5      # Low end of per-query time-saved range (minutes)
+  roiMinutesSavedHigh: 25    # High end of per-query time-saved range (minutes)
+  roiMinDistinctUsers: 3     # Minimum distinct non-admin users with positive feedback before ROI is reported (otherwise "Insufficient signal")
+  roiExcludeAdmin: true      # Exclude admin votes from ROI math (recommended — operators inflate their own number)
+  roiMaxVotesPerUser: 10     # Per-user vote cap inside the window (prevents one power-user from dominating the org-wide number)
 
-  # Tribal Knowledge v2 — applies the same defensive methodology to the
+  # Tribal Knowledge v2 — same defensive methodology applied to the
   # tribal-knowledge percentage. See docs/configuration.md §
   # "Tribal Knowledge methodology".
-  tribalV2Enabled: true              # Switch to v2 formula (real domain entities, configurable threshold, insufficient-signal gate)
-  tribalMaxExpertsPerDomain: 2       # Domains with ≤ this many distinct experts are "tribal"
-  tribalMinDomainsWithSignal: 3      # Minimum distinct domains with feedback before the percentage is reported
+  tribalV2Enabled: true              # Switch to v2 formula (domain_team_scores substrate, configurable threshold, insufficient-signal gate)
+  tribalMaxExpertsPerDomain: 2       # Domains with ≤ this many distinct experts are "tribal" (default 2; raise for larger orgs)
+  tribalMinDomainsWithSignal: 3      # Minimum distinct domains with positive feedback before the percentage is reported
   maintenanceTrendMinSnapshots: 4    # Minimum snapshots with flow signal before Maintenance Trend reports a verdict
 
   # Net knowledge velocity — bulk re-ingest exclusion. A re-ingest sweep
-  # (e.g. tens of thousands of docs touched in one day) must not inflate
-  # the velocity headline or flip the trend to "accelerating".
+  # (e.g. 60k docs touched in one day) must not inflate the velocity
+  # headline or flip the trend to "accelerating".
   bulkUpdateMultiple: 10.0           # A week's updates above this multiple of the rolling norm are treated as a bulk sweep and capped (order-of-magnitude jump = sweep signature)
   substantiveUpdateCeiling: 2000     # Absolute ceiling on a single week's substantive updates, guarding the all-bulk-history case where the rolling median is itself inflated
-
-# -- Expertise Ownership Gate
-# Thresholds the scorer applies before publishing a (subject, team) ownership
-# attribution; all must hold or it abstains. Defaults are abstain-heavy (high
-# precision). See docs/configuration.md § "Expertise Ownership Gate".
-expertiseGate:
-  vMin: 1.0            # Min decayed team score (volume gate)
-  nMin: 5             # Min raw signal count (volume gate)
-  mAskers: 2          # Min distinct askers
-  marginFrac: 0.25    # Min fraction the leading team must beat the runner-up
-  diversityMin: 2     # Min distinct signal types supporting the attribution
-  # UI accuracy gate — confident ownership is shown to users only when measured
-  # accuracy clears the bar AND the gate is enabled AND there is enough audited
-  # evidence. Disabled by default so a new deployment abstains until proven.
-  uiGateEnabled: false           # Master switch; false = UI always abstains
-  uiConfidentlyWrongBar: 0.0     # Max audited confidently-wrong rate to show confident attributions
-  uiMinAuditSamples: 30          # Min audited labels before the gate can open
-
-# -- Doc-improvement evidence loop
-# The autopilot improvement evidence chain reports how far each published fix got
-# along the proven path, each link at its true strength. The re-ingest-confirm
-# timeout is load-bearing: a published fix not confirmed live within this window
-# is reported "stale — published but never confirmed live" (a downstream failure)
-# instead of "published, not yet confirmed live" (the normal in-flight state).
-improvement:
-  reingestConfirmTimeoutHours: 72   # Hours before an unconfirmed published fix is flagged stale
 
 # -- Knowledge Stream — proactive push intelligence
 # Detects and pushes: incident warnings, knowledge decay risks,
@@ -404,32 +365,89 @@ consolidation:
 
 # -- RAG (Retrieval-Augmented Generation) cache
 rag:
-  # -- Verify mechanically-checkable claims (file paths) an answer cites against
-  # the file listings recorded at ingest, before returning it. Deterministic — no
-  # LLM call. Inert until a git source records a listing, so enabling it costs
-  # nothing on a deployment with no code sources connected.
+  # -- Verify mechanically-checkable claims (file paths) in an answer against the
+  # file listings recorded at ingest, before returning it. Deterministic — no LLM
+  # call. Inert until a source records a listing, so enabling it costs nothing on
+  # a deployment with no git sources connected.
   claimVerification: true
   cacheTtlHours: 24
   cacheThreshold: "0.95"
   # -- Tool-output caps (the truncation chain). All THREE must rise together —
   # raising one alone has no effect because the smallest still truncates. The
-  # two outputCap values also gate the manifest validator via the DOCBRAIN_MCP_*
-  # env vars these map to. evidenceBufferCapBytes is the SHARED per-round budget;
-  # size it at 2x the per-tool cap so one maxed source leaves headroom. The
-  # built-in defaults are sized so a high-volume hosted search (which can return
-  # 100-145KB of raw results) passes through whole instead of being truncated.
-  # Commented = use the built-in defaults (262144 / 262144 / 524288). Cost: a
-  # maxed search result adds up to 256KB to the grounding prompt; lower these if
-  # prompt token cost matters more than search recall in your deployment.
+  # two outputCap values also gate the manifest validator (which runs in a
+  # crate that does not read this config) via the DOCBRAIN_MCP_* env vars these
+  # map to. Defaults let a high-volume search (43-63KB raw) keep ~32KB instead
+  # of being truncated. evidenceBufferCapBytes is the SHARED per-round budget;
+  # size it at 2x the per-tool cap so one maxed source leaves headroom.
+  # Commented = use the binary defaults (262144 / 262144 / 524288). Raised
+  # through 32768→65536→262144 because slack.slack_search_public_and_private
+  # returns 100-145KB raw (live-measured) — every cap below that truncated it,
+  # and structural compaction of the response was abandoned (shape too variable
+  # to fit reliably). 256KB per-tool lets the raw slack search result through
+  # whole. Cost: a maxed slack result adds up to 256KB to the grounding prompt.
   # mcpOutputCeilingBytes: 262144         # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES
   # mcpDefaultToolOutputCapBytes: 262144  # DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES
   # evidenceBufferCapBytes: 524288        # DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES
   # mcpJqlRecencyBoundDays: 180           # DOCBRAIN_MCP_JQL_RECENCY_BOUND_DAYS — recency
-                                          # window appended to unbounded full-text issue-tracker
-                                          # searches so they hit the date index (avoids timeouts).
-  # -- Experimental retrieval ladder. Off by default. When enabled, answers
-  # are synthesised twice (indexed vs indexed+live-tool) and an LLM judge
-  # picks the winner; low-confidence answers get knowledge-graph expert
+                                          # window appended to unbounded full-text Jira
+                                          # searches so they hit the date index (avoids 10s
+                                          # timeouts). Commented = binary default (180).
+  # -- Sufficiency critic. A scope-relative answer-quality gate after synthesis:
+  # judges sub-part coverage grounded in retrieved sources; insufficient → ONE
+  # recovery round → re-judge; still short → an honest, specific gap. ON BY
+  # DEFAULT (the critic is the product). Kill-switch disables without a code
+  # rollback; fail-OPEN on any critic error. Commented = binary defaults.
+  # sufficiencyCriticEnabled: true              # DOCBRAIN_SUFFICIENCY_CRITIC_ENABLED
+  # sufficiencyCriticMaxRecoveryRounds: 1       # DOCBRAIN_SUFFICIENCY_CRITIC_MAX_RECOVERY_ROUNDS (0..=2)
+  # sufficiencyCriticSkipAboveConfidence: 0.85  # DOCBRAIN_SUFFICIENCY_CRITIC_SKIP_ABOVE_CONFIDENCE
+  # sufficiencyCriticMinCoverage: 0.9           # DOCBRAIN_SUFFICIENCY_CRITIC_MIN_COVERAGE
+  # sufficiencyCriticMinRecoveryBudgetMs: 20000 # DOCBRAIN_SUFFICIENCY_CRITIC_MIN_RECOVERY_BUDGET_MS — min wall-clock headroom (ms) to allow a recovery round; below this the critic ships an honest gap instead of a round the cliff would kill. Set 0 to disable.
+  # Freshness Critic — the doc-generation reviewer. Flags only evidence-contradicted
+  # claims (conservative-KEEP). ON by default; fail-OPEN; bounds cap cost per draft.
+  # freshnessCriticEnabled: true                # DOCBRAIN_FRESHNESS_CRITIC_ENABLED (disable only with false/0/no/off)
+  # freshnessCriticMaxClaims: 60                # DOCBRAIN_FRESHNESS_CRITIC_MAX_CLAIMS (over-cap claims reported unchecked, never dropped)
+  # freshnessCriticBatchSize: 12               # DOCBRAIN_FRESHNESS_CRITIC_BATCH_SIZE (claims per batched judgment LLM call)
+  # freshnessCriticEvidencePerClaim: 5         # DOCBRAIN_FRESHNESS_CRITIC_EVIDENCE_PER_CLAIM (evidence snippets retrieved per claim)
+  # freshnessCriticMinBudgetMs: 20000          # DOCBRAIN_FRESHNESS_CRITIC_MIN_BUDGET_MS (min wall-clock headroom to RUN the critic; 0 disables the guard)
+  # Support Critic (grounding) — flags claims NO supplied source supports (fabrication)
+  # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
+  # never blocks; fail-OPEN. ON by default.
+  # supportCriticEnabled: true                 # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
+  # supportCriticMaxClaims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
+  # supportCriticNoFabEnforce: true            # DOCBRAIN_SUPPORT_CRITIC_NOFAB_ENFORCE (ON by default: degrade ungrounded FRESH sections to NEEDS INPUT in place so fabrication can't reach the reader; disable only with false/0/no/off)
+  # Regenerate loop (Reviewer Part 2) — consumes the freshness flags and regenerates
+  # until they clear. UI = human-in-loop (maxRevisions); CLI/generate = auto-review
+  # (maxRounds). Feedback shapes the WRITING prompt only — never clears a flag. The
+  # round cap is the hard backstop; never loops forever, never silently ships flags.
+  # regenLoopEnabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
+  # regenLoopMaxRounds: 3                       # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; range 1..=20)
+  # regenLoopMaxRevisions: 10                   # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; range 1..=100)
+  # regenLoopMinBudgetMs: 20000                 # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to START a round; 0 disables the guard)
+  # Generation hollow-doc guard (DELTA #9): refuse (422) a draft ONLY when it has no
+  # seed, no High-tier authoritative grounding, AND no Low-tier live grounding either,
+  # AND is mostly NEEDS-INPUT placeholders (>= this % of `##` sections). A no-seed/
+  # no-High draft WITH live/Low grounding ships unverified (barred from auto-publish).
+  # Applies to short docs too (min-sections floor removed). Keys on output shape + tier.
+  # generateHollowRatioPct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
+  # In-place reconcile: when a section of an existing page is flagged stale, replace
+  # ONLY that section in place instead of appending — no duplicate-but-newer content.
+  # Kill-switch defaults ON (publish version-check + lint floor + fail-open-to-append).
+  # reconcileEnabled: true                      # DOCBRAIN_RECONCILE_ENABLED (disable only with false/0/no/off)
+  # reconcileMaxSections: 5                     # DOCBRAIN_RECONCILE_MAX_SECTIONS (max sections reconciled per draft; range 1..=50)
+  # Merged-doc update: when generating against an existing target doc, return the FULL
+  # merged document — unchanged sections preserved byte-exact, changed sections rewritten,
+  # additions surfaced — plus a per-section change manifest, so the output can replace the
+  # whole doc with confidence about what changed. Kill-switch defaults ON (unchanged
+  # sections are byte-exact, an unsafe splice bails, and nothing is ever published).
+  # mergeEnabled: true                          # DOCBRAIN_MERGE_ENABLED (disable only with false/0/no/off)
+  # mergeMaxSections: 60                        # DOCBRAIN_MERGE_MAX_SECTIONS (max existing sections fed to the merge pass; range 1..=500)
+  # mergeMaxTokens: 4096                         # DOCBRAIN_MERGE_MAX_TOKENS (max output tokens for the merge decision; range 512..=32768)
+  # emptyResultFloorBytes: 256                  # DOCBRAIN_EMPTY_RESULT_FLOOR_BYTES — below
+                                                # this, a search tool's ok-but-empty result
+                                                # triggers ONE broaden-retry. Default 256.
+  # -- Experimental retrieval ladder (Plan D). Off by default. When enabled,
+  # answers are synthesised twice (indexed vs indexed+live-tool) and an LLM
+  # judge picks the winner; low-confidence answers get knowledge-graph expert
   # routing. Costs an extra synthesis + judge call and disables token streaming.
   retrievalLadder:
     enabled: false
@@ -444,37 +462,13 @@ rag:
   fusion:
     preferFused: false
 
-  # -- Regenerate-with-feedback loop. The doc reviewer flags claims its evidence
-  # contradicts; this loop regenerates the draft until they clear. UI = human-in-
-  # loop (each "Regenerate" click, capped at maxRevisions); CLI/generate = auto-
-  # review (capped at maxRounds). Reviewer feedback shapes the writing prompt only
-  # — it can never clear a flagged claim. Commented = built-in defaults.
-  # regenLoopEnabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
-  # regenLoopMaxRounds: 3                        # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; 1..=20)
-  # regenLoopMaxRevisions: 10                    # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; 1..=100)
-  # regenLoopMinBudgetMs: 20000                  # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to start a round; 0 disables)
-
-  # -- Hollow-document guard for generation. Refuses (HTTP 422) a draft ONLY when it
-  # has no seed, no High-tier authoritative grounding, AND no Low-tier live-tool
-  # grounding either, AND is mostly NEEDS-INPUT placeholders (>= this % of `##`
-  # sections). A no-seed/no-High draft WITH live/Low grounding ships unverified
-  # (barred from auto-publish). Applies to short docs too (min-sections floor removed).
-  # Commented = defaults.
-  # generateHollowRatioPct: 50                   # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
-  # Support Critic (grounding) — flags claims NO supplied source supports (fabrication)
-  # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
-  # never blocks; fail-OPEN. ON by default.
-  # supportCriticEnabled: true                 # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
-  # supportCriticMaxClaims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
-  # supportCriticNoFabEnforce: true            # DOCBRAIN_SUPPORT_CRITIC_NOFAB_ENFORCE (ON by default: degrade ungrounded FRESH sections to NEEDS INPUT in place so fabrication can't reach the reader; disable only with false/0/no/off)
-  # Merged-doc update: when generating against an existing target doc, return the FULL
-  # merged document — unchanged sections preserved byte-exact, changed sections rewritten,
-  # additions surfaced — plus a per-section change manifest, so the output can replace the
-  # whole doc with confidence about what changed. Kill-switch defaults ON (unchanged
-  # sections are byte-exact, an unsafe splice bails, and nothing is ever published).
-  # mergeEnabled: true                         # DOCBRAIN_MERGE_ENABLED (disable only with false/0/no/off)
-  # mergeMaxSections: 60                        # DOCBRAIN_MERGE_MAX_SECTIONS (max existing sections fed to the merge pass; range 1..=500)
-  # mergeMaxTokens: 4096                        # DOCBRAIN_MERGE_MAX_TOKENS (max output tokens for the merge decision; range 512..=32768)
+# -- Standing premise monitor ("living claims"). Re-verifies file-path premises
+# in captured knowledge fragments against connected sources' file listings
+# every 300 seconds (plus an immediate check on fragment-index events).
+# Deterministic — no LLM call. `uncheckable` (no connected source can currently
+# speak to a premise) is never treated as `broken`; only a decisive absence is.
+premises:
+  monitorEnabled: true
 
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:
@@ -660,36 +654,7 @@ rbac:
 # -- Secret (created from values, or use existing)
 existingSecret: ""
 
-# -- Kubernetes ServiceAccount.
-# When create: true, helm creates a dedicated SA for docbrain pods. When
-# false, pods use the namespace's default SA. The serviceaccount.yaml
-# template and the serviceAccountName references in web-deployment.yaml +
-# ingest-cronjob.yaml branch on this. Most operators want create: true so
-# IAM roles for service accounts (IRSA on EKS, workload identity on GKE)
-# can be bound to a known name.
-serviceAccount:
-  # Create a dedicated ServiceAccount for docbrain pods.
-  create: true
-  # Name of the ServiceAccount. Auto-generated from release name when empty.
-  name: ""
-  # Annotations applied to the ServiceAccount (e.g. IRSA role ARN on EKS).
-  # Example:
-  #   annotations:
-  #     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/docbrain
-  annotations: {}
-
-# -- Bootstrap admin key.
-# When enabled: true, helm renders a Secret (<release>-initial-admin-secret)
-# containing a randomly generated API key with admin role. The server picks
-# it up at boot and inserts/preserves the row in api_keys. Retrieve with:
-#   kubectl get secret <release>-initial-admin-secret \
-#     -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
-# Disable after creating a proper admin user — the bootstrap key remains
-# active in the database until revoked via API or this flag flips false.
-bootstrapKey:
-  enabled: true
-
-# ── MCP tool platform ────────────────────────────────────────────────────
+# ── MCP tool platform (Plan 4) ────────────────────────────────────────────
 # Enables answer-time tool dispatch through external MCP servers
 # (Jira, GitHub, Sentry, etc.). Off by default — flip enabled=true once
 # the per-tool manifest credentials below are populated.
@@ -711,9 +676,9 @@ mcpTools:
 
   # -- Max TOTAL chars of live-tool evidence admitted into a single
   # generate fan-out (clamped 1000..=200000 in code). Bounds the always-on
-  # per-tool live evidence so a verbose catalog can't stuff the writing
-  # prompt; whole lowest-priority chunks past the budget are dropped at
-  # chunk boundaries (never truncated mid-chunk). Applies only to live
+  # per-tool live evidence (delta #5) so a verbose catalog can't stuff the
+  # writing prompt; whole lowest-priority chunks past the budget are dropped
+  # at chunk boundaries (never truncated mid-chunk). Applies only to live
   # chunks; corpus chunks keep their own budget. Default 24000.
   fanoutMaxAdmittedChars: 24000
 
@@ -805,7 +770,6 @@ mcpTools:
       # ROOTLY_BASE_URL — override the default https://api.rootly.com only for
       # self-hosted Rootly. Leave empty to use the public API.
       baseUrl: ""
-
   # 256-bit master key for at-rest encryption of mcp_oauth_tokens.
   # Generate with: openssl rand -hex 32
   # MUST be set whenever any manifest declares oauth in auth.modes.
