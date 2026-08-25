@@ -1,0 +1,26 @@
+[package]
+name = "docbrain-evidence"
+version.workspace = true
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+ed25519-dalek = "=2.2.0"
+sha2 = "0.10"
+base64 = "0.22"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+chrono = "0.4"
+curve25519-dalek = { version = "4.1.3", optional = true }
+
+[dev-dependencies]
+proptest = "1"
+
+[features]
+# Only for regenerating vectors/ed25519_pin.json (T-G, the frozen cross-language
+# ed25519 contract). Never enabled in CI — the committed JSON is the source of
+# truth; tests/vectors.rs loads it, it never regenerates it.
+gen-vectors = ["dep:curve25519-dalek"]

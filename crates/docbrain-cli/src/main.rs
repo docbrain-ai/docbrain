@@ -216,8 +216,81 @@ enum Commands {
         #[command(subcommand)]
         action: CiAction,
     },
+    /// Evidence bundles — verify, explain, tabulate (all OFFLINE), and export.
+    ///
+    /// `verify`, `why` and `tables` are fully offline: no server, no API key,
+    /// no config file needed — they read a `.dbev` file and nothing else. Only
+    /// `export` talks to your DocBrain server. For a purpose-built, dependency-
+    /// free verifier to hand an auditor, see the standalone `docbrain-verify`
+    /// binary (same verdict + exit codes).
+    Evidence {
+        #[command(subcommand)]
+        action: EvidenceAction,
+    },
     /// Show CLI and server version
     Version,
+}
+
+#[derive(Subcommand)]
+enum EvidenceAction {
+    /// Verify a `.dbev` bundle OFFLINE and print a verdict.
+    ///
+    /// Exit code IS the verdict: 0 VALID, 1 TAMPERED, 2 CANNOT_VERIFY, 3 a
+    /// CLI-level error (file missing/unreadable). With `--against <earlier>`,
+    /// additionally cross-checks the two bundles for a forked journal (see the
+    /// printed caveat); a proven fork forces exit 1 even if this bundle alone
+    /// is VALID.
+    Verify {
+        /// Path to the `.dbev` bundle to verify.
+        bundle: PathBuf,
+        /// An EARLIER `.dbev` of the same journal to cross-check against, for
+        /// fork detection over the overlapping position range.
+        #[arg(long)]
+        against: Option<PathBuf>,
+        /// Emit the machine-readable verdict JSON instead of the human report.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Explain one record's story from a VALID bundle, OFFLINE.
+    ///
+    /// Refuses (exit 2) unless the bundle verifies VALID first — never renders
+    /// content from an unverified bundle. `record` is a journal position, or an
+    /// id carried in a record body.
+    Why {
+        /// The record to explain: a journal position (e.g. `42`) or a record-
+        /// body id (decision/fragment/premise id).
+        record: String,
+        /// Path to the `.dbev` bundle.
+        bundle: PathBuf,
+    },
+    /// Write a populations CSV (record counts per class/kind) with a
+    /// bundle-digest header row, OFFLINE. Refuses unless the bundle is VALID.
+    Tables {
+        /// Path to the `.dbev` bundle.
+        bundle: PathBuf,
+        /// Output CSV path.
+        out: PathBuf,
+    },
+    /// Export a signed `.dbev` bundle from your DocBrain server (admin).
+    ///
+    /// This is the ONLY evidence subcommand that touches the network. Range
+    /// and preset are alternatives, not both.
+    Export {
+        /// Explicit checkpoint-boundary range `START,END` (e.g. `0,1200`).
+        /// Mutually exclusive with --preset.
+        #[arg(long, value_name = "START,END")]
+        range: Option<String>,
+        /// Compliance profile id (default: the server's default profile).
+        #[arg(long)]
+        profile: Option<String>,
+        /// Named retention window within the profile (e.g. a "last-N-days"
+        /// preset). Mutually exclusive with --range.
+        #[arg(long)]
+        preset: Option<String>,
+        /// Where to write the downloaded `.dbev` bundle.
+        #[arg(short = 'o', long = "output", value_name = "FILE")]
+        out: PathBuf,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1307,6 +1380,13 @@ async fn main() -> Result<()> {
                 "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
             ))?;
             handle_ci(&server_url, action, &key).await?;
+        }
+        Commands::Evidence { action } => {
+            // Offline subcommands (verify/why/tables) take NO api key and NO
+            // server URL — only `export` uses them (resolved inside the
+            // handler). Verify/Why/Tables set their own process exit code via
+            // `std::process::exit`, so control does not return from them.
+            handle_evidence(action, &server_url, api_key.as_deref()).await?;
         }
         Commands::Admin { action } => {
             let key = api_key.ok_or_else(|| anyhow::anyhow!(
@@ -4326,6 +4406,471 @@ async fn ci_deploy_capture(
     Ok(())
 }
 
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Evidence bundles — verify / why / tables (OFFLINE) + export (network)
+// ═══════════════════════════════════════════════════════════════════════════
+
+use docbrain_evidence::{
+    chain_heads_for_bundle, read_records, verify_bundle, RecordHeader, Verdict, VerdictReport,
+};
+
+/// CLI-level error exit code (NOT a verdict — 0/1/2 are the three verdicts).
+/// A missing/unreadable file, a bad argument, or a failed local write.
+const EXIT_CLI_ERROR: i32 = 3;
+
+async fn handle_evidence(action: EvidenceAction, server_url: &str, api_key: Option<&str>) -> Result<()> {
+    match action {
+        EvidenceAction::Verify { bundle, against, json } => {
+            // Never returns — sets the process exit code to the verdict.
+            evidence_verify(&bundle, against.as_deref(), json);
+        }
+        EvidenceAction::Why { record, bundle } => {
+            evidence_why(&record, &bundle);
+        }
+        EvidenceAction::Tables { bundle, out } => {
+            evidence_tables(&bundle, &out);
+        }
+        EvidenceAction::Export { range, profile, preset, out } => {
+            // The ONLY networked evidence subcommand — returns normally (exit
+            // 0 on success, anyhow error → exit 1).
+            evidence_export(server_url, api_key, range.as_deref(), profile.as_deref(), preset.as_deref(), &out).await
+        }
+    }
+}
+
+/// Read a `.dbev` file, or print a CLI error to stderr and exit 3. A missing
+/// or unreadable file is a CLI-level failure, never a verdict.
+fn read_bundle_or_exit(path: &std::path::Path) -> Vec<u8> {
+    match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            eprintln!("error: cannot read bundle {}: {e}", path.display());
+            std::process::exit(EXIT_CLI_ERROR);
+        }
+    }
+}
+
+/// Flush stdout (block-buffered when piped) before a hard `process::exit`,
+/// which does not run destructors or flush on its own.
+fn exit_with(code: i32) -> ! {
+    std::io::stdout().flush().ok();
+    std::process::exit(code);
+}
+
+// ---- verify (verdict-bearing: MUST be perfect) ----
+
+/// The outcome of a `--against` cross-bundle comparison over the overlapping
+/// journal range. `Consistent`/`Fork` are only ever computed when BOTH
+/// bundles independently verify VALID.
+enum AgainstOutcome {
+    /// Overlapping positions all agree — the chains are prefix-compatible.
+    Consistent { shared: usize },
+    /// Same journal (shared genesis identity) and a shared position carries
+    /// DIFFERENT heads: cryptographic proof of a forked journal.
+    Fork { position: u64 },
+    /// No overlapping positions — no claim either way.
+    NotComparable,
+    /// The two bundles are DIFFERENT journals (distinct genesis signing
+    /// keys). A head disagreement here is NOT a fork — it is expected between
+    /// unrelated journals — so no consistency claim is made and no adverse
+    /// verdict is asserted (e.g. the operator grabbed the wrong earlier file).
+    DifferentJournals,
+    /// One bundle is not VALID, so no consistency claim can be made.
+    NotValid { which: &'static str, verdict: Verdict },
+    /// Both VALID but the heads could not be re-derived (structurally
+    /// unreachable — a VALID verdict means the bootstrap already succeeded —
+    /// but handled rather than unwrapped).
+    Error { detail: String },
+}
+
+/// Verify `bundle` offline, optionally cross-check against an EARLIER bundle,
+/// print the report, and exit with the verdict's code (fork forces exit 1).
+/// Never returns.
+fn evidence_verify(bundle: &std::path::Path, against: Option<&std::path::Path>, json: bool) -> ! {
+    let bytes = read_bundle_or_exit(bundle);
+    let report = verify_bundle(&bytes);
+
+    let Some(earlier_path) = against else {
+        // Plain verify: output shape is IDENTICAL to the standalone
+        // `docbrain-verify` binary.
+        if json {
+            println!("{}", serde_json::to_string_pretty(&report.to_json()).unwrap_or_default());
+        } else {
+            print!("{}", report.render_human());
+        }
+        exit_with(report.verdict.exit_code());
+    };
+
+    let earlier_bytes = read_bundle_or_exit(earlier_path);
+    let earlier_report = verify_bundle(&earlier_bytes);
+    let outcome = compare_against(&bytes, &earlier_bytes, &report, &earlier_report);
+
+    if json {
+        let out = serde_json::json!({
+            "bundle": report.to_json(),
+            "against": against_json(&earlier_report, &outcome),
+        });
+        println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+    } else {
+        print!("{}", report.render_human());
+        print_against_human(earlier_path, &earlier_report, &outcome);
+    }
+
+    // A proven fork is cryptographic proof of tampering across the pair — it
+    // forces a failing exit even if THIS bundle alone verifies VALID.
+    let code = match outcome {
+        AgainstOutcome::Fork { .. } => Verdict::Tampered.exit_code(),
+        _ => report.verdict.exit_code(),
+    };
+    exit_with(code);
+}
+
+/// Compare two bundles' per-position heads over their overlapping range. The
+/// genesis anchor (position 0, all-zero head — a universal constant carrying
+/// no journal identity) is excluded, so "consistent" always rests on at least
+/// one real shared position. Both bundles must be VALID first; otherwise no
+/// claim is made.
+fn compare_against(
+    bundle_bytes: &[u8],
+    earlier_bytes: &[u8],
+    report: &VerdictReport,
+    earlier_report: &VerdictReport,
+) -> AgainstOutcome {
+    if report.verdict != Verdict::Valid {
+        return AgainstOutcome::NotValid { which: "this bundle", verdict: report.verdict };
+    }
+    if earlier_report.verdict != Verdict::Valid {
+        return AgainstOutcome::NotValid { which: "the --against bundle", verdict: earlier_report.verdict };
+    }
+
+    let a = match chain_heads_for_bundle(bundle_bytes) {
+        Ok(h) => h,
+        Err(e) => return AgainstOutcome::Error { detail: e.to_string() },
+    };
+    let b = match chain_heads_for_bundle(earlier_bytes) {
+        Ok(h) => h,
+        Err(e) => return AgainstOutcome::Error { detail: e.to_string() },
+    };
+
+    // Identity gate FIRST (the narrowing that keeps FORK an honest accusation):
+    // a head disagreement only proves a FORK when both bundles are the SAME
+    // journal — i.e. share the genesis signing key (the immutable, self-signed
+    // TOFU root). Between DIFFERENT journals a head disagreement is expected,
+    // not fraud, so it can never be reported as a fork. A real intra-journal
+    // fork still shares the genesis key and is still caught below; a
+    // post-compromise successor-genesis lineage is different-genesis → the
+    // safe "different journals / not-comparable" answer.
+    if a.genesis_identity != b.genesis_identity {
+        return AgainstOutcome::DifferentJournals;
+    }
+
+    // Map earlier bundle's positions → head, excluding the genesis anchor.
+    let earlier_by_pos: std::collections::HashMap<u64, [u8; 32]> =
+        b.heads.iter().filter(|(p, _)| *p != 0).copied().collect();
+
+    let mut shared = 0usize;
+    let mut fork_at: Option<u64> = None;
+    for (pos, head) in a.heads.iter().filter(|(p, _)| *p != 0) {
+        if let Some(other) = earlier_by_pos.get(pos) {
+            shared += 1;
+            if other != head {
+                // Report the LOWEST forking position for a stable message.
+                fork_at = Some(fork_at.map_or(*pos, |f| f.min(*pos)));
+            }
+        }
+    }
+
+    match (fork_at, shared) {
+        (Some(position), _) => AgainstOutcome::Fork { position },
+        (None, 0) => AgainstOutcome::NotComparable,
+        (None, shared) => AgainstOutcome::Consistent { shared },
+    }
+}
+
+const AGAINST_CAVEAT: &str =
+    "Note: two bundles handed over together can both come from the same clean fork. A \
+consistency claim only holds if you (the relying party) retained the earlier bundle \
+independently, at the earlier time.";
+
+fn print_against_human(earlier_path: &std::path::Path, earlier_report: &VerdictReport, outcome: &AgainstOutcome) {
+    println!("\n--against {} (verdict: {})", earlier_path.display(), earlier_report.verdict.as_str());
+    match outcome {
+        AgainstOutcome::Consistent { shared } => {
+            println!("Cross-check: consistent — {shared} overlapping position(s) agree; the chains are prefix-compatible.");
+            println!("{AGAINST_CAVEAT}");
+        }
+        AgainstOutcome::Fork { position } => {
+            println!("Cross-check: FORK DETECTED at position {position} — the two bundles carry different heads for the same position. This is cryptographic proof of a forked journal.");
+        }
+        AgainstOutcome::NotComparable => {
+            println!("Cross-check: not-comparable — the two bundles' exported ranges do not overlap. No consistency claim is made either way.");
+        }
+        AgainstOutcome::DifferentJournals => {
+            println!("Cross-check: different journals — the two bundles have distinct genesis signing keys, so they are not the same journal. not-comparable; no consistency claim is made either way (and this is NOT a fork).");
+        }
+        AgainstOutcome::NotValid { which, verdict } => {
+            println!("Cross-check: skipped — {which} is {} (not VALID). No consistency claim is made.", verdict.as_str());
+        }
+        AgainstOutcome::Error { detail } => {
+            println!("Cross-check: could not compare ({detail}). No consistency claim is made.");
+        }
+    }
+}
+
+fn against_json(earlier_report: &VerdictReport, outcome: &AgainstOutcome) -> serde_json::Value {
+    let (result, mut extra) = match outcome {
+        AgainstOutcome::Consistent { shared } => ("consistent", serde_json::json!({ "shared_positions": shared, "caveat": AGAINST_CAVEAT })),
+        AgainstOutcome::Fork { position } => ("fork_detected", serde_json::json!({ "fork_position": position })),
+        AgainstOutcome::NotComparable => ("not_comparable", serde_json::json!({})),
+        AgainstOutcome::DifferentJournals => ("different_journals", serde_json::json!({ "note": "distinct genesis signing keys; not the same journal, not a fork" })),
+        AgainstOutcome::NotValid { which, verdict } => ("skipped", serde_json::json!({ "reason": format!("{which} is {}", verdict.as_str()) })),
+        AgainstOutcome::Error { detail } => ("error", serde_json::json!({ "detail": detail })),
+    };
+    extra["result"] = serde_json::json!(result);
+    extra["earlier_verdict"] = serde_json::json!(earlier_report.verdict.as_str());
+    extra
+}
+
+// ---- why (offline; refuses non-VALID; lower-criticality rendering) ----
+
+fn evidence_why(record: &str, bundle: &std::path::Path) -> ! {
+    let bytes = read_bundle_or_exit(bundle);
+    let report = verify_bundle(&bytes);
+    if report.verdict != Verdict::Valid {
+        eprintln!(
+            "refusing to explain a {} bundle — never render record content from an unverified bundle.",
+            report.verdict.as_str()
+        );
+        eprintln!("Reason: {}", report.dominant.detail);
+        exit_with(Verdict::CannotVerify.exit_code());
+    }
+
+    let records = match read_records(&bytes) {
+        Ok(r) => r,
+        Err(e) => {
+            // Unreachable after a VALID verdict; handled, not unwrapped.
+            eprintln!("error: bundle verified VALID but records could not be read: {e}");
+            exit_with(EXIT_CLI_ERROR);
+        }
+    };
+
+    let Some(primary) = find_record(&records, record) else {
+        eprintln!("No record in this bundle matches {record:?} (tried journal position and record-body id).");
+        exit_with(0);
+    };
+
+    render_why(primary, &records);
+    exit_with(0);
+}
+
+/// Find the record a `why` selector names: a bare integer matches a journal
+/// position; anything else matches a record-body id field (`id`, `premise_id`,
+/// `fragment_id`).
+fn find_record<'a>(records: &'a [RecordHeader], selector: &str) -> Option<&'a RecordHeader> {
+    if let Ok(pos) = selector.parse::<u64>()
+        && let Some(r) = records.iter().find(|r| r.position == pos)
+    {
+        return Some(r);
+    }
+    records.iter().find(|r| {
+        ["id", "premise_id", "fragment_id"]
+            .iter()
+            .any(|k| body_str(&r.body, k).as_deref() == Some(selector))
+    })
+}
+
+/// A body string field, if present and a string — the graceful accessor `why`
+/// uses everywhere so a missing/mistyped field is skipped, never a panic.
+fn body_str(body: &serde_json::Value, key: &str) -> Option<String> {
+    body.get(key).and_then(|v| v.as_str()).map(str::to_string)
+}
+
+fn render_why(primary: &RecordHeader, all: &[RecordHeader]) {
+    println!("Record @position {} — {}/{} at {}", primary.position, primary.class, primary.kind, primary.at);
+    println!("  actor: {}", primary.actor);
+
+    // Fields extracted BY NAME from the record body — each printed only if
+    // present (decision/fragment-created carry id/fragment_type/summary_hash/
+    // routed_status; premise transitions carry the state fields; a discard
+    // carries a reason). Unknown shapes simply print nothing extra.
+    for (label, key) in [
+        ("id", "id"),
+        ("type", "fragment_type"),
+        ("summary-hash", "summary_hash"),
+        ("routed", "routed_status"),
+        ("reason", "reason"),
+        ("expression", "expression"),
+        ("premise-id", "premise_id"),
+        ("fragment-id", "fragment_id"),
+    ] {
+        if let Some(v) = body_str(&primary.body, key) {
+            println!("  {label}: {v}");
+        }
+    }
+
+    // "sources" — extracted by name, rendered if present (a decision may carry
+    // a sources array; skipped gracefully when absent).
+    if let Some(sources) = primary.body.get("sources") {
+        println!("  sources: {sources}");
+    }
+
+    // premise state, when this record is itself a transition.
+    if let (Some(new_state), old_state) = (body_str(&primary.body, "new_state"), body_str(&primary.body, "old_state")) {
+        match old_state {
+            Some(old) => println!("  premise state: {old} -> {new_state}"),
+            None => println!("  premise state: -> {new_state}"),
+        }
+    }
+
+    // The record's own id, used to correlate approvals and premise history.
+    if let Some(id) = body_str(&primary.body, "id") {
+        // approver: an `approved`-kind record whose body id matches — its
+        // actor is who approved it.
+        if let Some(appr) = all.iter().find(|r| r.kind == "approved" && body_str(&r.body, "id").as_deref() == Some(&id)) {
+            println!("  approved by: {}", appr.actor);
+        }
+        // premise states referencing this record as their fragment.
+        let transitions: Vec<&RecordHeader> = all
+            .iter()
+            .filter(|r| r.kind == "transition" && body_str(&r.body, "fragment_id").as_deref() == Some(&id))
+            .collect();
+        if !transitions.is_empty() {
+            println!("  premise transitions ({}):", transitions.len());
+            for t in transitions {
+                let expr = body_str(&t.body, "expression").unwrap_or_default();
+                let old = body_str(&t.body, "old_state").unwrap_or_else(|| "?".to_string());
+                let new = body_str(&t.body, "new_state").unwrap_or_else(|| "?".to_string());
+                println!("    - {expr}: {old} -> {new}");
+            }
+        }
+    }
+}
+
+// ---- tables (offline; refuses non-VALID; populations CSV) ----
+
+fn evidence_tables(bundle: &std::path::Path, out: &std::path::Path) -> ! {
+    let bytes = read_bundle_or_exit(bundle);
+    let report = verify_bundle(&bytes);
+    if report.verdict != Verdict::Valid {
+        eprintln!(
+            "refusing to tabulate a {} bundle — never render record content from an unverified bundle.",
+            report.verdict.as_str()
+        );
+        exit_with(Verdict::CannotVerify.exit_code());
+    }
+
+    let records = match read_records(&bytes) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("error: bundle verified VALID but records could not be read: {e}");
+            exit_with(EXIT_CLI_ERROR);
+        }
+    };
+
+    // Populations: record counts per (class, kind), sorted for a stable file.
+    let mut populations: std::collections::BTreeMap<(String, String), u64> = std::collections::BTreeMap::new();
+    for r in &records {
+        *populations.entry((r.class.clone(), r.kind.clone())).or_insert(0) += 1;
+    }
+
+    // Bundle-digest header row: a plain SHA-256 of the whole `.dbev`, so the
+    // CSV is tied to one specific bundle. Not a trust hash — a display digest.
+    let digest = {
+        use sha2::{Digest, Sha256};
+        hex::encode(Sha256::digest(&bytes))
+    };
+
+    let mut csv = String::new();
+    csv.push_str(&format!(
+        "# bundle_sha256={digest},verdict={},range=[{},{}],records={}\n",
+        report.verdict.as_str(),
+        report.scope.range.0,
+        report.scope.range.1,
+        report.counts.records,
+    ));
+    csv.push_str("class,kind,count\n");
+    for ((class, kind), count) in &populations {
+        csv.push_str(&format!("{},{},{}\n", csv_field(class), csv_field(kind), count));
+    }
+
+    if let Err(e) = std::fs::write(out, csv.as_bytes()) {
+        eprintln!("error: cannot write CSV {}: {e}", out.display());
+        exit_with(EXIT_CLI_ERROR);
+    }
+    eprintln!("Wrote {} population row(s) to {}", populations.len(), out.display());
+    exit_with(0);
+}
+
+/// Minimal RFC-4180 CSV escaping: quote a field containing a comma, quote or
+/// newline; double any embedded quotes. `class`/`kind` are closed-vocabulary
+/// today, but escaping keeps the CSV well-formed if that ever changes.
+fn csv_field(s: &str) -> String {
+    if s.contains(',') || s.contains('"') || s.contains('\n') {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}
+
+// ---- export (the ONLY networked evidence subcommand) ----
+
+async fn evidence_export(
+    server_url: &str,
+    api_key: Option<&str>,
+    range: Option<&str>,
+    profile: Option<&str>,
+    preset: Option<&str>,
+    out: &std::path::Path,
+) -> Result<()> {
+    use anyhow::Context;
+    let key = api_key.ok_or_else(|| anyhow::anyhow!(
+        "API key required for export. Run `docbrain login` or set DOCBRAIN_API_KEY. \
+         (verify/why/tables need no key — export is the only networked evidence subcommand.)"
+    ))?;
+
+    if range.is_some() && preset.is_some() {
+        anyhow::bail!("--range and --preset are alternatives; pass at most one.");
+    }
+
+    let mut body = serde_json::Map::new();
+    if let Some(r) = range {
+        let (start, end) = r
+            .split_once(',')
+            .ok_or_else(|| anyhow::anyhow!("--range must be START,END (e.g. 0,1200)"))?;
+        let start: u64 = start.trim().parse().map_err(|_| anyhow::anyhow!("--range START must be a non-negative integer"))?;
+        let end: u64 = end.trim().parse().map_err(|_| anyhow::anyhow!("--range END must be a non-negative integer"))?;
+        body.insert("range".to_string(), serde_json::json!([start, end]));
+    }
+    if let Some(p) = profile {
+        body.insert("profile".to_string(), serde_json::json!(p));
+    }
+    if let Some(p) = preset {
+        body.insert("preset".to_string(), serde_json::json!(p));
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/api/v1/evidence/export", server_url))
+        .header("Authorization", format!("Bearer {}", key))
+        .json(&serde_json::Value::Object(body))
+        .send()
+        .await
+        .context("sending evidence export request to the DocBrain server")?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        anyhow::bail!("evidence export failed ({}): {}", status, text);
+    }
+
+    let bytes = response.bytes().await.context("reading the exported .dbev bundle body from the server")?;
+    std::fs::write(out, &bytes)
+        .map_err(|e| anyhow::anyhow!("cannot write bundle {}: {e}", out.display()))?;
+    eprintln!("Wrote {} bytes to {}. Verify it offline: docbrain-verify {}", bytes.len(), out.display(), out.display());
+    Ok(())
+}
 
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -17,4 +17,19 @@ dirs = "5"
 futures-util = "0.3"
 rpassword = "7"
 open = "5"
+# The MIT trust core: the offline verifier (`verify_bundle`) plus the additive
+# read helpers (`read_records`, `chain_heads_for_bundle`) the evidence CLI is
+# built on. All parsing/hashing/verdict logic lives there, never here.
+docbrain-evidence = { path = "../docbrain-evidence", version = "1.5" }
+# `evidence tables` prints a SHA-256 bundle-digest header row; this is a plain
+# content digest for display, not a domain-separated trust hash, so it is
+# computed CLI-side rather than pulled from the crate's hash module.
+sha2 = "0.10"
+hex = "0.4"
+
+# The auditor-facing offline verifier — thin: read file → `verify_bundle` →
+# print human/JSON report → exit 0/1/2/3. No server, no network, no config.
+[[bin]]
+name = "docbrain-verify"
+path = "src/bin/docbrain_verify.rs"
 

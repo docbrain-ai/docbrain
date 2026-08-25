@@ -911,6 +911,23 @@ stream:
   expertise_gap_days: 90
 ```
 
+## Evidence Bundles
+
+See [`docs/evidence.md`](evidence.md) for what a bundle is, the verdict taxonomy, and how to verify one offline. These settings control the server-side journal that bundles are exported from.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EVIDENCE_ENABLED` | `true` | Master switch for the evidence journal. When `false`, no records are written and `docbrain evidence export` has nothing to export. |
+| `EVIDENCE_CHECKPOINT_EVERY_N` | `256` | Emit a signed checkpoint after this many journal records. Clamped to `16..=65536`. |
+| `EVIDENCE_CHECKPOINT_EVERY_SECS` | `3600` | Emit a signed checkpoint after this many seconds even if the record count hasn't reached `EVIDENCE_CHECKPOINT_EVERY_N` yet. Not clamped — the writer floors a zero value to 1 second internally rather than rejecting it, so a sub-minute value is valid for testing. |
+| `EVIDENCE_RECOVERY_PUBKEY` | — | Hex-encoded Ed25519 public key for the cold recovery key, declared at genesis. **Set this before the journal's first boot** — genesis is created automatically on first write and is immutable afterward; without a recovery key declared at genesis, no compromise can ever be declared in-band. Optional but strongly recommended. |
+| `EVIDENCE_TSA_URL` | — | RFC 3161 timestamp authority endpoint. Must be an absolute `http`/`https` URL. Optional, off by default. A down or slow TSA never blocks a checkpoint — anchoring is best-effort. v1 stores the returned token but does not cryptographically validate it (a future release adds validation); an anchor is honestly reported as present-but-unvalidated, never granted a trust tier on that basis alone. |
+| `EVIDENCE_WITNESS_DIR` | — | Directory for append-only, dated witness files (`witness-YYYY-MM-DD.jsonl`) your organization publishes independently. Must be an existing, writable directory — validated at startup with a create+delete probe, not just an existence check. Optional, off by default. |
+
+The set of event classes journaled (`fragments`, `reviews`, `decisions`, `premises`, `governance` — all on by default) is YAML-only, matching this codebase's convention for other list-shaped config; there is no env override. `governance` (GDPR erasure records) is written unconditionally regardless of this list.
+
+The **default compliance profile** is `eu-ai-act` — a compiled default (there is no env var to change it), selectable per export via `docbrain evidence export --profile <id>`. It is the only profile v1 ships; see [`docs/evidence.md`](evidence.md#regulation-agnostic-engine-pluggable-compliance-profiles).
+
 ## Ollama-specific Notes
 
 When using Ollama as both LLM and embedding provider:
