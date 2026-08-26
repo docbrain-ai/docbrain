@@ -4,8 +4,9 @@ This directory contains the full source for everything DocBrain runs **on your s
 
 | Crate | What it is | License |
 |---|---|---|
-| [`docbrain-cli`](docbrain-cli/) | The `docbrain` command-line client: `login`, `ask`, `capture`, `generate`, `freshness` | MIT |
+| [`docbrain-cli`](docbrain-cli/) | The `docbrain` command-line client: `login`, `ask`, `capture`, `generate`, `freshness`, `evidence` — and the standalone `docbrain-verify` binary | MIT |
 | [`docbrain-mcp`](docbrain-mcp/) | The MCP server installed in Claude Code, Cursor, and other MCP-compatible editors | MIT |
+| [`docbrain-evidence`](docbrain-evidence/) | The offline verifier for `.dbev` evidence bundles — audit a signed record of your knowledge without trusting DocBrain | MIT |
 
 ## Why these are open
 

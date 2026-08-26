@@ -38,7 +38,7 @@
 
 ---
 
-> **Project Status: client source open, server closed.** The source for everything DocBrain runs on *your* side of the network boundary — the `docbrain` CLI and the IDE MCP server — is in this repo under [`crates/`](crates/), MIT-licensed, built and tested in public CI — as is everything else in this repository. Audit exactly what runs in your environment and what leaves it. The server ships as free production Docker images (BSL 1.1 permits production use) with full Helm charts, complete configuration, the [threat model](THREAT_MODEL.md), and all the docs to self-host in production. The server source stays closed for now — we originally targeted the first half of 2026 to publish it, we missed that date, and we won't post a new date until we're certain we can hit it. If a closed server is a dealbreaker for you, that's a rational position and we respect it: [how DocBrain earns trust](https://docbrainapi.com/docs/trust/). Contributions: code PRs for the client crates, plus documentation, configuration, and bug reports. When the server source publishes, it will be published under the Business Source License 1.1.
+> **Project Status: client source open, server closed.** The source for everything DocBrain runs on *your* side of the network boundary — the `docbrain` CLI, the IDE MCP server, and the offline [`.dbev` evidence verifier](crates/docbrain-evidence/) — is in this repo under [`crates/`](crates/), MIT-licensed, built and tested in public CI — as is everything else in this repository. Audit exactly what runs in your environment and what leaves it. The server ships as free production Docker images (BSL 1.1 permits production use) with full Helm charts, complete configuration, the [threat model](THREAT_MODEL.md), and all the docs to self-host in production. The server source stays closed for now — we originally targeted the first half of 2026 to publish it, we missed that date, and we won't post a new date until we're certain we can hit it. If a closed server is a dealbreaker for you, that's a rational position and we respect it: [how DocBrain earns trust](https://docbrainapi.com/docs/trust/). Contributions: code PRs for the client crates, plus documentation, configuration, and bug reports. When the server source publishes, it will be published under the Business Source License 1.1.
 
 ---
 
@@ -113,6 +113,7 @@ Your agent fixes something, checks whether the org already knows it, and — wit
 - **`docbrain generate`** — on-demand docs grounded in your own runbooks, incidents, threads, and PRs, with per-claim provenance and honest `needs_input` for what the knowledge can't answer. [Generate guide →](docs/generate.md)
 - **Quality gates on every doc** — structural, style (your style guide, enforced automatically), and semantic scoring; nothing unscored enters the system. [Style policy →](docs/style-policy.md)
 - **Review workflows and ownership** — multi-stage approvals, space owners, SLAs, and governance dashboards, so documentation has accountability. [Governance →](docs/governance.md) · [Reviews →](docs/reviews.md)
+- **Offline evidence bundles** — export a sealed, signed, hash-chained `.dbev` record of answers, decisions, approvals and premise verdicts that **anyone verifies offline** — no DocBrain, no server, no network — with an open-source verifier (a Rust binary and a dependency-free Python script, proven byte-identical) returning `VALID` / `TAMPERED` / `CANNOT_VERIFY`. The trust comes from the math they run themselves, not from us. [Evidence bundles →](docs/evidence.md)
 - **Autopilot** — clusters unanswered questions into gaps, drafts grounded fixes, and routes them to human review. Nothing publishes without oversight. [Autopilot →](docs/autopilot.md)
 - **Live intelligence** — reads connected systems *at the moment you ask*, then reconciles that with indexed history in one cited answer. Write-capable tools are dropped at discovery, so it never holds the capability to change anything. [MCP tools →](docs/mcp-tools.md)
 - **Freshness and contradiction detection** — stale docs flagged, conflicting docs surfaced, cascade staleness traced across dependent docs. [Knowledge intelligence →](docs/knowledge-intelligence.md)
@@ -200,6 +201,7 @@ helm install docbrain ./helm/docbrain \
 | [Autopilot](docs/autopilot.md) | Gap detection, draft generation, feedback loop |
 | [Generate](docs/generate.md) | Grounded on-demand doc generation |
 | [Coding Agents](docs/agents.md) | Teaching Claude Code / Cursor to file docs via MCP |
+| [Evidence Bundles](docs/evidence.md) | Offline-verifiable `.dbev` proof of your knowledge, and the open verifier |
 | [API Reference](docs/api-reference.md) | Full REST API documentation |
 | [RBAC](docs/rbac.md) | Role-based access control and SSO |
 | [Slack Integration](docs/slack.md) | Slash commands, message shortcuts, thread capture |
