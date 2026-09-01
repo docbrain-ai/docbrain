@@ -177,6 +177,37 @@ server:
   env: {}
 
 # -- DocBrain Web UI
+# First-boot admin key, rendered into a dedicated Secret by
+# templates/initial-admin-secret.yaml. That template was referencing
+# `.Values.bootstrapKey.enabled` while this file defined no `bootstrapKey`
+# block, so `helm lint` and `helm install` failed on the default values with
+# `nil pointer evaluating interface {}.enabled`.
+#
+# `true` matches the template's documented lifecycle (a key is generated on
+# install and preserved across upgrades) and docs/kubernetes.md, which presents
+# `bootstrapKey.enabled=false` as the opt-OUT used to delete the Secret and
+# have the server revoke the key.
+bootstrapKey:
+  enabled: true
+
+# Kubernetes ServiceAccount for the server and ingest pods.
+#
+# Four templates reference this block (server/web deployments, the ingest
+# CronJob, and the serviceAccountName helper), but it was absent from this
+# file, so `helm lint` and `helm install` failed on the default values with
+# `nil pointer evaluating interface {}.create`.
+#
+# `create: false` is the conservative default and matches the documented
+# opt-in flow: set `create: true` plus an IRSA role annotation when the pod
+# needs a cloud identity (e.g. Bedrock `bedrock:InvokeModel`). With `false`
+# the pods use the namespace's `default` ServiceAccount, which is the
+# effective behaviour for every chart consumer who supplied their own values.
+serviceAccount:
+  create: false
+  # Leave empty to derive the name from the release; only used when create=true.
+  name: ""
+  annotations: {}
+
 web:
   enabled: true
   image:
