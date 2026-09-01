@@ -12,13 +12,34 @@
 //! `tests/header_caller_integration.rs`.
 
 use anyhow::Result;
-use docbrain_mcp::{JsonRpcRequest, McpServer};
+use docbrain_mcp::{parse_cli, usage, CliAction, JsonRpcRequest, McpServer};
 use serde_json::json;
 use std::io::{self, BufRead, Write};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenvy::dotenv().ok();
+
+    // Arguments first. `--version` and `--help` are questions about this
+    // binary, so they must be answerable without credentials — startup
+    // validation used to run first, and asking for the version exited 1 with
+    // "DOCBRAIN_API_KEY is not set".
+    match parse_cli(&std::env::args().skip(1).collect::<Vec<_>>()) {
+        CliAction::Version => {
+            println!("docbrain-mcp {}", env!("CARGO_PKG_VERSION"));
+            return Ok(());
+        }
+        CliAction::Help => {
+            print!("{}", usage());
+            return Ok(());
+        }
+        CliAction::Unknown(arg) => {
+            eprintln!("[docbrain-mcp] ERROR: unrecognised argument: {arg}");
+            eprint!("{}", usage());
+            std::process::exit(2);
+        }
+        CliAction::Serve => {}
+    }
 
     let server = McpServer::new();
 

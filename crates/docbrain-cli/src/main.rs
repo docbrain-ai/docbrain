@@ -64,6 +64,10 @@ enum Commands {
         /// Show raw UUIDs (session/episode IDs)
         #[arg(long, short = 'v')]
         verbose: bool,
+        /// Emit the answer and sources as JSON on stdout. Disables streaming
+        /// and suppresses progress output, so stdout is machine-readable.
+        #[arg(long)]
+        json: bool,
     },
     /// Trace the retrieval pipeline for a question (admin only).
     ///
@@ -522,7 +526,7 @@ struct LoginResponse {
     id: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct AskResponse {
     answer: String,
     sources: Vec<SourceResponse>,
@@ -533,7 +537,7 @@ struct AskResponse {
     intent: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[allow(dead_code)]
 struct SourceResponse {
     heading: Option<String>,
@@ -1135,12 +1139,38 @@ fn print_response(result: &AskResponse, verbose: bool) {
     print_response_metadata(result, verbose);
 }
 
-fn freshness_tag(status: Option<&str>) -> &'static str {
-    match status {
-        Some("stale")        => " \x1b[38;5;208m⚠ stale\x1b[0m",
-        Some("outdated")     => " \x1b[31m⚠ outdated\x1b[0m",
-        Some("needs_review") => " \x1b[33m⚠ needs review\x1b[0m",
-        _                   => "",
+/// Whether ANSI colour may be written to **stdout**.
+///
+/// stdout carries the answer, so a redirected or piped answer must be plain
+/// text: escape codes there are the same scriptability problem as the progress
+/// spinner was, just quieter. `NO_COLOR` (set to any value, per
+/// no-color.org) and `TERM=dumb` both suppress colour even on a terminal.
+fn stdout_colour_enabled() -> bool {
+    use std::io::IsTerminal;
+    if std::env::var_os("NO_COLOR").is_some() {
+        return false;
+    }
+    if std::env::var("TERM").map(|t| t == "dumb").unwrap_or(false) {
+        return false;
+    }
+    std::io::stdout().is_terminal()
+}
+
+/// Freshness marker appended to a source line.
+///
+/// Printed on stdout as part of the sources list, so colour is gated — see
+/// `stdout_colour_enabled`.
+fn freshness_tag(status: Option<&str>, colour: bool) -> String {
+    let (code, label) = match status {
+        Some("stale")        => ("38;5;208", "⚠ stale"),
+        Some("outdated")     => ("31",       "⚠ outdated"),
+        Some("needs_review") => ("33",       "⚠ needs review"),
+        _                    => return String::new(),
+    };
+    if colour {
+        format!(" \x1b[{code}m{label}\x1b[0m")
+    } else {
+        format!(" {label}")
     }
 }
 
@@ -1159,7 +1189,7 @@ fn print_sources(result: &AskResponse) {
             Some(h) => format!(" > {}", h),
             None => String::new(),
         };
-        let tag = freshness_tag(source.freshness_status.as_deref());
+        let tag = freshness_tag(source.freshness_status.as_deref(), stdout_colour_enabled());
         println!("  [{}] {}{} (score: {:.2}){}", i + 1, source.title, section, source.score, tag);
         println!("      {}", source.source_url);
     }
@@ -1198,13 +1228,74 @@ fn print_response_metadata(result: &AskResponse, verbose: bool) {
     println!();
 }
 
-fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32) {
-    let mut stdout = std::io::stdout();
+/// How to render transient pipeline progress.
+///
+/// Progress is UI, not data. It used to be printed to stdout with
+/// unconditional ANSI — cyan markers plus `\r\x1b[2K` in-place rewrites — so
+/// it shared a stream with the answer and the two interleaved, splitting the
+/// answer mid-word. It survived `NO_COLOR=1`, `TERM=dumb`, and stdout being a
+/// file, which made `docbrain ask` unusable from a script or an agent.
+///
+/// Progress now goes to stderr in every mode; this type only decides how much
+/// of it, and whether escapes are allowed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ProgressStyle {
+    /// Interactive terminal: coloured, rewritten in place.
+    Animated,
+    /// Not a terminal, or colour suppressed: one plain line per phase, no
+    /// escapes, nothing rewritten.
+    Plain,
+    /// Machine-readable output requested: no progress at all.
+    Silent,
+}
+
+impl ProgressStyle {
+    /// Decide the style from the request and the environment.
+    ///
+    /// Kept pure so the policy is testable without a terminal; the caller
+    /// supplies the environment probes.
+    fn decide(json: bool, no_color: bool, term_dumb: bool, stderr_is_tty: bool) -> Self {
+        if json {
+            // The caller asked for data on stdout and is parsing it. Progress
+            // would be noise even on stderr.
+            return ProgressStyle::Silent;
+        }
+        if !stderr_is_tty || no_color || term_dumb {
+            return ProgressStyle::Plain;
+        }
+        ProgressStyle::Animated
+    }
+
+    /// Read the environment and decide. `NO_COLOR` is honoured per the
+    /// no-color.org convention: set at all, to any value, means no escapes.
+    fn from_env(json: bool) -> Self {
+        use std::io::IsTerminal;
+        let no_color = std::env::var_os("NO_COLOR").is_some();
+        let term_dumb = std::env::var("TERM").map(|t| t == "dumb").unwrap_or(false);
+        Self::decide(json, no_color, term_dumb, std::io::stderr().is_terminal())
+    }
+}
+
+fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32, style: ProgressStyle) {
+    if style == ProgressStyle::Silent {
+        return;
+    }
+    // Progress is UI: stderr, never stdout. stdout carries the answer.
+    let mut err = std::io::stderr();
     match event {
         PipelineEvent::Started { phase, description } => {
             *phase_count += 1;
-            print!("  \x1b[36m◆\x1b[0m {}... \x1b[2m{}\x1b[0m", phase_label(phase), description);
-            let _ = stdout.flush();
+            if style == ProgressStyle::Animated {
+                let _ = write!(
+                    err,
+                    "  \x1b[36m◆\x1b[0m {}... \x1b[2m{}\x1b[0m",
+                    phase_label(phase),
+                    description
+                );
+                let _ = err.flush();
+            }
+            // Plain style says nothing on Started — without in-place rewriting
+            // a start line would just be superseded by the Completed line.
         }
         PipelineEvent::Completed { phase, duration_ms, result_count, detail } => {
             // For live_tools, the per-tool detail ("jira_rest.search → ok") is
@@ -1216,10 +1307,26 @@ fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32) {
                     None    => String::new(),
                 },
             };
-            print!("\r\x1b[2K  \x1b[32m✓\x1b[0m {} \x1b[2m({}ms{})\x1b[0m
-",
-                phase_label(phase), duration_ms, info);
-            let _ = stdout.flush();
+            match style {
+                ProgressStyle::Animated => {
+                    let _ = writeln!(
+                        err,
+                        "\r\x1b[2K  \x1b[32m✓\x1b[0m {} \x1b[2m({}ms{})\x1b[0m",
+                        phase_label(phase),
+                        duration_ms,
+                        info
+                    );
+                }
+                ProgressStyle::Plain => {
+                    let _ = writeln!(
+                        err,
+                        "  {} ({}ms{})",
+                        phase_label(phase), duration_ms, info
+                    );
+                }
+                ProgressStyle::Silent => {}
+            }
+            let _ = err.flush();
         }
     }
 }
@@ -1290,8 +1397,8 @@ async fn main() -> Result<()> {
             ))?;
             handle_token(&server_url, action, &key).await?;
         }
-        Commands::Ask { question, session, new, verbose } => {
-            ask(&server_url, &question, session.as_deref(), new, verbose, api_key.as_deref()).await?;
+        Commands::Ask { question, session, new, verbose, json } => {
+            ask(&server_url, &question, session.as_deref(), new, verbose, json, api_key.as_deref()).await?;
         }
         Commands::TraceQuery { question, json } => {
             let key = api_key.ok_or_else(|| anyhow::anyhow!(
@@ -1923,13 +2030,15 @@ async fn ask(
     session_id: Option<&str>,
     new_session: bool,
     verbose: bool,
+    json: bool,
     api_key: Option<&str>,
 ) -> Result<()> {
     let client = reqwest::Client::new();
 
     println!();
 
-    let mut body = serde_json::json!({ "question": question, "stream": true });
+    // --json wants one parseable document, so ask the server not to stream.
+    let mut body = serde_json::json!({ "question": question, "stream": !json });
 
     if new_session {
         body["session_id"] = serde_json::Value::String("new".to_string());
@@ -1940,7 +2049,10 @@ async fn ask(
     }
 
     let mut request = client.post(format!("{}/api/v1/ask", server_url))
-        .header("Accept", "text/event-stream")
+        .header(
+            "Accept",
+            if json { "application/json" } else { "text/event-stream" },
+        )
         .header("X-DocBrain-Caller", "cli")
         .json(&body);
 
@@ -1980,7 +2092,17 @@ async fn ask(
         .to_string();
 
     if content_type.contains("text/event-stream") {
-        handle_sse_stream(response, verbose).await?;
+        handle_sse_stream(response, verbose, ProgressStyle::from_env(json)).await?;
+    } else if json {
+        // Machine-readable: the response document, verbatim, nothing else on
+        // stdout. Session bookkeeping still happens so follow-ups work.
+        let result: AskResponse = response.json().await?;
+        write_last_answer(&result);
+        if let Some(ref sid) = result.session_id {
+            write_local_session(sid);
+        }
+        println!("{}", serde_json::to_string_pretty(&result)?);
+        return Ok(());
     } else {
         let result: AskResponse = response.json().await?;
         print_response(&result, verbose);
@@ -2054,7 +2176,11 @@ fn handle_sse_answer(data: &str, phase_count: u32, tokens_streamed: bool, verbos
     }
 }
 
-async fn handle_sse_stream(response: reqwest::Response, verbose: bool) -> Result<()> {
+async fn handle_sse_stream(
+    response: reqwest::Response,
+    verbose: bool,
+    style: ProgressStyle,
+) -> Result<()> {
     let mut stream = response.bytes_stream();
     let mut buffer = String::new();
     let mut phase_count = 0u32;
@@ -2076,7 +2202,7 @@ async fn handle_sse_stream(response: reqwest::Response, verbose: bool) -> Result
             match event_type.as_str() {
                 "phase" => {
                     if let Ok(event) = serde_json::from_str::<PipelineEvent>(&data) {
-                        display_phase_event(&event, &mut phase_count);
+                        display_phase_event(&event, &mut phase_count, style);
                     }
                 }
                 "token" => {
@@ -2150,7 +2276,7 @@ async fn ask_incident(server_url: &str, description: &str, api_key: Option<&str>
         .to_string();
 
     if content_type.contains("text/event-stream") {
-        handle_sse_stream(response, false).await?;
+        handle_sse_stream(response, false, ProgressStyle::from_env(false)).await?;
     } else {
         let result: AskResponse = response.json().await?;
         println!("\x1b[31;1mINCIDENT RESPONSE\x1b[0m
@@ -4880,6 +5006,95 @@ async fn evidence_export(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Output policy (ProgressStyle::decide) ─────────────────────────
+    //
+    // Transient progress used to be printed to STDOUT with unconditional
+    // ANSI: `print!("  \x1b[36m◆\x1b[0m ...")` plus `\r\x1b[2K` in-place
+    // rewrites. Progress and the answer therefore shared one stream and
+    // interleaved, splitting the answer mid-word — reproduced with stdout
+    // redirected to a file and both NO_COLOR=1 and TERM=dumb set:
+    //
+    //   The AWS to GCP migration approach is ... GKE microservices ap
+    //     ✓ Synthesizing (16808ms, 5 results)
+    //   proach only.
+    //
+    // Progress is UI and belongs on stderr; stdout carries the answer.
+
+    /// Machine-readable output means no progress noise at all.
+    #[test]
+    fn json_output_silences_progress() {
+        assert_eq!(
+            ProgressStyle::decide(true, false, false, true),
+            ProgressStyle::Silent
+        );
+    }
+
+    /// A pipe or file is not a terminal — no cursor games.
+    #[test]
+    fn non_terminal_gets_plain_progress() {
+        assert_eq!(
+            ProgressStyle::decide(false, false, false, false),
+            ProgressStyle::Plain
+        );
+    }
+
+    /// NO_COLOR suppresses escapes but not progress itself.
+    #[test]
+    fn no_color_gets_plain_progress() {
+        assert_eq!(
+            ProgressStyle::decide(false, true, false, true),
+            ProgressStyle::Plain
+        );
+    }
+
+    #[test]
+    fn dumb_terminal_gets_plain_progress() {
+        assert_eq!(
+            ProgressStyle::decide(false, false, true, true),
+            ProgressStyle::Plain
+        );
+    }
+
+    #[test]
+    fn interactive_terminal_gets_animated_progress() {
+        assert_eq!(
+            ProgressStyle::decide(false, false, false, true),
+            ProgressStyle::Animated
+        );
+    }
+
+    /// Freshness markers are printed as part of the sources list on stdout, so
+    /// they must be plain when colour is off — a redirected answer carrying
+    /// escape codes is the same scriptability problem as the spinner, just
+    /// quieter.
+    #[test]
+    fn freshness_tag_is_plain_without_colour() {
+        let tag = freshness_tag(Some("needs_review"), false);
+        assert!(!tag.contains('\x1b'), "no escapes without colour; got {tag:?}");
+        assert!(tag.contains("needs review"), "the text itself must survive");
+    }
+
+    #[test]
+    fn freshness_tag_is_coloured_with_colour() {
+        let tag = freshness_tag(Some("needs_review"), true);
+        assert!(tag.contains('\x1b'), "colour requested, escapes expected");
+    }
+
+    #[test]
+    fn freshness_tag_empty_for_unknown_status() {
+        assert_eq!(freshness_tag(None, true), "");
+        assert_eq!(freshness_tag(Some("fresh"), true), "");
+    }
+
+    /// --json wins over an interactive terminal: the caller asked for data.
+    #[test]
+    fn json_wins_over_interactive_terminal() {
+        assert_eq!(
+            ProgressStyle::decide(true, false, false, true),
+            ProgressStyle::Silent
+        );
+    }
 
     /// The `generate` subcommand parses the full documented flag surface, and
     /// the destructured fields match what `main`'s dispatch arm reads. This is a

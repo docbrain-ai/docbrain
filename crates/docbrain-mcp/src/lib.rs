@@ -21,6 +21,58 @@ const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Producer/receiver contract: this value MUST match the literal `"mcp-host"`
 /// in `compute_surface()`. Mis-spelling either side silently breaks the
 /// surface-detection round-trip (receiver / emitter).
+/// What the binary was asked to do, decided from its arguments alone.
+///
+/// Argument handling must happen BEFORE credential validation: `--version` and
+/// `--help` are questions about the binary, not requests to talk to a server,
+/// and answering them must not require `DOCBRAIN_API_KEY`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CliAction {
+    /// Print the version and exit 0.
+    Version,
+    /// Print usage and exit 0.
+    Help,
+    /// Run the JSON-RPC stdin/stdout loop (the default, and what an MCP host
+    /// invokes).
+    Serve,
+    /// An argument we do not understand. Reported rather than ignored: falling
+    /// through to Serve would leave the caller waiting on a stdin read that
+    /// never produces the output they asked for.
+    Unknown(String),
+}
+
+/// Decide what to do from the argument list (excluding argv[0]).
+pub fn parse_cli(args: &[String]) -> CliAction {
+    match args.first().map(String::as_str) {
+        None => CliAction::Serve,
+        Some("--version") | Some("-V") => CliAction::Version,
+        Some("--help") | Some("-h") => CliAction::Help,
+        Some(other) => CliAction::Unknown(other.to_string()),
+    }
+}
+
+/// Usage text for `--help`. Kept next to `parse_cli` so the accepted flags and
+/// the documented flags cannot drift apart.
+pub fn usage() -> String {
+    format!(
+        "docbrain-mcp {}\n\
+         \n\
+         The DocBrain MCP connector. Speaks JSON-RPC over stdin/stdout and is\n\
+         normally launched by an MCP host (Claude Code, Cursor, ...), not by hand.\n\
+         \n\
+         USAGE:\n\
+         \x20   docbrain-mcp              run the JSON-RPC loop\n\
+         \x20   docbrain-mcp --version    print version\n\
+         \x20   docbrain-mcp --help       print this help\n\
+         \n\
+         ENVIRONMENT:\n\
+         \x20   DOCBRAIN_API_KEY      required to serve; create with\n\
+         \x20                         `docbrain token create --name \"MCP Key\" --role viewer`\n\
+         \x20   DOCBRAIN_SERVER_URL   defaults to http://localhost:3000\n",
+        env!("CARGO_PKG_VERSION")
+    )
+}
+
 pub const DOCBRAIN_CALLER_HEADER: &str = "X-DocBrain-Caller";
 pub const DOCBRAIN_CALLER_VALUE: &str = "mcp-host";
 
@@ -1366,6 +1418,54 @@ impl McpServer {
             code: -32000,
             message: format!("Invalid response: {}", e),
         })
+    }
+}
+
+#[cfg(test)]
+mod cli_tests {
+    use super::*;
+
+    // `--version` and `--help` used to be unreachable: startup validation ran
+    // before any argument handling, so the binary exited 1 with
+    // "DOCBRAIN_API_KEY is not set" instead of printing its version. Asking a
+    // binary what it is must not require credentials.
+
+    #[test]
+    fn version_flag_is_recognised() {
+        assert_eq!(parse_cli(&["--version".to_string()]), CliAction::Version);
+        assert_eq!(parse_cli(&["-V".to_string()]), CliAction::Version);
+    }
+
+    #[test]
+    fn help_flag_is_recognised() {
+        assert_eq!(parse_cli(&["--help".to_string()]), CliAction::Help);
+        assert_eq!(parse_cli(&["-h".to_string()]), CliAction::Help);
+    }
+
+    #[test]
+    fn no_arguments_serves_the_protocol() {
+        assert_eq!(parse_cli(&[]), CliAction::Serve);
+    }
+
+    /// An unrecognised flag must not be silently swallowed into Serve — that
+    /// would hang the caller on a stdin read while they wait for output.
+    #[test]
+    fn unknown_flag_is_reported() {
+        assert_eq!(
+            parse_cli(&["--frobnicate".to_string()]),
+            CliAction::Unknown("--frobnicate".to_string())
+        );
+    }
+
+    /// A JSON-RPC host launches the binary with no flags; extra non-flag
+    /// arguments are not a thing it does, but they must not be mistaken for
+    /// flags either.
+    #[test]
+    fn bare_argument_is_reported_as_unknown() {
+        assert_eq!(
+            parse_cli(&["serve".to_string()]),
+            CliAction::Unknown("serve".to_string())
+        );
     }
 }
 
