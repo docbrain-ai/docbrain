@@ -34,9 +34,11 @@ async fn main() -> Result<()> {
             return Ok(());
         }
         CliAction::Unknown(arg) => {
-            eprintln!("[docbrain-mcp] ERROR: unrecognised argument: {arg}");
+            // Warn, do NOT exit. The npm wrapper forwards argv to this binary,
+            // so exiting here would break an MCP host that passes an argument —
+            // a case that worked before argument handling existed at all.
+            eprintln!("[docbrain-mcp] WARNING: ignoring unrecognised argument: {arg}");
             eprint!("{}", usage());
-            std::process::exit(2);
         }
         CliAction::Serve => {}
     }

@@ -2092,6 +2092,18 @@ async fn ask(
         .to_string();
 
     if content_type.contains("text/event-stream") {
+        // `--json` asked for one parseable document and set `stream: false`
+        // plus `Accept: application/json`. If the server streams anyway
+        // (version skew, a proxy rewriting Accept), emitting the token stream
+        // on stdout would silently break the JSON contract the caller is
+        // parsing. Fail loudly instead.
+        if json {
+            anyhow::bail!(
+                "--json requested but the server returned a text/event-stream \
+                 response. It may predate the `stream: false` request field. \
+                 Re-run without --json, or upgrade the server."
+            );
+        }
         handle_sse_stream(response, verbose, ProgressStyle::from_env(json)).await?;
     } else if json {
         // Machine-readable: the response document, verbatim, nothing else on

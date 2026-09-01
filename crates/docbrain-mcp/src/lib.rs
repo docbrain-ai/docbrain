@@ -35,9 +35,12 @@ pub enum CliAction {
     /// Run the JSON-RPC stdin/stdout loop (the default, and what an MCP host
     /// invokes).
     Serve,
-    /// An argument we do not understand. Reported rather than ignored: falling
-    /// through to Serve would leave the caller waiting on a stdin read that
-    /// never produces the output they asked for.
+    /// An argument we do not understand. Reported on stderr, then Serve still
+    /// runs — the npm wrapper forwards `process.argv.slice(2)` to this binary
+    /// (`npm-mcp/run.js`), so exiting on an unrecognised argument would hard-
+    /// break any MCP host that passes one, where the previous code ignored
+    /// arguments entirely. A human driving it by hand sees the warning and the
+    /// usage text; a host keeps working.
     Unknown(String),
 }
 
@@ -1447,8 +1450,11 @@ mod cli_tests {
         assert_eq!(parse_cli(&[]), CliAction::Serve);
     }
 
-    /// An unrecognised flag must not be silently swallowed into Serve — that
-    /// would hang the caller on a stdin read while they wait for output.
+    /// An unrecognised flag is surfaced as `Unknown` so the binary can warn
+    /// about it. BLINDSPOT (pre-push): it must NOT cause an exit —
+    /// `npm-mcp/run.js` forwards `process.argv.slice(2)`, so exiting would
+    /// break any MCP host that passes an argument, which worked before
+    /// argument handling existed. See the dispatch in `main.rs`.
     #[test]
     fn unknown_flag_is_reported() {
         assert_eq!(
