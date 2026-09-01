@@ -84,6 +84,18 @@ rag:
   display_floor: 0.50                 # Display floor — chunks below this are never shown as citations. Lowering surfaces more tangential sources (user trust cost).
   confidence_gate: 0.40                # Confidence gate — below this, sources are hidden and the answer is shown as "general knowledge". Lowering shows sources on lower-confidence answers.
   strong_answer_floor: 0.55           # Strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer.
+
+  # ── Window-expanded synthesis context ────────────────────────────────
+  #
+  # Retrieval is chunk-granular because small chunks embed and rerank
+  # better. Synthesis used to be chunk-granular too, which meant the LLM
+  # saw only the matched fragments — an answer cannot contain what the
+  # context never held, on any provider, local or hosted.
+  #
+  # These widen only what SYNTHESIS sees. Retrieval, ranking, source cards
+  # and the grounding floors above are untouched.
+  context_window_chunks: 3            # Sibling chunks fetched either side of each match. 0 disables expansion. Raising it costs synthesis latency and context-window headroom.
+  context_window_budget_bytes: 65536  # Total budget across all expanded documents; overflow trimmed from the lowest-ranked end. Guards small local models' context windows.
   # ── Tool-output caps (the truncation chain) ───────────────────────────
   # Three coordinated caps bound how much raw tool output reaches the
   # synthesis prompt. They MUST rise together — raising one alone has no
