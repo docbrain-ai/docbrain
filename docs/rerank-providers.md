@@ -190,6 +190,7 @@ rerank:
 |---|---|
 | `RAG_RERANK_TOP_N` | Higher = better recall at the top, linear cost/latency growth. Should match `rag.candidate_pool_size`. |
 | `RAG_RERANK_BATCH_SIZE` | Lower = more HTTP calls but smaller per-call latency spikes. Clamped to `[1, 1000]`. |
+| `RAG_RERANK_TOP_N` | Bounds how many candidates are sent to the provider, enforced for every provider. **Matters most for `ollama`**: that dialect is a bi-encoder approximation over the embeddings API and issues **one embedding round-trip per candidate**, sequentially, so cost is linear in this value and a 200-candidate pool is 200 round-trips on every query. Hosted cross-encoders batch, so they feel the value far less. Start well below `rag.candidate_pool_size` on the local provider and raise it only if recall at the top actually suffers. |
 | `RAG_RERANK_TIMEOUT_SECS` | Tight — rerank is on the critical path of every query. Failure falls back to the RRF-only ranking from stage 2. |
 
 ### Tuning the grounding floors
@@ -204,6 +205,14 @@ The reranker's score only matters insofar as it gates the four **grounding floor
 | `rag.display_floor` | `0.50` | Chunks below this are never shown as citations | **User trust** — tangentially-related docs appear in the sources list and erode credibility |
 | `rag.confidence_gate` | `0.40` | Below this, sources are hidden entirely (answer shown as "general knowledge") | Sources render on low-confidence answers that may mislead users |
 | `rag.strong_answer_floor` | `0.55` | Below this, the answer carries a "low confidence" disclaimer | The UI stops warning users about borderline matches |
+
+**Local-provider caveat.** The `ollama` dialect scores with a bi-encoder
+(cosine between separately-embedded query and document) rather than a true
+cross-encoder. Its scores land in a narrow band — 0.879/0.880/0.882 across the
+top three of a real 22k-chunk corpus — so they are calibrated into `[0, 1]` but
+discriminate weakly between "answers the question" and "same topic". The floors
+below still apply, but expect them to separate candidates less sharply than the
+table's cross-encoder guidance implies.
 
 **Calibration note.** A cross-encoder's `[0, 1]` score is **not** a percentage. For Cohere Rerank v3.5, Voyage rerank-2, and similar models, `> 0.70` means "directly answers the question", `0.50–0.70` is "strong supporting evidence", `0.40–0.50` is "topically related", `0.30–0.40` is "shares keywords but usually noise". The defaults draw the lines at "topically related" for retrieval and "strong evidence" for citation display.
 

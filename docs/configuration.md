@@ -168,15 +168,41 @@ To migrate:
 
 ## Document Sources
 
-Set `SOURCE_TYPE` to choose your document source.
+A source is enabled by the **presence of its block** under the top-level
+`sources:` key in `config/default.yaml` or `config/local.yaml` — there is no
+env var that selects a source.
 
-### Local Files (`SOURCE_TYPE=local`)
+> **`SOURCE_TYPE` no longer exists.** Earlier versions selected the source with
+> `SOURCE_TYPE=local|confluence|github`. It is gone from the code; setting it
+> has no effect. If you set it and nothing else, ingest falls back to the
+> `LOCAL_DOCS_PATH` default (`./examples/sample-docs`) and DocBrain answers from
+> the sample documents while appearing to work. Enable the `sources:` block
+> instead — see [Ingestion](ingestion.md) and the quickstart.
+
+Resource lists (spaces, repos, projects, channels) are always explicit; an empty
+list is a startup error, never "ingest everything the token can see".
+
+```yaml
+sources:
+  local:
+    path: /path/to/docs        # or set LOCAL_DOCS_PATH
+  confluence:
+    base_url: https://your-org.atlassian.net/wiki
+    user_email: ${CONFLUENCE_USER_EMAIL}
+    api_token: ${CONFLUENCE_API_TOKEN}
+    space_keys: [DOCS, ENG]
+```
+
+The scalar credentials below are still read from the environment; only the
+source selection and the resource lists moved to YAML.
+
+### Local Files
 
 | Variable | Default | Description |
 |---|---|---|
 | `LOCAL_DOCS_PATH` | `./examples/sample-docs` | Path to local markdown/text files to ingest |
 
-### Confluence (`SOURCE_TYPE=confluence`)
+### Confluence
 
 | Variable | Default | Description |
 |---|---|---|
@@ -498,7 +524,7 @@ ms_teams:
 
 ---
 
-### GitHub (`SOURCE_TYPE=github`)
+### GitHub
 
 | Variable | Default | Description |
 |---|---|---|
@@ -524,6 +550,8 @@ Controls how documents are split into chunks for embedding. See **[docs/chunking
 | `RAG_CACHE_TTL_HOURS` | `24` | How long to cache semantically identical answers (hours) |
 | `RAG_CACHE_THRESHOLD` | `0.95` | Cosine similarity threshold for answer cache hits (0.0-1.0) |
 | `RAG_TOP_K` | `10` | Chunks retrieved per query. Higher = more context passed to LLM, higher token cost. |
+| `RAG_MAX_PER_SOURCE` | `3` | Max chunks from any one **source** in the final top-k. A distribution cap: it stops a dominant source crowding out the others. **It is skipped entirely when fewer than two sources are eligible** — with a single source (local-only, Confluence-only, …) it would otherwise cap total LLM context at 3 chunks regardless of `RAG_TOP_K`, which starves synthesis and presents as a weak model rather than a truncated context. With two or more sources it binds normally, including when that leaves the result under `RAG_TOP_K`. |
+| `RAG_MAX_PER_DOCUMENT` | `2` | Max chunks from any one **document** in the final top-k. Bounds redundancy: consecutive chunks of one document are frequently near-duplicates. Never relaxed — unlike the per-source cap, this is not about distribution across sources. |
 | `RAG_BM25_BOOST` | `1.0` | BM25 keyword search weight relative to vector search. Raise (e.g. `2.0`) for corpora with lots of exact-match queries (error codes, tool names). |
 | `SEARCH_MIN_SCORE` | `0.0` | Drop retrieved chunks below this relevance score. `0.0` keeps everything; `0.3`–`0.4` filters low-signal noise. |
 | `OPENSEARCH_INDEX` | `docbrain-chunks` | Name of the document chunk index in OpenSearch |
@@ -1067,6 +1095,7 @@ enable live tool fan-out at answer time.
 | `MCP_TOOLS_FANOUT_MAX_CONCURRENT` | `8` | Max concurrent gateway dispatches in a single fan-out pass (clamped 1..=64). Caps how many tool calls are in flight at once so an always-on full-catalog fan-out under many users can't become a spawn storm. The total wall-clock budget is a separate, fixed bound. |
 | `MCP_TOOLS_FANOUT_MAX_ADMITTED_CHARS` | `24000` | Max TOTAL chars of live-tool evidence admitted into a single generate fan-out (clamped 1000..=200000). Delta #5 admits one chunk per tool, so a verbose catalog can stuff the writing prompt with huge live evidence (token cost + lost-in-the-middle); this bounds the sum, dropping whole lowest-priority chunks past the budget at chunk boundaries (never truncated mid-chunk). Applies only to live chunks; corpus chunks keep their own budget. |
 | `MCP_TOOLS_FANOUT_COOLDOWN_SECS` | `30` | Per-connector cooldown TTL in seconds (`0` disables; clamped 0..=600). When a connector returns a rate-limit (429), timeout, or transient (5xx / transport) failure, it is skipped from dispatch for this TTL ACROSS requests, so the always-on full-catalog fan-out can't re-hammer a flaky / rate-limited connector on every generate + regenerate. Keyed ONLY on the connector's OWN recent failures and CLEARED the moment it succeeds, so a connector that succeeded more recently than it failed is never suppressed (anti-DoS-on-the-good-tool). |
+| `DOCBRAIN_SSRF_ALLOW_LOOPBACK_FOR_INTERNAL_SHIMS` | unset | **Required to load the shipped in-process shim manifests.** `confluence_rest` and `jira_rest` are served by docbrain-server itself at `http://localhost:${DOCBRAIN_SERVER_PORT}/internal/mcp/*`, so their endpoint host is loopback by design. The manifest validator's SSRF check rejects loopback by default, and without this set both manifests are skipped at boot (`manifest failed to materialize ... is in a disallowed range`) leaving `manifest_count=0`. Set to `1` or `true` to allow **loopback only** — RFC1918, link-local and IMDS (169.254.169.254) addresses stay blocked, and non-loopback hostnames are still resolved and checked at probe time. |
 | `MCP_REGISTRY_PUBKEY` | — | Base64-encoded 32-byte Ed25519 public key used to verify the signed registry index and per-manifest signatures. When unset, `/api/v1/admin/mcp/registry*` and `/install-from-registry` return `503` and the server boots normally; admins can still install via the paste/URL endpoint. No default. |
 | `MCP_REGISTRY_URL` | `https://registry.docbrain-ai.com/v1/index.json` | URL of the signed registry index. |
 | `MCP_REGISTRY_CACHE_PATH` | `/var/lib/docbrain/registry-cache/index.json` | Disk path for the cached registry index. Acts as the Tier 2 fallback when the network fetch fails. |
@@ -1204,7 +1233,7 @@ Controls what role new SSO users receive. Roles are re-evaluated on every login.
    - `OPENSEARCH_URL` — OpenSearch endpoint
    - `LLM_PROVIDER` + provider-specific API key
    - `EMBED_PROVIDER` + model ID
-   - `SOURCE_TYPE` + source-specific vars
+   - the relevant `sources:` block + its source-specific vars
 
 3. Run migrations:
    ```bash
