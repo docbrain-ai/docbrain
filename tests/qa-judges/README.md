@@ -34,7 +34,7 @@ The v1 ship-gate batch lives at:
 tests/qa-judges/golden/management-questions-seed.yaml
 ```
 
-Two cases ship scaffolded (helm_migration_blocker, aitoolintg_35_status).
+Two cases ship scaffolded (helm_migration_blocker, plat_35_status).
 The remaining 8 are TODO markers — the operator authors them against their
 operational reality (Jira tickets, deployment status, ownership questions
 specific to your org).

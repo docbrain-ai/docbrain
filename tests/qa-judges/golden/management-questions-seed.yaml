@@ -11,7 +11,7 @@
 # Rubric authoring guidelines:
 # - expected_facts: PROPOSITIONAL truths the answer should reflect. Phrase
 #   them as standalone claims, not phrases that must literally appear.
-#   "AITOOLINTG-35 is the blocker" — good. "AITOOLINTG-35" — bad.
+#   "PLAT-35 is the blocker" — good. "PLAT-35" — bad.
 # - forbidden_claims: things the answer must NOT assert. Catch known
 #   regressions (e.g. an old wrong answer) and category-1 false positives.
 # - Keep each fact/claim concise — judge model is Haiku 4.5 with limited
@@ -29,18 +29,18 @@ cases:
   - id: helm_migration_blocker
     question: "What is blocking the helm migration this week?"
     expected_facts:
-      - "AITOOLINTG-35 is the current blocker"
+      - "PLAT-35 is the current blocker"
       - "Alex is the assignee or owner of the blocking work"
     forbidden_claims:
       - "Jordan worked on the blocking ticket"
     judge_model: claude-haiku-4-5
     notes: |
       Live-tool dependency: jira.search or jira.get_issue must surface
-      AITOOLINTG-35's current state. The pre-MCP path (JiraEnricher)
+      PLAT-35's current state. The pre-MCP path (JiraEnricher)
       handled this via ingest-time enrichment.
 
-  - id: aitoolintg_35_status
-    question: "What is the status of AITOOLINTG-35?"
+  - id: plat_35_status
+    question: "What is the status of PLAT-35?"
     expected_facts:
       - "answer reflects the CURRENT Jira status (not stale ingest-time data)"
     forbidden_claims: []

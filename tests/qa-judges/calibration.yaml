@@ -27,8 +27,8 @@ cases:
     expected_verdict: pass
 
   - id: partial_missing_fact
-    question: "What is the status of AITOOLINTG-35 and who is assigned?"
-    answer: "AITOOLINTG-35 is currently In Progress."
+    question: "What is the status of PLAT-35 and who is assigned?"
+    answer: "PLAT-35 is currently In Progress."
     expected_facts:
       - "status is In Progress"
       - "assignee is Alex"
@@ -49,7 +49,7 @@ cases:
     question: "What is blocking the helm migration this week?"
     answer: "I don't have information on that."
     expected_facts:
-      - "AITOOLINTG-35 is the blocker"
+      - "PLAT-35 is the blocker"
       - "Alex is the assignee"
     forbidden_claims: []
     expected_verdict: fail

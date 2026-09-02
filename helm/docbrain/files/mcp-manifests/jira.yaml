@@ -132,9 +132,9 @@ tools:
       Retrieves connected context from Atlassian Teamwork Graph for any Atlassian entity (Jira issue,
       Confluence page, Project, Goal, etc.). Returns relationships and linked objects within one traversal,
       including cross-product connections. Use when the answer requires connections between entities —
-      e.g. "what's blocking PROJ-123?", "who is assigned to AITOOLINTG-35?", "what tickets reference
+      e.g. "what's blocking PROJ-123?", "who is assigned to PLAT-35?", "what tickets reference
       this Confluence page?". For a bare ticket key lookup, also pass `objectType: "JiraWorkItem"` and
-      the ticket key (e.g. "AITOOLINTG-35") as objectIdentifier.
+      the ticket key (e.g. "PLAT-35") as objectIdentifier.
 
       Performance: prefer `detailLevel: summary` (counts + metadata, ~1-2s) for ticket status / assignee /
       simple lookups. Only pass `detailLevel: full` when the user is asking about deep relationship content
@@ -164,7 +164,7 @@ tools:
         objectIdentifier:
           type: string
           maxLength: 500
-          description: "Identifier for the object. For Jira: a ticket key like 'AITOOLINTG-35'. For Confluence: a page ID. For URLs: the full browser URL."
+          description: "Identifier for the object. For Jira: a ticket key like 'PLAT-35'. For Confluence: a page ID. For URLs: the full browser URL."
         detailLevel:
           type: string
           enum: [summary, full]

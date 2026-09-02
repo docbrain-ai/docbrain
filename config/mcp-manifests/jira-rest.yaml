@@ -70,7 +70,7 @@ tools:
   - name: jira_rest.get_issue
     upstream_name: get_issue
     description: |
-      Fetch full data for a Jira ticket by key (e.g. AITOOLINTG-35). Returns
+      Fetch full data for a Jira ticket by key (e.g. PLAT-35). Returns
       summary, status, assignee, reporter, priority, type, labels, created/updated
       timestamps, comment count, and the first 2KB of description. Use this for
       'what is X about / who owns X / what is the status of X' questions.
@@ -81,7 +81,7 @@ tools:
         key:
           type: string
           pattern: "^[A-Z][A-Z0-9]+-\\d+$"
-          description: "Jira ticket key like 'AITOOLINTG-35' or 'PROJ-123'."
+          description: "Jira ticket key like 'PLAT-35' or 'PROJ-123'."
       required: [key]
       additionalProperties: false
     output_size_cap_bytes: 16384
