@@ -38,6 +38,12 @@ server:
 auth:
   modes:
     - oauth
+  # OAuth-only connector: the health probe must run as the designated probe
+  # user (auto-designated on first connect). Without this the probe falls
+  # back to service-account-first, has no user to run as, and the admin
+  # surface reports a permanent failure while users dispatch fine.
+  health_check:
+    kind: per_user_oauth
   oauth:
     # Standards-compliant authorization-code + PKCE flow against Slack's user
     # OAuth endpoints (note the v2_user / oauth.v2.user.access paths — these are

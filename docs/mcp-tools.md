@@ -234,6 +234,30 @@ auth:
 
 The orchestrator picks OAuth when the requesting user has a stored token for that manifest; otherwise it falls back to service-account if the manifest declares it.
 
+#### Health checks for OAuth-only manifests
+
+A manifest whose only auth mode is `oauth` has no credential of its own, so
+the admin **Run health check** and the background health probe can only run
+as a user who has connected. Declare that explicitly:
+
+```yaml
+auth:
+  modes:
+    - oauth
+  health_check:
+    kind: per_user_oauth
+  oauth:
+    ...
+```
+
+The probe then runs as the manifest's **designated probe user** — the first
+user to connect is auto-designated, and an admin can change it from the
+manifest detail page or via `PUT /api/v1/admin/mcp/manifests/<id>/probe-user`.
+Without a probe user the health check reports a permanent failure that names
+this fix; without the `health_check` block the probe falls back to a
+service-account-first path that has no identity to run as. The shipped
+`slack.yaml` carries the block.
+
 ### OAuth-for-shim-internal token grants (`shim_internal`)
 
 A small number of manifests use OAuth NOT as a dispatch mode but to grant the user's token to an **in-process shim** which calls the upstream itself. The canonical example is `slack_rest`: the gateway → shim hop runs over loopback using a shared service-account bearer (the shim's auth gate), and the shim then resolves the user's Slack OAuth token from `mcp_oauth_tokens` to call `slack.com/api/conversations.replies` as that user.
