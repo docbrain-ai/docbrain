@@ -95,6 +95,12 @@ rag:
   # These widen only what SYNTHESIS sees. Retrieval, ranking, source cards
   # and the grounding floors above are untouched.
   context_window_chunks: 3            # Sibling chunks fetched either side of each match. 0 disables expansion. Raising it costs synthesis latency and context-window headroom.
+  # Intent-aware: precision lookups (intent find, who_owns) always use radius 0,
+  # whatever is set here — on "what is the URL for X" the neighbouring chunks are
+  # competing values, and the model picks the wrong one (proven: 4.8KB of matched
+  # chunks answered correctly, the same chunks expanded ±3 did not). Explanatory
+  # intents (how_to, explain, troubleshoot) use the full radius. The effective radius
+  # is in the stage="rag.staged.context_window" log line.
   context_window_budget_bytes: 65536  # Total budget across all expanded documents; overflow trimmed from the lowest-ranked end. A BYTE budget, but the real limit is the model's TOKEN window (~3.2 bytes/token measured). Lowering it to 32768 measurably cost answer quality, so it stays generous — if your model's window is smaller, lower it and check the stage="rag.staged.context_window" log line, since providers truncate silently.
   # ── Tool-output caps (the truncation chain) ───────────────────────────
   # Three coordinated caps bound how much raw tool output reaches the
