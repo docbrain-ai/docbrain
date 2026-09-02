@@ -1016,7 +1016,7 @@ architecture decisions, how-to answers, anything marked with a target reaction.
 | Variable | Default | Description |
 |---|---|---|
 | `SLACK_INGEST_TOKEN` | — | Bot token with `channels:history`, `channels:read`, `users:read` OAuth scopes |
-| `SLACK_INGEST_CHANNELS` | — | Comma-separated channel names to index. Empty = all channels the bot is in. e.g. `incident-response,platform,backend` |
+| `SLACK_INGEST_CHANNELS` | — | Comma-separated channel names to index (leading `#` optional). Required — an empty list is a startup error; DocBrain never silently ingests every channel a token can see. Private channels need the `groups:read` scope; without it only public channels are listed. e.g. `incident-response,platform,backend` |
 | `SLACK_INGEST_MIN_REPLIES` | `3` | Minimum replies for a thread to be indexed (reply volume signals value) |
 | `SLACK_INGEST_REACTIONS` | `white_check_mark,bookmark` | Comma-separated reaction names that mark a thread indexable, regardless of reply count |
 | `SLACK_INGEST_LOOKBACK_DAYS` | `90` | How far back to look for threads |
