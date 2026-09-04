@@ -102,6 +102,7 @@ rag:
   # intents (how_to, explain, troubleshoot) use the full radius. The effective radius
   # is in the stage="rag.staged.context_window" log line.
   context_window_budget_bytes: 65536  # Total budget across all expanded documents; overflow trimmed from the lowest-ranked end. A BYTE budget, but the real limit is the model's TOKEN window (~3.2 bytes/token measured). Lowering it to 32768 measurably cost answer quality, so it stays generous — if your model's window is smaller, lower it and check the stage="rag.staged.context_window" log line, since providers truncate silently.
+  live_data_budget_bytes: 32768  # Ceiling on the LIVE DATA block (MCP tool output) spliced into a synthesis prompt. Same byte-vs-token caveat as above, and the same silent failure: a live tool can return far more than the model can read — measured 2026-09-04, one Jira search returned 68,779 bytes and one Confluence search 103,857 against a model loaded with a 16,384-token window. Over-budget output is TRUNCATED with a marker and a warn log (search: "live tool output exceeds the synthesis budget") rather than dropped silently by the provider. Raise it if your model's window is large; lower it if answers degrade when a tool returns a lot.
   # ── Tool-output caps (the truncation chain) ───────────────────────────
   # Three coordinated caps bound how much raw tool output reaches the
   # synthesis prompt. They MUST rise together — raising one alone has no

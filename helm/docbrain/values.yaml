@@ -167,6 +167,18 @@ server:
   #                                                       # falls back to
   #                                                       # RAG_CONFIDENCE_RETRY_THRESHOLD
   #
+  #
+  # Prompt budgets. Both are BYTE ceilings on prompt sections, while the
+  # real limit is your model's TOKEN window — a provider truncates an
+  # over-long prompt silently rather than erroring, so an unbudgeted
+  # section is fetched and then lost with no trace. Live tool output is
+  # the one most likely to overrun: measured 2026-09-04, a single Jira
+  # search returned 68,779 bytes and a Confluence search 103,857. Over
+  # budget, DocBrain truncates with a marker and a warn log instead.
+  # To change, uncomment:
+  #   env:
+  #     RAG_CONTEXT_WINDOW_BUDGET_BYTES: "65536"   # expanded document context
+  #     RAG_LIVE_DATA_BUDGET_BYTES: "32768"        # MCP tool output
   # Subscription certificate. Default unset (Community tier). Points at a
   # certificate file mounted from a Helm-managed Secret — GitOps-friendly,
   # since the path itself is safe to commit even though the file's contents
