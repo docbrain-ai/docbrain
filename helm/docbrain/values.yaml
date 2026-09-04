@@ -168,6 +168,21 @@ server:
   #                                                       # RAG_CONFIDENCE_RETRY_THRESHOLD
   #
   #
+  # Retrieval ladder. Default OFF. When a tool fires, the normal path puts
+  # corpus chunks AND live tool output in ONE prompt, where live output can
+  # make an otherwise good corpus answer worse (measured: a question answered
+  # at 0.90 from the corpus alone fell to 0.15 once a tool returned results
+  # into the same prompt). Enabled, DocBrain synthesizes both an indexed-only
+  # and a live-tool answer and an LLM judge keeps the better one, so live data
+  # can only help. Extra cost applies ONLY when a tool fires, and the two
+  # syntheses run concurrently. On judge timeout the higher self-graded
+  # confidence wins — safe degradation. The judge timeout was 1500ms, which no
+  # local model can meet (a 14B judge call measured 46-120s). To enable:
+  #   env:
+  #     RAG_RETRIEVAL_LADDER_ENABLED: "true"
+  #     RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS: "10000"   # raise for local models
+  #     RAG_RETRIEVAL_LADDER_GRAPH_THRESHOLD: "0.5"      # 0.0-1.0
+  #
   # Prompt budgets. Both are BYTE ceilings on prompt sections, while the
   # real limit is your model's TOKEN window — a provider truncates an
   # over-long prompt silently rather than erroring, so an unbudgeted

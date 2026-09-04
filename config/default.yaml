@@ -129,6 +129,31 @@ rag:
   # (env only, default true). Not a RagConfig struct field because it's a
   # behavior flag, not a numeric tunable.
 
+  # ── Retrieval ladder (pick the better of corpus-only vs live-tool answer) ──
+  # Off by default. When a tool fires, the fused path puts corpus chunks AND
+  # live tool output in ONE prompt — and live output can make an otherwise good
+  # corpus answer worse. Measured 2026-09-04: a FluxCD question answered at
+  # 0.90 confidence from the corpus alone dropped to 0.15 once a Confluence
+  # tool returned results into the same prompt.
+  #
+  # Enabled, DocBrain synthesizes BOTH an indexed-only answer and a
+  # live-tool answer, then an LLM judge keeps the better one — so live data can
+  # only help. Cost is paid ONLY when a tool fires: a corpus-only question runs
+  # a single synthesis exactly as before. The two syntheses run concurrently,
+  # so the added wall-clock is roughly one judge call, not a second answer.
+  #
+  # judge_timeout_ms: if the judge does not answer in time, the higher
+  # self-graded confidence wins — a safe degradation, not a failure. The old
+  # 1500ms default was unreachable for a local model (a 14B judge call measured
+  # 46-120s), so self-hosted deployments silently never ran the judge at all.
+  # Raise it if you want the real judge on a local model; lower it to bound
+  # added latency and accept the fallback.
+  retrieval_ladder:
+    enabled: false
+    graph_append_threshold: 0.5   # below this confidence, append graph-derived related topics
+    judge_timeout_ms: 10000
+    # judge_model_id: null        # null = use the configured fast model
+
   # ── Confidence-retry fallback (intelligent tool fan-out on weak answers) ──
   #
   # When a /ask first pass returns very-low confidence AND the user has
