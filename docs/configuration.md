@@ -534,7 +534,7 @@ ms_teams:
 
 ## Chunking
 
-Controls how documents are split into chunks for embedding. See **[docs/chunking.md](chunking.md)** for tuning guidance and re-ingest instructions.
+Controls how documents are split into chunks for embedding. Tuning guidance and the re-ingest requirement are in this section — changing these values only affects documents ingested afterwards, so a change needs a re-ingest to apply to existing content.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1184,7 +1184,7 @@ in the Kubernetes Secret via `mcpTools.serviceAccount.rootly.*` in Helm):
 
 ## SSO / OIDC
 
-See **[docs/sso.md](sso.md)** for full setup instructions and a provider comparison.
+See **[docs/rbac.md](rbac.md)** for full setup instructions and a provider comparison — it covers GitHub OAuth, GitLab OIDC and generic OIDC.
 
 ### Generic OIDC (Google, Okta, Auth0, Azure AD, Keycloak, …)
 
