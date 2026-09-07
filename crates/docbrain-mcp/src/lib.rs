@@ -500,6 +500,21 @@ impl McpServer {
                     }
                 },
                 {
+                    "name": "docbrain_context",
+                    "description": "Before changing files, ask what this organization already knows about them. Returns decisions, caveats and constraints captured against those exact paths, with a warning first if any of that knowledge has since gone stale. Use it when you are about to edit, refactor or delete code — not as a search tool. Exact path matching: pass repo-relative paths as they appear in the repository.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "file_paths": {
+                                "type": "array",
+                                "items": { "type": "string" },
+                                "description": "Repo-relative paths about to change, e.g. [\"src/auth/session.rs\"]. Max 100."
+                            }
+                        },
+                        "required": ["file_paths"]
+                    }
+                },
+                {
                     "name": "docbrain_commit_capture",
                     "description": "Capture knowledge from a commit — why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten.",
                     "inputSchema": {
@@ -601,6 +616,7 @@ impl McpServer {
             "docbrain_autopilot_summary" => self.tool_autopilot_summary(arguments).await,
             "docbrain_annotate" => self.tool_annotate(arguments).await,
             "docbrain_suggest_capture" => self.tool_suggest_capture(arguments).await,
+            "docbrain_context" => self.tool_context(arguments).await,
             "docbrain_commit_capture" => self.tool_commit_capture(arguments).await,
             "docbrain_feedback" => self.tool_feedback(arguments).await,
             _ => Err(JsonRpcError {
@@ -1269,6 +1285,85 @@ impl McpServer {
         }))
     }
 
+    /// `docbrain_context` — what the organisation knows about these paths.
+    ///
+    /// Renders the server's blocks in the server's order and never filters by
+    /// `kind`, for the same reason `leading_lines` does not: the server decides
+    /// what the reader needs, and a client that drops what it does not
+    /// recognise loses signal the day a kind is added.
+    ///
+    /// When nothing is captured it says so, naming the paths it checked. An
+    /// empty string would let the agent conclude there is no organisational
+    /// opinion, which is indistinguishable from not having looked.
+    async fn tool_context(&self, args: &Value) -> Result<Value, JsonRpcError> {
+        let paths: Vec<String> = args["file_paths"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default();
+        if paths.is_empty() {
+            return Err(JsonRpcError {
+                code: -32602,
+                message: "Missing or empty 'file_paths' parameter".into(),
+            });
+        }
+
+        let mut request = self
+            .client
+            .post(format!("{}/api/v1/fragments/context", self.server_url))
+            .json(&json!({ "file_paths": paths }));
+        if let Some(ref key) = self.api_key {
+            request = request.header("Authorization", format!("Bearer {}", key));
+        }
+        let response = request.send().await.map_err(|e| JsonRpcError {
+            code: -32000,
+            message: format!("API call failed: {}", e),
+        })?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(JsonRpcError {
+                code: -32000,
+                message: format!("API error ({}): {}", status, body),
+            });
+        }
+        let body: Value = response.json().await.map_err(|e| JsonRpcError {
+            code: -32000,
+            message: format!("Invalid response: {}", e),
+        })?;
+
+        let checked = body["checked_paths"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .unwrap_or_else(|| paths.join(", "));
+
+        let lines: Vec<&str> = body["blocks"]
+            .as_array()
+            .map(|bs| {
+                bs.iter()
+                    .filter_map(|b| b.get("text")?.as_str())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let text = if lines.is_empty() {
+            format!("No captured knowledge for: {checked}")
+        } else {
+            format!("{}\n\nChecked: {checked}", lines.join("\n\n"))
+        };
+
+        Ok(json!({ "content": [{ "type": "text", "text": text }] }))
+    }
+
     /// `docbrain_commit_capture` — capture intent and reasoning at commit time.
     ///
     /// Creates a knowledge fragment via `POST /api/v1/fragments` with:
@@ -1600,11 +1695,15 @@ mod tests {
             names.contains(&"docbrain_commit_capture"),
             "missing docbrain_commit_capture"
         );
-        // Verify total tool count: 7 original + 3 new = 10
+        assert!(
+            names.contains(&"docbrain_context"),
+            "missing docbrain_context"
+        );
+        // Verify total tool count: 7 original + 3 new + docbrain_context = 11
         assert_eq!(
             names.len(),
-            10,
-            "expected 10 tools, got {}: {:?}",
+            11,
+            "expected 11 tools, got {}: {:?}",
             names.len(),
             names
         );

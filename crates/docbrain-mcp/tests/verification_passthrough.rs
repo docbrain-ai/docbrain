@@ -28,6 +28,7 @@ async fn spawn_mock(canned: Value) -> (Canned, String) {
     let app = Router::new()
         .route("/api/v1/ask", post(handler))
         .route("/api/v1/incident", post(handler))
+        .route("/api/v1/fragments/context", post(handler))
         .with_state(state.clone());
     let listener = TcpListener::bind(SocketAddr::from(([127, 0, 0, 1], 0)))
         .await
@@ -303,4 +304,46 @@ async fn incident_renders_blocks_above_the_header() {
     let warn = text.find("a future warning").expect("blocks must reach the incident path");
     let header = text.find("**INCIDENT RESPONSE**").expect("header present");
     assert!(warn < header, "warning sits below the header: {text}");
+}
+
+/// The whole point of the tool: a note bound to a file reaches the agent, with
+/// any stale-premise warning above it, in the server's order.
+#[tokio::test]
+async fn context_returns_warnings_above_notes() {
+    let (_c, url) = spawn_mock(json!({
+        "blocks": [
+            { "kind": "warning", "text": "⚠ Out of date: acme", "severity": "stale" },
+            { "kind": "note", "text": "we cannot upgrade this chart yet" }
+        ],
+        "checked_paths": ["acme/svc/main.rs"],
+        "fragments_found": 1
+    })).await;
+    let text = call_tool(&url, "docbrain_context", json!({"file_paths": ["acme/svc/main.rs"]})).await;
+    let warn = text.find("⚠ Out of date").expect("warning present");
+    let note = text.find("we cannot upgrade").expect("note present");
+    assert!(warn < note, "warning sits below the note: {text}");
+}
+
+/// Nothing captured is NOT silence. A tool that returns an empty string lets
+/// the agent conclude the organisation has no opinion, which is the same
+/// failure as an over-filtered query reading as "all is well".
+#[tokio::test]
+async fn context_says_it_checked_when_it_found_nothing() {
+    let (_c, url) = spawn_mock(json!({
+        "blocks": [], "checked_paths": ["acme/svc/main.rs"], "fragments_found": 0
+    })).await;
+    let text = call_tool(&url, "docbrain_context", json!({"file_paths": ["acme/svc/main.rs"]})).await;
+    assert!(text.contains("acme/svc/main.rs"), "must name what it checked: {text}");
+    assert!(!text.trim().is_empty(), "an empty string reads as 'no opinion'");
+}
+
+/// A kind this build has never seen must still reach the host.
+#[tokio::test]
+async fn context_renders_an_unknown_block_kind() {
+    let (_c, url) = spawn_mock(json!({
+        "blocks": [{ "kind": "something-new", "text": "a future signal" }],
+        "checked_paths": ["acme/svc/main.rs"], "fragments_found": 1
+    })).await;
+    let text = call_tool(&url, "docbrain_context", json!({"file_paths": ["acme/svc/main.rs"]})).await;
+    assert!(text.contains("a future signal"), "unknown kinds must render: {text}");
 }
