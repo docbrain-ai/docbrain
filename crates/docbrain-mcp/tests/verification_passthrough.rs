@@ -347,3 +347,22 @@ async fn context_renders_an_unknown_block_kind() {
     let text = call_tool(&url, "docbrain_context", json!({"file_paths": ["acme/svc/main.rs"]})).await;
     assert!(text.contains("a future signal"), "unknown kinds must render: {text}");
 }
+
+/// Every other fixture above echoes `checked_paths` identical to the
+/// request's `file_paths`, so none of them could catch code that ignores the
+/// server's response and just re-joins its own input instead. This one
+/// diverges on purpose: the request names two paths the mock never echoes
+/// back, and the assertion is exact — it only holds if the tool renders
+/// what the server actually said it checked.
+#[tokio::test]
+async fn context_names_the_servers_checked_paths_not_the_requests() {
+    let (_c, url) = spawn_mock(json!({
+        "blocks": [], "checked_paths": ["normalised/only.rs"], "fragments_found": 0
+    })).await;
+    let text = call_tool(&url, "docbrain_context", json!({"file_paths": ["a.rs", "b.rs"]})).await;
+    assert_eq!(
+        text.trim(),
+        "No captured knowledge for: normalised/only.rs",
+        "must echo the server's checked_paths, not the request's file_paths: {text}"
+    );
+}

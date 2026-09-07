@@ -501,14 +501,14 @@ impl McpServer {
                 },
                 {
                     "name": "docbrain_context",
-                    "description": "Before changing files, ask what this organization already knows about them. Returns decisions, caveats and constraints captured against those exact paths, with a warning first if any of that knowledge has since gone stale. Use it when you are about to edit, refactor or delete code — not as a search tool. Exact path matching: pass repo-relative paths as they appear in the repository.",
+                    "description": "Before changing files, ask what this organization already knows about them. Returns decisions, caveats and constraints captured against those exact paths, with a warning first if any of that knowledge has since gone stale. Use it when you are about to edit, refactor or delete code — not as a search tool. Paths must be bare, with no line suffix: \"src/auth/session.rs\" is correct, \"src/auth/session.rs:42\" is wrong and will be rejected.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "file_paths": {
                                 "type": "array",
                                 "items": { "type": "string" },
-                                "description": "Repo-relative paths about to change, e.g. [\"src/auth/session.rs\"]. Max 100."
+                                "description": "Repo-relative paths about to change, e.g. [\"src/auth/session.rs\"]. No line suffix: \"src/auth/session.rs:42\" is wrong and will be rejected. Max 100."
                             }
                         },
                         "required": ["file_paths"]
@@ -1709,6 +1709,42 @@ mod tests {
         );
     }
 
+    /// B1's bar is "in words an agent will act on". Naming the accepted form
+    /// alone doesn't rule out `path:42` — a coding agent forwarding a
+    /// compiler/linter/stack-trace location verbatim is the single most
+    /// likely call it makes, and it reads the `file_paths` property
+    /// description (not just the top-level description) when building
+    /// arguments, so both must carry the rule.
+    #[test]
+    fn context_description_explicitly_rejects_a_line_suffixed_path() {
+        let server = make_server();
+        let list = server.handle_tools_list();
+        let tools = list["tools"].as_array().unwrap();
+        let context = tools
+            .iter()
+            .find(|t| t["name"] == "docbrain_context")
+            .unwrap();
+        let description = context["description"].as_str().unwrap();
+        let file_paths_description =
+            context["inputSchema"]["properties"]["file_paths"]["description"]
+                .as_str()
+                .unwrap();
+
+        for (label, desc) in [
+            ("tool description", description),
+            ("file_paths schema description", file_paths_description),
+        ] {
+            assert!(
+                desc.contains("session.rs:42"),
+                "{label} must show a rejected, line-suffixed example: {desc}"
+            );
+            assert!(
+                desc.to_lowercase().contains("reject") || desc.to_lowercase().contains("wrong"),
+                "{label} must say the line-suffixed form is wrong, not just show it: {desc}"
+            );
+        }
+    }
+
     #[test]
     fn annotate_tool_schema_has_required_fields() {
         let server = make_server();
@@ -1853,6 +1889,31 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.message.contains("file_path"));
+    }
+
+    /// Previously verified only by a throwaway probe (added, run, then
+    /// deleted) — a deleted test protects nothing on the next change.
+    #[tokio::test]
+    async fn context_validates_missing_file_paths() {
+        let server = make_server();
+        let args = json!({});
+        let result = server.tool_context(&args).await;
+        let err = result.unwrap_err();
+        // `is_err()` alone proves nothing here: make_server points at an
+        // unreachable port, so a request that gets PAST the guard also returns
+        // Err — from the network. The code and the message are what discriminate.
+        assert_eq!(err.code, -32602, "invalid params, not a transport failure");
+        assert!(err.message.contains("file_paths"));
+    }
+
+    #[tokio::test]
+    async fn context_rejects_empty_file_paths() {
+        let server = make_server();
+        let args = json!({ "file_paths": [] });
+        let result = server.tool_context(&args).await;
+        let err = result.unwrap_err();
+        assert_eq!(err.code, -32602, "invalid params, not a transport failure");
+        assert!(err.message.contains("empty"));
     }
 
     #[test]
