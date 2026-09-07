@@ -1,9 +1,10 @@
 # Coding Agents — Teach Your Agent to File Docs
 
-Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor four tools:
+Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor the five tools this page uses:
 
 | Tool | Direction | What it does |
 |------|-----------|--------------|
+| `docbrain_context` | read | What the org already knows about the files you are about to change — decisions, caveats and constraints captured against those exact paths, with a warning first if any of it has since gone stale |
 | `docbrain_ask` | read | Cited answers from your org's memory, in the editor |
 | `docbrain_suggest_capture` | read | Checks whether documentation gaps exist for a file or function |
 | `docbrain_annotate` | write | Files a knowledge fragment (a decision, fix, or caveat) tied to a file and line range |
@@ -68,6 +69,10 @@ Add this to your project's `CLAUDE.md` (or global `~/.claude/CLAUDE.md`):
 
 ```markdown
 ## DocBrain
+Before editing files you have not worked in before, call docbrain_context with
+their repo-relative paths and read what comes back first. Pass bare paths —
+`src/auth/session.rs`, not `src/auth/session.rs:42`.
+
 When we resolve an error, discover non-obvious behavior, or make a decision a
 future engineer would need, do this before the task ends:
 1. Call docbrain_suggest_capture for the files involved.
@@ -82,10 +87,11 @@ Cursor users: the same text goes in `.cursor/rules/docbrain.mdc` with `alwaysApp
 
 ## What happens
 
-1. You and your agent fix something real.
-2. The agent asks DocBrain whether that knowledge already exists (`docbrain_suggest_capture` — a corpus check, not a guess).
-3. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
-4. Approved captures land as fragments in the normal review pipeline — space owners, quality gates, nothing auto-publishes.
+1. Before your agent edits a file, it asks what the org already knows about it (`docbrain_context`). A caveat a teammate filed last quarter surfaces *before* the mistake, not in the post-mortem.
+2. You and your agent fix something real.
+3. The agent asks DocBrain whether that knowledge already exists (`docbrain_suggest_capture` — a corpus check, not a guess).
+4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
+5. Approved captures land as fragments in the normal review pipeline — space owners, quality gates, nothing auto-publishes.
 
 ## Privacy properties
 
