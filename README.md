@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>The institutional memory your AI agents don't have.</strong><br/>
-  An agent opens your repository knowing everything about code and nothing about your organization — not why the session store moved off Redis, not which approach the team already rejected and why, not the caveat someone hit at 2am last quarter. So it proposes what was ruled out, and re-breaks what was fixed. DocBrain captures those decisions where they actually happen — pull requests, threads, incidents, deploys — hands them to the agent <em>before</em> it edits the file, and lets it file back what it just learned. Every claim cites its source, expires when reality moves, and exports as proof a third party verifies offline. Self-hosted. Read-only. Zero data egress.
+  <strong>What one engineer works out, the whole company keeps.</strong><br/>
+  Someone solves it on a Tuesday. Two teams over, in November, a person who has never met them hits the same wall and has no way to know it was ever solved — and neither does their agent, which proposes the approach that was already ruled out. DocBrain captures those decisions where they actually happen — pull requests, threads, incidents, deploys — and hands them to whoever touches that code next, human or agent, <em>before</em> the change. Every claim cites its source, expires when reality moves, and exports as proof a third party verifies offline. Self-hosted. Read-only. Zero data egress.
 </p>
 
 <p align="center">
@@ -52,7 +52,7 @@ Tools that "index your docs and add a chatbot" solve the wrong half of the probl
 
 Most tools in this space index your documents and put a chat box in front of them. That is one of the three things below, and it is the easy one.
 
-The reason it matters more now: agents write a large share of the code, and every session starts from zero. A human engineer accumulates the reasons behind your systems over years. An agent is brilliant, tireless, and permanently new — it will re-derive, re-decide and re-break whatever is not written somewhere it can read. Meanwhile it generates plausible documentation faster than anyone can check it, so "more docs" makes the problem worse and "docs you can verify" is the scarce thing.
+The reason it matters more now: agents write a large share of the code, and they will re-derive, re-decide and re-break anything your organization settled but never recorded somewhere reachable. A rules file does not close that — it holds what one person remembered to write, in one repo, for their own agent. It does not cross teams, it does not expire when the system changes, and it carries no source anyone can check. Meanwhile agents generate plausible documentation faster than anyone can review it, so "more docs" makes the problem worse and "docs you can verify" is the scarce thing.
 
 **1. It captures what was never written down.** A wiki holds the fraction of your knowledge that somebody found time to type up. The decision from the meeting, the fix found at 2am, the workaround one person knows — those live in PRs, threads, tickets and heads. DocBrain reads those systems in place and captures the knowledge as it is produced, so the record includes what nobody would have filed. Your coding agent is the best capture device you have ever had: it is present at the exact second knowledge is created, and it can file it before the session ends.
 
@@ -127,11 +127,13 @@ DocBrain re-checks premises against their sources on a schedule and holds each i
 
 ## Teach Your Agent
 
-**An agent's memory dies when the session does.**
+**Knowledge that compounds across people, not just sessions.**
 
-Everything it worked out goes with it: the approach that failed and why, the root cause behind the symptom, the caveat that will bite whoever touches that file next. All of it lives in a context window that is discarded when you close the tab. Tomorrow the same agent starts from nothing. So does your teammate's agent, on the same file, next week — and neither of them can know the other ever tried.
+Someone works out why the pooler is load-bearing. Six weeks later a person on another team, who has never met them, opens that file — and has no way to know it was ever worked out. Neither does their agent.
 
-You are paying for the same discovery over and over, and the only record is a terminal buffer somebody already scrolled past.
+**That is not a session-memory problem, and a rules file does not fix it.** A `CLAUDE.md` holds what you remembered to write, in your repo, for your agent: it does not cross people, it does not expire when the system changes, and it carries no source you can check.
+
+Your coding agent is the best instrument for both halves of the fix — it is present at the second the knowledge is created, and it is the thing asking for it at the moment of the next change.
 
 The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your agent eleven tools. Two instructions in your `CLAUDE.md` close the loop:
 
@@ -152,7 +154,7 @@ docbrain_suggest_capture for the files involved. If a gap exists, draft a
 
 **Agents are never seats.** Every tool in this category has to decide whether a bot counts as a licence. We do not: agents make the memory better, and inference is billed by your own provider rather than resold by us. Point as many at it as you like.
 
-The compounding is the point. One session leaves a caveat behind. The next one starts from it, adds the thing *it* learned, and stops. Ten engineers and their agents working this way for a month is a record nobody sat down to write — and the reason the eleventh person does not repeat any of it.
+The compounding is the point, and it compounds *outward*. One engineer's caveat becomes the team's, the team's becomes the company's, and none of it depended on anyone finding time to write a document. The new joiner in month three asks a question and gets an answer four people contributed to without ever being in a room together.
 
 Full guide, including Cursor setup, the privacy model and all eleven tools: [docs/agents.md](docs/agents.md)
 

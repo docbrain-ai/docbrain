@@ -1,4 +1,16 @@
-# Coding Agents — Teach Your Agent to File Docs
+# Coding Agents — Knowledge That Compounds Across People
+
+Someone works out why a thing is the way it is. Six weeks later a person on
+another team, who has never met them, opens that file — and has no way to know it
+was ever worked out. Neither does their agent, which proposes the approach that
+was already ruled out.
+
+That is not a session-memory problem and a rules file does not fix it. A
+`CLAUDE.md` holds what you remembered to write, in your repo, for your agent: it
+does not cross people, it does not expire when the system changes, and it carries
+no source anyone can check. Your coding agent is, however, the best instrument
+for both halves of the actual fix — it is present at the second the knowledge is
+created, and it is the thing asking for it at the moment of the next change.
 
 Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor eleven tools. These five are the ones this page's workflow uses; the [full table](#all-eleven-tools) is at the end:
 
