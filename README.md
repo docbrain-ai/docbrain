@@ -127,7 +127,13 @@ DocBrain re-checks premises against their sources on a schedule and holds each i
 
 ## Teach Your Agent
 
-If your team uses Claude Code or Cursor, the [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) already gives your agent eleven tools — most teams just never tell the agent to use them. These lines in your `CLAUDE.md` close the loop in both directions:
+**An agent's memory dies when the session does.**
+
+Everything it worked out goes with it: the approach that failed and why, the root cause behind the symptom, the caveat that will bite whoever touches that file next. All of it lives in a context window that is discarded when you close the tab. Tomorrow the same agent starts from nothing. So does your teammate's agent, on the same file, next week — and neither of them can know the other ever tried.
+
+You are paying for the same discovery over and over, and the only record is a terminal buffer somebody already scrolled past.
+
+The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your agent eleven tools. Two instructions in your `CLAUDE.md` close the loop:
 
 ```markdown
 Before editing files you have not worked in before, call docbrain_context
@@ -138,9 +144,17 @@ docbrain_suggest_capture for the files involved. If a gap exists, draft a
 3–5 line capture and ask me to approve it before calling docbrain_annotate.
 ```
 
-Two halves, and most tools only have the second. **`docbrain_context` is the read before the change:** the agent names the files it is about to touch and gets back the decisions, caveats and constraints your organization has recorded against those exact paths — with a warning first if any of that knowledge has since gone stale. A caveat a teammate filed last quarter surfaces *before* the mistake instead of in the post-mortem.
+**Read — before it changes anything.** `docbrain_context` takes the files the agent is about to touch and returns what your organization already decided about them: the decision, the constraint, the thing someone learned the hard way. If any of that has since stopped being true, the warning comes *first*, dated. The agent arrives knowing what the last dozen sessions learned instead of re-deriving it.
 
-**`docbrain_annotate` is the write after the fix.** Your agent fixes something, checks whether the org already knows it, and — with your approval — files what's missing into the review queue. The knowledge gets captured at the only moment it's free: seconds after the fix. Full guide, including Cursor setup and the privacy model: [docs/agents.md](docs/agents.md)
+**Write — at the only moment it is free.** Nobody writes up a fix on Friday afternoon. An agent will, in the same breath as the fix, while the reasoning is still in its context and costs nothing to recover. That is the moment this knowledge is cheapest to capture and the moment it is always lost.
+
+**Nothing lands without you.** The agent proposes, you approve, and the fragment enters the normal review queue tied to a file and line range. Nothing publishes unattended, nothing uploads on its own, and the session never leaves your machine.
+
+**Agents are never seats.** Every tool in this category has to decide whether a bot counts as a licence. We do not: agents make the memory better, and inference is billed by your own provider rather than resold by us. Point as many at it as you like.
+
+The compounding is the point. One session leaves a caveat behind. The next one starts from it, adds the thing *it* learned, and stops. Ten engineers and their agents working this way for a month is a record nobody sat down to write — and the reason the eleventh person does not repeat any of it.
+
+Full guide, including Cursor setup, the privacy model and all eleven tools: [docs/agents.md](docs/agents.md)
 
 ## What You Get
 
