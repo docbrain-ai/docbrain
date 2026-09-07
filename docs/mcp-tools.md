@@ -681,6 +681,29 @@ host that can hold all three models resident, or one chat model used for both
 `LLM_MODEL_ID` and `FAST_MODEL_ID` (which removes the eviction but reinstates
 the queueing in requirement 1, so raise the budgets below).
 
+### How the meta-gateway asks, and what an empty answer means
+
+Two behaviours are mechanical, not model-decided, because asking the model to
+get them right failed repeatedly in measurement:
+
+- **Breadth first.** Each dispatch tries a deliberately broad form of the call
+  before the model's precise one, and any field the call leaves unset whose
+  schema default is a relative lookback shorter than 24 hours (`now-1h` and
+  friends) is set to `now-24h`. A default window answers "what is happening
+  right now", but a question about a fault is asked after the fault, and an
+  empty result reads as "there is no problem". A window the model chose itself
+  is never overridden. If the broad form finds nothing, the precise one is
+  still tried.
+- **Nothing found is reported as nothing found.** A result that declares zero
+  records — an empty array, "no results", or a header whose every count is
+  zero — is recorded in the audit log and the tool chip but never rendered
+  into the prompt as a finding. It is not evidence about the question, and a
+  model handed an empty live block will write a confident answer around it.
+
+Both cost you a wider upstream query than you might expect. Neither has a
+setting: a deployment where they were optional would answer "no problem found"
+to a real incident.
+
 ### Per-tool latency budget vs. orchestrator budget
 
 - Each tool has `latency_budget_ms` (default `7000`, ceiling `12000`).
