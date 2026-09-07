@@ -519,22 +519,56 @@ fn resolve_server_url() -> String {
 // API response types
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// The subset of `POST /api/v1/auth/login`'s response the CLI needs.
+///
+/// The server names these `api_key` and `key_id` (`docbrain-server`
+/// main.rs:525-533); the renames below are what make this parse. It sent those
+/// names from the first commit, while this struct asked for `key` and `id`, so
+/// email/password login failed in every version with `missing field 'key'`.
+/// Pinned by `login_parses_the_payload_the_server_actually_sends`.
+///
+/// `key_id`, `role`, `user_id` and `expires_at` are deliberately absent: the
+/// CLI reads none of them, and an unused required field is a way to break a
+/// client for no benefit. Serde ignores unknown fields, so they pass through
+/// harmlessly.
 #[derive(Deserialize)]
 struct LoginResponse {
+    #[serde(rename = "api_key")]
     key: String,
-    #[allow(dead_code)]
-    id: String,
 }
 
 #[derive(Deserialize, Serialize)]
 struct AskResponse {
     answer: String,
+    /// Required on the wire in practice (the server always sends an array,
+    /// empty or not), but `default` so a payload that omits it entirely —
+    /// e.g. a test constructing just `{"answer": ..., "blocks": [...]}`
+    /// — still parses instead of hard-erroring on an unrelated field.
+    #[serde(default)]
     sources: Vec<SourceResponse>,
     session_id: Option<String>,
     episode_id: Option<String>,
     turn: Option<usize>,
     #[allow(dead_code)]
     intent: Option<String>,
+    /// Premises of fragments this answer drew on that no longer hold. Absent
+    /// from the wire when empty (server `skip_serializing_if`), so `default`
+    /// here rather than a required field.
+    #[serde(default)]
+    stale_claims: Vec<StaleClaim>,
+    /// The ordered parts a surface renders, warnings first. Absent from older
+    /// servers, so `#[serde(default)]` and a fallback to the legacy fields.
+    #[serde(default)]
+    blocks: Vec<CliBlock>,
+}
+
+/// The CLI's mirror of the server's `StaleClaim` — deliberately narrow.
+/// Law 4: every surface renders the server's `note` verbatim rather than
+/// composing its own sentence from `expression`/`current`/`basis`, so this
+/// type carries only what it renders.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct StaleClaim {
+    note: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -1134,8 +1168,62 @@ fn phase_label(phase: &str) -> &str {
     }
 }
 
+/// One ordered part of a rendered answer, as the server sent it.
+///
+/// `kind` is a plain String on purpose: a kind this build has never heard of
+/// must still render, or the CLI silently drops warnings the day the server
+/// adds one. Unknown JSON fields are ignored for the same reason.
+///
+/// Also `Serialize`: `--json` re-serializes this narrowed struct rather than
+/// forwarding the server's bytes, so every field the server sends must be
+/// captured here or it is silently dropped from machine-readable output.
+/// `severity` is carried for exactly that reason even though no CLI code path
+/// renders it — a consumer of `--json` is entitled to what the server sent.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct CliBlock {
+    kind: String,
+    #[serde(default)]
+    text: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    severity: Option<String>,
+}
+
+/// The renderable text of a block, whatever its kind. Deliberately does NOT
+/// match on `kind`: the server decides what the reader needs to see.
+fn block_text(block: &CliBlock) -> Option<String> {
+    (!block.text.is_empty()).then(|| block.text.clone())
+}
+
+/// The whole answer, rendered from its blocks in the server's order. `None`
+/// when the server sent no blocks (an older server), so the caller falls back
+/// to the legacy `answer` + `stale_claims` rendering.
+fn render_blocks(result: &AskResponse) -> Option<String> {
+    if result.blocks.is_empty() {
+        return None;
+    }
+    let parts: Vec<String> = result.blocks.iter().filter_map(block_text).collect();
+    Some(parts.join("\n\n"))
+}
+
 fn print_response(result: &AskResponse, verbose: bool) {
-    println!("{}", result.answer);
+    // Blocks carry the server's placement decision, warning first — a
+    // terminal is append-only, so the CLI can no longer decide where a
+    // warning goes relative to the answer (law 4: renders the server's text
+    // verbatim, no surface composes its own sentence from the parts).
+    match render_blocks(result) {
+        Some(text) => println!("{text}"),
+        None => {
+            // Older server: no blocks on the wire. Render the legacy fields,
+            // warnings first, exactly as before.
+            for claim in &result.stale_claims {
+                println!("{}", claim.note);
+            }
+            if !result.stale_claims.is_empty() {
+                println!();
+            }
+            println!("{}", result.answer);
+        }
+    }
     print_response_metadata(result, verbose);
 }
 
@@ -2123,13 +2211,6 @@ async fn ask(
     Ok(())
 }
 
-// The LLM appends `<!-- confidence: X.X -->` to every response so the server can
-// extract a confidence score. The server strips it before storing the answer, but
-// in the streaming path the marker arrives as tokens before the server can strip it.
-// We hold back the last CONFIDENCE_TAIL_BUF bytes of token output so we can strip
-// the marker before it reaches the terminal.
-const CONFIDENCE_TAIL_BUF: usize = 40;
-
 fn handle_sse_token(data: &str, phase_count: u32, tokens_streamed: &mut bool, tail_buf: &mut String) {
     if !*tokens_streamed {
         if phase_count > 0 {
@@ -2137,20 +2218,17 @@ fn handle_sse_token(data: &str, phase_count: u32, tokens_streamed: &mut bool, ta
         }
         *tokens_streamed = true;
     }
-    if let Ok(value) = serde_json::from_str::<serde_json::Value>(data) &&
-        let Some(text) = value["text"].as_str()
-    {
-        tail_buf.push_str(text);
-        // Flush everything that can't possibly be part of the confidence marker.
-        if tail_buf.len() > CONFIDENCE_TAIL_BUF {
-            let safe_len = tail_buf.len() - CONFIDENCE_TAIL_BUF;
-            // Ensure we split on a char boundary.
-            let safe_len = tail_buf.floor_char_boundary(safe_len);
-            print!("{}", &tail_buf[..safe_len]);
-            let _ = std::io::stdout().flush();
-            tail_buf.drain(..safe_len);
-        }
-    }
+    // Tokens are not printed live. A terminal is append-only, so a warning
+    // that arrives with the completed response could never be placed above
+    // tokens already on screen. The completed `answer` event carries the
+    // ordered blocks; `print_response` renders them warning-first.
+    //
+    // `tail_buf` is left untouched (never pushed to) rather than accumulated
+    // and silently dropped: `flush_tail_buf` still runs before the `answer`
+    // event and at `error`/`done`, and a buffer holding real text would print
+    // that text there — duplicating (or fragmenting) what `print_response`
+    // is about to render in full.
+    let _ = (data, tail_buf);
 }
 
 /// Flush the tail buffer, stripping any trailing `<!-- confidence: X.X -->` marker.
@@ -2172,18 +2250,41 @@ fn flush_tail_buf(tail_buf: &mut String) {
     tail_buf.clear();
 }
 
+/// What the `answer` event turned out to be.
+///
+/// Split out of [`handle_sse_answer`] so the rule that matters — a malformed
+/// event is REPORTED, never swallowed — is expressible in a test. The function
+/// itself only prints, which a test cannot observe; this enum is where the
+/// decision lives, and dropping the `Unreadable` arm is a compile error rather
+/// than a silent regression.
+enum AnswerEvent {
+    Render(Box<AskResponse>),
+    Unreadable(String),
+}
+
+fn parse_answer_event(data: &str) -> AnswerEvent {
+    match serde_json::from_str::<AskResponse>(data) {
+        Ok(result) => AnswerEvent::Render(Box::new(result)),
+        Err(e) => AnswerEvent::Unreadable(e.to_string()),
+    }
+}
+
 fn handle_sse_answer(data: &str, phase_count: u32, tokens_streamed: bool, verbose: bool) {
-    if tokens_streamed {
+    // Exactly one blank line between the progress phases and the answer. When
+    // tokens streamed, `handle_sse_token` already printed it at the first
+    // token; printing again here would leave two.
+    if phase_count > 0 && !tokens_streamed {
         println!();
-        if let Ok(result) = serde_json::from_str::<AskResponse>(data) {
-            print_response_metadata(&result, verbose);
-        }
-    } else {
-        if phase_count > 0 {
-            println!();
-        }
-        if let Ok(result) = serde_json::from_str::<AskResponse>(data) {
-            print_response(&result, verbose);
+    }
+    match parse_answer_event(data) {
+        AnswerEvent::Render(result) => print_response(&result, verbose),
+        // Before blocks, swallowing this was cosmetic: the token stream had
+        // already put the answer on screen, so a malformed final event cost
+        // only the source list. Nothing is printed until this event parses
+        // now, so a silent `if let Ok` would lose the entire answer and still
+        // exit 0 — the reader would see phases, then nothing, and no error.
+        AnswerEvent::Unreadable(why) => {
+            eprintln!("\n  Error: the server's answer could not be read: {why}")
         }
     }
 }
@@ -5017,6 +5118,45 @@ async fn evidence_export(
 
 #[cfg(test)]
 mod tests {
+    /// The payload the SERVER actually sends for `POST /api/v1/auth/login`,
+    /// copied from `docbrain-server`'s `LoginResponse` (main.rs:525-533):
+    /// `api_key`, `key_id`, `role`, and optional `user_id` / `expires_at`.
+    ///
+    /// This test is the guard that never existed. The CLI expected `key` and
+    /// `id`; the server has sent `api_key` and `key_id` since the day both
+    /// were written (2026-02-26, `2599c8a9` and `b41f8405`). Email/password
+    /// login therefore failed in every released version with
+    /// `missing field 'key'`, and no test could see it because nothing ever
+    /// parsed a real server payload.
+    ///
+    /// If the server renames these fields again, this test fails here rather
+    /// than in a user's terminal.
+    #[test]
+    fn login_parses_the_payload_the_server_actually_sends() {
+        let from_server = serde_json::json!({
+            "api_key": "db_live_example_key",
+            "key_id": "6f1c9c4e-0000-4000-8000-000000000001",
+            "role": "editor",
+            "user_id": "6f1c9c4e-0000-4000-8000-000000000002",
+            "expires_at": "2026-12-31T23:59:59Z"
+        });
+        let parsed: super::LoginResponse =
+            serde_json::from_value(from_server).expect("the server's own payload must parse");
+        assert_eq!(parsed.key, "db_live_example_key");
+    }
+
+    /// `role`, `user_id` and `expires_at` are not read by the CLI, and
+    /// `user_id`/`expires_at` are `skip_serializing_if` on the server — so a
+    /// payload carrying only the key must still parse. Requiring a field the
+    /// CLI never reads is how a client breaks for no benefit.
+    #[test]
+    fn login_needs_only_the_key_it_actually_uses() {
+        let minimal = serde_json::json!({ "api_key": "k", "key_id": "ignored", "role": "viewer" });
+        let parsed: super::LoginResponse =
+            serde_json::from_value(minimal).expect("only api_key is required");
+        assert_eq!(parsed.key, "k");
+    }
+
     use super::*;
 
     // ── Output policy (ProgressStyle::decide) ─────────────────────────
@@ -5749,6 +5889,163 @@ mod tests {
             instance_public_key: Some("key".to_string()),
         };
         assert!(missing_ok_fields(&report).is_empty());
+    }
+
+    // ── Answer blocks (Task 5) ─────────────────────────────────────────
+    //
+    // A terminal is append-only, so a warning that arrives with the
+    // completed response could never be placed above tokens already on
+    // screen. The server now sends an ordered list of blocks instead;
+    // `render_blocks` renders them in the server's order, warning first.
+    // An older server sends no `blocks` at all, so the legacy `answer` +
+    // `stale_claims` rendering must still work.
+
+    #[test]
+    fn an_unknown_block_kind_still_prints_its_text() {
+        let json = serde_json::json!({ "kind": "something-new", "text": "a future warning" });
+        let b: CliBlock = serde_json::from_value(json).expect("parse");
+        assert_eq!(block_text(&b).as_deref(), Some("a future warning"),
+            "a client that drops unknown kinds loses warnings the day a kind is added");
+    }
+
+    #[test]
+    fn an_unknown_kind_survives_the_renderer_not_just_the_leaf_helper() {
+        // The test above pins the property at `block_text`, which is one call
+        // deep. `render_blocks` is where a `filter` by kind would actually be
+        // written, and no fixture in this module could see one: every other
+        // block here is `warning`, `answer`, or a `note` already dropped for
+        // its empty text, so a whitelist of the two known kinds leaves the
+        // whole file green. This drives the composition site instead.
+        //
+        // MCP pins the same property through `leading_lines` and web through
+        // the component — a surface's unknown-kind test must reach its
+        // RENDERER, or it guards the one place nobody would break.
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({
+            "answer": "the answer",
+            "blocks": [
+                { "kind": "something-new", "text": "a future warning" },
+                { "kind": "answer",        "text": "the answer" }
+            ]
+        })).expect("parse");
+        let out = render_blocks(&resp).expect("blocks present");
+        assert!(
+            out.contains("a future warning"),
+            "render_blocks dropped an unknown kind; the reader loses the warning: {out}"
+        );
+        let u = out.find("a future warning").expect("unknown kind present");
+        let a = out.find("the answer").expect("answer present");
+        assert!(u < a, "an unknown kind keeps the server's position too: {out}");
+    }
+
+    #[test]
+    fn a_block_without_text_is_skipped_rather_than_printed_empty() {
+        let b = CliBlock { kind: "warning".into(), text: String::new(), severity: None };
+        assert_eq!(block_text(&b), None);
+    }
+
+    #[test]
+    fn blocks_render_in_the_order_the_server_gave() {
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({
+            "answer": "the answer",
+            "blocks": [
+                { "kind": "warning", "text": "first" },
+                { "kind": "answer",  "text": "the answer" }
+            ]
+        })).expect("parse");
+        let out = render_blocks(&resp).expect("blocks present");
+        let w = out.find("first").expect("warning present");
+        let a = out.find("the answer").expect("answer present");
+        assert!(w < a, "warning sits below the answer: {out}");
+    }
+
+    #[test]
+    fn no_blocks_means_the_legacy_path_renders() {
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({ "answer": "legacy" })).expect("parse");
+        assert!(render_blocks(&resp).is_none(), "an older server sends no blocks; fall back to answer + stale_claims");
+    }
+
+    #[test]
+    fn the_order_is_the_servers_even_when_it_is_not_warnings_first() {
+        // The previous fixture was [warning, answer], which is ALSO what a
+        // "sort warnings to the top" implementation produces — so it could not
+        // tell the two apart. Answer-first is the arrangement that can: any
+        // CLI-side reordering by kind moves `beta` above `alpha` and fails.
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({
+            "answer": "alpha",
+            "blocks": [
+                { "kind": "answer",  "text": "alpha" },
+                { "kind": "warning", "text": "beta" }
+            ]
+        })).expect("parse");
+        let out = render_blocks(&resp).expect("blocks present");
+        let a = out.find("alpha").expect("answer present");
+        let w = out.find("beta").expect("warning present");
+        assert!(a < w, "the CLI re-ordered the server's blocks: {out}");
+    }
+
+    #[test]
+    fn render_blocks_omits_a_text_less_block_rather_than_joining_a_gap() {
+        // block_text returning None is not enough: render_blocks must also drop
+        // the block, or the join inserts a stray blank paragraph.
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({
+            "answer": "the answer",
+            "blocks": [
+                { "kind": "note",   "text": "" },
+                { "kind": "answer", "text": "the answer" }
+            ]
+        })).expect("parse");
+        let out = render_blocks(&resp).expect("blocks present");
+        assert_eq!(out, "the answer", "a text-less block must vanish, not become a gap");
+    }
+
+    #[test]
+    fn a_block_keeps_its_severity_through_the_json_round_trip() {
+        // `--json` re-serializes CliBlock rather than forwarding the server's
+        // bytes, so any field this struct does not capture is dropped from
+        // machine-readable output. Every production warning block carries
+        // `severity: "stale"`.
+        let json = serde_json::json!({ "kind": "warning", "text": "note", "severity": "stale" });
+        let b: CliBlock = serde_json::from_value(json.clone()).expect("parse");
+        assert_eq!(b.severity.as_deref(), Some("stale"));
+        assert_eq!(serde_json::to_value(&b).expect("serialise"), json);
+    }
+
+    #[test]
+    fn a_malformed_answer_event_is_reported_not_swallowed() {
+        // Nothing reaches stdout until this event parses, so treating a parse
+        // failure as "nothing to print" would lose the entire answer and still
+        // exit 0 — phases, then silence, then success.
+        match parse_answer_event("{ not json") {
+            AnswerEvent::Unreadable(why) => {
+                assert!(!why.is_empty(), "the reason must be reportable to the reader")
+            }
+            AnswerEvent::Render(_) => panic!("malformed data must not be treated as an answer"),
+        }
+    }
+
+    #[test]
+    fn a_well_formed_answer_event_renders() {
+        let data = serde_json::json!({ "answer": "hello" }).to_string();
+        match parse_answer_event(&data) {
+            AnswerEvent::Render(r) => assert_eq!(r.answer, "hello"),
+            AnswerEvent::Unreadable(why) => panic!("a valid answer was rejected: {why}"),
+        }
+    }
+
+    #[test]
+    fn the_token_stream_never_buffers_answer_text() {
+        // print_response prints the whole answer at the `answer` event. If
+        // handle_sse_token also accumulated tokens, flush_tail_buf — which
+        // still runs immediately before that event — would print them too and
+        // the reader would see the answer twice.
+        let mut streamed = false;
+        let mut tail = String::new();
+        for chunk in ["the ", "answer ", "text"] {
+            let data = serde_json::json!({ "text": chunk }).to_string();
+            handle_sse_token(&data, 0, &mut streamed, &mut tail);
+        }
+        assert!(streamed, "the token stream was observed");
+        assert!(tail.is_empty(), "tokens must never be buffered, got {tail:?}");
     }
 }
 

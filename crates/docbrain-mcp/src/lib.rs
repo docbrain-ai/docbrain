@@ -127,6 +127,91 @@ fn role_rank(role: &str) -> u8 {
     }
 }
 
+/// The claim-verification verdict, as the lines a host reads around an answer.
+///
+/// Returns `(before, after)`.
+///
+/// Wording comes from the server's own `notes` (produced by
+/// `claim_verifier::render_note`) and is never re-derived here, so this shim,
+/// the web banner and the CLI cannot drift apart on what a verdict says.
+///
+/// A FAILED verdict goes BEFORE the answer. That mirrors the web banner, which
+/// sits above the confidence line deliberately — burying a failed check under
+/// the answer inverts which of the two signals is stronger. It also matters
+/// more here than on the web: an MCP host owns the pixels, so whatever it reads
+/// first is what it is least able to paraphrase away.
+///
+/// A PASS is one quiet line after, worded exactly as the web words it, so that
+/// silence is never the only signal — absence of any line would otherwise read
+/// as "this feature is switched off".
+///
+/// `nothing_checkable` and an absent `verification` produce NEITHER. The first
+/// is the outcome for every answer on a deployment whose sources record no file
+/// listings, where a line on each one is indistinguishable from a broken
+/// feature. The second means the pass never ran, and reporting a verdict that
+/// was never computed is the exact failure `Answer::verification` being an
+/// `Option` exists to prevent.
+fn verification_lines(response: &Value) -> (String, String) {
+    let Some(v) = response.get("verification") else {
+        return (String::new(), String::new());
+    };
+    match v["status"].as_str() {
+        Some("failed") => {
+            let notes: Vec<&str> = v["notes"]
+                .as_array()
+                .map(|a| a.iter().filter_map(|n| n.as_str()).collect())
+                .unwrap_or_default();
+            if notes.is_empty() {
+                // Failed with nothing renderable: say nothing rather than
+                // assert a failure the reader cannot act on.
+                return (String::new(), String::new());
+            }
+            (format!("{}\n\n", notes.join("\n")), String::new())
+        }
+        Some("passed") => {
+            let n = v["checked"].as_u64().unwrap_or(0);
+            if n == 0 {
+                return (String::new(), String::new());
+            }
+            let noun = if n == 1 { "path" } else { "paths" };
+            (
+                String::new(),
+                format!("\n\n{n} referenced {noun} checked against the source."),
+            )
+        }
+        _ => (String::new(), String::new()),
+    }
+}
+
+/// Everything the server wants shown before the answer, in the server's order.
+///
+/// Reads `blocks` and never matches on `kind`: a kind this build has never heard
+/// of still reaches the host, because the server decides what the reader needs.
+/// Falls back to `stale_claims` when `blocks` is absent, so an older server
+/// keeps working.
+fn leading_lines(response: &Value) -> String {
+    if let Some(blocks) = response.get("blocks").and_then(|v| v.as_array()) {
+        let lines: Vec<&str> = blocks
+            .iter()
+            .filter(|b| b.get("kind").and_then(|k| k.as_str()) != Some("answer"))
+            .filter_map(|b| b.get("text")?.as_str())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if lines.is_empty() {
+            return String::new();
+        }
+        return format!("{}\n\n", lines.join("\n"));
+    }
+    let Some(claims) = response.get("stale_claims").and_then(|v| v.as_array()) else {
+        return String::new();
+    };
+    let notes: Vec<&str> = claims.iter().filter_map(|c| c.get("note")?.as_str()).collect();
+    if notes.is_empty() {
+        return String::new();
+    }
+    format!("{}\n\n", notes.join("\n"))
+}
+
 impl McpServer {
     // `Default` would silently read process env (`DOCBRAIN_SERVER_URL`/
     // `DOCBRAIN_API_KEY`), which is surprising for a Default impl. Callers
@@ -552,7 +637,9 @@ impl McpServer {
             })
             .unwrap_or_default();
 
-        let mut text = answer.to_string();
+        let (verdict_before, verdict_after) = verification_lines(&response);
+        let leading = leading_lines(&response);
+        let mut text = format!("{leading}{verdict_before}{answer}");
         if !sources.is_empty() {
             text.push_str("\n\nSources:\n");
             text.push_str(&sources.join("\n"));
@@ -563,6 +650,7 @@ impl McpServer {
                 episode_id
             ));
         }
+        text.push_str(&verdict_after);
 
         Ok(json!({
             "content": [{
@@ -601,7 +689,11 @@ impl McpServer {
             })
             .unwrap_or_default();
 
-        let mut text = format!("**INCIDENT RESPONSE**\n\n{}", answer);
+        let (verdict_before, verdict_after) = verification_lines(&response);
+        let leading = leading_lines(&response);
+        // Above the header, not below it: mid-incident, a reader acts on the
+        // first line and this one says not to trust part of what follows.
+        let mut text = format!("{leading}{verdict_before}**INCIDENT RESPONSE**\n\n{}", answer);
         if !sources.is_empty() {
             text.push_str("\n\nRunbooks & Sources:\n");
             text.push_str(&sources.join("\n"));
@@ -612,6 +704,7 @@ impl McpServer {
                 episode_id
             ));
         }
+        text.push_str(&verdict_after);
 
         Ok(json!({
             "content": [{
