@@ -103,7 +103,7 @@ Cursor users: the same text goes in `.cursor/rules/docbrain.mdc` with `alwaysApp
 2. You and your agent fix something real.
 3. The agent asks DocBrain whether that knowledge already exists (`docbrain_suggest_capture` — a corpus check, not a guess).
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
-5. Approved captures land as fragments in the normal review pipeline — space owners, quality gates, nothing auto-publishes.
+5. Approved captures land as fragments, anchored to the file and line range they came from. A capture that declares a premise becomes checkable: DocBrain re-verifies it against your codebase and flags it the moment it stops being true, without anyone reviewing anything. A capture anchored to nothing checkable is queued for a human instead of served.
 
 ## All eleven tools
 
@@ -128,14 +128,14 @@ from the editor. Direction is read unless marked write — write tools require
 
 Nothing here can change your source systems. There is no tool that edits a
 Confluence page, closes a ticket or posts to a channel — the write tools write
-knowledge fragments into DocBrain's own review queue and nowhere else.
+knowledge fragments into DocBrain's own corpus and nowhere else.
 
 ## Privacy properties
 
 - **Nothing is automatic.** The agent proposes; a human approves every capture, visibly, in the session.
 - **The session never uploads.** Only the approved 3–5 line capture crosses the wire — not your transcript, not your code, not your prompts.
 - **The client is auditable.** Every line of code that touches your session is MIT-licensed in [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp).
-- **Captures are attributed and reviewed** like any other fragment — the same governance that applies to Slack captures applies here.
+- **Captures are attributed and falsifiable.** Every fragment records who filed it, and a capture is only served unreviewed when it is anchored to real code — the trust level is derived by the server from those anchors, never from anything the client claims about itself.
 
 ## Honest limitations
 

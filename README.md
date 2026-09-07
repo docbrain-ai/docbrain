@@ -150,7 +150,7 @@ docbrain_suggest_capture for the files involved. If a gap exists, draft a
 
 **Write — at the only moment it is free.** Nobody writes up a fix on Friday afternoon. An agent will, in the same breath as the fix, while the reasoning is still in its context and costs nothing to recover. That is the moment this knowledge is cheapest to capture and the moment it is always lost.
 
-**Nothing lands without you.** The agent proposes, you approve, and the fragment enters the normal review queue tied to a file and line range. Nothing publishes unattended, nothing uploads on its own, and the session never leaves your machine.
+**Nothing lands without you.** The agent proposes, you approve in the session, and the capture lands tied to a file and line range — and to the facts it depends on, so the codebase can contradict it later without anyone reviewing anything. A capture anchored to nothing checkable waits for a human instead of being served. Nothing publishes unattended, nothing uploads on its own, and the session never leaves your machine.
 
 **Agents are never seats.** Every tool in this category has to decide whether a bot counts as a licence. We do not: agents make the memory better, and inference is billed by your own provider rather than resold by us. Point as many at it as you like.
 
