@@ -640,13 +640,63 @@ Atlassian's hosted MCP server occasionally returns *"We are having trouble compl
 
 Some MCP servers' API-token authentication requires an organization administrator to enable programmatic MCP access at the workspace level (Atlassian's case). If users see permission errors on the chip despite a valid token, switch the manifest to OAuth — OAuth grants work without the org-level toggle.
 
+### What the meta-gateway requires of your LLM provider
+
+This is the supported bar, not a preference. A meta-gateway manifest (one whose
+`meta_gateway` block turns a `search → describe → invoke` triad into real tool
+calls) runs **an LLM call inside tool dispatch**: after the gateway returns the
+candidate tools and their schemas, a fast-model call chooses one and builds its
+arguments. That call is what makes a name collision decidable — `query` on one
+backend is free text and on another is an expression language, and only the
+field's own description says which.
+
+Three requirements follow, and DocBrain reports a violation as a `timeout`
+rather than as a wrong answer:
+
+1. **`FAST_MODEL_ID` must differ from `LLM_MODEL_ID`.** Providers that serialise
+   requests per model — Ollama does — make the argument builder queue behind
+   whatever synthesis is doing. Measured with both set to the same 14B model: a
+   builder call needing ~8s of GPU waited over 30s and timed out the dispatch.
+2. **The fast model must answer a small prompt quickly.** The builder sends up
+   to four projected tool schemas (roughly 300–800 tokens) and expects a short
+   JSON reply. A hosted fast model returns in well under a second.
+3. **The provider must serve that call concurrently** with the pipeline's other
+   model calls.
+
+**Hosted providers meet all three by construction.** Anthropic, Bedrock, OpenAI
+and Azure OpenAI have no per-model queue, no weight-eviction, and sub-second
+fast models, so nothing here needs tuning.
+
+**Self-hosted Ollama is where this gets hard, and we would rather say so than
+pretend otherwise.** The meta-gateway wants three models resident at once —
+synthesis, fast, and embedding. Measured: 11GB + 5.6GB + 0.4GB of weights on a
+24GB host also running a 6GB container VM. Ollama evicts and reloads under that
+pressure, and everything slows down, including network handshakes that normally
+take ~100ms. On a single GPU under roughly 32GB, expect handshake and builder
+timeouts on meta-gateway manifests. Ordinary (non-meta) manifests are
+unaffected — they make no model call during dispatch.
+
+If you are self-hosting and want this feature, the workable configurations are a
+host that can hold all three models resident, or one chat model used for both
+`LLM_MODEL_ID` and `FAST_MODEL_ID` (which removes the eviction but reinstates
+the queueing in requirement 1, so raise the budgets below).
+
 ### Per-tool latency budget vs. orchestrator budget
 
-- Each tool has `latency_budget_ms` (default `7000`).
-- The orchestrator has an 8-second total wall-clock budget across the entire fan-out.
+- Each tool has `latency_budget_ms` (default `7000`, ceiling `12000`).
+- The orchestrator's total wall-clock budget is **derived**, not fixed: the
+  per-tool ceiling plus the argument builder's own bound (`12000 + 30000`).
+  A total budget equal to its largest component is unsatisfiable — a dispatch
+  that spends its per-tool budget on upstream calls and then needs time to
+  build arguments can never finish inside it. Both numbers were `12000` until
+  2026-09-07, and a dispatch that had already fetched 5,443 bytes was detached
+  at the deadline and its result discarded while its own audit row said `ok`.
+  A compile-time assertion now keeps the total above the ceiling.
+- The builder's bound is a **ceiling on waiting, not a cost**: a fast provider
+  returns early and nothing waits on it.
 - The per-tool budget is the **single source of truth** for in-process REST shims (`jira-rest`, `confluence-rest`, `slack-rest`). The gateway injects the budget on every dispatch via an internal `X-DocBrain-Tool-Budget-Ms` header; the shim uses it as its upstream-call timeout. To change a timeout, edit the manifest — no code change required.
 
-A tool that takes longer than its own budget shows `timeout` on the chip. If you're seeing frequent timeouts on a specific tool, tune `latency_budget_ms` in the manifest — but staying under the 8-second orchestrator ceiling is what keeps `/ask` from feeling hung.
+A tool that takes longer than its own budget shows `timeout` on the chip. If you're seeing frequent timeouts on a specific tool, tune `latency_budget_ms` in the manifest — the `12000` ceiling is what keeps `/ask` from feeling hung. A `timeout` chip on a meta-gateway manifest more often means the provider bar above is not being met than that the upstream is slow; the audit row records which backend was reached and with what arguments, so the two are distinguishable.
 
 **Security note for the budget header.** The header is trusted only because the request already traversed the shim's loopback gate (`127.0.0.1` only) and constant-time bearer compare. The shim additionally clamps the header value to `[1000, 30000]` ms regardless of what it received, so a forged or misbehaving value cannot pin a worker.
 
