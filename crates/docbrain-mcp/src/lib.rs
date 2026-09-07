@@ -1081,7 +1081,12 @@ impl McpServer {
             "content": annotation,
             "source_type": "ide_annotation",
             "source_id": source_id,
-            "confidence": 0.85,
+            // No confidence field: routing is derived server-side from the
+            // capture's anchors (code_location + premises), never from a value
+            // the client asserts about its own trustworthiness. Sending one
+            // here would read like it controlled whether a human reviews this
+            // capture, which it no longer does. Pass `premises` to make the
+            // capture falsifiable — that is what earns unreviewed indexing.
             "code_location": code_location,
         });
 
@@ -1440,7 +1445,12 @@ impl McpServer {
             "content": content,
             "source_type": "commit",
             "source_id": source_id,
-            "confidence": 0.80,
+            // No confidence field: routing is derived server-side from the
+            // capture's anchors (code_location + premises), never from a value
+            // the client asserts about its own trustworthiness. Sending one
+            // here would read like it controlled whether a human reviews this
+            // capture, which it no longer does. Pass `premises` to make the
+            // capture falsifiable — that is what earns unreviewed indexing.
         });
 
         if let Some(loc) = &code_location {
