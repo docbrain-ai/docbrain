@@ -1,6 +1,6 @@
 # Coding Agents — Teach Your Agent to File Docs
 
-Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor the five tools this page uses:
+Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor eleven tools. These five are the ones this page's workflow uses; the [full table](#all-eleven-tools) is at the end:
 
 | Tool | Direction | What it does |
 |------|-----------|--------------|
@@ -92,6 +92,31 @@ Cursor users: the same text goes in `.cursor/rules/docbrain.mdc` with `alwaysApp
 3. The agent asks DocBrain whether that knowledge already exists (`docbrain_suggest_capture` — a corpus check, not a guess).
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
 5. Approved captures land as fragments in the normal review pipeline — space owners, quality gates, nothing auto-publishes.
+
+## All eleven tools
+
+The five above are the ones this page's workflow uses. The MCP server declares
+eleven; the rest are the same capabilities the API and CLI expose, reachable
+from the editor. Direction is read unless marked write — write tools require
+`editor` role or above, and the server refuses them below that.
+
+| Tool | Direction | What it does |
+|------|-----------|--------------|
+| `docbrain_context` | read | What the organization already knows about the files you are about to change — decisions, caveats and constraints against those exact paths, with a stale-knowledge warning first |
+| `docbrain_ask` | read | Ask a question about your organization's knowledge; cited answer, or an honest "not in the record" |
+| `docbrain_incident` | read | Incident-mode search — prioritises runbooks, past incident resolutions, on-call procedures and troubleshooting guides over general documentation |
+| `docbrain_suggest_capture` | read | Whether a documentation gap exists for a file or function, before you write a capture nobody needs |
+| `docbrain_freshness` | read | Freshness report — which documentation has gone stale, and how stale |
+| `docbrain_autopilot_gaps` | read | Documentation gaps Autopilot has detected and clustered from unanswered questions |
+| `docbrain_autopilot_summary` | read | Autopilot status: total, open and critical gaps, drafts generated, drafts published |
+| `docbrain_feedback` | read | Submit feedback on an answer. Read-direction because it changes no documentation — it feeds answer quality |
+| `docbrain_annotate` | **write** | File a knowledge fragment — a decision, fix or caveat — tied to a file and line range |
+| `docbrain_commit_capture` | **write** | Capture the *why* behind a change at commit time, grounded in the diff and the commit message |
+| `docbrain_autopilot_generate` | **write** | Generate a documentation draft for a specific gap cluster. Routes to human review; nothing publishes unattended |
+
+Nothing here can change your source systems. There is no tool that edits a
+Confluence page, closes a ticket or posts to a channel — the write tools write
+knowledge fragments into DocBrain's own review queue and nowhere else.
 
 ## Privacy properties
 
