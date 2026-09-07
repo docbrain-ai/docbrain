@@ -259,6 +259,7 @@ data:
        flag impossible to switch off. Test for nil explicitly instead. */}}
   RAG_CLAIM_VERIFICATION: {{ if kindIs "invalid" .Values.rag.claimVerification }}"true"{{ else }}{{ .Values.rag.claimVerification | quote }}{{ end }}
   PREMISE_MONITOR_ENABLED: {{ if kindIs "invalid" .Values.premises.monitorEnabled }}"true"{{ else }}{{ .Values.premises.monitorEnabled | quote }}{{ end }}
+  PREMISE_SWEEP_INTERVAL_SECS: {{ if kindIs "invalid" .Values.premises.sweepIntervalSeconds }}"300"{{ else }}{{ .Values.premises.sweepIntervalSeconds | quote }}{{ end }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
   RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
   {{- if .Values.rag.mcpOutputCeilingBytes }}

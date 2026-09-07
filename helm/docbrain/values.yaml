@@ -527,12 +527,17 @@ rag:
     preferFused: false
 
 # -- Standing premise monitor ("living claims"). Re-verifies file-path premises
-# in captured knowledge fragments against connected sources' file listings
-# every 300 seconds (plus an immediate check on fragment-index events).
+# in captured knowledge fragments against connected sources' file listings on a
+# fixed interval (plus an immediate check on fragment-index events).
 # Deterministic — no LLM call. `uncheckable` (no connected source can currently
 # speak to a premise) is never treated as `broken`; only a decisive absence is.
 premises:
   monitorEnabled: true
+  # -- Seconds between sweeps. Each sweep reads every premise row and settles
+  # each one, so this is the only dial on that cost: raise it on a large
+  # premise table to spend less, lower it to notice a broken claim sooner.
+  # Values below 5 are raised to 5 by the server.
+  sweepIntervalSeconds: 300
 
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:

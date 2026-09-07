@@ -66,7 +66,7 @@ Two rules keep this honest:
 
 With `PREMISE_MONITOR_ENABLED=true` (the default), the server runs a standing monitor:
 
-- **Every 300 seconds** it sweeps all premises against the current file listings.
+- **Every 300 seconds by default** (`PREMISE_SWEEP_INTERVAL_SECS`) it sweeps all premises against the current file listings.
 - **On fragment-index events** it extracts and initially verifies a new fragment's premises
   immediately, rather than waiting for the sweep.
 - **At startup, and after any missed events,** it backfills premises for indexed fragments
@@ -151,6 +151,7 @@ it always did. The monitor adds a five-minute heartbeat of list-against-list com
 | Variable | Default | Description |
 |---|---|---|
 | `PREMISE_MONITOR_ENABLED` | `true` | The standing monitor. Turning it off stops sweeps and events; premise rows and the answer-time verifier are unaffected. Helm: `premises.monitorEnabled`. |
+| `PREMISE_SWEEP_INTERVAL_SECS` | `300` | Seconds between sweeps. The only dial on sweep cost — each sweep reads and settles every premise row. Values below `5` are raised to `5`. Helm: `premises.sweepIntervalSeconds`. |
 
 Premises need a git source with a recorded file listing — see the GitHub source in
 [Configuration](configuration.md). A deployment with no listings runs the monitor inertly:
