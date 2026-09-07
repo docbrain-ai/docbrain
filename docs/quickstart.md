@@ -5,6 +5,7 @@ Get DocBrain running in under 5 minutes.
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) with Docker Compose V2
+- **Architecture:** the server and web images are published for `linux/amd64`. On Apple Silicon, Docker Desktop runs them under emulation — expect slower ingest and model calls. Some runtimes refuse the pull outright rather than emulate (podman reports `no image found in image index for architecture "arm64"`); if you hit that, build locally from source or run the CLI against a server elsewhere. The `docbrain` CLI itself ships native `darwin-arm64` binaries and is unaffected.
 - **For local mode (default):** [Ollama](https://ollama.ai) installed and running — no API keys needed
 - **For cloud mode:** An API key from Anthropic or OpenAI
 

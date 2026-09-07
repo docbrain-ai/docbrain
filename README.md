@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>The memory layer for humans and AI agents.</strong><br/>
-  Every other tool retrieves what someone remembered to write down. DocBrain captures what nobody did — from tickets, threads, incidents and code changes — cites every individual claim to its source, and says so plainly when your record has no answer. Self-hosted. Read-only. Zero data egress.
+  <strong>The institutional memory your AI agents don't have.</strong><br/>
+  An agent opens your repository knowing everything about code and nothing about your organization — not why the session store moved off Redis, not which approach the team already rejected and why, not the caveat someone hit at 2am last quarter. So it proposes what was ruled out, and re-breaks what was fixed. DocBrain captures those decisions where they actually happen — pull requests, threads, incidents, deploys — hands them to the agent <em>before</em> it edits the file, and lets it file back what it just learned. Every claim cites its source, expires when reality moves, and exports as proof a third party verifies offline. Self-hosted. Read-only. Zero data egress.
 </p>
 
 <p align="center">
@@ -47,6 +47,20 @@
 Every organization runs on knowledge that never gets written down: the decision from a meeting, the fix someone found at 2am, the workaround only one person knows. It lives in PRs, chat threads, tickets, and people's heads. When that person changes teams or quits, years of context walk out the door with them.
 
 Tools that "index your docs and add a chatbot" solve the wrong half of the problem: they retrieve your stale, incomplete wiki slightly faster. The knowledge that actually runs your organization was never captured in the first place. And it's getting worse now that AI produces code, changes, and fluent documentation faster than any human can absorb — your agents read those docs too. More documentation is easy. Documentation your organization can trust is the scarce thing.
+
+## Why This Is Not a Documentation Tool
+
+Most tools in this space index your documents and put a chat box in front of them. That is one of the three things below, and it is the easy one.
+
+The reason it matters more now: agents write a large share of the code, and every session starts from zero. A human engineer accumulates the reasons behind your systems over years. An agent is brilliant, tireless, and permanently new — it will re-derive, re-decide and re-break whatever is not written somewhere it can read. Meanwhile it generates plausible documentation faster than anyone can check it, so "more docs" makes the problem worse and "docs you can verify" is the scarce thing.
+
+**1. It captures what was never written down.** A wiki holds the fraction of your knowledge that somebody found time to type up. The decision from the meeting, the fix found at 2am, the workaround one person knows — those live in PRs, threads, tickets and heads. DocBrain reads those systems in place and captures the knowledge as it is produced, so the record includes what nobody would have filed. Your coding agent is the best capture device you have ever had: it is present at the exact second knowledge is created, and it can file it before the session ends.
+
+**2. Every claim carries provenance, and claims expire.** An answer is not one blob of prose with a source list stapled to it. Each individual claim is traced to the span it came from, and a claim can be registered as a *premise* — a statement about your systems that DocBrain then monitors. When the source stops supporting it, the answer that relied on it says so, with the date it changed. Documentation that is wrong is worse than documentation that is missing, and the difference is whether the system notices.
+
+**3. An answer can be proved without us.** Export any answer, decision, approval or premise verdict as a sealed, hash-chained `.dbev` bundle. A third party verifies it offline — no DocBrain, no server, no network — using an open-source verifier. The trust comes from the maths they run themselves. This is the property a model provider structurally cannot offer: a sampled generation is not reproducible, and verifying a claim about a moment requires having been present for it.
+
+Everything else in this README is in service of those three.
 
 ## How DocBrain Works
 
@@ -94,21 +108,44 @@ curl -H "Authorization: Bearer <key>" \
 
 Full setup guide: [docs/quickstart.md](docs/quickstart.md)
 
+## Living Claims
+
+A captured note can declare a **premise** — a checkable statement about your systems, not prose. `cert-manager is pinned to chart version 1.21.1`. `the session store is Postgres-backed`.
+
+DocBrain re-checks premises against their sources on a schedule and holds each in one of four states:
+
+| state | meaning |
+|---|---|
+| `holds` | the source still supports it |
+| `broken` | the source now says something else — carries the new value and the date it changed |
+| `uncheckable` | the source could not be read this sweep |
+| `dormant` | not currently monitored |
+
+`uncheckable` is deliberately not `broken`. A source that could not be read proves nothing about the claim, and a system that reports a failed check as a failed claim teaches you to ignore it. Every answer that draws on a broken premise carries the warning above the prose, on every surface — API, CLI, MCP and web — so a stale fact cannot reach you looking current.
+
+[Knowledge intelligence →](docs/knowledge-intelligence.md)
+
 ## Teach Your Agent
 
-If your team uses Claude Code or Cursor, the [`docbrain-mcp`](crates/docbrain-mcp) server already gives your agent capture tools — most teams just never tell the agent to use them. Three lines in your `CLAUDE.md` turn every debugging session into documentation:
+If your team uses Claude Code or Cursor, the [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) already gives your agent eleven tools — most teams just never tell the agent to use them. These lines in your `CLAUDE.md` close the loop in both directions:
 
 ```markdown
+Before editing files you have not worked in before, call docbrain_context
+with their repo-relative paths and read what comes back first.
+
 When we resolve an error or discover non-obvious behavior, call
 docbrain_suggest_capture for the files involved. If a gap exists, draft a
 3–5 line capture and ask me to approve it before calling docbrain_annotate.
 ```
 
-Your agent fixes something, checks whether the org already knows it, and — with your approval — files what's missing into the review queue. The knowledge gets captured at the only moment it's free: seconds after the fix. Full guide, including Cursor setup and the privacy model: [docs/agents.md](docs/agents.md)
+Two halves, and most tools only have the second. **`docbrain_context` is the read before the change:** the agent names the files it is about to touch and gets back the decisions, caveats and constraints your organization has recorded against those exact paths — with a warning first if any of that knowledge has since gone stale. A caveat a teammate filed last quarter surfaces *before* the mistake instead of in the post-mortem.
+
+**`docbrain_annotate` is the write after the fix.** Your agent fixes something, checks whether the org already knows it, and — with your approval — files what's missing into the review queue. The knowledge gets captured at the only moment it's free: seconds after the fix. Full guide, including Cursor setup and the privacy model: [docs/agents.md](docs/agents.md)
 
 ## What You Get
 
 - **Capture from 13 built-in sources** — Confluence, Slack, Teams, GitHub, GitLab, Jira, PagerDuty, Linear, OpsGenie, Rootly, Zendesk, Intercom, and local files, plus a language-agnostic [Connector SDK](docs/connectors.md) for anything else. [Ingestion guide →](docs/ingestion.md)
+- **Context before the change** — `docbrain_context` takes the repo-relative paths your agent is about to edit and returns what the organization already knows about those exact files: decisions, caveats and constraints, with a stale-knowledge warning first. Prevention, not just capture. [Coding agents →](docs/agents.md)
 - **Ask, with citations** — hybrid vector + keyword search, confidence-scored answers; low confidence asks clarifying questions instead of guessing. [API →](docs/api-reference.md)
 - **`docbrain generate`** — on-demand docs grounded in your own runbooks, incidents, threads, and PRs, with per-claim provenance and honest `needs_input` for what the knowledge can't answer. [Generate guide →](docs/generate.md)
 - **Quality gates on every doc** — structural, style (your style guide, enforced automatically), and semantic scoring; nothing unscored enters the system. [Style policy →](docs/style-policy.md)
