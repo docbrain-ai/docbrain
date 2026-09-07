@@ -682,6 +682,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Offline Evidence Bundles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../premises/" class="md-nav__link">
         
   
@@ -1445,6 +1473,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#all-eleven-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All eleven tools
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#privacy-properties" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1487,7 +1526,7 @@
 
 
 <h1 id="coding-agents-teach-your-agent-to-file-docs">Coding Agents — Teach Your Agent to File Docs<a class="headerlink" href="#coding-agents-teach-your-agent-to-file-docs" title="Permanent link">&para;</a></h1>
-<p>Your coding agent already has DocBrain's tools. The <a href="https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp"><code>docbrain-mcp</code></a> server (MIT, in <code>crates/</code>) gives Claude Code, Cursor, and any MCP-compatible editor four tools:</p>
+<p>Your coding agent already has DocBrain's tools. The <a href="https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp"><code>docbrain-mcp</code></a> server (MIT, in <code>crates/</code>) gives Claude Code, Cursor, and any MCP-compatible editor eleven tools. These five are the ones this page's workflow uses; the <a href="#all-eleven-tools">full table</a> is at the end:</p>
 <table>
 <thead>
 <tr>
@@ -1497,6 +1536,11 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>docbrain_context</code></td>
+<td>read</td>
+<td>What the org already knows about the files you are about to change — decisions, caveats and constraints captured against those exact paths, with a warning first if any of it has since gone stale</td>
+</tr>
 <tr>
 <td><code>docbrain_ask</code></td>
 <td>read</td>
@@ -1562,23 +1606,102 @@ file captures.</p>
 <h2 id="the-snippet">The snippet<a class="headerlink" href="#the-snippet" title="Permanent link">&para;</a></h2>
 <p>Add this to your project's <code>CLAUDE.md</code> (or global <code>~/.claude/CLAUDE.md</code>):</p>
 <div class="language-markdown highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gu">## DocBrain</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>When we resolve an error, discover non-obvious behavior, or make a decision a
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>future engineer would need, do this before the task ends:
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">1.</span> Call docbrain_suggest_capture for the files involved.
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">2.</span> If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>   trap to avoid — and show it to me for approval before calling
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>   docbrain_annotate.
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>Never include secrets, tokens, hostnames from .env files, or customer data in
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>a capture. When in doubt, leave it out.
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Before editing files you have not worked in before, call docbrain_context with
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>their repo-relative paths and read what comes back first. Pass bare paths —
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="sb">`src/auth/session.rs`</span>, not <span class="sb">`src/auth/session.rs:42`</span>.
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>When we resolve an error, discover non-obvious behavior, or make a decision a
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>future engineer would need, do this before the task ends:
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="k">1.</span> Call docbrain_suggest_capture for the files involved.
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="k">2.</span> If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>   trap to avoid — and show it to me for approval before calling
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>   docbrain_annotate.
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>Never include secrets, tokens, hostnames from .env files, or customer data in
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>a capture. When in doubt, leave it out.
 </span></code></pre></div>
 <p>Cursor users: the same text goes in <code>.cursor/rules/docbrain.mdc</code> with <code>alwaysApply: true</code>.</p>
 <h2 id="what-happens">What happens<a class="headerlink" href="#what-happens" title="Permanent link">&para;</a></h2>
 <ol>
+<li>Before your agent edits a file, it asks what the org already knows about it (<code>docbrain_context</code>). A caveat a teammate filed last quarter surfaces <em>before</em> the mistake, not in the post-mortem.</li>
 <li>You and your agent fix something real.</li>
 <li>The agent asks DocBrain whether that knowledge already exists (<code>docbrain_suggest_capture</code> — a corpus check, not a guess).</li>
 <li>If the org doesn't have it, the agent drafts a capture and <strong>asks you first</strong>. You see exactly what leaves the machine.</li>
 <li>Approved captures land as fragments in the normal review pipeline — space owners, quality gates, nothing auto-publishes.</li>
 </ol>
+<h2 id="all-eleven-tools">All eleven tools<a class="headerlink" href="#all-eleven-tools" title="Permanent link">&para;</a></h2>
+<p>The five above are the ones this page's workflow uses. The MCP server declares
+eleven; the rest are the same capabilities the API and CLI expose, reachable
+from the editor. Direction is read unless marked write — write tools require
+<code>editor</code> role or above, and the server refuses them below that.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Direction</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docbrain_context</code></td>
+<td>read</td>
+<td>What the organization already knows about the files you are about to change — decisions, caveats and constraints against those exact paths, with a stale-knowledge warning first</td>
+</tr>
+<tr>
+<td><code>docbrain_ask</code></td>
+<td>read</td>
+<td>Ask a question about your organization's knowledge; cited answer, or an honest "not in the record"</td>
+</tr>
+<tr>
+<td><code>docbrain_incident</code></td>
+<td>read</td>
+<td>Incident-mode search — prioritises runbooks, past incident resolutions, on-call procedures and troubleshooting guides over general documentation</td>
+</tr>
+<tr>
+<td><code>docbrain_suggest_capture</code></td>
+<td>read</td>
+<td>Whether a documentation gap exists for a file or function, before you write a capture nobody needs</td>
+</tr>
+<tr>
+<td><code>docbrain_freshness</code></td>
+<td>read</td>
+<td>Freshness report — which documentation has gone stale, and how stale</td>
+</tr>
+<tr>
+<td><code>docbrain_autopilot_gaps</code></td>
+<td>read</td>
+<td>Documentation gaps Autopilot has detected and clustered from unanswered questions</td>
+</tr>
+<tr>
+<td><code>docbrain_autopilot_summary</code></td>
+<td>read</td>
+<td>Autopilot status: total, open and critical gaps, drafts generated, drafts published</td>
+</tr>
+<tr>
+<td><code>docbrain_feedback</code></td>
+<td>read</td>
+<td>Submit feedback on an answer. Read-direction because it changes no documentation — it feeds answer quality</td>
+</tr>
+<tr>
+<td><code>docbrain_annotate</code></td>
+<td><strong>write</strong></td>
+<td>File a knowledge fragment — a decision, fix or caveat — tied to a file and line range</td>
+</tr>
+<tr>
+<td><code>docbrain_commit_capture</code></td>
+<td><strong>write</strong></td>
+<td>Capture the <em>why</em> behind a change at commit time, grounded in the diff and the commit message</td>
+</tr>
+<tr>
+<td><code>docbrain_autopilot_generate</code></td>
+<td><strong>write</strong></td>
+<td>Generate a documentation draft for a specific gap cluster. Routes to human review; nothing publishes unattended</td>
+</tr>
+</tbody>
+</table>
+<p>Nothing here can change your source systems. There is no tool that edits a
+Confluence page, closes a ticket or posts to a channel — the write tools write
+knowledge fragments into DocBrain's own review queue and nowhere else.</p>
 <h2 id="privacy-properties">Privacy properties<a class="headerlink" href="#privacy-properties" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Nothing is automatic.</strong> The agent proposes; a human approves every capture, visibly, in the session.</li>

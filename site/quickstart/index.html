@@ -988,6 +988,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Offline Evidence Bundles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../premises/" class="md-nav__link">
         
   
@@ -1986,6 +2014,7 @@
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="https://docs.docker.com/get-docker/">Docker</a> with Docker Compose V2</li>
+<li><strong>Architecture:</strong> the server and web images are published for <code>linux/amd64</code>. On Apple Silicon, Docker Desktop runs them under emulation — expect slower ingest and model calls. Some runtimes refuse the pull outright rather than emulate (podman reports <code>no image found in image index for architecture "arm64"</code>); if you hit that, build locally from source or run the CLI against a server elsewhere. The <code>docbrain</code> CLI itself ships native <code>darwin-arm64</code> binaries and is unaffected.</li>
 <li><strong>For local mode (default):</strong> <a href="https://ollama.ai">Ollama</a> installed and running — no API keys needed</li>
 <li><strong>For cloud mode:</strong> An API key from Anthropic or OpenAI</li>
 </ul>

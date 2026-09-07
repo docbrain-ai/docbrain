@@ -982,6 +982,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../evidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Offline Evidence Bundles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../premises/" class="md-nav__link">
         
   
@@ -2175,6 +2203,10 @@
 <td>Lower = more HTTP calls but smaller per-call latency spikes. Clamped to <code>[1, 1000]</code>.</td>
 </tr>
 <tr>
+<td><code>RAG_RERANK_TOP_N</code></td>
+<td>Bounds how many candidates are sent to the provider, enforced for every provider. <strong>Matters most for <code>ollama</code></strong>: that dialect is a bi-encoder approximation over the embeddings API and issues <strong>one embedding round-trip per candidate</strong>, sequentially, so cost is linear in this value and a 200-candidate pool is 200 round-trips on every query. Hosted cross-encoders batch, so they feel the value far less. Start well below <code>rag.candidate_pool_size</code> on the local provider and raise it only if recall at the top actually suffers.</td>
+</tr>
+<tr>
 <td><code>RAG_RERANK_TIMEOUT_SECS</code></td>
 <td>Tight — rerank is on the critical path of every query. Failure falls back to the RRF-only ranking from stage 2.</td>
 </tr>
@@ -2219,6 +2251,13 @@
 </tr>
 </tbody>
 </table>
+<p><strong>Local-provider caveat.</strong> The <code>ollama</code> dialect scores with a bi-encoder
+(cosine between separately-embedded query and document) rather than a true
+cross-encoder. Its scores land in a narrow band — 0.879/0.880/0.882 across the
+top three of a real 22k-chunk corpus — so they are calibrated into <code>[0, 1]</code> but
+discriminate weakly between "answers the question" and "same topic". The floors
+below still apply, but expect them to separate candidates less sharply than the
+table's cross-encoder guidance implies.</p>
 <p><strong>Calibration note.</strong> A cross-encoder's <code>[0, 1]</code> score is <strong>not</strong> a percentage. For Cohere Rerank v3.5, Voyage rerank-2, and similar models, <code>&gt; 0.70</code> means "directly answers the question", <code>0.50–0.70</code> is "strong supporting evidence", <code>0.40–0.50</code> is "topically related", <code>0.30–0.40</code> is "shares keywords but usually noise". The defaults draw the lines at "topically related" for retrieval and "strong evidence" for citation display.</p>
 <p><strong>If <code>rerank.provider = "none"</code>:</strong> these floors gate on raw BM25/vector scores which are <strong>not</strong> calibrated to <code>[0, 1]</code>. Set all four to <code>0.0</code> in that mode and rely on <code>top_k</code> to bound results. A real reranker is what makes these floors work at all — which is why the plug-and-play providers in this doc exist.</p>
 <p><strong>Debugging a noisy citation.</strong> Run <code>docbrain trace-query "your question"</code> and look at the <code>rerank</code> stage log line. If the offending citation is scoring <code>0.30–0.45</code>, raising <code>display_floor</code> will fix it. If it's scoring <code>&gt; 0.50</code>, the reranker genuinely thinks it's relevant and the problem is upstream (candidate pool, query decomposition, or title-enrichment metadata leak).</p>
