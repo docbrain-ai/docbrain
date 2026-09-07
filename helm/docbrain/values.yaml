@@ -10,6 +10,9 @@ llm:
   #                        # OpenAI: gpt-4o-mini  |  Groq: llama-3.1-8b-instant
   #                        # DeepSeek: deepseek-chat  |  Mistral: mistral-small-latest
   #                        # Falls back to modelId if not set
+  # fastProvider: ""       # provider for fastModelId when it is not hosted by `provider`
+  #                        # (e.g. provider: ollama + fastProvider: openai). bedrock and
+  #                        # vertex_ai are refused. Falls back to provider if not set.
   # ingestModelId: ""      # model used ONLY during ingest for image extraction
   #                        # IMPORTANT: set this to a cheaper model when using Opus 4 + thinkingBudget
   #                        # otherwise image extraction will trigger throttling errors on every page
