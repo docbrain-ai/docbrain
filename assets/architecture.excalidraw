@@ -35,6 +35,10 @@
         {
           "type": "text",
           "id": "t002"
+        },
+        {
+          "type": "arrow",
+          "id": "a012"
         }
       ]
     },
@@ -107,6 +111,10 @@
         {
           "type": "text",
           "id": "t004"
+        },
+        {
+          "type": "arrow",
+          "id": "a012"
         }
       ]
     },
@@ -454,9 +462,9 @@
       "id": "a012",
       "type": "arrow",
       "x": 610.0,
-      "y": 216,
+      "y": 136,
       "width": 460.0,
-      "height": 80,
+      "height": 172,
       "strokeColor": "#e8590c",
       "backgroundColor": "transparent",
       "roundness": {
@@ -474,19 +482,27 @@
         ],
         [
           0,
-          80
+          164
         ],
         [
           -460.0,
-          80
+          164
         ],
         [
           -460.0,
-          16
+          -8
         ]
       ],
-      "startBinding": null,
-      "endBinding": null,
+      "startBinding": {
+        "elementId": "r003",
+        "focus": 0,
+        "gap": 16
+      },
+      "endBinding": {
+        "elementId": "r001",
+        "focus": 0,
+        "gap": 8
+      },
       "startArrowhead": null,
       "endArrowhead": "arrow",
       "lastCommittedPoint": null,
@@ -507,8 +523,8 @@
       "locked": false,
       "id": "t013",
       "type": "text",
-      "x": 370,
-      "y": 300,
+      "x": 190.0,
+      "y": 318,
       "width": 420,
       "height": 35.0,
       "strokeColor": "#e8590c",

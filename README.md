@@ -30,7 +30,7 @@
 
 <p align="center">
   <a href="https://youtu.be/DeiP74HuVDc">
-    <img src="assets/agent-in-the-editor.jpg" alt="A coding agent calls docbrain_context before a commit, reads a captured decision it could not have known, and refuses the change" width="720" />
+    <img src="assets/agent-in-the-editor.gif" alt="A coding agent calls docbrain_context before a commit, reads a captured decision it could not have known, and refuses the change" width="720" />
   </a>
   <br/>
   <em>a one-line chart bump that takes checkout down, and the agent that refuses it — <a href="https://youtu.be/DeiP74HuVDc">54 seconds ▶</a></em>
@@ -125,7 +125,7 @@ DocBrain re-checks premises against their sources on a schedule and holds each i
 
 <p align="center">
   <a href="https://youtube.com/shorts/sq0zkHxWIaA">
-    <img src="assets/reason-expired.jpg" alt="The same docbrain ask command run twice; the second answer opens with a dated stale-claim warning" width="360" />
+    <img src="assets/reason-expired.gif" alt="The same docbrain ask command run twice; the second answer opens with a dated stale-claim warning" width="620" />
   </a>
   <br/>
   <em>the identical question, six weeks apart &mdash; <a href="https://youtube.com/shorts/sq0zkHxWIaA">watch the reason expire &#9654;</a></em>
