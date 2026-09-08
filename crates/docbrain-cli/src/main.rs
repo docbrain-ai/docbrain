@@ -584,6 +584,16 @@ struct AskResponse {
     /// servers, so `#[serde(default)]` and a fallback to the legacy fields.
     #[serde(default)]
     blocks: Vec<CliBlock>,
+    /// Tools the picker wanted for THIS question that the caller has no
+    /// credential for. The server has always sent this and the web UI renders
+    /// it as a connect banner; the CLI simply dropped it, so a terminal user
+    /// got a corpus-only answer with no indication that live data was reachable
+    /// and merely unauthorised. The answer text does not cover it: asked for
+    /// Slack activity while unconnected, the reply ended "that'd have to come
+    /// from Slack directly" — true, and silent about the one action that would
+    /// have fixed it.
+    #[serde(default)]
+    user_unconnected_relevant: Vec<String>,
 }
 
 /// The CLI's mirror of the server's `StaleClaim` — deliberately narrow.
@@ -1215,7 +1225,32 @@ struct CliBlock {
 /// The renderable text of a block, whatever its kind. Deliberately does NOT
 /// match on `kind`: the server decides what the reader needs to see.
 fn block_text(block: &CliBlock) -> Option<String> {
-    (!block.text.is_empty()).then(|| block.text.clone())
+    block_text_coloured(block, false)
+}
+
+/// A block's text, with a warning painted so it cannot be missed.
+///
+/// The stale-claim warning is the single most important line an answer can
+/// carry — it says the reasoning below rests on a fact that is no longer true.
+/// It was printed as plain text, visually identical to the prose around it, so
+/// in a real terminal it disappeared into the answer. Found by looking at a
+/// recorded frame: the warning was there and read like a sentence.
+///
+/// Orange `38;5;208` is not a new choice — it is the code `freshness_tag`
+/// already uses for `stale`, so a stale premise and a stale source now look
+/// the same to a reader. Law 4 still holds: the server's text is rendered
+/// verbatim and the CLI adds no words, only emphasis.
+///
+/// Colour is gated by the caller via `stdout_colour_enabled`, so a pipe, a
+/// `NO_COLOR` environment or `TERM=dumb` gets the plain text unchanged.
+fn block_text_coloured(block: &CliBlock, colour: bool) -> Option<String> {
+    if block.text.is_empty() {
+        return None;
+    }
+    if colour && block.kind == "warning" {
+        return Some(format!("\x1b[38;5;208m{}\x1b[0m", block.text));
+    }
+    Some(block.text.clone())
 }
 
 /// The whole answer, rendered from its blocks in the server's order. `None`
@@ -1225,7 +1260,12 @@ fn render_blocks(result: &AskResponse) -> Option<String> {
     if result.blocks.is_empty() {
         return None;
     }
-    let parts: Vec<String> = result.blocks.iter().filter_map(block_text).collect();
+    let colour = stdout_colour_enabled();
+    let parts: Vec<String> = result
+        .blocks
+        .iter()
+        .filter_map(|b| block_text_coloured(b, colour))
+        .collect();
     Some(parts.join("\n\n"))
 }
 
@@ -6109,3 +6149,51 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+mod a_warning_must_look_like_a_warning {
+    use super::{block_text_coloured, CliBlock};
+
+    fn block(kind: &str, text: &str) -> CliBlock {
+        serde_json::from_value(serde_json::json!({ "kind": kind, "text": text })).unwrap()
+    }
+
+    const ORANGE: &str = "\x1b[38;5;208m";
+
+    /// The stale-claim warning says the reasoning below rests on a fact that is
+    /// no longer true. It was printed as plain text, indistinguishable from the
+    /// prose around it, and vanished into the answer in a real terminal.
+    #[test]
+    fn a_stale_premise_warning_is_painted() {
+        let out = block_text_coloured(&block("warning", "⚠ Out of date: …"), true).unwrap();
+        assert!(out.starts_with(ORANGE), "got: {out:?}");
+        assert!(out.ends_with("\x1b[0m"), "and must reset: {out:?}");
+        assert!(out.contains("⚠ Out of date: …"), "text is rendered verbatim");
+    }
+
+    /// Law 4: the CLI adds emphasis, never words.
+    #[test]
+    fn the_servers_text_is_never_altered() {
+        let text = "⚠ Out of date: this answer draws on a note asserting `x=1`.";
+        let painted = block_text_coloured(&block("warning", text), true).unwrap();
+        let stripped = painted.replace(ORANGE, "").replace("\x1b[0m", "");
+        assert_eq!(stripped, text);
+    }
+
+    #[test]
+    fn an_answer_block_is_not_painted() {
+        let out = block_text_coloured(&block("answer", "The pin exists because…"), true).unwrap();
+        assert!(!out.contains('\x1b'), "only warnings are emphasised: {out:?}");
+    }
+
+    /// A pipe, NO_COLOR or TERM=dumb must get exactly the bytes the server sent.
+    #[test]
+    fn colour_off_yields_the_plain_text() {
+        let out = block_text_coloured(&block("warning", "⚠ Out of date: …"), false).unwrap();
+        assert_eq!(out, "⚠ Out of date: …");
+    }
+
+    #[test]
+    fn an_empty_block_is_still_dropped() {
+        assert!(block_text_coloured(&block("warning", ""), true).is_none());
+    }
+}
