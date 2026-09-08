@@ -207,43 +207,18 @@ Full guide, including Cursor setup, the privacy model and all eleven tools: [doc
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph "Capture Layer"
-        CI["CI/CD Pipelines"]
-        IDE["IDE (MCP)"]
-        SLACK["Slack / Teams"]
-        WEB["Web UI"]
-        CLI["CLI"]
-        API_EXT["External APIs"]
-    end
+<p align="center">
+  <img src="assets/architecture.png" alt="Where decisions happen feeds DocBrain, which serves the surfaces where work happens; a dashed loop runs back from DocBrain to the sources, re-checking its own claims" width="860" />
+</p>
 
-    subgraph "DocBrain Server (Rust / Axum)"
-        FRAG["Fragment Router"]
-        QUAL["Quality Pipeline"]
-        CLUST["Clustering Engine"]
-        COMP["Composition Engine"]
-        REV["Review Workflows"]
-        RAG["RAG Pipeline"]
-        AUTO["Autopilot"]
-        GOV["Governance"]
-        EVT["Event Bus + Webhooks"]
-    end
+Three moving parts and one loop. Knowledge is captured where decisions actually
+get made, served where the work happens, and &mdash; the part that is unusual
+&mdash; re-checked against its own sources on a cycle, so a claim whose premise
+has died says so instead of ageing quietly.
 
-    subgraph "Storage"
-        PG["PostgreSQL"]
-        OS["OpenSearch<br/><i>vector + keyword</i>"]
-        RD["Redis"]
-    end
-
-    CI & IDE & SLACK & WEB & CLI & API_EXT --> FRAG
-    FRAG --> QUAL --> CLUST --> COMP --> REV
-    WEB & CLI & SLACK --> RAG
-    RAG & AUTO & GOV --> PG & OS
-    EVT --> PG
-```
-
-Rust server, PostgreSQL, OpenSearch, Redis. Full design: [docs/architecture.md](docs/architecture.md)
+Rust server, PostgreSQL, OpenSearch, Redis. The component-level view, the data
+flow and the deployment topology: [docs/architecture.md](docs/architecture.md).
+Diagram source: [assets/architecture.excalidraw](assets/architecture.excalidraw).
 
 ## Security
 
