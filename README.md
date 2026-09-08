@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>What one engineer works out, the whole company keeps.</strong><br/>
-  Someone solves it on a Tuesday. Two teams over, in November, a person who has never met them hits the same wall and has no way to know it was ever solved — and neither does their agent, which proposes the approach that was already ruled out. DocBrain captures those decisions where they actually happen — pull requests, threads, incidents, deploys — and hands them to whoever touches that code next, human or agent, <em>before</em> the change. Every claim cites its source, expires when reality moves, and exports as proof a third party verifies offline. Self-hosted. Read-only. Zero data egress.
+  Someone solves it on a Tuesday. Two teams over, in November, a person who has never met them hits the same wall and has no way to know it was ever solved, and neither does their agent, which proposes the approach that was already ruled out. DocBrain captures those decisions where they actually happen, pull requests, threads, incidents, deploys, and hands them to whoever touches that code next, human or agent, <em>before</em> the change. Every claim cites its source, expires when reality moves, and exports as proof a third party verifies offline. Self-hosted. Read-only. Zero data egress.
 </p>
 
 <p align="center">
