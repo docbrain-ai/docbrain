@@ -1248,7 +1248,15 @@ fn block_text_coloured(block: &CliBlock, colour: bool) -> Option<String> {
     if block.text.is_empty() {
         return None;
     }
-    if colour && block.kind == "warning" {
+    // Paint on SEVERITY, not on kind. `kind` carries ORDER — "show this before
+    // the answer it qualifies" — and three block types now serialize as
+    // "warning" for that reason: `stale`, `unconnected` and `memory`. Only the
+    // first says the reasoning below rests on a fact that is no longer true.
+    // Painting on the kind painted all three, and the memory block rides on
+    // most answers (recall is scoped to the user, so `-n` does not clear it),
+    // which would have made orange ordinary and the one line that must not be
+    // missed ordinary with it.
+    if colour && block.severity.as_deref() == Some("stale") {
         return Some(format!("\x1b[38;5;208m{}\x1b[0m", block.text));
     }
     Some(block.text.clone())
@@ -6158,6 +6166,13 @@ mod a_warning_must_look_like_a_warning {
         serde_json::from_value(serde_json::json!({ "kind": kind, "text": text })).unwrap()
     }
 
+    fn block_sev(kind: &str, severity: &str, text: &str) -> CliBlock {
+        serde_json::from_value(
+            serde_json::json!({ "kind": kind, "text": text, "severity": severity }),
+        )
+        .unwrap()
+    }
+
     const ORANGE: &str = "\x1b[38;5;208m";
 
     /// The stale-claim warning says the reasoning below rests on a fact that is
@@ -6165,10 +6180,42 @@ mod a_warning_must_look_like_a_warning {
     /// prose around it, and vanished into the answer in a real terminal.
     #[test]
     fn a_stale_premise_warning_is_painted() {
-        let out = block_text_coloured(&block("warning", "⚠ Out of date: …"), true).unwrap();
+        // The fixture carries `severity: "stale"` because every warning block
+        // the server emits carries one — all three constructors in
+        // core/rag/blocks.rs set it. A bare `kind: "warning"` was an
+        // under-specified fixture that no server produces, and it hid the fact
+        // that kind alone cannot tell a stale claim from a memory note.
+        let out = block_text_coloured(&block_sev("warning", "stale", "⚠ Out of date: …"), true).unwrap();
         assert!(out.starts_with(ORANGE), "got: {out:?}");
         assert!(out.ends_with("\x1b[0m"), "and must reset: {out:?}");
         assert!(out.contains("⚠ Out of date: …"), "text is rendered verbatim");
+    }
+
+    /// Emphasis is scarce: spend it on the one line that says the reasoning
+    /// below rests on a fact that is no longer true.
+    ///
+    /// Three block kinds now serialize as `"warning"` — `stale`, `unconnected`
+    /// and `memory` — because the kind carries ORDER (show this before the
+    /// answer), not danger. Painting on the kind painted all three, and the
+    /// memory block appears on most answers, since recall is scoped to the user
+    /// and `-n` does not clear it. Orange on every answer is orange on none.
+    #[test]
+    fn only_a_stale_claim_is_painted_not_every_warning_kind() {
+        let memory = block_sev("warning", "memory", "Drew on memory as well as documentation");
+        assert!(
+            !block_text_coloured(&memory, true).unwrap().starts_with(ORANGE),
+            "a memory-provenance note is not a danger signal"
+        );
+        let unconnected = block_sev("warning", "unconnected", "Answered from the corpus only");
+        assert!(
+            !block_text_coloured(&unconnected, true).unwrap().starts_with(ORANGE),
+            "an unconnected-source caveat is not a danger signal"
+        );
+        let stale = block_sev("warning", "stale", "⚠ Out of date: …");
+        assert!(
+            block_text_coloured(&stale, true).unwrap().starts_with(ORANGE),
+            "the stale claim still is"
+        );
     }
 
     /// Law 4: the CLI adds emphasis, never words.
