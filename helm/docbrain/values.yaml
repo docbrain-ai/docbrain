@@ -561,6 +561,11 @@ imageExtraction:
 auth:
   # Session API key TTL in hours after email/password login. 0 = no expiry.
   sessionTtlHours: 720
+  # Requests per minute for a login session key. Named tokens keep the server's
+  # 60 default; a signed-in browser needs more, since one page load issues
+  # several API calls and the auth guard retries on failure. Set too low, the
+  # symptom is a UI that reports the server as unreachable.
+  sessionRateLimitRpm: 240
   # CORS allowed origins (comma-separated). Defaults to web UI origin only.
   # Example: "https://docbrain.mycompany.com"
   corsAllowedOrigins: ""

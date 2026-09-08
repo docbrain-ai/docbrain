@@ -1087,6 +1087,7 @@ When a rate limit is exceeded, DocBrain returns `429 Too Many Requests` with a `
 | Variable | Default | Description |
 |---|---|---|
 | `LOGIN_SESSION_TTL_HOURS` | `720` | Session key lifetime after login (hours). `0` = no expiry. |
+| `SESSION_RATE_LIMIT_RPM` | `240` | Requests per minute for a login session key. Named tokens keep the `60` default; a browser session needs more, because one page load issues several calls and the auth guard retries. Too low shows up as a UI that looks like an outage. |
 | `ADMIN_KEY_FILE` | `/app/admin-bootstrap-key.txt` | Where to write the admin bootstrap key on first boot |
 
 ## MCP Tool Platform

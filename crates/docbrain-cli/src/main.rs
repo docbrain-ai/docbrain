@@ -356,6 +356,11 @@ enum TokenAction {
         /// Role: viewer or admin
         #[arg(long, default_value = "viewer")]
         role: String,
+        /// Requests per minute for this token (server default: 60). Raise it
+        /// for a token driving a UI or a batch job — 60 is easy to exceed when
+        /// a page issues several calls per load and retries on failure.
+        #[arg(long)]
+        rate_limit_rpm: Option<i32>,
     },
     /// List active API tokens
     List,
@@ -1853,15 +1858,28 @@ async fn handle_logout(server_url: &str) -> Result<()> {
 
 async fn handle_token(server_url: &str, action: TokenAction, api_key: &str) -> Result<()> {
     match action {
-        TokenAction::Create { name, role } => token_create(server_url, &name, &role, api_key).await,
+        TokenAction::Create { name, role, rate_limit_rpm } => {
+            token_create(server_url, &name, &role, rate_limit_rpm, api_key).await
+        }
         TokenAction::List => token_list(server_url, api_key).await,
         TokenAction::Revoke { id } => token_revoke(server_url, &id, api_key).await,
     }
 }
 
-async fn token_create(server_url: &str, name: &str, role: &str, api_key: &str) -> Result<()> {
+async fn token_create(
+    server_url: &str,
+    name: &str,
+    role: &str,
+    rate_limit_rpm: Option<i32>,
+    api_key: &str,
+) -> Result<()> {
     let client = reqwest::Client::new();
-    let body = serde_json::json!({ "name": name, "role": role });
+    let mut body = serde_json::json!({ "name": name, "role": role });
+    // Omitted entirely when not given, so the server keeps its own default
+    // rather than the CLI inventing one.
+    if let Some(rpm) = rate_limit_rpm {
+        body["rate_limit_rpm"] = serde_json::json!(rpm);
+    }
     // Try self-service endpoint first; fall back to admin endpoint for backward compatibility
     let response = client
         .post(format!("{}/api/v1/me/tokens", server_url))
