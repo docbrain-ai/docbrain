@@ -123,6 +123,14 @@ DocBrain re-checks premises against their sources on a schedule and holds each i
 
 `uncheckable` is deliberately not `broken`. A source that could not be read proves nothing about the claim, and a system that reports a failed check as a failed claim teaches you to ignore it. Every answer that draws on a broken premise carries the warning above the prose, on every surface — API, CLI, MCP and web — so a stale fact cannot reach you looking current.
 
+<p align="center">
+  <a href="https://youtube.com/shorts/sq0zkHxWIaA">
+    <img src="assets/reason-expired.jpg" alt="The same docbrain ask command run twice; the second answer opens with a dated stale-claim warning" width="360" />
+  </a>
+  <br/>
+  <em>the identical question, six weeks apart &mdash; <a href="https://youtube.com/shorts/sq0zkHxWIaA">watch the reason expire &#9654;</a></em>
+</p>
+
 [Knowledge intelligence →](docs/knowledge-intelligence.md)
 
 ## Teach Your Agent
@@ -166,6 +174,14 @@ When we resolve an error or discover non-obvious behavior, call
 docbrain_suggest_capture for the files involved. If a gap exists, draft a
 3–5 line capture and ask me to approve it before calling docbrain_annotate.
 ```
+
+<p align="center">
+  <a href="https://youtu.be/DeiP74HuVDc">
+    <img src="assets/agent-in-the-editor.jpg" alt="A coding agent calls docbrain_context before a commit, reads a captured decision it could not have known, and refuses the change" width="720" />
+  </a>
+  <br/>
+  <em>a one-line chart bump that takes checkout down &mdash; <a href="https://youtu.be/DeiP74HuVDc">watch the agent refuse it ▶</a></em>
+</p>
 
 **Read — before it changes anything.** `docbrain_context` takes the files the agent is about to touch and returns what your organization already decided about them: the decision, the constraint, the thing someone learned the hard way. If any of that has since stopped being true, the warning comes *first*, dated. The agent arrives knowing what the last dozen sessions learned instead of re-deriving it.
 
