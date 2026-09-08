@@ -1222,13 +1222,14 @@ struct CliBlock {
     severity: Option<String>,
 }
 
-/// The renderable text of a block, whatever its kind. Deliberately does NOT
-/// match on `kind`: the server decides what the reader needs to see.
-fn block_text(block: &CliBlock) -> Option<String> {
-    block_text_coloured(block, false)
-}
-
-/// A block's text, with a warning painted so it cannot be missed.
+/// The renderable text of a block, whatever its kind, with a warning painted
+/// so it cannot be missed.
+///
+/// Deliberately does NOT match on `kind`: the server decides what the reader
+/// needs to see, so a client that recognised only today's kinds would drop
+/// tomorrow's warnings silently. That property is pinned by
+/// `an_unknown_block_kind_still_prints_its_text` here and again at the
+/// composition site, because a `filter` by kind would be written there.
 ///
 /// The stale-claim warning is the single most important line an answer can
 /// carry — it says the reasoning below rests on a fact that is no longer true.
@@ -6004,13 +6005,13 @@ mod tests {
     fn an_unknown_block_kind_still_prints_its_text() {
         let json = serde_json::json!({ "kind": "something-new", "text": "a future warning" });
         let b: CliBlock = serde_json::from_value(json).expect("parse");
-        assert_eq!(block_text(&b).as_deref(), Some("a future warning"),
+        assert_eq!(block_text_coloured(&b, false).as_deref(), Some("a future warning"),
             "a client that drops unknown kinds loses warnings the day a kind is added");
     }
 
     #[test]
     fn an_unknown_kind_survives_the_renderer_not_just_the_leaf_helper() {
-        // The test above pins the property at `block_text`, which is one call
+        // The test above pins the property at `block_text_coloured`, one call
         // deep. `render_blocks` is where a `filter` by kind would actually be
         // written, and no fixture in this module could see one: every other
         // block here is `warning`, `answer`, or a `note` already dropped for
@@ -6040,7 +6041,7 @@ mod tests {
     #[test]
     fn a_block_without_text_is_skipped_rather_than_printed_empty() {
         let b = CliBlock { kind: "warning".into(), text: String::new(), severity: None };
-        assert_eq!(block_text(&b), None);
+        assert_eq!(block_text_coloured(&b, false), None);
     }
 
     #[test]
@@ -6085,7 +6086,7 @@ mod tests {
 
     #[test]
     fn render_blocks_omits_a_text_less_block_rather_than_joining_a_gap() {
-        // block_text returning None is not enough: render_blocks must also drop
+        // block_text_coloured returning None is not enough: render_blocks must also drop
         // the block, or the join inserts a stray blank paragraph.
         let resp: AskResponse = serde_json::from_value(serde_json::json!({
             "answer": "the answer",
