@@ -29,11 +29,11 @@
 ---
 
 <p align="center">
-  <a href="https://youtu.be/zZ7WdjmOXHU">
-    <img src="assets/quickstart-preview.gif" alt="docbrain ask answering with per-claim citations — click to watch the full unedited quickstart" width="720" />
+  <a href="https://youtu.be/DeiP74HuVDc">
+    <img src="assets/agent-in-the-editor.jpg" alt="A coding agent calls docbrain_context before a commit, reads a captured decision it could not have known, and refuses the change" width="720" />
   </a>
   <br/>
-  <em>real recording, no edits — <a href="https://youtu.be/zZ7WdjmOXHU">watch the full 90-second quickstart ▶</a></em>
+  <em>a one-line chart bump that takes checkout down, and the agent that refuses it — <a href="https://youtu.be/DeiP74HuVDc">54 seconds ▶</a></em>
 </p>
 
 ---
@@ -175,14 +175,6 @@ docbrain_suggest_capture for the files involved. If a gap exists, draft a
 3–5 line capture and ask me to approve it before calling docbrain_annotate.
 ```
 
-<p align="center">
-  <a href="https://youtu.be/DeiP74HuVDc">
-    <img src="assets/agent-in-the-editor.jpg" alt="A coding agent calls docbrain_context before a commit, reads a captured decision it could not have known, and refuses the change" width="720" />
-  </a>
-  <br/>
-  <em>a one-line chart bump that takes checkout down &mdash; <a href="https://youtu.be/DeiP74HuVDc">watch the agent refuse it ▶</a></em>
-</p>
-
 **Read — before it changes anything.** `docbrain_context` takes the files the agent is about to touch and returns what your organization already decided about them: the decision, the constraint, the thing someone learned the hard way. If any of that has since stopped being true, the warning comes *first*, dated. The agent arrives knowing what the last dozen sessions learned instead of re-deriving it.
 
 **Write — at the only moment it is free.** Nobody writes up a fix on Friday afternoon. An agent will, in the same breath as the fix, while the reasoning is still in its context and costs nothing to recover. That is the moment this knowledge is cheapest to capture and the moment it is always lost.
@@ -299,7 +291,9 @@ helm install docbrain ./helm/docbrain \
 
 ## See It In Action
 
-**▶ [The quickstart, recorded unedited](https://youtu.be/zZ7WdjmOXHU)** — install → ingest → cited answer → `generate` turning raw on-call notes into a runbook that cites its sources. 90 seconds, shipped images, 100% local models, nothing staged.
+**▶ [A commit the agent refused](https://youtu.be/DeiP74HuVDc)** — a Redis chart bumped 6.2.1 → 7.2.4, one line, and the captured decision that stops it. Waits removed, nothing sped up.
+
+**▶ [The reason expired](https://youtube.com/shorts/sq0zkHxWIaA)** — the identical question asked six weeks apart, and the second answer opening with the fact that died.
 
 | | |
 |---|---|
