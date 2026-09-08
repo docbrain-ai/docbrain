@@ -135,7 +135,28 @@ Someone works out why the pooler is load-bearing. Six weeks later a person on an
 
 Your coding agent is the best instrument for both halves of the fix — it is present at the second the knowledge is created, and it is the thing asking for it at the moment of the next change.
 
-The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your agent eleven tools. Two instructions in your `CLAUDE.md` close the loop:
+The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your agent [eleven tools](crates/docbrain-mcp#tools). Point your editor at it — one file, at your **project root**:
+
+```jsonc
+// .mcp.json — Claude Code. Cursor: .cursor/mcp.json (same shape).
+// VS Code uses "servers" and needs "type": "stdio" — see examples/mcp-configs/vscode.json
+{
+  "mcpServers": {
+    "docbrain": {
+      "command": "npx",
+      "args": ["-y", "docbrain-mcp@latest"],
+      "env": {
+        "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
+        "DOCBRAIN_SERVER_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+Get the key with `docbrain token create --name "MCP" --role viewer`. Ready-made configs for all three editors, and the one setup mistake that fails silently, are in [`examples/mcp-configs/`](examples/mcp-configs/).
+
+Two instructions in your `CLAUDE.md` close the loop:
 
 ```markdown
 Before editing files you have not worked in before, call docbrain_context

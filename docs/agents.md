@@ -93,9 +93,33 @@ future engineer would need, do this before the task ends:
    docbrain_annotate.
 Never include secrets, tokens, hostnames from .env files, or customer data in
 a capture. When in doubt, leave it out.
+
+If the docbrain tools are not available in this session, say so plainly and
+stop there. Do not fall back to searching the repository and then report that
+nothing is recorded — captured decisions do not live in the repo, so an
+absent connector looks exactly like an empty knowledge base and is not one.
 ```
 
 Cursor users: the same text goes in `.cursor/rules/docbrain.mdc` with `alwaysApply: true`.
+
+### Open the workspace at the folder that holds the config
+
+MCP connector config is **workspace-root scoped** in every editor that reads it
+— `.mcp.json`, `.vscode/mcp.json`, `.cursor/mcp.json` are all found relative to
+the folder you opened, not to the file you are editing. Open a monorepo's parent
+directory instead of the service folder and the server never loads.
+
+That failure is silent and it is worse than an error, which is why the last
+paragraph of the snippet exists. Observed: with the connector unloaded, an agent
+searched the repository, found no captured decisions there — correctly, they are
+not stored there — and answered *"the org knows nothing about this file yet"*
+about a file carrying a live pinned decision and an out-of-date warning. A
+missing connector reads as an empty knowledge base unless the agent is told to
+distinguish them.
+
+Check before you rely on an answer: your editor's MCP panel should list
+`docbrain` and its tools. If it does not, you are looking at the wrong workspace
+root, not at an org that has recorded nothing.
 
 ## What happens
 
