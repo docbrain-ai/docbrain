@@ -594,6 +594,27 @@ struct AskResponse {
     /// have fixed it.
     #[serde(default)]
     user_unconnected_relevant: Vec<String>,
+    /// What the answer path fell back on. The rendered warning arrives via
+    /// `blocks`, so a reader is told either way; this is the STRUCTURED form,
+    /// for `--json` consumers and scripts that alert on a stage key.
+    ///
+    /// Added with the field itself rather than after someone notices: the same
+    /// omission left `user_unconnected_relevant` populated by the server, typed
+    /// by the web client, and absent from `--json` for months.
+    #[serde(default)]
+    degradations: Vec<CliDegradation>,
+}
+
+/// One fallback the answer path took, as the CLI receives it.
+#[derive(Debug, Deserialize, Serialize)]
+struct CliDegradation {
+    /// Stable machine-readable stage key (`rerank`, `context_window`).
+    #[allow(dead_code)]
+    stage: String,
+    #[allow(dead_code)]
+    detail: String,
+    #[allow(dead_code)]
+    severity: String,
 }
 
 /// The CLI's mirror of the server's `StaleClaim` — deliberately narrow.
