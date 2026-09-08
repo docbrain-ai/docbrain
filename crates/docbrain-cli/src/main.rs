@@ -58,7 +58,10 @@ enum Commands {
         /// Continue a specific session (pass session_id from a previous response)
         #[arg(long)]
         session: Option<String>,
-        /// Force a fresh session (ignore auto-resume)
+        /// Force a fresh session (ignore auto-resume). Starts a new conversation
+        /// thread; it does NOT clear what DocBrain remembers — episodic recall is
+        /// scoped to your user, not to the session, so answers may still draw on
+        /// earlier questions you asked in other sessions.
         #[arg(long, short = 'n')]
         new: bool,
         /// Show raw UUIDs (session/episode IDs)
@@ -502,6 +505,22 @@ fn resolve_api_key(flag: Option<&str>) -> Option<String> {
         return Some(k.to_string());
     }
     if let Some(k) = read_config().api_key {
+        // Say so when the config is shadowing an exported env var. The
+        // precedence itself is deliberate (above), but it is silent, and silence
+        // is what makes it cost an hour: the user exports DOCBRAIN_API_KEY,
+        // the CLI keeps using a stale config key, and every call 401s with no
+        // indication which key was even tried. Note that `resolve_server_url`
+        // orders these the OTHER way round (env wins), so a reader cannot infer
+        // one from the other. stderr, so `--json` stdout stays machine-readable.
+        if let Ok(env_key) = std::env::var("DOCBRAIN_API_KEY")
+            && !env_key.is_empty()
+            && env_key != k
+        {
+            eprintln!(
+                "  note: DOCBRAIN_API_KEY is set but ~/.docbrain/config.json takes \
+                 precedence — using the config key. Pass --api-key to override."
+            );
+        }
         return Some(k);
     }
     std::env::var("DOCBRAIN_API_KEY").ok()
@@ -1869,7 +1888,13 @@ async fn token_create(server_url: &str, name: &str, role: &str, api_key: &str) -
     println!("  {}", key);
     println!();
     println!("  ⚠  Save this key now — it will NOT be shown again.");
-    println!("  Add it to MCP config: DOCBRAIN_API_KEY={}", key);
+    // The key is printed exactly ONCE, above. It used to be repeated here inside
+    // a ready-to-paste `DOCBRAIN_API_KEY=...` line, which read well but meant a
+    // script doing `docbrain token create | grep -oE 'db_sk_[A-Za-z0-9]{32}'`
+    // captured two identical lines, and `--api-key "$(cat keyfile)"` then
+    // expanded to `--api-key KEY KEY`. One occurrence also keeps one fewer copy
+    // of a live secret in terminal scrollback.
+    println!("  Add it to MCP config as DOCBRAIN_API_KEY=<the key above>.");
     println!();
     Ok(())
 }
@@ -2125,6 +2150,16 @@ async fn ask(
 
     println!();
 
+    // Name the instance being queried. `~/.docbrain/config.json` carries BOTH the
+    // server URL and the key, so anything that rewrites it silently redirects
+    // every later command — and a wrong instance answers 200 with a plausible
+    // answer drawn from a different corpus, which is indistinguishable from a
+    // right one by reading the output. This line is the only thing that makes
+    // that visible. Suppressed under --json so machine output stays parseable.
+    if !json {
+        println!("  \x1b[2m{}\x1b[0m", server_url);
+    }
+
     // --json wants one parseable document, so ask the server not to stream.
     let mut body = serde_json::json!({ "question": question, "stream": !json });
 
@@ -2154,20 +2189,27 @@ async fn ask(
         let status = response.status();
         let body = response.text().await?;
         if status == reqwest::StatusCode::UNAUTHORIZED {
+            // Always name the server. A key that is perfectly valid on one
+            // instance is "invalid or expired" on another, and without the URL
+            // the message sends people to re-login against the wrong one — or to
+            // conclude their account was deleted, when they are simply pointed
+            // somewhere that has never heard of them.
             if std::env::var("DOCBRAIN_API_KEY").is_ok() {
                 anyhow::bail!(
-                    "Server error ({}): {}
+                    "Server error ({}) from {}: {}
 
   Hint: DOCBRAIN_API_KEY env var is set and may be stale.
   Run: unset DOCBRAIN_API_KEY",
-                    status, body
+                    status, server_url, body
                 );
             }
             anyhow::bail!(
-                "Server error ({}): {}
+                "Server error ({}) from {}: {}
 
-  Hint: Run `docbrain login` to refresh your session.",
-                status, body
+  Hint: Run `docbrain login` to refresh your session.
+  If that server is not the one you meant, check server_url in
+  ~/.docbrain/config.json or pass --server.",
+                status, server_url, body
             );
         }
         anyhow::bail!("Server error ({}): {}", status, body);
