@@ -193,6 +193,29 @@ enum Commands {
         #[arg(long = "max-regen-rounds", default_value = "2")]
         max_regen_rounds: u32,
     },
+    /// Check whether a change would falsify live documentation claims (CI gate)
+    #[command(name = "check-claims")]
+    CheckClaims {
+        /// `git diff --find-renames --name-status` output. `-` reads stdin.
+        ///
+        /// The RAW diff, because a rename is the only proven successorship
+        /// DocBrain has: flattening it to a path list would make every finding
+        /// unfixable. Produce it with:
+        ///   git diff --find-renames --name-status origin/main...
+        #[arg(long = "diff", value_name = "FILE|-")]
+        diff: String,
+        /// Machine-readable output on stdout.
+        #[arg(long)]
+        json: bool,
+        /// Report findings but exit 0.
+        ///
+        /// Named for what it does. The obvious alternative, mirroring
+        /// `generate --allow-violations`, reads as permission to break
+        /// documentation — and this is the flag people paste into every
+        /// workflow file they own.
+        #[arg(long = "warn-only")]
+        warn_only: bool,
+    },
     /// View usage analytics
     Analytics {
         /// Number of days to report on (default: 30)
@@ -1657,6 +1680,10 @@ async fn main() -> Result<()> {
                 max_regen_rounds,
             )
             .await?;
+        }
+        Commands::CheckClaims { diff, json, warn_only } => {
+            // Never returns — it is a policy exit, like `generate`'s.
+            check_claims(&server_url, &diff, json, warn_only, api_key.as_deref()).await?;
         }
         Commands::Analytics { days } => {
             show_analytics(&server_url, days, api_key.as_deref()).await?;
@@ -4788,6 +4815,128 @@ use docbrain_evidence::{
 /// CLI-level error exit code (NOT a verdict — 0/1/2 are the three verdicts).
 /// A missing/unreadable file, a bad argument, or a failed local write.
 const EXIT_CLI_ERROR: i32 = 3;
+
+/// The CI gate. Reads a diff, asks the server what it would falsify, reports,
+/// and sets the process exit code.
+///
+/// # Exit codes — the same vocabulary `generate` established
+///
+/// - `0` nothing at risk, or `--warn-only`
+/// - `2` a POLICY exit: the check ran fine and found something. Fail the step.
+/// - `3` [`EXIT_CLI_ERROR`]: the check could not run at all.
+///
+/// The 2/3 split is the point. "Your documentation is now wrong" and "DocBrain
+/// was unreachable" must never arrive as the same signal: the first should stop
+/// a merge, the second is an infrastructure problem that must not masquerade as
+/// a clean build — nor as a documentation failure someone will "fix" by
+/// deleting the step.
+///
+/// stdout carries the report (JSON with `--json`) and nothing else, so it can be
+/// piped; diagnostics go to stderr. Same discipline as `generate`.
+async fn check_claims(
+    server_url: &str,
+    diff_arg: &str,
+    json: bool,
+    warn_only: bool,
+    api_key: Option<&str>,
+) -> Result<()> {
+    use anyhow::Context as _;
+    use std::io::Read as _;
+
+    // Reading the diff is part of "could not run", so it exits 3 like every
+    // other such failure rather than letting anyhow propagate to 1. Three codes
+    // are a contract a CI author can hold in their head; a fourth that appears
+    // only for a mistyped path is how `|| true` ends up on the step.
+    let read = if diff_arg == "-" {
+        let mut buf = String::new();
+        std::io::stdin()
+            .read_to_string(&mut buf)
+            .context("read diff from stdin")
+            .map(|_| buf)
+    } else {
+        std::fs::read_to_string(diff_arg)
+            .with_context(|| format!("read diff from {diff_arg}"))
+    };
+    let diff = match read {
+        Ok(d) => d,
+        Err(e) => {
+            eprintln!("{e:#}");
+            exit_with(EXIT_CLI_ERROR);
+        }
+    };
+
+    let client = reqwest::Client::new();
+    let mut req = client
+        .post(format!("{server_url}/api/v1/premises/check"))
+        .json(&serde_json::json!({ "diff": diff }));
+    if let Some(k) = api_key {
+        req = req.bearer_auth(k);
+    }
+
+    // Any failure to ASK is exit 3, never 2 — see the note above.
+    let resp = match req.send().await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("could not reach DocBrain at {server_url}: {e}");
+            exit_with(EXIT_CLI_ERROR);
+        }
+    };
+    if !resp.status().is_success() {
+        let code = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        eprintln!("DocBrain returned {code}: {}", body.trim());
+        exit_with(EXIT_CLI_ERROR);
+    }
+    let body: serde_json::Value = match resp.json().await {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("could not read DocBrain's answer: {e}");
+            exit_with(EXIT_CLI_ERROR);
+        }
+    };
+
+    let findings = body.get("findings").and_then(|f| f.as_array()).cloned().unwrap_or_default();
+    let checked = body.get("paths_checked").and_then(serde_json::Value::as_u64).unwrap_or(0);
+
+    if json {
+        println!("{}", serde_json::to_string_pretty(&body).unwrap_or_else(|_| "{}".into()));
+    } else if findings.is_empty() {
+        // Says which of the two empty cases this is: nothing was checked, or
+        // nothing was at risk. A gate that prints "OK" when it examined zero
+        // paths teaches a team to trust a check that is not running.
+        if checked == 0 {
+            println!("No removed or renamed paths in this change — nothing to check.");
+        } else {
+            println!("Checked {checked} removed path(s); no live documentation claims affected.");
+        }
+    } else {
+        println!("{} live documentation claim(s) would be falsified by this change:\n", findings.len());
+        for f in &findings {
+            let s = |k: &str| f.get(k).and_then(serde_json::Value::as_str).unwrap_or("");
+            println!("  {}", s("expression"));
+            println!("    claimed by: {}", s("claimed_by"));
+            if !s("url").is_empty() {
+                println!("    page:       {}", s("url"));
+            }
+            match f.get("successor").and_then(serde_json::Value::as_str) {
+                Some(to) => println!("    fix:        this change renames it to {to}"),
+                // Said out loud rather than left blank: a deletion with no
+                // stated destination is a decision for a human, not a gap for
+                // DocBrain to fill with a guess.
+                None => println!("    fix:        not automatic — the change does not say where it went"),
+            }
+            println!();
+        }
+    }
+
+    if findings.is_empty() || warn_only {
+        exit_with(0);
+    }
+    eprintln!(
+        "Documentation claim(s) falsified — exiting non-zero. Pass --warn-only to report without failing."
+    );
+    exit_with(2);
+}
 
 async fn handle_evidence(action: EvidenceAction, server_url: &str, api_key: Option<&str>) -> Result<()> {
     match action {
