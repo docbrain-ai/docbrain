@@ -71,6 +71,10 @@ enum Commands {
         /// and suppresses progress output, so stdout is machine-readable.
         #[arg(long)]
         json: bool,
+        /// Answer from indexed docs only; live connector tools are not called.
+        /// Ownership and metadata lookups still work.
+        #[arg(long)]
+        docs_only: bool,
     },
     /// Trace the retrieval pipeline for a question (admin only).
     ///
@@ -1602,8 +1606,8 @@ async fn main() -> Result<()> {
             ))?;
             handle_token(&server_url, action, &key).await?;
         }
-        Commands::Ask { question, session, new, verbose, json } => {
-            ask(&server_url, &question, session.as_deref(), new, verbose, json, api_key.as_deref()).await?;
+        Commands::Ask { question, session, new, verbose, json, docs_only } => {
+            ask(&server_url, &question, session.as_deref(), new, verbose, json, docs_only, api_key.as_deref()).await?;
         }
         Commands::TraceQuery { question, json } => {
             let key = api_key.ok_or_else(|| anyhow::anyhow!(
@@ -2252,6 +2256,20 @@ async fn trace_query(
     Ok(())
 }
 
+/// Sets `tools_enabled: false` on the `/api/v1/ask` request body when
+/// `--docs-only` was passed; otherwise leaves the key absent so the server's
+/// own default (and any admin-configured master switch) stays authoritative.
+/// Mirrors `buildAskBody` on the web side (web/src/lib/api.ts) — never sets
+/// `true`: an explicit `true` could override a server-side default that
+/// turns live tools off. `tools_enabled: false` disables MCP/live connector
+/// tools ONLY; internal ownership/metadata tools stay eligible
+/// (`crates/docbrain-core/src/rag/synthesis.rs:4327`).
+fn apply_docs_only(body: &mut serde_json::Value, docs_only: bool) {
+    if docs_only {
+        body["tools_enabled"] = serde_json::Value::Bool(false);
+    }
+}
+
 async fn ask(
     server_url: &str,
     question: &str,
@@ -2259,6 +2277,7 @@ async fn ask(
     new_session: bool,
     verbose: bool,
     json: bool,
+    docs_only: bool,
     api_key: Option<&str>,
 ) -> Result<()> {
     let client = reqwest::Client::new();
@@ -2277,6 +2296,7 @@ async fn ask(
 
     // --json wants one parseable document, so ask the server not to stream.
     let mut body = serde_json::json!({ "question": question, "stream": !json });
+    apply_docs_only(&mut body, docs_only);
 
     if new_session {
         body["session_id"] = serde_json::Value::String("new".to_string());
@@ -5525,6 +5545,57 @@ mod tests {
             ProgressStyle::decide(true, false, false, true),
             ProgressStyle::Silent
         );
+    }
+
+    /// `--docs-only` parses and defaults off. Mirrors the web Sources control:
+    /// the flag restricts an ask to indexed docs (no live connector tools),
+    /// ownership/metadata tools stay eligible either way.
+    #[test]
+    fn ask_parses_docs_only_flag() {
+        let cli = Cli::try_parse_from(["docbrain", "ask", "how do I deploy?", "--docs-only"])
+            .expect("ask with --docs-only parses");
+        match cli.command {
+            Commands::Ask { docs_only, .. } => assert!(docs_only),
+            _ => panic!("expected Commands::Ask"),
+        }
+    }
+
+    #[test]
+    fn ask_docs_only_defaults_off() {
+        let cli = Cli::try_parse_from(["docbrain", "ask", "how do I deploy?"])
+            .expect("minimal ask invocation parses");
+        match cli.command {
+            Commands::Ask { docs_only, .. } => assert!(!docs_only, "docs_only defaults off"),
+            _ => panic!("expected Commands::Ask"),
+        }
+    }
+
+    /// `apply_docs_only` is the pure fn that turns `--docs-only` into the
+    /// `/api/v1/ask` request body's `tools_enabled` key — mirrors
+    /// `buildAskBody` on the web side (web/src/lib/api.ts). The default case
+    /// must OMIT the key (never send `true`) so the server's own default and
+    /// any admin master switch stay authoritative.
+    #[test]
+    fn apply_docs_only_omits_the_key_by_default() {
+        let mut body = serde_json::json!({ "question": "q", "stream": true });
+        apply_docs_only(&mut body, false);
+        assert!(body.get("tools_enabled").is_none());
+    }
+
+    #[test]
+    fn apply_docs_only_sets_false_for_docs_only() {
+        let mut body = serde_json::json!({ "question": "q", "stream": true });
+        apply_docs_only(&mut body, true);
+        assert_eq!(body["tools_enabled"], serde_json::Value::Bool(false));
+    }
+
+    #[test]
+    fn apply_docs_only_never_sets_true() {
+        for docs_only in [true, false] {
+            let mut body = serde_json::json!({ "question": "q" });
+            apply_docs_only(&mut body, docs_only);
+            assert_ne!(body.get("tools_enabled"), Some(&serde_json::Value::Bool(true)));
+        }
     }
 
     /// The `generate` subcommand parses the full documented flag surface, and
