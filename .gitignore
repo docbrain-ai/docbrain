@@ -13,3 +13,8 @@ node_modules/
 
 # Rust build artifacts
 target/
+
+# Python bytecode. Running tools/verify_dbev.py writes tools/__pycache__/,
+# and nothing should ever commit it.
+__pycache__/
+*.pyc
