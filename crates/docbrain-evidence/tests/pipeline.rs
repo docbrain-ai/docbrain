@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
-//! Task 7 pipeline tests: the verdict engine, the one-success-exit
+//! Pipeline tests: the verdict engine, the one-success-exit
 //! verification pipeline, and `BundleBuilder`, exercised end to end.
 //!
-//! Every taxonomy row this task can reach (design doc rows 1-17, 21-26;
-//! rows 18-19 get plumbing-only smoke coverage here, real corpus at Task
-//! 17; row 20 has no plumbing yet, genuinely deferred; row 26 is proven
-//! unreachable-in-practice at the unit level in `verdict.rs`) gets its own
-//! test, plus the three §11 "prove it's not theater" meta-tests and the
+//! Every taxonomy row the pipeline can reach (design doc rows 1-17, 21-26;
+//! rows 18-19 get plumbing-only smoke coverage here, with real fixtures in
+//! the golden corpus; row 20 has no plumbing yet, genuinely deferred; row 26
+//! is proven unreachable-in-practice at the unit level in `verdict.rs`) gets
+//! its own test, plus the three "prove it's not theater" meta-tests and the
 //! required tampered-record + malformed-anchor combo.
 
 use chrono::{DateTime, Utc};
@@ -142,7 +142,7 @@ fn row_7_records_after_the_compromise_position_are_post_compromise_position() {
     assert!(row_of(&report, 7), "{:?}", report.findings);
 }
 
-// ---- row 8: valid-pre-claim (needs an operator-trusted witness time — R4) ----
+// ---- row 8: valid-pre-claim (needs an operator-trusted witness time in v1) ----
 
 #[test]
 fn row_8_pre_compromise_record_with_a_trusted_witness_time_is_valid_pre_claim() {
@@ -171,7 +171,7 @@ fn row_9_pre_compromise_record_without_a_witness_is_indeterminate() {
         .with_compromise(100, "2026-06-01T00:00:00Z")
         .build();
     // No witness time supplied (verify_bundle == verify_bundle_with_witness
-    // with an empty slice) — v1/R4 never validates a real anchor, so this
+    // with an empty slice) — v1 never validates a real anchor, so this
     // is the default outcome for any pre-compromise record.
     let report = verify_bundle(&bytes);
     assert_eq!(report.verdict, Verdict::CannotVerify, "{:?}", report.findings);
@@ -286,7 +286,7 @@ fn row_17_multi_sig_record_is_unsupported() {
     assert!(row_of(&report, 17), "{:?}", report.findings);
 }
 
-// ---- rows 18/19: anchor plumbing (smoke only — real corpus is Task 17) ----
+// ---- rows 18/19: anchor plumbing (smoke only — the golden corpus carries the real fixtures) ----
 
 #[test]
 fn row_18_plumbing_malformed_anchor_is_downgraded_never_blocks_valid() {
@@ -349,14 +349,14 @@ fn row_23_anchor_tsa_time_before_checkpoint_clock_is_time_claim_falsified() {
     assert!(row_of(&report, 23), "{:?}", report.findings);
 }
 
-// ---- Task 17 F3(b): EXPIRED / MALFORMED / UNLINKED anchor is NEVER TAMPERED ----
+// ---- Anchor invariant: EXPIRED / MALFORMED / UNLINKED anchor is NEVER TAMPERED ----
 //
 // The sacred invariant of the anchor phase: an anchor PROBLEM must only ever
 // weaken a claim (CANNOT_VERIFY, or VALID-with-finding), NEVER escalate it
 // into a false fraud accusation (TAMPERED). By construction `process_anchors`
 // only emits rows 18/19/23; this test locks that in across every anchor
 // failure shape so a future edit cannot regress an anchor problem into a
-// TAMPERED verdict. It also asserts tier honesty: no anchor condition in R4
+// TAMPERED verdict. It also asserts tier honesty: no anchor condition in v1
 // ever grants a tier above `TokenPresentUnvalidated`.
 #[test]
 fn f3b_no_anchor_condition_ever_yields_tampered() {
@@ -402,12 +402,12 @@ fn f3b_no_anchor_condition_ever_yields_tampered() {
     }
 }
 
-// ---- Task 17: tier honesty — a well-formed token is only ever unvalidated ----
+// ---- Tier honesty — a well-formed token is only ever unvalidated ----
 //
 // A structurally-sound TSA token bound to a real checkpoint is VALID with NO
 // finding, and reports EXACTLY `TokenPresentUnvalidated` — never a higher
-// tier, because v1 (R4) never cryptographically validates the token. This is
-// the positive companion to the F3(b) invariant above.
+// tier, because v1 never cryptographically validates the token. This is
+// the positive companion to the never-TAMPERED anchor invariant above.
 #[test]
 fn well_formed_token_is_valid_and_capped_at_token_present_unvalidated() {
     // TSA time AFTER the checkpoint clock (01:00:00Z default) → no row 23.
@@ -457,7 +457,7 @@ fn row_25_zero_record_bundle_is_valid_trivial_range() {
 // `KeyChainError`, `ManifestError`, `MemberError`, `CpError`, `ChainError`,
 // `EnvelopeError`) is matched exhaustively by the Rust compiler — an
 // unmapped state reaching `classify()` from the real pipeline would
-// require a NEW enum variant Task 7's own match arms don't yet handle,
+// require a NEW enum variant the pipeline's own match arms don't yet handle,
 // which fails to compile rather than silently reaching row 26 at runtime.
 // That compile-time guarantee IS the row-26 property; forcing a runtime
 // case here would mean deliberately constructing a bogus row number by
@@ -494,10 +494,11 @@ fn to_json_lists_every_finding_for_the_combo_bundle() {
     assert!(rows.contains(&18), "{rows:?}");
 }
 
-// ---- §11 meta-tests: "prove it's not theater" ----
+// ---- meta-tests: "prove it's not theater" ----
 
-/// 1. Mutation-completeness-style audit, scoped to Task 7 (Task 16 owns
-///    the exhaustive byte-flip version): asserts by SOURCE INSPECTION that
+/// 1. Mutation-completeness-style audit, scoped to the pipeline
+///    (`tests/mutation.rs` owns the exhaustive byte-flip version): asserts by
+///    SOURCE INSPECTION that
 ///    `Verdict::Valid` is constructed exactly once in `verify.rs` — the
 ///    pipeline has exactly one success exit.
 #[test]

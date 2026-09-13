@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
-//! Domain-separated SHA-256 hashing for the evidence record chain (spec law 4).
+//! Domain-separated SHA-256 hashing for the evidence record chain. The
+//! prefixes are a pinned rule: two independent verifiers must compute every
+//! hash identically, so nothing here is left open to interpretation.
 //!
 //! Every hash in this module is prefixed with a fixed domain-separation byte
 //! so that a leaf hash, a head hash, and a content hash can never collide by
 //! construction, even if their raw inputs happened to coincide byte-for-byte.
 //! The three prefixes (`0x00`, `0x01`, `0x02`) are part of the cross-language
-//! contract (`docs/superpowers/specs/2026-08-24-evidence-bundle-design.md`)
-//! and MUST NOT change once frozen — a test below pins the exact byte values
+//! contract shared with the Python reference verifier (`tools/verify_dbev.py`;
+//! the bundle format is described in `docs/evidence.md`) and MUST NOT change
+//! once frozen — a test below pins the exact byte values
 //! by independently reconstructing each hash from the documented formula.
 
 use sha2::{Digest, Sha256};
@@ -45,7 +48,8 @@ pub fn head_hash(prev_head: &[u8; 32], leaf: &[u8; 32]) -> [u8; 32] {
 /// Salted content hash for erasure-compatible content addressing:
 /// `SHA-256(0x02 || salt || content)`. The salt (32 random bytes, destroyed
 /// on erasure) is what makes the erased content's hash infeasible to
-/// dictionary-confirm once the salt is gone (spec §5.8).
+/// dictionary-confirm once the salt is gone (the design's salted-commitment
+/// rule for erasure).
 pub fn content_hash(salt: &[u8; 32], content: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update([CONTENT_PREFIX]);

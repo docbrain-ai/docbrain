@@ -3,13 +3,13 @@
 //!
 //! `.dbev` is ZIP-compatible but conforms to a profile the reader enforces
 //! byte-first, before anything in the container is interpreted (design doc
-//! "Container: normative restricted profile", finding 3): STORE (method 0)
+//! "Container: normative restricted profile"): STORE (method 0)
 //! only, no zip64, no encryption, no data descriptors, UTF-8 names, no
 //! interpreted extra fields, an empty archive comment, and a fixed member
-//! path whitelist. This module is the NORMATIVE spec: Task 14's Python
+//! path whitelist. This module is the NORMATIVE spec: the Python reference
 //! verifier must reproduce every check here byte-for-byte, so precision
 //! matters more than cleverness — the notes below record the handful of
-//! judgment calls made where the brief's prose left a choice open.
+//! judgment calls made where the profile's prose left a choice open.
 //!
 //! ## Design notes (read before touching this file)
 //!
@@ -27,17 +27,17 @@
 //!   failed validation of the rightmost match is a hard reject, not a
 //!   retry against an earlier candidate.
 //! - **General-purpose flag is checked by exact equality to `0x0800`
-//!   (UTF-8 names, nothing else), not per-bit.** The brief pins three
+//!   (UTF-8 names, nothing else), not per-bit.** The profile pins three
 //!   specific bits (no encryption / no data descriptor / UTF-8 names) and
 //!   is silent on every other bit — but `ContainerWriter::finish` only
 //!   ever emits `0x0800`, so an honest bundle can NEVER carry any other
 //!   value, and rejecting anything else costs zero false-rejections.
 //!   Exact equality is the tighter, safer reading: it collapses 12+
-//!   unspecified-bit axes a faithful-but-independent Python reader (Task
-//!   14) could otherwise interpret differently, into one pinned constant
+//!   unspecified-bit axes a faithful-but-independent Python reader could
+//!   otherwise interpret differently, into one pinned constant
 //!   both implementations copy verbatim.
 //! - **Local-header cross-check covers name, method, and both sizes** (the
-//!   brief's literal enumeration) **plus `extra_len`**, because
+//!   profile's literal enumeration) **plus `extra_len`**, because
 //!   `extra_len` is not just "checked" — it is unavoidably CONSUMED by any
 //!   reader to locate where member data starts, so a CD/local mismatch on
 //!   it is a real smuggling vector, not an optional extra. It is checked
@@ -65,7 +65,7 @@
 use std::collections::{HashMap, HashSet};
 
 /// Local file header signature, `PK\x03\x04` (APPNOTE §4.3.7). `pub(crate)`
-/// (widened from private for Task 7's `BundleBuilder`, which needs to hand-
+/// (widened from private for `BundleBuilder`, which needs to hand-
 /// craft adversarial raw ZIP bytes — e.g. a duplicate member name — that
 /// `ContainerWriter` refuses to produce by construction; reusing these
 /// constants instead of re-declaring magic numbers in `builder.rs` keeps
@@ -85,7 +85,7 @@ const CDFH_FIXED_LEN: usize = 46;
 const EOCD_FIXED_LEN: usize = 22;
 const EOCD64_LOCATOR_LEN: usize = 20;
 const MAX_COMMENT_LEN: usize = 0xFFFF;
-/// Bounded EOCD back-scan window (brief: "bounded back-scan 66KB") — the
+/// Bounded EOCD back-scan window (the profile's "bounded back-scan 66KB") — the
 /// max possible EOCD record (fixed part + max comment), so locating the
 /// EOCD is O(64KB) regardless of file size, never O(file size). This is
 /// the primary OOM defense: we never allocate or scan proportional to an
@@ -110,7 +110,7 @@ pub(crate) const METHOD_STORE: u16 = 0;
 
 /// Every variant is a fail-closed rejection of the whole container: none of
 /// this is ever partially trusted or silently downgraded. The verdict
-/// engine (Task 7) maps every variant to `CANNOT_VERIFY(container-profile)`
+/// engine (`verify.rs`) maps every variant to `CANNOT_VERIFY(container-profile)`
 /// — never `TAMPERED`, never skipped (design doc row 21).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ContainerError {
@@ -362,7 +362,7 @@ fn parse_central_directory(bytes: &[u8], eocd: &Eocd) -> Result<Vec<CdEntry>, Co
         // ever emits `GPBF_UTF8` alone, so any other value — including an
         // unspecified/reserved bit our own writer would never set — is
         // rejected. This removes every unspecified-bit axis a faithful
-        // but independently-written reader (Task 14) could otherwise
+        // but independently-written reader (the Python verifier) could otherwise
         // diverge on.
         if gp_flag != GPBF_UTF8 {
             return Err(ContainerError::UnsupportedFlags {
@@ -407,7 +407,7 @@ fn parse_central_directory(bytes: &[u8], eocd: &Eocd) -> Result<Vec<CdEntry>, Co
 
 /// Cross-checks `entry`'s local header (name/method/sizes/extra_len must
 /// byte-agree with the central directory — see module docs for why
-/// `extra_len` is included alongside the brief's literal name/sizes/
+/// `extra_len` is included alongside the profile's literal name/sizes/
 /// method) and returns the member's data slice, bounds-checked against
 /// both the archive length and the central directory start (member data
 /// must not overlap the central directory).
@@ -524,12 +524,12 @@ impl<'a> ContainerReader<'a> {
 
 /// CRC-32 (ISO-HDLC / zlib polynomial 0xEDB88320), computed bit-by-bit —
 /// informational only: `ContainerReader` never reads or checks this field
-/// (see module docs; the brief's cross-check enumeration is name/sizes/
+/// (see module docs; the profile's cross-check enumeration is name/sizes/
 /// method, not CRC), so this exists purely so a `.dbev` written by
 /// `ContainerWriter` is byte-compatible with real unzip tooling when a
 /// human inspects one by hand (the live break-test procedure opens a
 /// `.dbev` in a hex editor). `pub(crate)` for the same reason as the
-/// signature constants above (Task 7's `BundleBuilder` raw-ZIP mutations).
+/// signature constants above (`BundleBuilder`'s raw-ZIP mutations).
 pub(crate) fn crc32(data: &[u8]) -> u32 {
     let mut crc = 0xFFFF_FFFFu32;
     for &byte in data {
@@ -543,7 +543,7 @@ pub(crate) fn crc32(data: &[u8]) -> u32 {
 }
 
 /// Deterministic STORE-only ZIP writer: members are emitted in insertion
-/// order (the exporter's job, Task 11, is to insert in manifest order so
+/// order (the exporter's job is to insert in manifest order so
 /// container layout and manifest order agree), with the exact profile
 /// `ContainerReader::open` enforces baked in by construction — the writer
 /// literally cannot produce a DEFLATE entry, an extra field, a non-empty

@@ -7,8 +7,8 @@
 //! position-anchored signed statement, just about the bundle as a whole
 //! rather than one record.
 //!
-//! ## Schema (pinned by this module — Task 11's exporter and Task 14's
-//! Python verifier must match this exactly)
+//! ## Schema (pinned by this module — the exporter and the Python reference
+//! verifier must match this exactly)
 //!
 //! ```json
 //! {
@@ -20,12 +20,12 @@
 //! }
 //! ```
 //!
-//! The brief's schema sketch leaves `export_checkpoint`'s shape as `{...}`
+//! The design's schema sketch leaves `export_checkpoint`'s shape as `{...}`
 //! — this module pins it to exactly `{position, head, count}`: three of
 //! `checkpoint::Checkpoint`'s four fields (`position`, `head`, `count`,
 //! `at`), deliberately omitting `at` — NOT full parity with `Checkpoint`.
 //! `position` is needed to resolve `key_at_position` for signer
-//! resolution; `head`/`count` are what a downstream verifier (Task 7)
+//! resolution; `head`/`count` are what the downstream verifier (`verify.rs`)
 //! needs to cross-check the manifest's claimed checkpoint against the
 //! bundle's own `checkpoints.jsonl` chain. Wall-clock `at` has no role
 //! here — the manifest doesn't assert a time, only a chain position — so
@@ -67,8 +67,8 @@ pub const MANIFEST_MEMBER_NAME: &str = "manifest.json";
 /// `CANNOT_VERIFY(container-profile)` (design doc row 21 — the fixed
 /// manifest.json member the profile requires simply isn't there).
 /// `Malformed` maps to `CANNOT_VERIFY(malformed)` (row 22). `Signature`
-/// covers exactly one cause after the Task 7 un-collapse below (2026-08-24
-/// controller ruling): the manifest's DSSE signature failed to verify
+/// covers exactly one cause after the deliberate un-collapse below (a
+/// review decision): the manifest's DSSE signature failed to verify
 /// under the key valid, per the key chain, at `export_checkpoint.position`
 /// — real evidence the manifest bytes were tampered post-signing, which
 /// the verdict engine maps to `TAMPERED(manifest)` (row 11). A
@@ -90,7 +90,7 @@ pub enum ManifestError {
 /// mismatch is content tampering (row 12, `TAMPERED`); an unlisted or
 /// missing member is a container-profile violation (row 21,
 /// `CANNOT_VERIFY`) — both are reported here as distinct variants so the
-/// verdict engine (Task 7) can map each to its correct row. This module
+/// verdict engine (`verify.rs`) can map each to its correct row. This module
 /// does not itself rank or collapse them.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum MemberError {
@@ -295,8 +295,8 @@ pub fn verify_manifest(
     // `Signature` defensively rather than `.expect()`-ed away, matching
     // the no-unwrap-in-prod bar.
     let vk = key_at_position(keys, position).ok_or(ManifestError::Signature)?;
-    // Un-collapsed (Task 7 controller ruling, 2026-08-24 review, extended
-    // by the same fix applied to keys.rs/checkpoint.rs): only an actual
+    // Deliberately un-collapsed (the same review decision applied to
+    // keys.rs/checkpoint.rs): only an actual
     // cryptographic authenticity failure is `Signature` (→ TAMPERED
     // (manifest), row 11); a wrong-payloadType/malformed/unsupported
     // envelope at the manifest slot is a format issue, not tampering, and

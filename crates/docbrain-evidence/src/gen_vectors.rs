@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! Generator for `vectors/ed25519_pin.json` — the frozen cross-language
-//! ed25519 contract (T-G). Gated behind the `gen-vectors` feature; NEVER run
+//! ed25519 contract. Gated behind the `gen-vectors` feature; NEVER run
 //! in CI. The committed JSON is the source of truth: `tests/vectors.rs` loads
 //! it and asserts `verify_pinned` returns exactly the recorded booleans. To
 //! regenerate (only when the pin itself changes, which should be rare and

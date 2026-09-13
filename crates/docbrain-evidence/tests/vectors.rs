@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Loads the frozen `vectors/ed25519_pin.json` (T-G, the cross-language
-//! ed25519 contract shared with the Python reference verifier — Task 14)
+//! Loads the frozen `vectors/ed25519_pin.json` (the cross-language
+//! ed25519 contract shared with the Python reference verifier)
 //! and asserts `verify_pinned` returns exactly the recorded boolean for
 //! every vector. This test NEVER regenerates the file — that only happens
 //! via `cargo test -p docbrain-evidence --features gen-vectors -- generate_vectors`,

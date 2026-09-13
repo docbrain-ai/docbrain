@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-//! Task 12 pipeline tests: `verify_bundle`'s interpretation of
-//! `journal/closure.jsonl` (Task 7 Ruling F1) plus the dangling-erasure-
-//! target check (Ruling F2), on both the in-range and closure paths.
+//! Erasure-closure pipeline tests: `verify_bundle`'s interpretation of
+//! `journal/closure.jsonl` plus the dangling-erasure-target check, on both
+//! the in-range and closure paths.
 //!
-//! Task 7 authenticated closure.jsonl's container shape (it is a normal
-//! whitelisted member the container profile already accepts) but
+//! The pipeline originally authenticated closure.jsonl's container shape (it
+//! is a normal whitelisted member the container profile already accepts) but
 //! deliberately never READ it — `collect_epoch_lines` only globs
 //! `journal/epoch-*.jsonl`. This file proves the NEW interpretation: an
 //! out-of-range erasure record targeting in-range content is honored
@@ -71,7 +71,7 @@ fn row_15_still_erasure_inconsistent_with_empty_closure_present() {
     assert!(row_of(&report, 15), "expected row 15, got: {:?}", report.findings);
 }
 
-// ---- row 22 (F2): dangling erasure target, in-range ----
+// ---- row 22: dangling erasure target, in-range ----
 
 #[test]
 fn row_22_dangling_erasure_target_in_range_journal_is_malformed() {
@@ -84,7 +84,7 @@ fn row_22_dangling_erasure_target_in_range_journal_is_malformed() {
     assert!(row_of(&report, 22), "expected row 22 for a dangling in-range erasure target, got: {:?}", report.findings);
 }
 
-// ---- controller fix round 1 (2026-08-25): in-range erasure targeting a
+// ---- settled in review: in-range erasure targeting a
 // record BELOW the export window's start is BENIGN, not row 22 ----
 //
 // The mainstream GDPR pattern: erase old content now, later export only a
@@ -127,7 +127,7 @@ fn in_range_erasure_targeting_position_zero_is_still_row_22() {
     assert!(row_of(&report, 22), "target 0 must always be malformed, got: {:?}", report.findings);
 }
 
-// ---- row 22 (F2): dangling erasure target, via closure ----
+// ---- row 22: dangling erasure target, via closure ----
 
 #[test]
 fn row_22_dangling_erasure_target_in_closure_is_malformed() {

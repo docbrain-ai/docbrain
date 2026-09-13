@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! DSSE Pre-Authentication Encoding (v1.0.2). The signed bytes are
 //! `PAE(payloadType, payload)`; the payload is treated as opaque bytes and is
-//! NEVER re-encoded anywhere in this crate (spec law 1).
+//! NEVER re-encoded anywhere in this crate: the rule is sign exact bytes and
+//! never re-encode in the trust path.
 
 /// PAE per https://github.com/secure-systems-lab/dsse/blob/v1.0.2/protocol.md
 pub fn pae(payload_type: &str, body: &[u8]) -> Vec<u8> {

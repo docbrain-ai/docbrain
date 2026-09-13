@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-//! Throwaway fixture emitter for the Rust<->Python parity check (Task 14,
-//! `tests-evidence/parity.sh`). Writes a representative — NOT exhaustive; the
-//! full 26-row golden corpus + CI is Task 15 — set of genuine `.dbev` bundles
+//! Throwaway fixture emitter for the Rust<->Python parity check
+//! (`tests-evidence/parity.sh`). Writes a representative — NOT exhaustive; the
+//! full 26-row golden corpus + CI lives in `tests-evidence/corpus` — set of
+//! genuine `.dbev` bundles
 //! built via `BundleBuilder`, one per distinct verdict/dominant-code mechanism,
 //! so both verifiers can be run over real exports and their verdicts diffed.
 //!

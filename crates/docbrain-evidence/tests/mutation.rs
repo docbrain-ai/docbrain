@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-//! Mutation gate (Task 16): the exhaustive every-byte-flip harness plus a set
-//! of structural mutations, standing behind the hand-picked golden corpus
-//! (Task 15). The corpus proves agreement on 23 curated rows; this proves the
+//! Mutation gate: the exhaustive every-byte-flip harness plus a set
+//! of structural mutations, standing behind the hand-picked golden corpus.
+//! The corpus proves agreement on 23 curated rows; this proves the
 //! Rust verifier never emits a false-VALID under adversarial single-byte and
 //! structural tampering of an honest bundle.
 //!
-//! ## The invariant (controller ruling, 2026-08-25)
+//! ## The invariant (deliberate, settled in review)
 //!
 //! A `.dbev` is a STORE-only ZIP wrapper, and a handful of bytes are inert to
 //! the verifier's INTERPRETATION even though they live in the file:
@@ -22,7 +22,7 @@
 //!     position-resolved key).
 //!
 //! So the correct inertness proof is not raw member-byte-identity (which the
-//! manifest-keyid class fails) but the precise form of the controller's stated
+//! manifest-keyid class fails) but the precise form of the stated
 //! goal — "the verifier's view of the evidence is unchanged": the FULL
 //! `VerdictReport` (verdict + every finding + scope + counts + anchor tier +
 //! time confidence) is identical before and after the flip. The invariant is

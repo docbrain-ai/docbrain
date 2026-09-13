@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! `BundleBuilder`: the ONLY writer of `.dbev` bundles in the workspace
-//! (Task 7 brief). Used by this crate's own pipeline tests, the golden
-//! corpus (Task 15), the mutation/fuzz gates (Task 16), and the real
-//! exporter (Task 11, which wraps this builder rather than hand-rolling
-//! container bytes again).
+//! (a deliberate rule). Used by this crate's own pipeline tests, the golden
+//! corpus, the mutation/fuzz gates, and the real exporter (which wraps this
+//! builder rather than hand-rolling container bytes again).
 //!
 //! Two build phases, deliberately kept separate:
 //! 1. **Recipe** — chainable `with_*`/`add_*` configuration methods that
@@ -13,7 +12,7 @@
 //!    later entries in the SAME hash chain, not out-of-band extras — this
 //!    is what keeps checkpoint/manifest bookkeeping (`count`, `head`,
 //!    `scope.range`) internally consistent even when erasures are present.
-//! 2. **Mutation hooks** — named methods, one per taxonomy row this task
+//! 2. **Mutation hooks** — named methods, one per taxonomy row the pipeline
 //!    can reach (`tamper_record`, `forge_position`, `duplicate_member`,
 //!    ...), each queuing a specific, documented deviation from the honest
 //!    recipe. `build()` always constructs the honest bundle FIRST, then
@@ -24,7 +23,7 @@
 //! Every signed line's payload byte-for-byte matches the closed schemas
 //! `chain.rs`/`keys.rs`/`checkpoint.rs`/`manifest.rs` already pin;
 //! `content/<position>` blobs are this module's own design decision (no
-//! Task 1-6 module wires content addressing) — `salt(32 bytes) ||
+//! other module in this crate wires content addressing) — `salt(32 bytes) ||
 //! content_bytes`, keyed by the record's decimal `position` (there is no
 //! separate record-id field in `chain::RecordHeader`, and position is
 //! already the bundle's natural unique identifier for a record).
@@ -134,7 +133,8 @@ enum ErasureMode {
     /// Content removed, honest erasure record present, but the erasure
     /// record's OWN position is placed OUTSIDE the exported range (in
     /// `journal/closure.jsonl` rather than `journal/epoch-0.jsonl`) — the
-    /// "erasure closure" case (row 13 via closure; Task 7 Ruling F1).
+    /// "erasure closure" case (row 13 via closure — the verifier honors
+    /// out-of-range erasure records carried in `journal/closure.jsonl`).
     HonestClosure,
 }
 
@@ -188,10 +188,10 @@ pub struct BundleBuilder {
     /// EARLIER than the start checkpoint's — chain position/hash order
     /// stays authoritative and honestly signed; only the wall clock lies.
     backwards_checkpoint_clock: bool,
-    /// F2 mutation: an extra, in-range erasure record whose `target` does
+    /// Dangling-erasure mutation: an extra, in-range erasure record whose `target` does
     /// not resolve to any record in the bundle.
     dangling_erasure_target: Option<u64>,
-    /// F2 mutation, closure variant: an extra `journal/closure.jsonl` entry
+    /// Dangling-erasure mutation, closure variant: an extra `journal/closure.jsonl` entry
     /// whose `target` does not resolve to any in-range record.
     dangling_closure_erasure_target: Option<u64>,
     /// Structural-violation mutation: overrides the declared `position` of
@@ -215,7 +215,7 @@ pub struct BundleBuilder {
     /// it. `None` (the default) preserves every existing test's exact
     /// full-range-from-genesis behavior.
     window_start: Option<u64>,
-    /// Task-16 timestamp-grammar hook: override the SIGNED `at` wall-clock of
+    /// Fuzz-gate timestamp-grammar hook: override the SIGNED `at` wall-clock of
     /// the start and end checkpoints with arbitrary strings (e.g. nanosecond
     /// precision, a `:60` leap second, alternate offset widths). Because the
     /// override is applied before the checkpoint envelope is signed, the
@@ -620,7 +620,7 @@ impl BundleBuilder {
         self
     }
 
-    /// F2 mutation: appends one extra, honestly-signed, IN-RANGE erasure
+    /// Dangling-erasure mutation: appends one extra, honestly-signed, IN-RANGE erasure
     /// record whose `target` does not resolve to any record actually in
     /// the bundle — a dangling erasure that must never be silently
     /// accepted.
@@ -629,7 +629,7 @@ impl BundleBuilder {
         self
     }
 
-    /// F2 mutation, closure variant: appends one extra erasure record to
+    /// Dangling-erasure mutation, closure variant: appends one extra erasure record to
     /// `journal/closure.jsonl` whose `target` does not resolve to any
     /// in-range record.
     pub fn dangling_closure_erasure_target(mut self, target: u64) -> Self {
@@ -685,7 +685,7 @@ impl BundleBuilder {
         self
     }
 
-    /// Task-16 timestamp-grammar hook: set the SIGNED `at` strings of the
+    /// Fuzz-gate timestamp-grammar hook: set the SIGNED `at` strings of the
     /// start and end checkpoints verbatim (see [`Self::checkpoint_times`]).
     /// Overrides both the default times and `backwards_checkpoint_clock`.
     pub fn with_checkpoint_times(mut self, start_at: &str, end_at: &str) -> Self {
@@ -987,7 +987,7 @@ impl BundleBuilder {
             // position with an erasure record. `KeepContentDespiteErasure`
             // deliberately leaves the content physically present (that IS
             // the row-15 mutation), so it must not be counted as withheld.
-            // `*target_position > range_start` (fix round 1, 2026-08-25):
+            // `*target_position > range_start` (a deliberate review decision):
             // a target OUTSIDE this export's own window isn't part of this
             // bundle's content at all — nothing here to mark withheld —
             // otherwise the manifest's own declared count would disagree
@@ -998,7 +998,7 @@ impl BundleBuilder {
             }
         }
 
-        // Optional dangling in-range erasure (F2): an honestly-signed
+        // Optional dangling in-range erasure: an honestly-signed
         // erasure record whose target matches no record anywhere in the
         // bundle.
         if let Some(target) = self.dangling_erasure_target {
@@ -1104,7 +1104,7 @@ impl BundleBuilder {
             heads_after[(range_start - 1) as usize]
         };
 
-        // Task-16 override wins over both the hardcoded times and
+        // The fuzz-gate override wins over both the hardcoded times and
         // `backwards_checkpoint_clock` when present.
         let start_at: &str = match &self.checkpoint_times {
             Some((s, _)) => s.as_str(),
@@ -1412,8 +1412,8 @@ mod tests {
     use crate::keys::verify_key_chain;
     use crate::manifest::{verify_manifest, verify_members};
 
-    /// Round-trips the HONEST (no mutations) bundle through every Task
-    /// 1-6 primitive directly — isolates bugs in the builder's own
+    /// Round-trips the HONEST (no mutations) bundle through every lower-level
+    /// primitive directly — isolates bugs in the builder's own
     /// construction from bugs in the (not-yet-written) verify.rs pipeline.
     /// If this fails, the builder is wrong, not the pipeline.
     #[test]

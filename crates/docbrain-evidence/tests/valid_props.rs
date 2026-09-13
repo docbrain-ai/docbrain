@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Valid-bundle property gate (Task 16): the false-TAMPERED gate. Where
+//! Valid-bundle property gate: the false-TAMPERED gate. Where
 //! `mutation.rs` proves no TAMPERED bundle reads VALID, this proves the other
 //! direction — an HONEST bundle, in ANY legal shape, NEVER reads non-VALID.
 //!
@@ -21,7 +21,7 @@
 use docbrain_evidence::{verify_bundle, BundleBuilder, Verdict};
 use proptest::prelude::*;
 
-/// RFC-3339 forms proven (Task-16 probe) to parse identically in chrono and the
+/// RFC-3339 forms probed and proven to parse identically in chrono and the
 /// stdlib Python verifier — safe to sign into checkpoint `at` fields.
 const VALID_TS_FORMS: &[&str] = &[
     "2026-01-01T00:00:00Z",

@@ -13,7 +13,7 @@
 //! analogous to `walk_chain`'s tamper-evidence for the record chain (design
 //! doc "Key records").
 //!
-//! Position convention (controller ruling): genesis is a REAL, self-signed
+//! Position convention (a deliberate decision): genesis is a REAL, self-signed
 //! envelope at the literal position `0` — the key it declares is valid from
 //! the very start, covering the virtual `(0, GENESIS_PREV)` anchor and every
 //! real evidence record from position 1 onward. Key validity is a half-open
@@ -21,12 +21,12 @@
 //! — the declaration position belongs to the NEW key, pinned by a boundary
 //! test below.
 //!
-//! Compromise semantics (Round-5-hardened design): a compromise record at
+//! Compromise semantics (as hardened in design review): a compromise record at
 //! position `P`, signed by the genesis-declared recovery key, names a
 //! compromised signing key `K` and carries a `claimed_compromise_time` `C`.
 //! It SEALS the chain — no further key record may follow it
 //! (`KeyChainError::JournalSealed`; evidence-record sealing past `P` is
-//! `classify_compromise`'s `TamperedPostPosition`, enforced by Task 7's
+//! `classify_compromise`'s `TamperedPostPosition`, enforced by the verify
 //! pipeline). Classifying whether a given evidence record signed by `K` is
 //! trustworthy is `classify_compromise`'s job; it is PURE — no anchor
 //! validation, no wall clock, inside this function. The caller establishes
@@ -163,7 +163,7 @@ fn decode_json<T: for<'de> Deserialize<'de>>(
     })
 }
 
-/// `deny_unknown_fields`: the schema is closed (design doc + Task 4 brief);
+/// `deny_unknown_fields`: the schema is closed by design;
 /// an unrecognized key is malformed input, not silently ignored. `_kind` is
 /// deserialized (it IS present on the wire, and `deny_unknown_fields` would
 /// reject it as unknown otherwise) but never re-read — the dispatch already
@@ -177,9 +177,9 @@ struct GenesisPayload {
     signing_key: String,
     recovery_key: Option<String>,
     // Present on the wire (successor-genesis lineage per the design doc's
-    // "post-compromise stance" section) but not interpreted by this task:
+    // "post-compromise stance" section) but not interpreted here:
     // cross-genesis continuity is attested, not proven, and rendering that
-    // attestation is the verifier's (Task 7's) job, not the key chain's.
+    // attestation is the verifier's job (`verify.rs`), not the key chain's.
     #[serde(rename = "predecessor_genesis")]
     _predecessor_genesis: Option<serde_json::Value>,
     key_prev: String,
@@ -216,8 +216,9 @@ struct SigningKeyEvent {
 
 /// The compromise record that sealed a [`KeyChain`], if any (spec rows 6-9).
 /// `claimed_compromise_time` is validated (RFC 3339) at the `verify_key_chain`
-/// boundary, not a raw wire string — Task 7 compares it against anchor times
-/// to establish `anchored_before_claim`, so it must already be a trustworthy
+/// boundary, not a raw wire string — the verify pipeline compares it against
+/// anchor times to establish `anchored_before_claim`, so it must already be a
+/// trustworthy
 /// timestamp by the time any caller can observe it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CompromiseRecord {
@@ -252,7 +253,7 @@ impl KeyChain {
 
     /// Every distinct signing key ever declared in this chain — genesis plus
     /// every rotation's `new_signing_key` — in position order. Added for
-    /// Task 7 (the verdict engine): distinguishing "signature invalid under
+    /// the verdict engine (`verify.rs`): distinguishing "signature invalid under
     /// any key this chain has ever declared" (taxonomy row 2) from
     /// "signature valid, but under a key that was authoritative at a
     /// DIFFERENT position" (row 3, key-epoch violation) requires trying a
@@ -296,8 +297,8 @@ pub fn verify_key_chain(lines: &[&[u8]]) -> Result<KeyChain, KeyChainError> {
     // declares (TOFU, same structure as a self-signed root certificate).
     // Only an actual cryptographic authenticity failure (SignatureInvalid)
     // is "not self-signed"; a wrong-payloadType/malformed/unsupported
-    // envelope is a DIFFERENT failure class (Task 7 controller ruling,
-    // 2026-08-24 review) — collapsing them would make a spliced
+    // envelope is a DIFFERENT failure class (a deliberate review
+    // decision) — collapsing them would make a spliced
     // wrong-payloadType envelope read as GenesisNotSelfSigned, which the
     // verdict engine maps to a TAMPERED-flavored row, when the taxonomy
     // wants CANNOT_VERIFY(malformed/unsupported) instead.
@@ -424,9 +425,10 @@ pub fn verify_key_chain(lines: &[&[u8]]) -> Result<KeyChain, KeyChainError> {
                         reason: format!("compromised_key: {reason}"),
                     })?;
                 // Parse-at-the-boundary: `claimed_compromise_time` is a raw
-                // wire string until here. Task 7 compares it against anchor
-                // times, so a non-RFC3339 value must fail closed now rather
-                // than silently propagate as an unvalidated string.
+                // wire string until here. The verify pipeline compares it
+                // against anchor times, so a non-RFC3339 value must fail
+                // closed now rather than silently propagate as an unvalidated
+                // string.
                 let claimed_compromise_time =
                     DateTime::parse_from_rfc3339(&comp.claimed_compromise_time)
                         .map(|dt| dt.with_timezone(&Utc))
@@ -511,7 +513,7 @@ pub fn classify_compromise(
     // TAMPERED no matter what anchor it claims. P itself is the compromise
     // declaration's own slot — the journal seals AT P, so nothing signed by
     // the compromised key can legitimately occupy or follow that position
-    // (controller ruling, Task 4 fix round 1: `>=`, not `>`).
+    // (deliberate, settled in review: `>=`, not `>`).
     if record_position >= compromise.position {
         return CompromiseClass::TamperedPostPosition;
     }
@@ -711,7 +713,7 @@ mod tests {
         assert_eq!(err, KeyChainError::UnauthorizedControlRecord { position: 5 });
     }
 
-    // ---- fix round 1, finding 3: claimed_compromise_time is validated
+    // ---- settled in review: claimed_compromise_time is validated
     // (RFC 3339) at the verify_key_chain boundary, not accepted as a raw
     // unvalidated string ----
 
@@ -841,7 +843,7 @@ mod tests {
         );
     }
 
-    // Fix round 1, finding 2 (controller ruling): position == P -> also
+    // Settled in review (deliberate): position == P -> also
     // TamperedPostPosition, not just position > P. P is the compromise
     // declaration's own slot; the journal seals AT P, so nothing signed by
     // the compromised key can legitimately occupy that position either.
@@ -896,12 +898,12 @@ mod tests {
         );
     }
 
-    // 3.8 (REQUIRED, trust anchor for this task): detection-lag forgery.
+    // REQUIRED (the trust anchor of this module): detection-lag forgery.
     // A thief who stole K after the real compromise forges records at
     // positions < P and stamps them with anchors dated AFTER C (but before
     // the recovery-key holder got around to declaring the compromise).
-    // Task 7 is responsible for computing `anchored_before_claim` correctly
-    // from real anchor timestamps (an anchor dated >= C must yield `false`
+    // The verify pipeline is responsible for computing `anchored_before_claim`
+    // correctly from real anchor timestamps (an anchor dated >= C must yield `false`
     // here) — but this test locks in the property THIS function guarantees
     // unconditionally: there is NO input to classify_compromise that
     // produces ValidPreClaim except `anchored_before_claim == true`. A

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Full-link record-chain walker (spec law 4, taxonomy row 4).
+//! Full-link record-chain walker (taxonomy row 4). The chain formula it
+//! recomputes is pinned so two independent verifiers cannot read it two ways.
 //!
 //! `walk_chain` is the "does verify actually verify?" primitive for chain
 //! integrity: it recomputes the leaf/head hash for EVERY record in the
@@ -8,13 +9,14 @@
 //! interior tampering). It also enforces strict position continuity: no
 //! gaps, no duplicates, no reordering.
 //!
-//! Contract for callers (Task 7's verify pipeline, Task 9's writer):
+//! Contract for callers (the verify pipeline in this crate, and the server's
+//! journal writer):
 //! `start_position`/`start_head` are a TRUSTED anchor — either the genesis
 //! anchor `(0, GENESIS_PREV)` or a previously-verified checkpoint's declared
 //! `(position, head)`. The first element of `envelope_lines` MUST declare
 //! `position == start_position + 1` and `prev_head == start_head`; every
 //! subsequent record continues from there. `walk_chain` does NOT verify
-//! DSSE signatures (that is `verify_envelope`'s job, Task 2) — it verifies
+//! DSSE signatures (that is `verify_envelope`'s job) — it verifies
 //! only the hash-chain linkage and position sequence over the raw envelope
 //! bytes. A caller that needs both runs both checks over the same lines.
 
@@ -143,7 +145,7 @@ fn parse_record_header(line: &[u8], index: usize) -> Result<RecordHeader, ChainE
 /// [`walk_chain`] uses internally — so offline tooling that needs record
 /// bodies/positions (the CLI's `evidence why`/`tables`) reuses the trust
 /// core's parser rather than growing a second one that could drift from it
-/// (the parser-differential risk the design's Round-5 N4 warns against).
+/// (the parser-differential risk the design explicitly warns against).
 /// Does NO chain/signature verification of its own; callers that care about
 /// authenticity gate on [`crate::verify::verify_bundle`] first.
 pub fn parse_record(line: &[u8]) -> Result<RecordHeader, ChainError> {

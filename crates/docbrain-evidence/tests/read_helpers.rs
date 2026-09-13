@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! Integration tests for the additive read helpers `read_records` and
-//! `chain_heads_for_bundle` (Task 13) — the thin, offline surfaces the CLI's
+//! `chain_heads_for_bundle` — the thin, offline surfaces the CLI's
 //! `evidence why`/`tables`/`--against` build on WITHOUT reparsing `.dbev`
 //! bytes themselves. Kept out of `src/verify.rs` deliberately: the
 //! `single_success_exit` meta-test counts `Verdict::Valid` occurrences in

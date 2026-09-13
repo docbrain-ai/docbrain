@@ -29,7 +29,7 @@
 //! (row 24); anchors (rows 18,19,23; tier). Every check runs regardless of
 //! whether an earlier Phase B check already found something — this is what
 //! lets a single bundle with BOTH a tampered record and a malformed anchor
-//! report both findings (Task 7 brief's required combo test).
+//! report both findings (the required combo test in `tests/pipeline.rs`).
 //!
 //! ## One success exit
 //!
@@ -90,9 +90,9 @@ const CODE_TIME_CLAIM_FALSIFIED: &str = "time-claim-falsified";
 const CODE_CLOCK_ANOMALY: &str = "clock-anomaly";
 const CODE_TRIVIAL_RANGE: &str = "trivial-range";
 
-/// THE pipeline (pinned public signature — Task 7 brief). Always verifies
+/// THE pipeline (its public signature is pinned). Always verifies
 /// with an empty trusted-witness-time set; see
-/// [`verify_bundle_with_witness`] for the (v1, R4-scoped) witness-time
+/// [`verify_bundle_with_witness`] for the (v1-scoped) witness-time
 /// override that row 8 needs.
 pub fn verify_bundle(bytes: &[u8]) -> VerdictReport {
     verify_bundle_with_witness(bytes, &[])
@@ -101,7 +101,7 @@ pub fn verify_bundle(bytes: &[u8]) -> VerdictReport {
 /// Same pipeline, plus an explicit, OPERATOR-SUPPLIED set of
 /// `(checkpoint_position, trusted_time)` assertions — "I personally know/
 /// trust that this checkpoint existed at or before this time," entirely
-/// out-of-band from the bundle's own bytes. This exists because v1 (R4)
+/// out-of-band from the bundle's own bytes. This exists because v1
 /// never cryptographically validates a real TSA/QTSP anchor token, so
 /// `anchored_before_claim` (spec: "row-8 time comparisons only ever use
 /// validated anchors") can otherwise never be `true` in v1 — row 8
@@ -252,10 +252,13 @@ pub fn verify_bundle_with_witness(
         }
     }
 
-    // B5: content / erasure closure (rows 12,13,14,15; Task 7 Rulings F1/F2).
+    // B5: content / erasure closure (rows 12,13,14,15). Two decisions taken
+    // in review are pinned here: out-of-range erasure records carried in
+    // `journal/closure.jsonl` are honored, and a dangling erasure target is
+    // rejected, never silently accepted.
     //
-    // F2 (dangling erasure), IN-RANGE erasure records — controller fix round
-    // 1 (2026-08-25): the target requirement is NARROWER than CLOSURE
+    // Dangling-erasure check, IN-RANGE erasure records — settled in review:
+    // the target requirement is NARROWER than CLOSURE
     // records get below. An honest in-range erasure record can legitimately
     // target a record that predates this export's window entirely (the
     // mainstream GDPR pattern: erase old content now, later export only a
@@ -300,7 +303,7 @@ pub fn verify_bundle_with_witness(
         }
     }
 
-    // F1 (closure.jsonl interpretation): erasure records targeting in-range
+    // Closure interpretation (`journal/closure.jsonl`): erasure records targeting in-range
     // content whose OWN position is outside the exported range (design doc
     // "erasure closure" — a later re-export of an older window still needs
     // to show a since-erased record as withheld, not incomplete).
@@ -448,7 +451,7 @@ pub fn verify_bundle_with_witness(
         ));
     }
 
-    // B7: anchors (rows 18,19,23; tier — v1/R4: never validated to tier >= 2).
+    // B7: anchors (rows 18,19,23; tier — v1: never validated to tier >= 2).
     let (anchor_tier, anchor_findings) = process_anchors(&reader, &checkpoints);
     findings.extend(anchor_findings);
 
@@ -472,7 +475,7 @@ pub fn verify_bundle_with_witness(
         .iter()
         .map(|cp| TimeSpan {
             label: format!("checkpoint at position {}", cp.position),
-            // v1/R4: no anchor is ever cryptographically validated, so
+            // v1: no anchor is ever cryptographically validated, so
             // every wall-clock claim in this report is self-asserted —
             // never overclaimed as anchor-bounded.
             anchored: false,
@@ -498,7 +501,7 @@ pub fn verify_bundle_with_witness(
 // `verify_bundle` first and gate on a `Valid` verdict before interpreting
 // anything they return. They exist so the CLI never reparses `.dbev` bytes
 // or recomputes a domain-separated hash itself (the parser-differential risk
-// the design's Round-5 N4 warns against): they reuse the SAME container
+// the design explicitly warns against): they reuse the SAME container
 // reader, per-line record parser, and chain walker the verifier uses. Trust
 // logic stays here, in the audited MIT crate — not in the CLI.
 
@@ -641,7 +644,7 @@ fn manifest_counts_summary(m: &Manifest) -> CountsSummary {
 
 /// Builds a terminal (single-finding) report for a Phase A failure.
 /// `manifest`, when available, supplies honest scope/counts even though
-/// the overall verdict is non-VALID (spec law 5 disclosures are not
+/// the overall verdict is non-VALID (the negative-space disclosures are not
 /// conditioned on the verdict).
 fn terminal(finding: Finding, manifest: Option<&Manifest>) -> VerdictReport {
     let (disposition, dominant, findings) = classify(vec![finding]);
@@ -748,7 +751,7 @@ fn collect_member_lines(reader: &ContainerReader, name: &str) -> Vec<Vec<u8>> {
 }
 
 fn container_error_finding(e: ContainerError) -> Finding {
-    // Task 6's own doc pin (container.rs module docs): every variant maps
+    // Pinned by `container.rs`'s own module docs: every variant maps
     // to CANNOT_VERIFY(container-profile), row 21 — never TAMPERED.
     Finding::new(21, CODE_CONTAINER_PROFILE, e.to_string())
 }
@@ -987,8 +990,8 @@ fn anchored_before_claim_for(
         .any(|(cp_pos, t)| *cp_pos == covering.position && *t < claim)
 }
 
-// ---- Phase B: anchors (rows 18,19,23; tier — R4: plumbing only, real
-// TSA/QTSP crypto validation is Task 17's) ----
+// ---- Phase B: anchors (rows 18,19,23; tier — v1 is plumbing only: real
+// TSA/QTSP crypto validation is deferred to v1.1) ----
 
 #[derive(Deserialize)]
 struct AnchorPeek {
@@ -1055,7 +1058,7 @@ fn process_anchors(reader: &ContainerReader, checkpoints: &CheckpointChain) -> (
             continue;
         };
 
-        // Structurally present and linked to a real checkpoint — v1 (R4)
+        // Structurally present and linked to a real checkpoint — v1
         // never validates the token/witness cryptographically, so this is
         // as far as tier can go.
         let this_tier = match anchor.kind.as_str() {

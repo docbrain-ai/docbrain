@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Pinned ed25519 verification (spec law 4, R1): the rule set is exactly
+//! Pinned ed25519 verification. Two implementations could read "ed25519
+//! verification" two ways, so the rule set is pinned to exactly
 //! `ed25519-dalek=2.2.0/verify_strict`. `verify_pinned` is the ONLY
 //! signature-verification entry point in this crate — a later grep-audit
 //! enforces that no other code path calls `verify`/`verify_strict` directly.

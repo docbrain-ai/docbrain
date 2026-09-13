@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Differential fuzzing (Task 16): THE Rust <-> Python divergence gate. The
-//! frozen corpus (Task 15) proves the two verifiers agree on 23 hand-picked
+//! Differential fuzzing: THE Rust <-> Python divergence gate. The
+//! frozen corpus proves the two verifiers agree on 23 hand-picked
 //! rows; this proves it holds under seeded random and adversarial inputs. The
 //! non-negotiable: on EVERY generated bundle the Rust `verify_bundle` (in
 //! process) and the stdlib `tools/verify_dbev.py` (shelled to) return the
@@ -10,7 +10,7 @@
 //! Determinism: the generator is fully driven by a seeded SplitMix64 PRNG. The
 //! seed is `EVIDENCE_FUZZ_SEED` (default a fixed constant) so a green run today
 //! is green tomorrow and a red run is replayable with the printed seed. Sizes
-//! are `EVIDENCE_FUZZ_N` per bucket (default 200 — the brief's CI-affordable
+//! are `EVIDENCE_FUZZ_N` per bucket (default 200 — the CI-affordable
 //! figure; the design target is 500). Each Python invocation is ~0.1-0.3s, so
 //! the default ~400 invocations run in ~1-2 minutes.
 //!
@@ -22,7 +22,8 @@
 //! * **raw-byte-mutated** — honest base + one random single-byte flip; assert
 //!   Rust==Python for WHATEVER verdict results. This is where parser
 //!   differentials hide (strict base64, lazy-UTF-8, hex, JSON edges).
-//! * **timestamp grammar** — the controller-assigned Task-14 residual. A frozen
+//! * **timestamp grammar** — the divergence surface the Python verifier's
+//!   parity work left open, deliberately assigned to this gate. A frozen
 //!   set of unusual-but-valid RFC-3339 forms (sub-microsecond/nanosecond
 //!   precision, leap-second `:60`, offset-width and case variants) injected
 //!   into SIGNED checkpoint / compromise times and unsigned anchor times, plus
@@ -322,7 +323,7 @@ fn gen_builder_mutated(rng: &mut Rng) -> Vec<u8> {
 }
 
 // ---------------------------------------------------------------------------
-// Timestamp grammar (the controller-assigned Task-14 residual).
+// Timestamp grammar (the residual the Python verifier's parity work left open).
 // ---------------------------------------------------------------------------
 
 /// A pair of unusual-but-VALID RFC-3339 forms for the start/end checkpoints.
@@ -330,7 +331,7 @@ fn gen_builder_mutated(rng: &mut Rng) -> Vec<u8> {
 /// used as SIGNED checkpoint times, so it reaches the verifier's parse/compare
 /// stage exactly as an honest export would.
 fn random_valid_ts_pair(rng: &mut Rng) -> (String, String) {
-    // Forms proven (Task-16 probe) to parse identically in chrono and Python.
+    // Forms probed and proven to parse identically in chrono and Python.
     let forms: &[&str] = &[
         "2026-01-01T00:00:00Z",
         "2026-01-01T00:00:00.000000500Z", // sub-microsecond
@@ -448,7 +449,7 @@ fn timestamp_vectors() -> Vec<(Vec<u8>, &'static str, Option<bool>)> {
         Some(true),
     ));
 
-    // Fix-round-1 regression vector (I1): a `:60` leap second is STRICTLY
+    // Regression vector for the leap-second fix: a `:60` leap second is STRICTLY
     // before the following whole second in chrono (probe: lt=true, eq=false),
     // so end (`00:01:00`) is after start (`00:00:60`) → no clock anomaly →
     // VALID|valid. The pre-fix flat-1e9 key collapsed `:60` onto `00:01:00`
@@ -462,7 +463,7 @@ fn timestamp_vectors() -> Vec<(Vec<u8>, &'static str, Option<bool>)> {
         "leap-adjacent-next-second",
         Some(true),
     ));
-    // Fix-round-1 regression vector (I1), the reviewer's exact day-boundary
+    // Regression vector for the leap-second fix, the reviewer's exact day-boundary
     // case: `23:59:60` strictly precedes next-day midnight.
     v.push((
         BundleBuilder::new()
@@ -472,7 +473,7 @@ fn timestamp_vectors() -> Vec<(Vec<u8>, &'static str, Option<bool>)> {
         "leap-boundary-next-day",
         Some(true),
     ));
-    // Fix-round-1 regression vector (C1): an out-of-range offset MINUTE in a
+    // Regression vector for the offset-range fix: an out-of-range offset MINUTE in a
     // SIGNED checkpoint time. chrono rejects `+00:60` ("out of range") → row 22
     // CANNOT_VERIFY; both verifiers must agree. The pre-fix Python silently
     // read `+00:60` as +1h and returned VALID — a false-VALID in the published
@@ -485,7 +486,7 @@ fn timestamp_vectors() -> Vec<(Vec<u8>, &'static str, Option<bool>)> {
         "offset-minute-60-both-reject",
         Some(false),
     ));
-    // Fix-round-1 regression vector (C1): out-of-range offset HOUR.
+    // Regression vector for the offset-range fix: out-of-range offset HOUR.
     v.push((
         BundleBuilder::new()
             .add_records(2)

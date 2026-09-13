@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Golden-corpus generator (Task 15). Writes the FROZEN, COMMITTED ground
+//! Golden-corpus generator. Writes the FROZEN, COMMITTED ground
 //! truth the cross-verifier parity CI checks forever:
 //!
 //!   tests-evidence/corpus/valid.dbev            (taxonomy row 1)
@@ -34,7 +34,7 @@
 //! Deferred rows (8, 20, 26) are NOT reachable through the standard offline
 //! verifiers the parity harness runs; they are recorded as explicit deferred
 //! entries in `expected.json` with a reason, never as fabricated `.dbev`.
-//! See the Task 15 brief's controller ruling and the corpus README.
+//! This is a deliberate rule; see the corpus README.
 
 use docbrain_evidence::{verify_bundle, BundleBuilder};
 use serde_json::{json, Map, Value};
@@ -266,22 +266,22 @@ fn corpus() -> Vec<Entry> {
 
 /// The deferred-entry block of `expected.json` — rows the standard offline
 /// verifiers the parity harness runs can never produce in v1. Recorded
-/// honestly with a reason and a Task-17 pointer, never as a fabricated
-/// `.dbev`. (Task 15 brief controller ruling.)
+/// honestly with a reason and a pointer to where they land, never as a
+/// fabricated `.dbev`. (A deliberate rule.)
 fn deferred() -> Value {
     json!([
         {
             "row": 8,
             "code": "valid-pre-claim",
             "reachable": false,
-            "deferred_to": "Task 17",
+            "deferred_to": "v1.1 (anchor token validation)",
             "reason": "requires verify_bundle_with_witness / tier>=2 anchor; not reachable via the standard offline verifiers the parity harness runs (an intended-row-8 bundle verifies as row 9 there)"
         },
         {
             "row": 20,
             "code": "anchor-stale",
             "reachable": false,
-            "deferred_to": "Task 17",
+            "deferred_to": "v1.1 (anchor token validation)",
             "reason": "anchor-stale not implemented until anchors v1 (no CODE_ANCHOR_STALE; verify.rs never validates an anchor to tier>=2)"
         },
         {

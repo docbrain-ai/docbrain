@@ -7,28 +7,28 @@
 //! space: a checkpoint's `position` field names the evidence-record position
 //! it certifies.
 //!
-//! ## Hash-chain domain separation: reused, not a new prefix (controller-ratified)
+//! ## Hash-chain domain separation: reused, not a new prefix (deliberate)
 //!
 //! This chain is linked with `crate::hash::{leaf_hash, head_hash}` UNCHANGED
 //! — no new domain-separation byte was introduced for the checkpoint chain.
-//! This is a deliberate design decision, ratified by the controller
-//! (2026-08-24, Task 5 review), not an oversight, and not to be re-litigated
-//! by a later reviewer as a missing prefix:
+//! This is a deliberate design decision, settled in review, not an
+//! oversight, and not to be re-litigated by a later reviewer as a missing
+//! prefix:
 //!
-//! 1. Spec law 4 pins EXACTLY three domain-separation bytes at the hash layer
-//!    (0x00 leaf / 0x01 chain / 0x02 content) as a frozen cross-language
-//!    contract, and states domain separation happens at TWO layers: the hash
+//! 1. The frozen cross-language contract pins EXACTLY three
+//!    domain-separation bytes at the hash layer (0x00 leaf / 0x01 chain /
+//!    0x02 content), and states domain separation happens at TWO layers: the hash
 //!    layer (by hash ROLE: leaf/head/content) and the signature layer
 //!    (`payloadType` per envelope kind, so one context's envelope can never
 //!    be spliced into another). A fourth hash-layer prefix isn't part of
-//!    that contract, and would only enlarge the Rust-vs-Python (Task 14)
-//!    divergence surface for no security gain.
-//! 2. Task 4's key chain already established this precedent: it is
+//!    that contract, and would only enlarge the Rust-vs-Python divergence
+//!    surface for no security gain.
+//! 2. The key chain (`keys.rs`) already established this precedent: it is
 //!    documented as its "OWN hash chain... separate from the evidence record
 //!    chain," yet verifiably reuses `leaf_hash`/`head_hash` (0x00/0x01)
 //!    as-is (see `keys.rs` module docs), relying on `PT_KEYRECORD` for
 //!    cross-context separation instead of a distinct hash prefix. No
-//!    retroactive change to Task 4 is needed — it was already correct.
+//!    retroactive change to the key chain is needed — it was already correct.
 //! 3. Adversarial check on the reuse: `leaf_hash` covers the FULL envelope
 //!    line, which always embeds the distinct `payloadType` string — so a
 //!    byte-identical leaf/head collision across chain types is structurally
@@ -54,8 +54,8 @@
 //! ## Signer authorization
 //!
 //! A checkpoint at `position` P must be signed by whatever key is valid at P
-//! per [`key_at_position`] (Task 4). Two checks enforce this (spec law 2,
-//! "verify every cross-checkable field," the cosign lesson): the payload's
+//! per [`key_at_position`]. Two checks enforce this (the rule is "verify
+//! every cross-checkable field," the cosign lesson): the payload's
 //! own declared `keyid` must equal the position-resolved key
 //! ([`CpError::UnauthorizedSigner`] on mismatch), AND the envelope signature
 //! must actually verify under that SAME position-resolved key
@@ -70,7 +70,7 @@
 //! not strictly after the previous checkpoint's `at` does NOT fail
 //! [`verify_checkpoint_chain`] — it is recorded as a [`ClockAnomaly`] and
 //! surfaced via [`CheckpointChain::clock_anomalies`] for the verdict engine
-//! (Task 7) to render as a WARNING finding, never as TAMPERED.
+//! (`verify.rs`) to render as a WARNING finding, never as TAMPERED.
 
 use crate::envelope::{verify_envelope, EnvelopeError, PT_CHECKPOINT};
 use crate::hash::{head_hash, leaf_hash, GENESIS_PREV};
@@ -208,7 +208,7 @@ fn decode_payload_bytes(line: &[u8], index: usize) -> Result<Vec<u8>, CpError> {
         })
 }
 
-/// `deny_unknown_fields`: the schema is closed (design doc + Task 5 brief);
+/// `deny_unknown_fields`: the schema is closed by design;
 /// an unrecognized key is malformed input, not silently ignored.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -293,7 +293,7 @@ pub fn verify_checkpoint_chain(
                 position: payload.position,
             });
         }
-        // Un-collapse (Task 7 controller ruling, 2026-08-24 review): only an
+        // Deliberately un-collapsed (a review decision): only an
         // actual cryptographic authenticity failure is SignatureInvalid; a
         // wrong-payloadType/malformed/unsupported envelope (e.g. a record
         // envelope spliced into the checkpoint chain's input) is a
@@ -445,7 +445,7 @@ mod tests {
     // ---- checkpoint envelope builder ----
 
     /// Builds one checkpoint envelope line, signed by `signer`, with the
-    /// exact payload schema from the Task 5 brief. `declared_keyid` is
+    /// exact closed payload schema this module pins. `declared_keyid` is
     /// normally `signer`'s own public key (honest case); tests that attack
     /// the keyid/signer relationship pass a different key.
     fn checkpoint_line(
@@ -612,7 +612,7 @@ mod tests {
         )
         .to_line();
         let err = verify_checkpoint_chain(&[line.as_slice()], &keys).unwrap_err();
-        // Un-collapsed (Task 7 controller ruling): a wrong-payloadType
+        // Deliberately un-collapsed (a review decision): a wrong-payloadType
         // splice is a format/malformed failure, not a signature failure —
         // it must map to CANNOT_VERIFY(malformed), never TAMPERED(signature).
         assert!(

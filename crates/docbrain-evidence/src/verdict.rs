@@ -27,7 +27,7 @@
 
 use serde_json::json;
 
-/// The three closed-world verdicts (spec law 3): never collapsed, never a
+/// The three closed-world verdicts: never collapsed, never a
 /// fourth value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
@@ -91,8 +91,10 @@ impl Finding {
     }
 }
 
-/// v1 anchor tier (R4: real TSA/QTSP token validation is Task 17's; v1
-/// never grants tier >= 2). `None`: no anchor member present at all.
+/// v1 anchor tier (v1 stores and binds anchor tokens but never validates
+/// them cryptographically — real TSA/QTSP token validation is deferred to
+/// v1.1 — so v1 never grants tier >= 2). `None`: no anchor member present at
+/// all.
 /// `WitnessFilePresent`: a tier-1-shaped (public witness receipt) anchor is
 /// present — tier-1 was never claimed to be cryptographically validated
 /// (design doc: "published observability, not CT-grade witnessing"), so
@@ -124,7 +126,7 @@ pub struct CountsSummary {
     pub withheld_erased: u64,
 }
 
-/// One time-confidence label (spec law 5): whether a wall-clock claim is
+/// One time-confidence label (a required disclosure): whether a wall-clock claim is
 /// anchor-bounded (backed by a validated anchor) or merely self-asserted
 /// (the journal's own `at` field, unverified).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -136,7 +138,7 @@ pub struct TimeSpan {
 
 /// The verifier's complete output: one verdict, the dominant reason, every
 /// finding actually evaluated, and the negative-space/scope/time-confidence
-/// disclosures spec law 5 requires on every VALID output (rendered
+/// disclosures every VALID output must carry (rendered
 /// regardless of verdict here, since a non-VALID report benefits from the
 /// same honesty).
 #[derive(Debug, Clone, PartialEq)]
