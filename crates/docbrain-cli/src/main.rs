@@ -602,6 +602,15 @@ struct AskResponse {
     turn: Option<usize>,
     #[allow(dead_code)]
     intent: Option<String>,
+    /// Post-synthesis claim verification. The server sends this and this
+    /// struct used to have nowhere to put it, so serde silently dropped it —
+    /// `docbrain ask --json` reported "verification absent" on every answer,
+    /// on or off, indistinguishable from the verifier being broken. Absent
+    /// stays absent (no default substituted): that is how the server marks
+    /// "the pass did not run", distinct from having run and found nothing
+    /// checkable, which arrives with `checked: 0`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    verification: Option<Verification>,
     /// Premises of fragments this answer drew on that no longer hold. Absent
     /// from the wire when empty (server `skip_serializing_if`), so `default`
     /// here rather than a required field.
@@ -651,6 +660,37 @@ struct CliDegradation {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct StaleClaim {
     note: String,
+}
+
+/// The CLI's mirror of the server's `Claim` (see
+/// `docbrain_core::rag::claim_verifier::Claim`). `verdict` is carried as raw
+/// JSON rather than a re-declared enum: the CLI does not branch on it (Law 4
+/// — only the verifier's rendered `notes` are printed), so typing out
+/// `ClaimVerdict`'s variants here would be a second place to keep in sync
+/// with the server for no reader-facing benefit, while a `--json` consumer
+/// still gets it byte-for-byte.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct Claim {
+    text: String,
+    verdict: serde_json::Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    basis: Option<String>,
+}
+
+/// The CLI's mirror of the server's `Verification` (see
+/// `docbrain_core::rag::claim_verifier::Verification`). `status` is carried
+/// as the raw wire string rather than a re-declared enum for the same reason
+/// as `Claim::verdict`: nothing here branches on its value, only on whether
+/// `notes` is empty, so a status the server adds later still round-trips
+/// through `--json` without a CLI release.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct Verification {
+    status: String,
+    checked: usize,
+    #[serde(default)]
+    failures: Vec<Claim>,
+    #[serde(default)]
+    notes: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -1326,7 +1366,34 @@ fn render_blocks(result: &AskResponse) -> Option<String> {
     Some(parts.join("\n\n"))
 }
 
+/// The verifier's own sentences, if it ran and had something to say.
+///
+/// `None` covers both silent cases on purpose: `result.verification` absent
+/// (the pass did not run) and present with empty `notes` (ran, nothing
+/// checkable, or every checkable claim held) print exactly the same way —
+/// nothing. Verification is not part of `blocks` (the server keeps it a
+/// separate field; see `docbrain_core::rag::blocks::warning_blocks`'s doc
+/// comment), so this runs unconditionally rather than only in the legacy
+/// branch the way `stale_claims` does.
+fn verification_notes(result: &AskResponse) -> Option<&[String]> {
+    let notes = &result.verification.as_ref()?.notes;
+    if notes.is_empty() {
+        None
+    } else {
+        Some(notes)
+    }
+}
+
 fn print_response(result: &AskResponse, verbose: bool) {
+    // The verifier's notes are already renderer-ready sentences (same
+    // contract as `stale_claims.note`) and belong before the answer they
+    // qualify.
+    if let Some(notes) = verification_notes(result) {
+        for note in notes {
+            println!("{note}");
+        }
+        println!();
+    }
     // Blocks carry the server's placement decision, warning first — a
     // terminal is append-only, so the CLI can no longer decide where a
     // warning goes relative to the answer (law 4: renders the server's text
@@ -6358,6 +6425,75 @@ mod tests {
         let b: CliBlock = serde_json::from_value(json.clone()).expect("parse");
         assert_eq!(b.severity.as_deref(), Some("stale"));
         assert_eq!(serde_json::to_value(&b).expect("serialise"), json);
+    }
+
+    // ── Verification notes ──────────────────────────────────────────────
+    //
+    // The server's `/api/v1/ask` response carries a `verification` object —
+    // the ask-time claim verifier's result — but this struct had nowhere to
+    // put it, so serde silently dropped it. `docbrain ask --json` reported
+    // "verification absent" on every question whether the verifier was on,
+    // off, or broken; the three were indistinguishable. The CLI now carries
+    // the field through and prints the verifier's own notes.
+
+    #[test]
+    fn a_failed_verifications_note_reaches_the_user() {
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({
+            "answer": "see docs/setup.md",
+            "verification": {
+                "status": "failed",
+                "checked": 5,
+                "failures": [{
+                    "text": "docs/setup.md",
+                    "verdict": { "verdict": "moved", "candidates": ["docs/guide/setup.md"] },
+                    "basis": "connected source (captured 2026-09-13)"
+                }],
+                "notes": [
+                    "⚠ Corrected: the documentation says `docs/setup.md`, which no longer exists. Verified location: `docs/guide/setup.md`."
+                ]
+            }
+        })).expect("a well-formed verification object must parse");
+        let notes = verification_notes(&resp)
+            .expect("a failed verification with a note must produce something to print");
+        assert_eq!(
+            notes,
+            ["⚠ Corrected: the documentation says `docs/setup.md`, which no longer exists. Verified location: `docs/guide/setup.md`."]
+        );
+    }
+
+    #[test]
+    fn nothing_checkable_prints_nothing_but_still_round_trips() {
+        let json = serde_json::json!({
+            "answer": "a conceptual answer",
+            "verification": { "status": "nothing_checkable", "checked": 0, "failures": [], "notes": [] }
+        });
+        let resp: AskResponse = serde_json::from_value(json.clone()).expect("parse");
+        assert!(
+            verification_notes(&resp).is_none(),
+            "nothing checkable must print nothing, the same silence as the verifier not running"
+        );
+        let round_tripped = serde_json::to_value(&resp).expect("serialise");
+        assert_eq!(
+            round_tripped["verification"], json["verification"],
+            "checked: 0 must survive --json unchanged, not be dropped or defaulted away"
+        );
+    }
+
+    #[test]
+    fn an_absent_verification_key_still_parses_and_prints_nothing() {
+        let resp: AskResponse =
+            serde_json::from_value(serde_json::json!({ "answer": "the answer" })).expect("parse");
+        assert!(
+            resp.verification.is_none(),
+            "absent on the wire must stay None, never a substituted default Verification"
+        );
+        assert!(verification_notes(&resp).is_none());
+        assert_eq!(
+            serde_json::to_value(&resp).expect("serialise")
+                .as_object().unwrap().contains_key("verification"),
+            false,
+            "an absent verification must not reappear as a null key in --json"
+        );
     }
 
     #[test]
