@@ -1331,6 +1331,21 @@ fn phase_label(phase: &str) -> &str {
     }
 }
 
+/// What a step in progress is called, while it is still running.
+///
+/// The server's own words for THIS step, because the phase label is the same
+/// for every step of a phase: a question that calls three connectors sends
+/// three steps through one phase, and labelling them all by the phase says
+/// nothing about which one is being waited on. The label remains the fallback
+/// for a server that sends no words, and remains what the finished step is
+/// reported under.
+///
+/// Kept pure so the wording is testable without a terminal.
+fn started_heading<'a>(phase: &'a str, description: &'a str) -> &'a str {
+    let described = description.trim();
+    if described.is_empty() { phase_label(phase) } else { described }
+}
+
 /// One ordered part of a rendered answer, as the server sent it.
 ///
 /// `kind` is a plain String on purpose: a kind this build has never heard of
@@ -1620,9 +1635,8 @@ fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32, style: Prog
             if style == ProgressStyle::Animated {
                 let _ = write!(
                     err,
-                    "  \x1b[36m◆\x1b[0m {}... \x1b[2m{}\x1b[0m",
-                    phase_label(phase),
-                    description
+                    "  \x1b[36m◆\x1b[0m {}...",
+                    started_heading(phase, description),
                 );
                 let _ = err.flush();
             }
@@ -5636,6 +5650,50 @@ mod tests {
             ProgressStyle::decide(false, false, false, true),
             ProgressStyle::Animated
         );
+    }
+
+    // ── What a running step is called (started_heading) ───────────────
+    //
+    // Every step of a phase used to be headed by the phase label, so a
+    // question that called three different connectors showed the same
+    // heading three times — and the heading is what a reader sees while
+    // the call is still running.
+
+    /// A step is headed by what the server called it, so two steps of one
+    /// phase read as the two different things they are.
+    #[test]
+    fn a_step_is_headed_by_what_the_server_called_it() {
+        assert_eq!(
+            started_heading("live_tools", "Calling tickets/search_issues"),
+            "Calling tickets/search_issues"
+        );
+        assert_eq!(
+            started_heading("live_tools", "Calling docs/search_pages"),
+            "Calling docs/search_pages"
+        );
+    }
+
+    /// The same words the other surfaces show: whatever the server sends is
+    /// relayed as it came, never reworded or prefixed.
+    #[test]
+    fn the_servers_words_are_relayed_unchanged() {
+        for description in [
+            "Selecting tools for this question",
+            "Resolving __ownership",
+            "Generating answer",
+        ] {
+            assert_eq!(started_heading("live_tools", description), description);
+        }
+    }
+
+    /// A server that sends no words for a step still gets a heading — the
+    /// phase label, which is what every step showed before.
+    #[test]
+    fn a_step_with_no_words_falls_back_to_the_phase_label() {
+        for blank in ["", "   "] {
+            assert_eq!(started_heading("live_tools", blank), "Calling live tools");
+            assert_eq!(started_heading("synthesize", blank), "Synthesizing");
+        }
     }
 
     /// Freshness markers are printed as part of the sources list on stdout, so
