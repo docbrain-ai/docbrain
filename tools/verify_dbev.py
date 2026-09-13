@@ -722,7 +722,7 @@ def deny_unknown(obj, allowed):
 # RFC 3339 timestamps (mirrors chrono::DateTime::parse_from_rfc3339). Returns an
 # `_Instant` ordered by an integer nanosecond key so comparisons match chrono's
 # absolute-instant ordering EXACTLY — including two forms Python's datetime
-# cannot represent and that the Task-16 differential fuzzer proved chrono
+# cannot represent and that the differential fuzzer proved chrono
 # accepts (chrono is the authoritative trust core; the fix lives here, never in
 # Rust):
 #   * sub-microsecond precision — chrono keeps up to 9 fractional digits
@@ -821,7 +821,7 @@ def parse_rfc3339(s):
         om_str = rest[-2:]
         # ASCII digits only (int() would accept "+5"/" 5"/unicode digits that
         # chrono rejects), then chrono's actual accepted range: reproduced with
-        # DateTime::parse_from_rfc3339 (Task-16 probe), it accepts offset hour
+        # DateTime::parse_from_rfc3339 (probed against chrono), it accepts offset hour
         # 0..=23 and minute 0..=59 (up to +/-23:59) and rejects anything past
         # that as "out of range" (e.g. +00:60, +24:00). Without this bound a
         # `+00:60` silently became +1h here — a false-VALID vs the authoritative
@@ -874,7 +874,7 @@ def parse_rfc3339(s):
     # maxes at 1e9 + 999_999_999 < 2e9 and so never carries into the next
     # base-second slot. A flat 1e9 multiplier would collapse a `:60` leap second
     # onto the following whole second (`00:00:60Z` == `00:01:00Z`), but chrono
-    # (Task-16 probe: lt=true, eq=FALSE) orders `:60` STRICTLY BEFORE the next
+    # (probed against chrono: lt=true, eq=FALSE) orders `:60` STRICTLY BEFORE the next
     # second — so `00:00:60Z` = base(00:00:59)*2e9 + 1e9 sorts below
     # `00:01:00Z` = base(00:01:00)*2e9, exactly as chrono does.
     dt_utc = dt.astimezone(timezone.utc)
