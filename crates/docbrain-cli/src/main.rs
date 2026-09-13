@@ -653,12 +653,53 @@ struct CliDegradation {
     severity: String,
 }
 
-/// The CLI's mirror of the server's `StaleClaim` — deliberately narrow.
-/// Law 4: every surface renders the server's `note` verbatim rather than
-/// composing its own sentence from `expression`/`current`/`basis`, so this
-/// type carries only what it renders.
+/// The CLI's mirror of the server's `StaleClaim` (see
+/// `docbrain_core::premises::health::StaleClaim`): one premise an answer drew
+/// on that its source no longer supports.
+///
+/// Every field the server serialises is carried, in the server's order and
+/// with the server's serde attributes, because `--json` re-serialises this
+/// struct rather than forwarding the response bytes — anything missing here is
+/// dropped from machine-readable output. The struct used to hold `note`
+/// alone, on the reasoning that a renderer prints the note verbatim and needs
+/// nothing else. That is true of a renderer and false of `--json`: it left a
+/// script or an agent with a warning and no way to tell what it rested on.
+/// `basis` in particular is the dated evidence behind the break, and
+/// `fragment_id`/`document_id` say which note raised it.
+///
+/// Rendering is unaffected: a reader still sees `note` and only `note`, the
+/// one wording the web banner and the MCP shim print too.
+///
+/// The ids are carried as strings rather than parsed into a UUID type. The
+/// CLI does not look inside them or join on them, so parsing could only turn
+/// a value the server accepted into a CLI-side error, and a string round-trips
+/// the bytes either way.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 struct StaleClaim {
+    /// The fragment that made the claim, when a fragment did. The server omits
+    /// whichever id does not apply, so an absent id stays absent here — a
+    /// `null` would be a key the server never sent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    fragment_id: Option<String>,
+    /// The ingested document that made the claim, when a document did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    document_id: Option<String>,
+    /// The premise expression, verbatim: `<symbol>=<asserted>` or a path.
+    expression: String,
+    /// What the document asserted, when the expression carries a value.
+    ///
+    /// No `skip_serializing_if`, deliberately, and the same for `current`: the
+    /// server always sends these two keys and writes `null` when there is no
+    /// value, so skipping them on the way out would drop a key the server did
+    /// send. The two mechanisms are different contracts and both are mirrored
+    /// exactly as they arrive.
+    asserted: Option<String>,
+    /// What the sources say now, when the verdict carries it.
+    current: Option<String>,
+    /// What this is evidence of, and when it was captured. The server treats
+    /// an undated break as unrenderable, so this is always present.
+    basis: String,
+    /// Renderer-ready line. The one wording every surface prints.
     note: String,
 }
 
@@ -1384,6 +1425,27 @@ fn verification_notes(result: &AskResponse) -> Option<&[String]> {
     }
 }
 
+/// The answer as a server that sends no `blocks` is rendered: each stale
+/// claim's own line, verbatim and warnings first, then the answer.
+///
+/// Split out of `print_response` so a test can read exactly what a terminal
+/// would see; the bytes are the ones this path has always written. One line
+/// per claim and nothing else — a claim carries `expression`, `basis` and the
+/// rest for machine-readable output, but a reader gets the server's single
+/// rendered sentence, the same wording the web banner and the MCP shim print.
+fn render_legacy(result: &AskResponse) -> String {
+    let mut out = String::new();
+    for claim in &result.stale_claims {
+        out.push_str(&claim.note);
+        out.push('\n');
+    }
+    if !result.stale_claims.is_empty() {
+        out.push('\n');
+    }
+    out.push_str(&result.answer);
+    out
+}
+
 fn print_response(result: &AskResponse, verbose: bool) {
     // The verifier's notes are already renderer-ready sentences (same
     // contract as `stale_claims.note`) and belong before the answer they
@@ -1403,13 +1465,7 @@ fn print_response(result: &AskResponse, verbose: bool) {
         None => {
             // Older server: no blocks on the wire. Render the legacy fields,
             // warnings first, exactly as before.
-            for claim in &result.stale_claims {
-                println!("{}", claim.note);
-            }
-            if !result.stale_claims.is_empty() {
-                println!();
-            }
-            println!("{}", result.answer);
+            println!("{}", render_legacy(result));
         }
     }
     print_response_metadata(result, verbose);
@@ -6493,6 +6549,126 @@ mod tests {
                 .as_object().unwrap().contains_key("verification"),
             false,
             "an absent verification must not reappear as a null key in --json"
+        );
+    }
+
+    // ── Stale claims ────────────────────────────────────────────────────
+    //
+    // A stale claim is the server's evidence that an answer rests on
+    // something a source no longer supports, and it is dated: `basis` says
+    // what the break was measured against and when. This struct carried
+    // `note` alone, so `docbrain ask --json` re-serialised each claim with
+    // every other field gone — a script or an agent reading the machine
+    // output was told a warning existed and could not tell what it rested on
+    // or which document raised it. The mirror now carries the whole record;
+    // the human line is unchanged and still the note alone.
+
+    /// The exact bytes the server pins in its own wire-shape test. Parsing
+    /// them and serialising them back must reproduce them character for
+    /// character, field order included: `--json` is a forwarding surface, and
+    /// a consumer diffing the CLI's output against the server's response is
+    /// entitled to find them identical.
+    const PINNED_SERVER_CLAIM: &str = r#"{"fragment_id":"00000000-0000-0000-0000-000000000000","expression":"acme-ph/Chart.yaml#version=1.4.0","asserted":"1.4.0","current":"9.9.9","basis":"local:acme-ph (captured 2026-09-05)","note":"⚠ Out of date: this answer draws on a note asserting `acme-ph/Chart.yaml#version=1.4.0`; the source now says `9.9.9` (local:acme-ph (captured 2026-09-05))."}"#;
+
+    #[test]
+    fn the_servers_pinned_claim_survives_json_byte_for_byte() {
+        let claim: StaleClaim =
+            serde_json::from_str(PINNED_SERVER_CLAIM).expect("the server's own wire shape parses");
+        assert_eq!(
+            serde_json::to_string(&claim).expect("serialise"),
+            PINNED_SERVER_CLAIM,
+            "--json must reproduce the claim the server sent, every field and in its order"
+        );
+    }
+
+    #[test]
+    fn every_field_a_claim_arrives_with_reaches_json() {
+        // Through the real `--json` path: the whole response is re-serialised,
+        // so a field this mirror does not capture is dropped from the document
+        // a script parses. `basis` is the load-bearing one — it is the dated
+        // evidence the warning rests on.
+        let wire = serde_json::json!({
+            "answer": "the chart pins 1.4.0",
+            "stale_claims": [{
+                "fragment_id": "11111111-1111-1111-1111-111111111111",
+                "document_id": "22222222-2222-2222-2222-222222222222",
+                "expression": "acme-ph/Chart.yaml#version=1.4.0",
+                "asserted": "1.4.0",
+                "current": "9.9.9",
+                "basis": "local:acme-ph (captured 2026-09-05)",
+                "note": "⚠ Out of date: this answer draws on a note asserting `acme-ph/Chart.yaml#version=1.4.0`; the source now says `9.9.9` (local:acme-ph (captured 2026-09-05))."
+            }]
+        });
+        let resp: AskResponse = serde_json::from_value(wire.clone()).expect("parse");
+        let out = serde_json::to_value(&resp).expect("serialise");
+        assert_eq!(
+            out["stale_claims"], wire["stale_claims"],
+            "the claim reaching --json differs from the one the server sent"
+        );
+    }
+
+    #[test]
+    fn an_absent_id_stays_absent_rather_than_arriving_as_null() {
+        // The server omits the id it does not have (`skip_serializing_if`) and
+        // sends `asserted`/`current` as an explicit null when the expression
+        // carries no value. Both are contracts a consumer reads: an invented
+        // `"document_id": null` is a key that never existed, and dropping a
+        // null the server sent is a key that quietly vanished.
+        let wire = r#"{"expression":"docs/setup.md","asserted":null,"current":null,"basis":"connected source (captured 2026-09-13)","note":"⚠ Out of date: this answer draws on a note asserting `docs/setup.md`, which the source no longer supports (connected source (captured 2026-09-13))."}"#;
+        let claim: StaleClaim = serde_json::from_str(wire).expect("parse");
+        let out = serde_json::to_string(&claim).expect("serialise");
+        assert_eq!(out, wire, "an id the server omitted must stay omitted");
+        assert!(
+            !out.contains("fragment_id") && !out.contains("document_id"),
+            "a missing id must not reappear as a null key: {out}"
+        );
+    }
+
+    #[test]
+    fn a_document_claim_keeps_its_own_id_and_drops_neither() {
+        // The shape a claim raised by an ingested document actually has: the
+        // id that does not apply is absent, the one that does is carried.
+        let wire = r#"{"document_id":"22222222-2222-2222-2222-222222222222","expression":"docs/setup.md","asserted":null,"current":null,"basis":"connected source (captured 2026-09-13)","note":"⚠ Out of date: this answer draws on a note asserting `docs/setup.md`, which the source no longer supports (connected source (captured 2026-09-13))."}"#;
+        let claim: StaleClaim = serde_json::from_str(wire).expect("parse");
+        assert_eq!(
+            claim.document_id.as_deref(),
+            Some("22222222-2222-2222-2222-222222222222"),
+            "the id naming the document that raised the warning was lost"
+        );
+        assert_eq!(
+            serde_json::to_string(&claim).expect("serialise"),
+            wire,
+            "a document claim must reach --json exactly as it arrived"
+        );
+    }
+
+    #[test]
+    fn the_human_line_is_the_note_and_nothing_else() {
+        // The note is the one wording every surface prints. Carrying the rest
+        // of the record is for machine output only; a reader must see exactly
+        // the sentence the server wrote, not a line the CLI assembled from the
+        // parts.
+        let resp: AskResponse = serde_json::from_value(serde_json::json!({
+            "answer": "the chart pins 1.4.0",
+            "stale_claims": [{
+                "fragment_id": "11111111-1111-1111-1111-111111111111",
+                "document_id": "22222222-2222-2222-2222-222222222222",
+                "expression": "acme-ph/Chart.yaml#version=1.4.0",
+                "asserted": "1.4.0",
+                "current": "9.9.9",
+                "basis": "local:acme-ph (captured 2026-09-05)",
+                "note": "⚠ the note, verbatim."
+            }]
+        }))
+        .expect("parse");
+        assert_eq!(
+            render_legacy(&resp),
+            "⚠ the note, verbatim.\n\nthe chart pins 1.4.0",
+            "the terminal shows the server's note and the answer, nothing more"
+        );
+        assert!(
+            !render_legacy(&resp).contains("22222222-2222-2222-2222-222222222222"),
+            "a record field leaked into the human line"
         );
     }
 
