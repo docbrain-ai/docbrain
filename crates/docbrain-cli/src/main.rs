@@ -2208,7 +2208,7 @@ async fn trace_query(
   \
                  - Your API key is not an admin role (trace is admin-only)
   \
-                 - The server is running an old build without Phase 3 trace support
+                 - The server is running an older build that does not send pipeline traces
 
 \
                  Run `docbrain token list` (admin) or check your role."
@@ -4450,7 +4450,7 @@ async fn license_show(server_url: &str, api_key: &str) -> Result<()> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Identity attestation report (Licensing Phase 2, spec §7)
+// Identity attestation report
 //
 // A dumb HTTP passthrough, same as license_show above: GET the server's
 // answer, print it (or write it to a file for --export). No counting,
@@ -6308,7 +6308,7 @@ mod tests {
         assert!(missing_ok_fields(&report).is_empty());
     }
 
-    // ── Answer blocks (Task 5) ─────────────────────────────────────────
+    // ── Answer blocks ──────────────────────────────────────────────────
     //
     // A terminal is append-only, so a warning that arrives with the
     // completed response could never be placed above tokens already on

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! End-to-end tests for the `evidence` CLI family and the standalone
-//! `docbrain-verify` binary (Task 13). Bundles are built on disk with the MIT
+//! `docbrain-verify` binary. Bundles are built on disk with the MIT
 //! crate's `BundleBuilder`; the compiled binaries are then run as
 //! subprocesses so the assertions cover the REAL exit codes an auditor sees.
 //!
