@@ -139,3 +139,11 @@ rbac:
 
 retention:
   audit_log_days: 90
+
+# Links this connector reads, for `docbrain generate --source-url`: an issue
+# link, https://<site>.atlassian.net/browse/<KEY-N> (or .../jira/browse/...).
+# A self-hosted Jira declares its own host here instead.
+url_sources:
+  - pattern: '^(?i:https?://(?:[^/]+\.)?atlassian\.net)/(?:[^?#]*/)?browse/(?P<key>[A-Z][A-Z0-9]+-\d+)(?:[/?#].*)?$'
+    tool: jira_rest.get_issue
+    args: { key: '{key}' }

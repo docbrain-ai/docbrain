@@ -265,3 +265,11 @@ rbac:
 
 retention:
   audit_log_days: 90
+
+# Links this connector reads, for `docbrain generate --source-url`. A Slack
+# message link, https://<workspace>.slack.com/archives/<channel>/p<ts>, is
+# passed through whole: the shim reads the channel and timestamp from it.
+url_sources:
+  - pattern: '^(?i:https?://(?:[^/]+\.)?slack\.com)/archives/[^/?#]+/p\d+'
+    tool: slack_rest.read_thread
+    args: { url: '{url}' }

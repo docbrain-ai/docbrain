@@ -147,3 +147,14 @@ rbac:
 
 retention:
   audit_log_days: 90
+
+# Links this connector reads, for `docbrain generate --source-url`: a page link,
+# by ?pageId=<id> or /wiki/.../pages/<id>/... . A self-hosted Confluence
+# declares its own host here instead.
+url_sources:
+  - pattern: '^(?i:https?://(?:[^/]+\.)?atlassian\.net)/[^#]*?[?&]pageId=(?P<id>\d+)'
+    tool: confluence_rest.get_page
+    args: { id: '{id}' }
+  - pattern: '^(?i:https?://(?:[^/]+\.)?atlassian\.net)/(?:[^?#]*/)?wiki/(?:[^?#]*/)?pages/(?P<id>\d{4,})(?:[/?#].*)?$'
+    tool: confluence_rest.get_page
+    args: { id: '{id}' }
