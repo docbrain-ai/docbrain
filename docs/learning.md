@@ -112,7 +112,7 @@ Each trained model moves through a lifecycle:
 |-------|---------|
 | `pending` | Training job submitted, awaiting completion |
 | `shadow` | Training complete, ONNX exported, ready to promote |
-| `canary` | Serving a fraction of embedding requests for quality comparison |
+| `canary` | A staging state before promotion. Embedding traffic is NOT split: every request uses the promoted model |
 | `promoted` | Active model; all embedding requests use this model |
 | `retired` | Superseded by a newer promoted model |
 | `failed` | Training failed or quality regression rollback |
