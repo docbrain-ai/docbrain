@@ -49,12 +49,14 @@ One capture per fact. Fill `resources/capture-template.md`; three finished examp
   so and ask where it lives; never anchor a capture to lines that do not contain it. Pass those exact
   lines as `code_snippet`: DocBrain hashes them and flags the capture the day that code changes.
 - `docbrain_commit_capture` is for one moment: the person is about to commit, or asks to record why
-  a commit was made, and the reason is not in the message — then the intent, the files and the message
-  go through it. Everything else — a fix, a procedure, a caveat, a fact — goes through
-  `docbrain_annotate`, anchored to the lines that hold it and with its premises: that is what DocBrain
-  can check; a commit capture carries no anchored lines and no premises. A change that is already
-  committed is not a commit capture: it is a fact about the file, whatever commit put it there, so do
-  not go looking for its commit — read the file.
+  a commit was made, and the reason is not in the message. The signals are the person's own words —
+  "about to commit", "before I commit", "the message will say", "record why I changed" — and when
+  one is present the diff is the anchor: the intent, the files and the message go through
+  `docbrain_commit_capture`, never an annotation on lines that are about to change. Everything else —
+  a fix, a procedure, a caveat, a fact — goes through `docbrain_annotate`, anchored to the lines that
+  hold it and with its premises: that is what DocBrain can check; a commit capture carries no anchored
+  lines and no premises. A change that is already committed is not a commit capture: it is a fact
+  about the file, whatever commit put it there, so do not go looking for its commit — read the file.
 - When no file holds the knowledge — a process, a fact about how two systems are wired — anchor to the
   document a reader would open first (a README, a runbook, a manifest, a config) and say so in the
   capture. If no repository holds anything for it, use `docbrain_commit_capture` with the intent alone;
