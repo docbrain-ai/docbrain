@@ -1,0 +1,10 @@
+{
+  "name": "docbrain",
+  "description": "DocBrain for coding agents: capture what a conversation worked out into your organization's knowledge, with the file it concerns and the facts it rests on, after one yes.",
+  "version": "1.0.0",
+  "author": { "name": "DocBrain" },
+  "homepage": "https://docbrainapi.com",
+  "repository": "https://github.com/docbrain-ai/docbrain",
+  "license": "MIT",
+  "keywords": ["docbrain", "knowledge", "capture", "documentation", "mcp"]
+}

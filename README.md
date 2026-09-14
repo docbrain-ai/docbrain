@@ -164,15 +164,20 @@ The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your 
 
 Get the key with `docbrain token create --name "MCP" --role viewer`. Ready-made configs for all three editors, and the one setup mistake that fails silently, are in [`examples/mcp-configs/`](examples/mcp-configs/).
 
-Two instructions in your `CLAUDE.md` close the loop:
+One skill closes the loop. Install it for the whole team from the repository you work in:
+
+```bash
+claude plugin marketplace add docbrain-ai/docbrain --scope project
+claude plugin install docbrain@docbrain --scope project   # both land in .claude/settings.json — commit it
+```
+
+From then on, when a conversation has worked something out — a decision and its reason, a fix that took digging, a caveat, a procedure, how a system is actually wired — say `/docbrain:docbrain-capture`, or just "capture this"; the skill also offers itself when it notices. It checks DocBrain first, drafts in your team's words with the file it concerns and the premises it rests on, shows you the draft, and writes only after your yes. One line back: indexed, or queued for review. Everything is automated except the yes. Prefer a plain directory? Copy [`plugins/docbrain/skills/docbrain-capture`](plugins/docbrain/skills/docbrain-capture) into your repo's `.claude/skills/` and invoke it as `/docbrain-capture`.
+
+One line in your `CLAUDE.md` keeps the read side on:
 
 ```markdown
 Before editing files you have not worked in before, call docbrain_context
 with their repo-relative paths and read what comes back first.
-
-When we resolve an error or discover non-obvious behavior, call
-docbrain_suggest_capture for the files involved. If a gap exists, draft a
-3–5 line capture and ask me to approve it before calling docbrain_annotate.
 ```
 
 **Read — before it changes anything.** `docbrain_context` takes the files the agent is about to touch and returns what your organization already decided about them: the decision, the constraint, the thing someone learned the hard way. If any of that has since stopped being true, the warning comes *first*, dated. The agent arrives knowing what the last dozen sessions learned instead of re-deriving it.

@@ -64,6 +64,7 @@ nav:
     - Ingestion Guide: ingestion.md
     - External Connectors: connectors.md
     - MCP Tool Platform: mcp-tools.md
+    - Coding Agents: agents.md
     - Slack: slack.md
     - GitLab Capture: gitlab-capture.md
     - Confluence Webhook: confluence-webhook.md

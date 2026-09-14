@@ -1,0 +1,13 @@
+{
+  "name": "docbrain",
+  "description": "Plugins that make coding agents use DocBrain the way the product intends.",
+  "owner": { "name": "DocBrain" },
+  "plugins": [
+    {
+      "name": "docbrain",
+      "source": "./plugins/docbrain",
+      "description": "Capture what a conversation worked out into DocBrain — checked first, anchored to the file and the facts it rests on, written after one yes.",
+      "category": "knowledge"
+    }
+  ]
+}

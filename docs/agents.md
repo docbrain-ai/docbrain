@@ -24,7 +24,7 @@ Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://git
 
 Most teams wire these up and only ever use `ask`. The write path is where the leverage is: **the moment your agent helps you fix something is the one moment the knowledge exists, is fresh, and costs nothing to keep.** Sessions end, terminal scrollback dies, and the fix your agent found never reaches the teammate who hits the same error next month — unless the agent files it.
 
-The missing piece is not a feature. It's standing instructions.
+The missing piece is not a feature. It's standing instructions — and a skill that carries them, so nobody has to remember to write them.
 
 ## Setup
 
@@ -75,9 +75,49 @@ Other `premise_type` values are accepted and recorded but not currently validate
 
 If an array item is missing required fields (`premise_type`, `expression`) or has invalid types, it is skipped silently — the capture does not fail. This allows robust agent capture even if premise formatting is incorrect.
 
+## The skill
+
+`docbrain-capture` is a Claude Code skill that does the write path for you. When a conversation has
+produced knowledge that is written nowhere — a decision and why, a fix that took digging, a caveat, a
+procedure (how we deploy, rotate, roll back, get access), how a system is actually wired — it:
+
+1. checks DocBrain first (`docbrain_context` for the files concerned, or `docbrain_ask`), and offers an
+   update instead of a duplicate when the knowledge already exists;
+2. drafts one capture per fact in your team's words: what, why, how — the exact command, path, flag or
+   value — anchored to the file and line range it concerns, with the premises it rests on declared
+   (paths that must exist), so DocBrain can flag it the day one of them disappears;
+3. shows the draft exactly as it will be sent and waits for your yes;
+4. writes it with `docbrain_annotate` (or `docbrain_commit_capture` for the *why* of a commit) and
+   reports where it landed: indexed, or queued for review.
+
+It offers itself once, at a natural breakpoint, never mid-task, and a "no" ends it. Nothing leaves the
+session unapproved. It never captures secrets, tokens, hostnames from `.env` files, customer or
+personal names, logs or chatter.
+
+### Install it
+
+For the whole team, from the repository you work in:
+
+```bash
+claude plugin marketplace add docbrain-ai/docbrain --scope project
+claude plugin install docbrain@docbrain --scope project
+```
+
+Both commands write to `.claude/settings.json` — the marketplace under `extraKnownMarketplaces`, the
+plugin under `enabledPlugins`; commit that file and everyone who trusts the project has the skill. Invoke it as `/docbrain:docbrain-capture`, or say
+"capture this", "write this down", "document how we did that".
+
+Prefer a plain directory? Copy
+[`plugins/docbrain/skills/docbrain-capture`](https://github.com/docbrain-ai/docbrain/tree/main/plugins/docbrain/skills/docbrain-capture)
+into your repository's `.claude/skills/` and invoke it as `/docbrain-capture`. The skill's template and
+three finished captures are in its `resources/` directory.
+
+What counts as adoption is not the number of captures but the number that later answer a question or
+get corrected by their premises — measure that, not volume.
+
 ## The snippet
 
-Add this to your project's `CLAUDE.md` (or global `~/.claude/CLAUDE.md`):
+Without the skill (Cursor, other editors, or a team that prefers prose), add this to your project's `CLAUDE.md` (or global `~/.claude/CLAUDE.md`):
 
 ```markdown
 ## DocBrain
@@ -87,10 +127,10 @@ their repo-relative paths and read what comes back first. Pass bare paths —
 
 When we resolve an error, discover non-obvious behavior, or make a decision a
 future engineer would need, do this before the task ends:
-1. Call docbrain_suggest_capture for the files involved.
-2. If it reports a gap, draft a 3–5 line capture — what broke, the fix, the
-   trap to avoid — and show it to me for approval before calling
-   docbrain_annotate.
+1. Call docbrain_context for the files involved and read what is already
+   recorded there.
+2. If it is not there, draft a short capture — what broke, the fix, the trap
+   to avoid — and show it to me for approval before calling docbrain_annotate.
 Never include secrets, tokens, hostnames from .env files, or customer data in
 a capture. When in doubt, leave it out.
 
@@ -125,7 +165,7 @@ root, not at an org that has recorded nothing.
 
 1. Before your agent edits a file, it asks what the org already knows about it (`docbrain_context`). A caveat a teammate filed last quarter surfaces *before* the mistake, not in the post-mortem.
 2. You and your agent fix something real.
-3. The agent asks DocBrain whether that knowledge already exists (`docbrain_suggest_capture` — a corpus check, not a guess).
+3. The agent asks DocBrain whether that knowledge already exists (`docbrain_context` for the files involved — a lookup in the record, not a guess).
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
 5. Approved captures land as fragments, anchored to the file and line range they came from. A capture that declares a premise becomes checkable: DocBrain re-verifies it against your codebase and flags it the moment it stops being true, without anyone reviewing anything. A capture anchored to nothing checkable is queued for a human instead of served.
 
@@ -157,7 +197,7 @@ knowledge fragments into DocBrain's own corpus and nowhere else.
 ## Privacy properties
 
 - **Nothing is automatic.** The agent proposes; a human approves every capture, visibly, in the session.
-- **The session never uploads.** Only the approved 3–5 line capture crosses the wire — not your transcript, not your code, not your prompts.
+- **The session never uploads.** Only the approved capture crosses the wire — not your transcript, not your code, not your prompts.
 - **The client is auditable.** Every line of code that touches your session is MIT-licensed in [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp).
 - **Captures are attributed and falsifiable.** Every fragment records who filed it, and a capture is only served unreviewed when it is anchored to real code — the trust level is derived by the server from those anchors, never from anything the client claims about itself.
 
