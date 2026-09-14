@@ -633,10 +633,13 @@ This means `allowed_spaces` ACL filtering works as expected — setting `allowed
 Unlike incident records (Jira, PagerDuty, Zendesk), which are permanent historical events, **captured content decays with age**. A GitHub PR discussing an architecture from 5 years ago, or a Slack thread about a since-replaced system, should score low in freshness — not be treated as always-current.
 
 - The freshness scorer uses the **original content creation date** (when the PR/MR was opened, when the Slack thread started) as the age baseline — not the time DocBrain captured it.
-- Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one, which reduces its weight in RAG retrieval and Autopilot gap analysis.
+- Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one. What that score does depends on whether a reranker is configured:
+  - **No reranker** (`RAG_RERANK_PROVIDER=none`, the default): freshness also scales each result's retrieval score, so an older capture ranks below a newer one of similar relevance.
+  - **With a reranker** (any other provider): retrieval ranks on relevance alone, so an old capture that answers the question is still picked. Its age is not hidden: a source whose freshness has fallen into the stale or needs-review band is labelled that way to the model writing the answer.
+  - Autopilot reads the same score: it looks at the stalest documents first when it searches for pages to fix, and breaks a tie between two candidate pages in favour of the fresher one.
 - **Re-capturing the same thread** (via message shortcut, `@DocBrain capture`, or `@docbrain capture` on a PR) updates the content but preserves the original creation date as the age baseline.
 
-This ensures that outdated design decisions, replaced architectures, or deprecated processes are progressively de-emphasized in answers as they age — without ever being deleted (the historical record is preserved for explicit search).
+Either way, outdated design decisions, replaced architectures and deprecated processes are never deleted — the historical record stays available to explicit search — and the model writing an answer from a stale one is told that it is stale.
 
 ---
 
