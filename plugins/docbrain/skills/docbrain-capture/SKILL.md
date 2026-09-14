@@ -2,6 +2,7 @@
 name: docbrain-capture
 description: Capture what this conversation worked out into DocBrain, so the whole organization can find it later and DocBrain can tell when it stops being true. Use when a piece of work has produced knowledge written nowhere — a decision and its reason, a fix that took digging, a caveat, a procedure (how we deploy, rotate, roll back, get access), how a system is actually wired —, when a commit is about to be made whose reason is not in its message, or when asked to "capture this", "write this down", "document how we did that". Checks DocBrain first, drafts in the team's words with the file and the facts it rests on, shows the draft, and writes only after a yes.
 allowed-tools: Read
+license: MIT
 ---
 
 # Capture knowledge into DocBrain
