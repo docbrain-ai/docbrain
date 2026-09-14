@@ -1,5 +1,5 @@
 ---
 type: tool_used
-tool: mcp__docbrain__Read
+tool: Read
 min: 1
 ---

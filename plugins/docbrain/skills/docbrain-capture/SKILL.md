@@ -28,9 +28,10 @@ interrupt a task to offer. Never offer twice for the same thing. If the person s
 
 ## Step 1 — check before writing
 
-1. Call `docbrain_context` with the repo-relative paths the knowledge concerns (bare paths such as
-   `deploy/ingress.yaml`, never `deploy/ingress.yaml:42`), or `docbrain_ask` with the question a
-   future engineer would type.
+1. Call `docbrain_context` with `file_paths`, an array of the repo-relative paths the knowledge
+   concerns — always the array, even for one path; bare paths such as `deploy/ingress.yaml`, never
+   `deploy/ingress.yaml:42`. When no file is involved, call `docbrain_ask` with the question a future
+   engineer would type instead; never call `docbrain_context` without paths.
 2. If DocBrain already has it: say so, cite it, and offer the delta as an update instead of a duplicate.
 3. If the tools are not available in this session: say "DocBrain's tools are not connected in this
    session" and stop. Do not search the repository instead. Captured knowledge does not live in the
@@ -47,10 +48,13 @@ One capture per fact. Fill `resources/capture-template.md`; three finished examp
   the lines you name must hold what the capture says. If the change described is not in the file, say
   so and ask where it lives; never anchor a capture to lines that do not contain it. Pass those exact
   lines as `code_snippet`: DocBrain hashes them and flags the capture the day that code changes.
-- A fix, a procedure, a caveat or a fact goes through `docbrain_annotate`, anchored and with its
-  premises: that is what DocBrain can check. Use `docbrain_commit_capture` (the intent, the files, the
-  message) only when the person asks to record a commit's reasoning, or when the knowledge is nothing
-  but the reason for a diff.
+- `docbrain_commit_capture` is for one moment: the person is about to commit, or asks to record why
+  a commit was made, and the reason is not in the message — then the intent, the files and the message
+  go through it. Everything else — a fix, a procedure, a caveat, a fact — goes through
+  `docbrain_annotate`, anchored to the lines that hold it and with its premises: that is what DocBrain
+  can check; a commit capture carries no anchored lines and no premises. A change that is already
+  committed is not a commit capture: it is a fact about the file, whatever commit put it there, so do
+  not go looking for its commit — read the file.
 - When no file holds the knowledge — a process, a fact about how two systems are wired — anchor to the
   document a reader would open first (a README, a runbook, a manifest, a config) and say so in the
   capture. If no repository holds anything for it, use `docbrain_commit_capture` with the intent alone;
@@ -62,11 +66,13 @@ One capture per fact. Fill `resources/capture-template.md`; three finished examp
   checkable and indexed at once; a capture with only a file is indexed; a capture anchored to nothing
   waits for a human review.
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a
-  gotcha or limit), `procedure` (steps), `context` (background a reader needs first).
+  gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
+  explains why), `context` (background a reader needs first).
 - Keep it to what was actually established. No guesses, no "probably", no restating the code.
 - Leave out: secrets, tokens, keys, hostnames from `.env` files, customer or personal names, pasted
   logs, chat, opinions without a reason, and anything the person said to keep out. When in doubt,
-  leave it out.
+  leave it out. Say what kind of thing was left out ("a key, a hostname, a name") — never repeat the
+  value, not even to say it was omitted.
 
 ## Step 3 — ask once, then write
 

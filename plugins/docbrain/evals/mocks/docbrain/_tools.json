@@ -1,0 +1,161 @@
+{
+  "tools": [
+    {
+      "name": "docbrain_context",
+      "description": "Before changing files, ask what this organization already knows about them. Returns decisions, caveats and constraints captured against those exact paths, with a warning first if any of that knowledge has since gone stale. Use it when you are about to edit, refactor or delete code \u2014 not as a search tool. Paths must be bare, with no line suffix: \"src/auth/session.rs\" is correct, \"src/auth/session.rs:42\" is wrong and will be rejected.",
+      "inputSchema": {
+        "properties": {
+          "file_paths": {
+            "description": "Repo-relative paths about to change, e.g. [\"src/auth/session.rs\"]. No line suffix: \"src/auth/session.rs:42\" is wrong and will be rejected. Max 100.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "file_paths"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "docbrain_ask",
+      "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume engineers have admin EKS access, it will correct you). Returns a direct, human-like answer \u2014 never says 'according to the documentation'. Cites up to 5 real source documents with URLs. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
+      "inputSchema": {
+        "properties": {
+          "question": {
+            "description": "The question to ask. Use specific service/team/tool names for best results (e.g. 'Canal V2 logs', 'EKS access for engineers', 'Airflow DAG deployment via ArgoCD').",
+            "type": "string"
+          },
+          "session_id": {
+            "description": "UUID to group follow-up questions into a conversation. Omit for standalone questions.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "docbrain_suggest_capture",
+      "description": "Check if there are unanswered questions or documentation gaps related to a file or function. Returns suggestions for what knowledge is missing and should be captured. Use this proactively when working in complex or undocumented code areas.",
+      "inputSchema": {
+        "properties": {
+          "file_path": {
+            "description": "Path to the source file to check for knowledge gaps",
+            "type": "string"
+          },
+          "function_name": {
+            "description": "Specific function or method name to check. Optional \u2014 omit to check the entire file.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_path"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "docbrain_annotate",
+      "description": "Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge.",
+      "inputSchema": {
+        "properties": {
+          "annotation": {
+            "description": "The knowledge to capture \u2014 a decision, fact, caveat, procedure, or context (max 10000 chars).",
+            "type": "string"
+          },
+          "code_snippet": {
+            "description": "The actual code at the annotated location. Used to compute a hash for drift detection \u2014 if the code changes later, the annotation is flagged as potentially stale.",
+            "type": "string"
+          },
+          "file_path": {
+            "description": "Path to the source file (relative to repo root)",
+            "type": "string"
+          },
+          "fragment_type": {
+            "description": "Type of knowledge. decision = why something was chosen, fact = how something works, caveat = gotcha or limitation, procedure = step-by-step process, context = background info. Defaults to 'context'.",
+            "enum": [
+              "decision",
+              "fact",
+              "caveat",
+              "procedure",
+              "context"
+            ],
+            "type": "string"
+          },
+          "line_range": {
+            "description": "Line range in the file, e.g. '42-58'. Optional \u2014 omit for file-level annotations.",
+            "type": "string"
+          },
+          "premises": {
+            "description": "Optional machine-checkable premises this annotation rests on; v1 checks type 'path'",
+            "items": {
+              "properties": {
+                "expression": {
+                  "type": "string"
+                },
+                "premise_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "premise_type",
+                "expression"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "space": {
+            "description": "Documentation space to associate with (e.g. team or project name). Optional.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file_path",
+          "annotation"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "docbrain_commit_capture",
+      "description": "Capture knowledge from a commit \u2014 why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten.",
+      "inputSchema": {
+        "properties": {
+          "commit_message": {
+            "description": "The commit message (max 1000 chars).",
+            "type": "string"
+          },
+          "diff_summary": {
+            "description": "Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed.",
+            "type": "string"
+          },
+          "file_paths": {
+            "description": "List of files changed in the commit. Used to link the fragment to code locations.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "intent": {
+            "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars).",
+            "type": "string"
+          },
+          "space": {
+            "description": "Documentation space to associate with. Optional.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent"
+        ],
+        "type": "object"
+      }
+    }
+  ]
+}
