@@ -143,7 +143,7 @@ Someone works out why the pooler is load-bearing. Six weeks later a person on an
 
 Your coding agent is the best instrument for both halves of the fix — it is present at the second the knowledge is created, and it is the thing asking for it at the moment of the next change.
 
-The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your agent [eleven tools](crates/docbrain-mcp#tools). Point your editor at it — one file, at your **project root**:
+The [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) gives your agent [eleven tools](crates/docbrain-mcp#tools). Using Claude Code? The plugin in the next paragraph connects the server for you. For Cursor, VS Code, or a team that prefers to manage it, point your editor at it — one file, at your **project root**:
 
 ```jsonc
 // .mcp.json — Claude Code. Cursor: .cursor/mcp.json (same shape).
@@ -170,6 +170,8 @@ One skill closes the loop. Install it for the whole team from the repository you
 claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project   # both land in .claude/settings.json — commit it
 ```
+
+The install asks for your DocBrain server URL and an API key with capture permission (`docbrain token create --name "Claude Code" --role editor`), and connects the server; add `--config server_url=… --config api_key=…` to answer without a prompt. The plugin also ships an eval suite with the connector mocked, so its behaviour is checked without a server: `claude plugin eval plugins/docbrain --scaffold`.
 
 From then on, when a conversation has worked something out — a decision and its reason, a fix that took digging, a caveat, a procedure, how a system is actually wired — say `/docbrain:docbrain-capture`, or just "capture this"; the skill also offers itself when it notices. It checks DocBrain first, drafts in your team's words with the file it concerns and the premises it rests on, shows you the draft, and writes only after your yes. One line back: indexed, or queued for review. Everything is automated except the yes. Prefer a plain directory? Copy [`plugins/docbrain/skills/docbrain-capture`](plugins/docbrain/skills/docbrain-capture) into your repo's `.claude/skills/` and invoke it as `/docbrain-capture`.
 

@@ -2,9 +2,33 @@
   "name": "docbrain",
   "description": "DocBrain for coding agents: capture what a conversation worked out into your organization's knowledge, with the file it concerns and the facts it rests on, after one yes.",
   "version": "1.0.0",
-  "author": { "name": "DocBrain" },
+  "author": {
+    "name": "DocBrain"
+  },
   "homepage": "https://docbrainapi.com",
   "repository": "https://github.com/docbrain-ai/docbrain",
   "license": "MIT",
-  "keywords": ["docbrain", "knowledge", "capture", "documentation", "mcp"]
+  "keywords": [
+    "docbrain",
+    "knowledge",
+    "capture",
+    "documentation",
+    "mcp"
+  ],
+  "userConfig": {
+    "server_url": {
+      "type": "string",
+      "title": "DocBrain server URL",
+      "description": "Where your DocBrain server answers, for example https://docbrain.your-org.internal or http://localhost:3000.",
+      "required": true,
+      "default": "http://localhost:3000"
+    },
+    "api_key": {
+      "type": "string",
+      "title": "DocBrain API key",
+      "description": "A key with capture permission: create one with `docbrain token create --name \"Claude Code\" --role editor`. Write tools refuse a viewer key.",
+      "required": true,
+      "sensitive": true
+    }
+  }
 }

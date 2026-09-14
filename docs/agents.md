@@ -103,8 +103,12 @@ claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
 ```
 
-Both commands write to `.claude/settings.json` — the marketplace under `extraKnownMarketplaces`, the
-plugin under `enabledPlugins`; commit that file and everyone who trusts the project has the skill. Invoke it as `/docbrain:docbrain-capture`, or say
+The install asks for your DocBrain server URL and an API key with capture permission (`docbrain token
+create --name "Claude Code" --role editor`) and connects the MCP server for you — no `.mcp.json` to write;
+pass `--config server_url=… --config api_key=…` to answer without a prompt. Both commands write to
+`.claude/settings.json` — the marketplace under `extraKnownMarketplaces`, the plugin under
+`enabledPlugins`; commit that file and everyone who trusts the project has the skill; the key stays in
+each person's own keychain. Invoke it as `/docbrain:docbrain-capture`, or say
 "capture this", "write this down", "document how we did that".
 
 Prefer a plain directory? Copy
