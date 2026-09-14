@@ -1122,10 +1122,10 @@ impl McpServer {
                     }]
                 }))
             }
-            Err(_) => Ok(json!({
+            Err(msg) => Ok(json!({
                 "content": [{
                     "type": "text",
-                    "text": format!("Annotation already exists for {} — no duplicate created.", code_location)
+                    "text": format!("{msg} — no new annotation created for {code_location}.")
                 }]
             })),
         }
@@ -1485,10 +1485,10 @@ impl McpServer {
                     }]
                 }))
             }
-            Err(_msg) => Ok(json!({
+            Err(msg) => Ok(json!({
                 "content": [{
                     "type": "text",
-                    "text": "This commit's knowledge has already been captured — no duplicate created."
+                    "text": format!("{msg} — no duplicate commit capture created.")
                 }]
             })),
         }
@@ -1536,8 +1536,16 @@ impl McpServer {
 
     /// Create a fragment via POST /api/v1/fragments, handling duplicate source_id gracefully.
     ///
-    /// Returns `Ok(Ok(json))` on success, `Ok(Err(message))` on duplicate (409/unique violation),
-    /// or `Err(JsonRpcError)` on real failures.
+    /// Returns `Ok(Ok(json))` on success, `Ok(Err(message))` on duplicate (409, a real
+    /// unique-constraint violation on the server), or `Err(JsonRpcError)` on real failures.
+    ///
+    /// A 500 is never treated as a duplicate here. It used to be sniffed for
+    /// "unique"/"duplicate"/"23505" in the response text as a fallback — a
+    /// workaround for the server returning 500 for duplicates too, which it no
+    /// longer does. Keeping that sniff would risk the opposite failure: a
+    /// genuine, unrelated server error whose text happened to contain one of
+    /// those words would be silently relabeled "already exists" instead of
+    /// surfaced as the failure it is.
     async fn create_fragment(&self, body: &Value) -> Result<Result<Value, String>, JsonRpcError> {
         let url = format!("{}/api/v1/fragments", self.server_url);
 
@@ -1553,23 +1561,13 @@ impl McpServer {
 
         let status = response.status();
 
-        // 409 Conflict or 500 with unique violation = duplicate fragment
         if status.as_u16() == 409 {
-            return Ok(Err(
-                "Fragment already exists for this annotation (duplicate source_id).".into(),
-            ));
-        }
-        if status.as_u16() == 500 {
             let text = response.text().await.unwrap_or_default();
-            if text.contains("unique") || text.contains("duplicate") || text.contains("23505") {
-                return Ok(Err(
-                    "Fragment already exists for this annotation (duplicate source_id).".into(),
-                ));
-            }
-            return Err(JsonRpcError {
-                code: -32000,
-                message: format!("API error ({}): {}", status, text),
-            });
+            let msg = match extract_trailing_id(&text) {
+                Some(id) => format!("DocBrain already has this capture: {id}"),
+                None => "DocBrain already has this capture (duplicate source_id).".to_string(),
+            };
+            return Ok(Err(msg));
         }
 
         if !status.is_success() {
@@ -1620,6 +1618,27 @@ impl McpServer {
             message: format!("Invalid response: {}", e),
         })
     }
+}
+
+/// Pull a trailing UUID out of a server error message, e.g. `"Fragment with
+/// this source_id already exists: 4e564246-40b5-4245-8615-90d84aacc2c2"`
+/// yields `Some("4e564246-40b5-4245-8615-90d84aacc2c2")`.
+///
+/// Deliberately not a full UUID parse (no new dependency for it): splits on
+/// the LAST `": "` so an id-less message, or one with a colon earlier in its
+/// prose, is not misread, then accepts the tail only if it has the right
+/// length and hyphen positions for a UUID. A message the server sends with no
+/// id (the lookup for the colliding row failed, or found nothing) correctly
+/// yields `None` rather than a wrong or partial id.
+fn extract_trailing_id(text: &str) -> Option<&str> {
+    let candidate = text.rsplit_once(": ").map(|(_, tail)| tail.trim())?;
+    let bytes = candidate.as_bytes();
+    let looks_like_uuid = candidate.len() == 36
+        && bytes.iter().enumerate().all(|(i, b)| match i {
+            8 | 13 | 18 | 23 => *b == b'-',
+            _ => b.is_ascii_hexdigit(),
+        });
+    looks_like_uuid.then_some(candidate)
 }
 
 #[cfg(test)]
@@ -1993,5 +2012,54 @@ mod tests {
         let cjk_str = "文".repeat(250);
         let summary: String = cjk_str.chars().take(200).collect();
         assert_eq!(summary.chars().count(), 200);
+    }
+
+    /// Attack table for `extract_trailing_id`: a well-formed id after the
+    /// last ": " is found, and everything that is not exactly UUID-shaped —
+    /// short, long, wrong hyphen positions, a non-hex byte, no colon at all,
+    /// or an empty tail — is rejected rather than guessed at.
+    #[test]
+    fn extract_trailing_id_only_accepts_a_well_formed_uuid_after_the_last_colon() {
+        let cases: &[(&str, Option<&str>)] = &[
+            (
+                "Fragment with this source_id already exists: 4e564246-40b5-4245-8615-90d84aacc2c2",
+                Some("4e564246-40b5-4245-8615-90d84aacc2c2"),
+            ),
+            ("Fragment with this source_id already exists", None),
+            ("note: short", None),
+            // Multiple colons: only the LAST "\": \"" delimits the id.
+            (
+                "Fragment already exists: for source: 4e564246-40b5-4245-8615-90d84aacc2c2",
+                Some("4e564246-40b5-4245-8615-90d84aacc2c2"),
+            ),
+            // Trailing whitespace is trimmed before the shape check.
+            (
+                "Fragment with this source_id already exists: 4e564246-40b5-4245-8615-90d84aacc2c2\n",
+                Some("4e564246-40b5-4245-8615-90d84aacc2c2"),
+            ),
+            // Uppercase hex is still hex.
+            (
+                "Fragment with this source_id already exists: 4E564246-40B5-4245-8615-90D84AACC2C2",
+                Some("4E564246-40B5-4245-8615-90D84AACC2C2"),
+            ),
+            ("", None),
+            ("Fragment with this source_id already exists: ", None),
+            // 35 chars — one short.
+            ("exists: 4e564246-40b5-4245-8615-90d84aacc2c", None),
+            // 37 chars — one too many.
+            ("exists: 4e564246-40b5-4245-8615-90d84aacc2c22", None),
+            // 36 chars but a hyphen shifted out of position.
+            ("exists: 4e5642460-0b5-4245-8615-90d84aacc2c2", None),
+            // 36 chars, hyphens in the right place, one non-hex byte ('g').
+            ("exists: 4e564246-40b5-4245-8615-90d84aaccgc2", None),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                extract_trailing_id(input),
+                *expected,
+                "input: {input:?}"
+            );
+        }
     }
 }
