@@ -7,6 +7,8 @@ use dotenvy::dotenv;
 use std::io::Write;
 use std::path::PathBuf;
 
+mod instance_check;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CLI structure
 // ═══════════════════════════════════════════════════════════════════════════
@@ -261,7 +263,7 @@ enum Commands {
         #[command(subcommand)]
         action: EvidenceAction,
     },
-    /// Show CLI and server version
+    /// Show CLI and server version, and which instance answers at this URL
     Version,
 }
 
@@ -493,6 +495,12 @@ enum CiAction {
 struct Config {
     server_url: Option<String>,
     api_key: Option<String>,
+    /// How much of the corpus must disappear between two observations of this URL before
+    /// the CLI says so. Absent means the documented default in `instance_check`; a
+    /// deployment whose corpus churns can raise it, one that never loses a document can
+    /// lower it. `DOCBRAIN_CORPUS_DROP_ALERT` overrides it for a single run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    corpus_drop_alert_fraction: Option<f64>,
 }
 
 fn config_file_path() -> Option<PathBuf> {
@@ -1678,10 +1686,137 @@ fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32, style: Prog
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Which instance is answering
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// How long the instance check may take before it is abandoned. Short, because it runs
+/// before every `ask`: the check exists to stop a wrong answer being trusted, and a check
+/// that delays a right answer would be paid for on every question.
+const INSTANCE_CHECK_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// Ask the server which instance it is and how many documents it holds.
+///
+/// `None` when the question cannot be answered — no key, an older server, an unreachable
+/// one. Never an error: this is a check on the answer, not the answer.
+async fn observe_instance(
+    client: &reqwest::Client,
+    server_url: &str,
+    api_key: Option<&str>,
+) -> Option<instance_check::Observed> {
+    let key = api_key?;
+    let resp = client
+        .get(format!("{}/api/v1/instance", server_url))
+        .header("Authorization", format!("Bearer {}", key))
+        // Per-request, because this runs on the `ask` path and `ask`'s client has no
+        // timeout of its own: a check on the answer must never be able to hold up the
+        // answer. An instance that cannot say who it is within this bound is treated
+        // exactly like an older server — silence, not a warning, and no answer delayed.
+        .timeout(INSTANCE_CHECK_TIMEOUT)
+        .send()
+        .await
+        .ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let body: serde_json::Value = resp.json().await.ok()?;
+    Some(instance_check::Observed {
+        install_id: body["install_id"].as_str().map(|s| s.to_string()),
+        documents: body["documents"].as_i64()?,
+    })
+}
+
+/// Compare against what this client last saw at this URL, say so if it changed, and record
+/// the new observation. On stderr, so it reaches a reader of `--json` output too without
+/// entering the document they are parsing.
+fn report_instance_change(server_url: &str, observed: &instance_check::Observed) {
+    let threshold = instance_check::drop_fraction(read_config().corpus_drop_alert_fraction);
+    if let Some(change) =
+        instance_check::compare(instance_check::last_seen(server_url).as_ref(), observed, threshold)
+    {
+        eprintln!("\x1b[33m⚠ {}\x1b[0m", change.message());
+    }
+    instance_check::record(server_url, observed);
+}
+
+#[cfg(test)]
+mod the_instance_check_never_holds_up_an_answer {
+    use super::*;
+    use std::net::TcpListener;
+
+    /// A server that accepts the connection and then says nothing — the failure mode a
+    /// status code cannot express, and the one that would otherwise hang `ask` forever,
+    /// because `ask`'s HTTP client carries no timeout of its own.
+    fn a_server_that_never_answers() -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        std::thread::spawn(move || {
+            // Hold every accepted connection open for longer than the check may wait.
+            let mut held = Vec::new();
+            while let Ok((stream, _)) = listener.accept() {
+                held.push(stream);
+                std::thread::sleep(std::time::Duration::from_secs(30));
+            }
+        });
+        format!("http://{}", addr)
+    }
+
+    #[tokio::test]
+    async fn a_hung_instance_endpoint_gives_up_instead_of_blocking_the_question() {
+        let url = a_server_that_never_answers();
+        // Deliberately the client `ask` uses: no timeout configured on it at all.
+        let client = reqwest::Client::new();
+
+        // The outer bound is the test's own, so that a check which is NOT bounded fails in
+        // seconds with a readable message rather than hanging the suite forever — a test
+        // that can only fail by never finishing is a test nobody will wait for.
+        let outcome = tokio::time::timeout(
+            INSTANCE_CHECK_TIMEOUT * 3,
+            observe_instance(&client, &url, Some("db_sk_irrelevant")),
+        )
+        .await;
+
+        match outcome {
+            Ok(observed) => {
+                assert!(observed.is_none(), "a server that never answered must yield no observation")
+            }
+            Err(_) => panic!(
+                "the instance check was still waiting after {:?}: it is not bounded by its own \
+                 timeout, so a hung server would hold up every question",
+                INSTANCE_CHECK_TIMEOUT * 3
+            ),
+        }
+    }
+
+    #[tokio::test]
+    async fn an_older_server_without_the_route_is_silence_not_a_warning() {
+        // 404 is what every server built before this endpoint returns. It must read as
+        // "cannot check", never as "the instance changed" — a new CLI must not make a
+        // working older deployment look broken.
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        std::thread::spawn(move || {
+            use std::io::{Read, Write};
+            if let Ok((mut stream, _)) = listener.accept() {
+                let mut buf = [0u8; 1024];
+                let _ = stream.read(&mut buf);
+                let _ = stream.write_all(
+                    b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                );
+            }
+        });
+
+        let client = reqwest::Client::new();
+        let observed =
+            observe_instance(&client, &format!("http://{}", addr), Some("db_sk_irrelevant")).await;
+        assert!(observed.is_none(), "a 404 must produce no observation to compare or record");
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // version
 // ═══════════════════════════════════════════════════════════════════════════
 
-async fn show_version(server_url: &str) -> Result<()> {
+async fn show_version(server_url: &str, api_key: Option<&str>) -> Result<()> {
     println!("docbrain CLI  {}", env!("CARGO_PKG_VERSION"));
     println!("Server        {}", server_url);
 
@@ -1703,6 +1838,29 @@ async fn show_version(server_url: &str) -> Result<()> {
         Err(_) => {
             println!("Server version  (unreachable — is the server running?)");
         }
+    }
+
+    // The URL above names the host; it cannot tell one corpus from another behind the
+    // same host. `install_id` is minted once per database and the document count is the
+    // corpus's own size, so a restored dump, a re-seeded stack or an empty database is
+    // visible here instead of arriving as a confident answer from somewhere else.
+    print!("Instance      ");
+    if api_key.is_none() {
+        println!("(needs an API key — run `docbrain login`)");
+        return Ok(());
+    }
+    match observe_instance(&client, server_url, api_key).await {
+        Some(observed) => {
+            println!(
+                "{}  ({} documents)",
+                observed.install_id.as_deref().unwrap_or("(not yet minted)"),
+                observed.documents,
+            );
+            // A number on its own catches nothing — nobody remembers yesterday's count.
+            // The comparison against what this client last saw at this URL is the check.
+            report_instance_change(server_url, &observed);
+        }
+        None => println!("(unavailable — an older server, or the key was refused)"),
     }
 
     Ok(())
@@ -1858,7 +2016,7 @@ async fn main() -> Result<()> {
             handle_license(&server_url, action, &key).await?;
         }
         Commands::Version => {
-            show_version(&server_url).await?;
+            show_version(&server_url, api_key.as_deref()).await?;
         }
     }
 
@@ -1914,6 +2072,9 @@ async fn handle_login(server_override: Option<&str>, email_flag: Option<&str>) -
     write_config(&Config {
         server_url: Some(server_url.clone()),
         api_key: Some(result.key),
+        // Everything else the user set stays set: a login must not quietly reset
+        // preferences it does not own.
+        ..read_config()
     })?;
 
     println!("Logged in to {}.", server_url);
@@ -2046,6 +2207,7 @@ Connection: close\r
     write_config(&Config {
         server_url: Some(server_url.clone()),
         api_key: Some(api_key),
+        ..read_config()
     })?;
 
     println!("Logged in to {} via {}.", server_url, provider);
@@ -2083,8 +2245,8 @@ async fn handle_logout(server_url: &str) -> Result<()> {
     }
 
     // Clear the config (keep server_url, remove api_key)
-    let server = cfg.server_url;
-    write_config(&Config { server_url: server, api_key: None })?;
+    let server = cfg.server_url.clone();
+    write_config(&Config { server_url: server, api_key: None, ..cfg })?;
 
     println!("Logged out. Session key revoked and removed from config.");
     Ok(())
@@ -2429,6 +2591,15 @@ async fn ask(
     // that visible. Suppressed under --json so machine output stays parseable.
     if !json {
         println!("  \x1b[2m{}\x1b[0m", server_url);
+    }
+
+    // The URL names the host; it cannot tell one corpus from another behind the same host.
+    // Ask the instance who it is before asking it a question, and say so — on stderr, ahead
+    // of the answer — if the database changed or most of the corpus went missing since this
+    // client last looked. Silent when nothing changed, and silent when the server is older
+    // than the endpoint: a check that cannot run must not become noise.
+    if let Some(observed) = observe_instance(&client, server_url, api_key).await {
+        report_instance_change(server_url, &observed);
     }
 
     // --json wants one parseable document, so ask the server not to stream.
