@@ -80,6 +80,13 @@ With `PREMISE_MONITOR_ENABLED=true` (the default), the server runs a standing mo
   immediately, rather than waiting for the sweep.
 - **At startup, and after any missed events,** it backfills premises for indexed fragments
   that have none, so nothing is silently unmonitored.
+- **A discarded capture's premises are not swept.** Discarding a capture rejects it, so its
+  claims stop being checked and stop being reported: they do not change state again, and
+  `POST /api/v1/premises/check` never names a discarded capture. The rows are kept, frozen
+  with the state and verdict they held at the moment of the discard — the same choice the
+  discard itself makes, where the search entry goes and the capture stays with its reason —
+  so the record of what was claimed survives the rejection. A capture that is merely waiting
+  for review is not affected; only a rejected one stops being checked.
 
 Writes happen only when something changed; a sweep over an unchanged world writes nothing
 and emits nothing. If the monitor cannot check (database hiccup, missing listing), premises
