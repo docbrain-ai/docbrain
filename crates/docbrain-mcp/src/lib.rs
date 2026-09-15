@@ -535,11 +535,23 @@ impl McpServer {
                             "file_paths": {
                                 "type": "array",
                                 "items": { "type": "string" },
-                                "description": "List of files changed in the commit. Used to link the fragment to code locations."
+                                "description": "List of files changed in the commit. Each one becomes a premise this capture is checked against, so the capture is flagged if that file is later moved or deleted. Send them — a commit capture with no files can never be checked against the code again."
                             },
                             "space": {
                                 "type": "string",
                                 "description": "Documentation space to associate with. Optional."
+                            },
+                            "premises": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "premise_type": { "type": "string" },
+                                        "expression": { "type": "string" }
+                                    },
+                                    "required": ["premise_type", "expression"]
+                                },
+                                "description": "Optional machine-checkable premises this reasoning rests on, beyond the changed files; v1 checks type 'path'"
                             }
                         },
                         "required": ["intent"]
@@ -1374,6 +1386,11 @@ impl McpServer {
     /// Creates a knowledge fragment via `POST /api/v1/fragments` with:
     /// - `source_type: commit`
     /// - Content combines intent + diff summary + commit message
+    /// - `code_location`: the changed files, which the server reads back as one
+    ///   path premise each, so the capture is checked against the files it
+    ///   describes instead of ageing silently
+    /// - `premises`: anything else the reasoning rests on, passed straight
+    ///   through the way `docbrain_annotate` passes its own
     async fn tool_commit_capture(&self, args: &Value) -> Result<Value, JsonRpcError> {
         let intent = args["intent"].as_str().ok_or_else(|| JsonRpcError {
             code: -32602,
@@ -1462,6 +1479,12 @@ impl McpServer {
         if !commit_message.is_empty() {
             body["source_ref"] = json!(commit_message);
         }
+        // Premises the caller declares on top of the ones the server derives
+        // from `file_paths` — a version or a config key the reasoning rests on,
+        // or a path the commit did not touch but the decision depends on.
+        if let Some(premises) = args["premises"].as_array() {
+            body["premises"] = json!(premises);
+        }
 
         match self.create_fragment(&body).await? {
             Ok(result) => {
@@ -1470,8 +1493,13 @@ impl McpServer {
                 let action = result["routed_action"].as_str().unwrap_or("unknown");
 
                 let files_note = match &code_location {
-                    Some(loc) => format!("\nLinked files: {}", loc),
-                    None => String::new(),
+                    Some(loc) => format!(
+                        "\nLinked files: {}\nEach is watched — this capture is flagged if one of them moves or disappears.",
+                        loc
+                    ),
+                    None => "\nTip: pass file_paths so this capture is checked against the files it describes; \
+                             without them nothing can ever tell whether it still holds."
+                        .to_string(),
                 };
 
                 Ok(json!({
@@ -1876,6 +1904,55 @@ mod tests {
         let mut hasher3 = Sha256::new();
         hasher3.update("fn main() { }".as_bytes());
         assert_ne!(hex::encode(hasher3.finalize()), hash);
+    }
+
+    /// The commit tool takes premises the way the annotate tool does. Without
+    /// it a commit capture could only ever carry what the server derives from
+    /// its file list, and a reasoning that rests on a version or a config key
+    /// would have nowhere to say so.
+    #[test]
+    fn commit_capture_accepts_premises_like_annotate_does() {
+        let server = make_server();
+        let list = server.handle_tools_list();
+        let tools = list["tools"].as_array().unwrap();
+        let schema_of = |name: &str| {
+            tools
+                .iter()
+                .find(|t| t["name"] == name)
+                .unwrap_or_else(|| panic!("{name} missing from tools/list"))["inputSchema"]
+                ["properties"]["premises"]
+                .clone()
+        };
+
+        let commit = schema_of("docbrain_commit_capture");
+        assert!(
+            commit.is_object(),
+            "docbrain_commit_capture must declare a premises argument"
+        );
+        assert_eq!(
+            commit["items"], schema_of("docbrain_annotate")["items"],
+            "one premise shape across the capture tools, not two"
+        );
+    }
+
+    /// The file list is what makes a commit capture checkable, so the argument
+    /// has to say so where an agent reads it — the property description, not
+    /// only the tool's own.
+    #[test]
+    fn commit_capture_file_paths_description_says_it_is_what_gets_checked() {
+        let server = make_server();
+        let list = server.handle_tools_list();
+        let tools = list["tools"].as_array().unwrap();
+        let description = tools
+            .iter()
+            .find(|t| t["name"] == "docbrain_commit_capture")
+            .unwrap()["inputSchema"]["properties"]["file_paths"]["description"]
+            .as_str()
+            .unwrap();
+        assert!(
+            description.contains("premise"),
+            "an agent deciding whether to send file_paths must be told what they buy: {description}"
+        );
     }
 
     #[tokio::test]

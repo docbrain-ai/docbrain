@@ -136,7 +136,7 @@
             "type": "string"
           },
           "file_paths": {
-            "description": "List of files changed in the commit. Used to link the fragment to code locations.",
+            "description": "List of files changed in the commit. Each one becomes a premise this capture is checked against, so the capture is flagged if that file is later moved or deleted. Send them \u2014 a commit capture with no files can never be checked against the code again.",
             "items": {
               "type": "string"
             },
@@ -145,6 +145,25 @@
           "intent": {
             "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars).",
             "type": "string"
+          },
+          "premises": {
+            "description": "Optional machine-checkable premises this reasoning rests on, beyond the changed files; v1 checks type 'path'",
+            "items": {
+              "properties": {
+                "expression": {
+                  "type": "string"
+                },
+                "premise_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "premise_type",
+                "expression"
+              ],
+              "type": "object"
+            },
+            "type": "array"
           },
           "space": {
             "description": "Documentation space to associate with. Optional.",

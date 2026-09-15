@@ -36,10 +36,19 @@ check" — never "broken".
    premises. Prose mentions, globs, URLs, flags, and placeholders are ignored — the same
    grammar the [answer-time claim verifier](configuration.md) uses.
 2. **Explicit declaration.** Agents capturing over MCP can pass a `premises` array to
-   `docbrain_annotate` — see [Agent Capture](agents.md). v1 checks `premise_type: "path"`;
-   other types are recorded but never checked (and never alert). Malformed entries are
-   skipped item-by-item — a bad premise never fails the capture.
-3. **Backfill.** `POST /api/v1/premises/backfill` (admin) extracts premises for every
+   `docbrain_annotate` or `docbrain_commit_capture` — see [Agent Capture](agents.md). v1
+   checks `premise_type: "path"`; other types are recorded but never checked (and never
+   alert). Malformed entries are skipped item-by-item — a bad premise never fails the
+   capture. The array is capped at **100 items**; a capture declaring more is rejected with
+   `400` rather than truncated, because the sweep reads every premise row in one unpaged
+   query and that cap is what keeps its working set bounded by fragment volume.
+3. **A commit capture's changed files.** `docbrain_commit_capture` records why a change was
+   made; the server turns each path in its `file_paths` list into a `path` premise, so the
+   capture is checked against the files it describes and is flagged when one of them moves
+   or disappears. Without it a commit capture could never be checked against the code again.
+   Repeats collapse to one premise, and the same 100-item cap applies. A commit capture sent
+   with no files declares nothing and waits in the review queue instead.
+4. **Backfill.** `POST /api/v1/premises/backfill` (admin) extracts premises for every
    already-indexed fragment that has none. Safe to re-run; it never duplicates.
 
 ## The four states

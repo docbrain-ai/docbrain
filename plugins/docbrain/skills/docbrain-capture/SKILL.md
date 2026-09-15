@@ -52,21 +52,24 @@ One capture per fact. Fill `resources/capture-template.md`; three finished examp
   a commit was made, and the reason is not in the message. The signals are the person's own words —
   "about to commit", "before I commit", "the message will say", "record why I changed" — and when
   one is present the diff is the anchor: the intent, the files and the message go through
-  `docbrain_commit_capture`, never an annotation on lines that are about to change. Everything else —
-  a fix, a procedure, a caveat, a fact — goes through `docbrain_annotate`, anchored to the lines that
-  hold it and with its premises: that is what DocBrain can check; a commit capture carries no anchored
-  lines and no premises. A change that is already committed is not a commit capture: it is a fact
-  about the file, whatever commit put it there, so do not go looking for its commit — read the file.
+  `docbrain_commit_capture`, never an annotation on lines that are about to change. Send `file_paths`:
+  DocBrain turns each changed file into a premise and flags the capture the day one of them moves or
+  disappears, so the file list is what keeps a commit capture checkable — without it nothing can ever
+  tell whether the reasoning still holds. Everything else — a fix, a procedure, a caveat, a fact —
+  goes through `docbrain_annotate`, anchored to the lines that hold it. A change that is already
+  committed is not a commit capture: it is a fact about the file, whatever commit put it there, so do
+  not go looking for its commit — read the file.
 - When no file holds the knowledge — a process, a fact about how two systems are wired — anchor to the
   document a reader would open first (a README, a runbook, a manifest, a config) and say so in the
   capture. If no repository holds anything for it, use `docbrain_commit_capture` with the intent alone;
   it waits in the review queue, which is the right place for a claim nothing can check.
 - Declare the premises it rests on: paths that must exist for the capture to hold
-  (`premise_type: "path"`). Every premise path must exist in the repository right now — check it before
-  you show the draft; a path that does not exist is not a premise, and a wrong one goes silent forever.
-  DocBrain re-checks the paths and flags the capture the day one disappears. A capture with premises is
-  checkable and indexed at once; a capture with only a file is indexed; a capture anchored to nothing
-  waits for a human review.
+  (`premise_type: "path"`). Both capture tools take them; on a commit capture they are what the
+  reasoning rests on beyond the files it changed. Every premise path must exist in the repository right
+  now — check it before you show the draft; a path that does not exist is not a premise, and a wrong one
+  goes silent forever. DocBrain re-checks the paths and flags the capture the day one disappears. A
+  capture with premises is checkable and indexed at once; a capture with only a file is indexed; a
+  capture anchored to nothing waits for a human review.
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a
   gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
   explains why), `context` (background a reader needs first).

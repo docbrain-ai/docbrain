@@ -44,7 +44,7 @@ claude mcp add docbrain \
 
 ## Capturing Knowledge with Premises
 
-When calling `docbrain_annotate`, agents may include an optional `premises` array to link captured knowledge to verifiable facts about your codebase:
+When calling `docbrain_annotate` or `docbrain_commit_capture`, agents may include an optional `premises` array to link captured knowledge to verifiable facts about your codebase:
 
 ```json
 {
@@ -74,6 +74,10 @@ Other `premise_type` values are accepted and recorded but not currently validate
 **Malformed Premises:**
 
 If an array item is missing required fields (`premise_type`, `expression`) or has invalid types, it is skipped silently — the capture does not fail. This allows robust agent capture even if premise formatting is incorrect.
+
+**Commit captures declare theirs by listing the files:**
+
+`docbrain_commit_capture` records why a change was made. Every path in its `file_paths` list becomes a `path` premise on the server, so the capture is checked against the files it describes and is flagged when one of them moves or disappears — send the file list, or nothing will ever be able to tell whether the reasoning still holds. Its `premises` array is for what the reasoning rests on beyond the files the commit touched.
 
 ## The skill
 

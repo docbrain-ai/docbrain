@@ -29,4 +29,5 @@ What the fields become on the wire:
 | Premises | `premises: [{ "premise_type": "path", "expression": "<path>" }]` |
 
 For the *why* of a commit, use `docbrain_commit_capture` instead: `intent` (the Why), `file_paths`,
-`commit_message`, and a `diff_summary` in words.
+`commit_message`, and a `diff_summary` in words. `file_paths` carries the Premises line there — each
+file becomes a `path` premise — and `premises` takes any the reasoning rests on beyond them.
