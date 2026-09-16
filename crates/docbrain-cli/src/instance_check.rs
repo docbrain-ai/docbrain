@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Did the instance behind this URL change since the last time this client looked?
 //!
 //! `~/.docbrain/config.json` carries the server URL and the key together, so anything that

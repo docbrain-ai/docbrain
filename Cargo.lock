@@ -442,7 +442,7 @@ dependencies = [
 
 [[package]]
 name = "docbrain-cli"
-version = "1.5.25"
+version = "1.5.26"
 dependencies = [
  "anyhow",
  "chrono",
@@ -464,7 +464,7 @@ dependencies = [
 
 [[package]]
 name = "docbrain-evidence"
-version = "1.5.25"
+version = "1.5.26"
 dependencies = [
  "base64",
  "chrono",
@@ -480,7 +480,7 @@ dependencies = [
 
 [[package]]
 name = "docbrain-mcp"
-version = "1.5.25"
+version = "1.5.26"
 dependencies = [
  "anyhow",
  "axum",
