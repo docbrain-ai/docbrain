@@ -274,10 +274,10 @@ enum Commands {
         #[command(subcommand)]
         action: EvidenceAction,
     },
-    /// Connect (or reconnect) a source this deployment can OAuth — prints the URL to open
+    /// Connect (or reconnect) a source. With no argument, lists what this deployment has
     Connect {
-        /// The source id as the server names it, e.g. `slack`
-        source: String,
+        /// The source id as the server names it. Omit it to see the list
+        source: Option<String>,
     },
     /// Show CLI and server version, and which instance answers at this URL
     Version,
@@ -433,13 +433,26 @@ enum HealthAction {
     },
     /// Validate a kf/1 JSON file — one object, or an array of them.
     ///
-    /// Offline: no server, no API key. Exit 0 when every finding in the file
-    /// is valid, 1 with one line per violation when any is not, so it can
-    /// gate a pipeline directly.
+    /// Exit 0 when every finding in the file is valid, 1 with one line per
+    /// violation when any is not, so it can gate a pipeline directly.
+    ///
+    /// The schema comes from `--schema`, or from the server this CLI is
+    /// configured for. It is not carried in the binary: a validator that
+    /// embeds a schema validates against whatever was true when it was
+    /// built, and embeds whoever wrote it. With `--schema` the command needs
+    /// no server and no key, which is what a CI gate on an export wants —
+    /// fetch the schema once (`docbrain health kf-schema > kf.json`) and
+    /// keep it beside the pipeline.
     Validate {
         /// Path to the JSON file
         file: std::path::PathBuf,
+        /// Path to the kf/1 JSON Schema. Without it, the schema is fetched
+        /// from the configured server.
+        #[arg(long)]
+        schema: Option<std::path::PathBuf>,
     },
+    /// Print this deployment's kf/1 JSON Schema, for `validate --schema`
+    KfSchema,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
@@ -1735,15 +1748,193 @@ fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32, style: Prog
     }
 }
 
-/// Start an OAuth connect for one source and print the URL to open.
+/// How long to wait for the browser half of the dance.
 ///
-/// The dance finishes in the browser and the callback lands on the server, so this does
-/// not wait for it: a terminal that blocks on a browser the reader may open on another
-/// machine is a terminal they kill. `docbrain version` says whether it took.
+/// The state token the URL carries lives for ten minutes (`STATE_TTL_SECONDS`,
+/// docbrain-oauth `dance.rs`), so a wait longer than that would outlive the thing it is
+/// waiting for and report a timeout for a flow that had already expired.
+const CONNECT_WAIT: std::time::Duration = std::time::Duration::from_secs(600);
+
+/// How often to ask. Three seconds is under the threshold where a person starts wondering
+/// whether it noticed, and 200 cheap calls over ten minutes is nothing next to the dance.
+const CONNECT_POLL: std::time::Duration = std::time::Duration::from_secs(3);
+
+/// What a poll means for the wait.
+#[derive(Debug, PartialEq, Eq)]
+enum ConnectWait {
+    /// A grant was written after we started. The dance completed.
+    Connected,
+    /// Keep waiting.
+    Pending,
+    /// We cannot tell — an older server, or one that does not report when a grant was
+    /// written. Stop polling rather than spinning on a signal that will never arrive.
+    Unknowable,
+}
+
+/// One poll of a source's connection: its status, and when the grant behind it was
+/// last written.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+struct Connection {
+    status: Option<String>,
+    /// `refreshed_at` — the moment a dance completed or a refresh replaced the token.
+    written_at: Option<String>,
+}
+
+/// The decision, separated from the IO so it can be tested without a server or a clock.
+///
+/// It waits for EVIDENCE OF THE EVENT, not for a state. Waiting for `status == "active"`
+/// looked right and was not: a source that is already connected is still `active` a second
+/// later, so a re-authorisation — the common case, and the one the owner ran — could never
+/// be confirmed, and the command refused to wait at all. `refreshed_at` moves when the
+/// callback writes a grant, so one rule now covers a first connect and a re-connect with
+/// no special case between them.
+fn connect_wait_state(before: &Connection, now: &Connection) -> ConnectWait {
+    let Some(now_written) = now.written_at.as_deref() else {
+        return ConnectWait::Unknowable;
+    };
+    let wrote_since_we_started = match before.written_at.as_deref() {
+        // Never connected before: any grant at all is the one we are waiting for.
+        None => true,
+        Some(then) => now_written != then,
+    };
+    if wrote_since_we_started && now.status.as_deref() == Some("active") {
+        ConnectWait::Connected
+    } else {
+        ConnectWait::Pending
+    }
+}
+
+/// This user's connection for one source: status, and when its grant was last written.
+async fn connection_of(
+    client: &reqwest::Client,
+    server_url: &str,
+    api_key: &str,
+    source: &str,
+) -> Connection {
+    let Ok(response) = client
+        .get(format!("{}/api/v1/oauth/mcp/manifests", server_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await
+    else {
+        return Connection::default();
+    };
+    if !response.status().is_success() {
+        return Connection::default();
+    }
+    let Ok(rows) = response.json::<serde_json::Value>().await else {
+        return Connection::default();
+    };
+    let row = rows
+        .as_array()
+        .and_then(|rs| rs.iter().find(|r| r["manifest_id"].as_str() == Some(source)));
+    Connection {
+        status: row.and_then(|r| r["status"].as_str().map(str::to_string)),
+        written_at: row.and_then(|r| r["connected_at"].as_str().map(str::to_string)),
+    }
+}
+
+/// Render the connectable sources as the reader will see them.
+///
+/// Separated from the fetch so the wording and the ordering can be tested without a
+/// server. Sorted by id: two runs a second apart must read identically, and a list whose
+/// order follows a server's iteration is one nobody can scan twice.
+fn render_source_list(rows: &[(String, String, String)]) -> String {
+    // Sorted HERE rather than by the caller: the guarantee belongs to the thing that
+    // renders, or it is a property nobody tests and the next caller forgets.
+    let mut rows: Vec<&(String, String, String)> = rows.iter().collect();
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    let rows = &rows[..];
+    if rows.is_empty() {
+        return "This deployment has no sources that can be connected from here.\n\
+                An administrator adds them; `docbrain version` names the instance you are \
+                talking to."
+            .to_string();
+    }
+    let id_width = rows.iter().map(|(id, _, _)| id.len()).max().unwrap_or(0);
+    let name_width = rows.iter().map(|(_, name, _)| name.len()).max().unwrap_or(0);
+    let mut out = String::from("Sources you can connect:\n\n");
+    for (id, name, status) in rows.iter().copied() {
+        out.push_str(&format!(
+            "  {id:<id_width$}  {name:<name_width$}  {}\n",
+            human_status(status)
+        ));
+    }
+    out.push_str("\nConnect one with:  docbrain connect <id>");
+    out
+}
+
+/// The server's enum in the words the rest of the product uses. `needs_reconnect` is a
+/// wire value, and nobody should have to read one.
+fn human_status(status: &str) -> &str {
+    match status {
+        "active" => "connected",
+        "needs_reconnect" => "needs reconnecting",
+        "not_connected" => "not connected",
+        other => other,
+    }
+}
+
+/// What can be connected here, with each source's state for this caller.
+///
+/// `docbrain connect` with no argument. The warning before an ask already names the id of
+/// a source that BROKE — "Fix: docbrain connect <id>" — so the reconnect path
+/// needs no discovery. This covers the other one: a source never connected is silent by
+/// design (a fault is worth saying, a choice is not), so without this there is no way to
+/// learn from a terminal that it exists.
+async fn handle_connect_list(server_url: &str, api_key: &str) -> Result<()> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()?;
+    let response = client
+        .get(format!("{}/api/v1/oauth/mcp/manifests", server_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        anyhow::bail!("Could not list sources ({}): {}", status, body.trim());
+    }
+    let rows: serde_json::Value = response.json().await?;
+    let mut list: Vec<(String, String, String)> = rows
+        .as_array()
+        .map(|rs| {
+            rs.iter()
+                .filter_map(|r| {
+                    Some((
+                        r["manifest_id"].as_str()?.to_string(),
+                        r["display_name"].as_str().unwrap_or_default().to_string(),
+                        r["status"].as_str().unwrap_or("unknown").to_string(),
+                    ))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    println!("{}", render_source_list(&list));
+    Ok(())
+}
+
+
+/// Start an OAuth connect for one source, print the URL, and WAIT for the dance to finish.
+///
+/// It waited for nothing until 2026-09-16: it printed a URL and told the reader to run
+/// another command afterwards to find out whether it had worked. The owner compared it
+/// with `gh auth login` and `aws sso login`, which block and then confirm, and he was
+/// right — learning the outcome in the terminal you are already in is the whole ergonomics
+/// of the thing.
+///
+/// The wait is bounded by the state token's own lifetime, and Ctrl-C costs nothing: the
+/// browser half stays valid, because the callback lands on the server rather than here.
 async fn handle_connect(server_url: &str, source: &str, api_key: &str) -> Result<()> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(20))
         .build()?;
+
+    // Captured BEFORE the dance so the wait can tell a NEW grant from the one already
+    // there — which is what lets a re-authorisation be confirmed like any other.
+    let before = connection_of(&client, server_url, api_key, source).await;
+
     let response = client
         .post(format!("{}/api/v1/oauth/mcp/init/{}", server_url, source))
         .header("Authorization", format!("Bearer {}", api_key))
@@ -1766,8 +1957,32 @@ async fn handle_connect(server_url: &str, source: &str, api_key: &str) -> Result
         .ok_or_else(|| anyhow::anyhow!("the server did not return an authorize_url"))?;
 
     println!("Open this to connect {}:\n\n  {}\n", source, url);
-    println!("Then run `docbrain version` — the source stops being listed as unavailable.");
-    Ok(())
+
+    println!("Waiting for you to finish in the browser… (Ctrl-C is safe; the link stays valid)");
+    let deadline = std::time::Instant::now() + CONNECT_WAIT;
+    while std::time::Instant::now() < deadline {
+        tokio::time::sleep(CONNECT_POLL).await;
+        let now = connection_of(&client, server_url, api_key, source).await;
+        match connect_wait_state(&before, &now) {
+            ConnectWait::Connected => {
+                println!("Connected. {} is available to answers again.", source);
+                return Ok(());
+            }
+            ConnectWait::Pending => {}
+            ConnectWait::Unknowable => {
+                println!(
+                    "This server doesn't report when a grant was written, so I can't confirm \
+                     it from here. Finish in the browser, then run `docbrain version`."
+                );
+                return Ok(());
+            }
+        }
+    }
+
+    anyhow::bail!(
+        "Timed out after 10 minutes — the authorize link has expired too. Run \
+         `docbrain connect {}` again."
+    , source)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1848,6 +2063,152 @@ fn report_instance_change(server_url: &str, observed: &instance_check::Observed)
         eprintln!("\x1b[33m⚠ {}\x1b[0m", change.message());
     }
     instance_check::record(server_url, observed);
+}
+
+#[cfg(test)]
+mod finding_out_what_to_connect {
+    //! `docbrain connect` with no argument tells you the ids.
+    //!
+    //! The pre-ask warning already names the id of a source that BROKE
+    //! ("Fix: docbrain connect <id>"), so a reconnect needs no discovery. The
+    //! gap is the other case: a source never connected is deliberately silent — a fault is
+    //! worth saying, a choice is not — so from a terminal there was no way to learn it
+    //! exists. Asking someone to open the web console to read an id back into their shell
+    //! is the kind of thing that makes a CLI the second-best way to use a product.
+
+    use super::render_source_list;
+
+    fn rows() -> Vec<(String, String, String)> {
+        vec![
+            ("zulip".into(), "Zulip".into(), "not_connected".into()),
+            ("acme_gateway".into(), "ACME Gateway".into(), "active".into()),
+            ("jira".into(), "Jira".into(), "needs_reconnect".into()),
+        ]
+    }
+
+    #[test]
+    fn every_id_is_shown_because_the_id_is_what_the_command_takes() {
+        let out = render_source_list(&rows());
+        for id in ["acme_gateway", "jira", "zulip"] {
+            assert!(out.contains(id), "`{id}` is missing, and it is what the reader must type:\n{out}");
+        }
+    }
+
+    #[test]
+    fn the_state_is_in_words_not_wire_values() {
+        let out = render_source_list(&rows());
+        assert!(out.contains("needs reconnecting"), "{out}");
+        assert!(!out.contains("needs_reconnect"), "a wire value reached the reader:\n{out}");
+        assert!(out.contains("connected"));
+    }
+
+    #[test]
+    fn the_order_is_stable_so_the_list_can_be_scanned_twice() {
+        // Sorted by id, not by whatever order the server happened to return.
+        let out = render_source_list(&rows());
+        let a = out.find("acme_gateway").unwrap();
+        let j = out.find("jira").unwrap();
+        let z = out.find("zulip").unwrap();
+        assert!(a < j && j < z, "not in id order:\n{out}");
+    }
+
+    #[test]
+    fn it_says_how_to_use_what_it_just_listed() {
+        assert!(render_source_list(&rows()).contains("docbrain connect <id>"));
+    }
+
+    #[test]
+    fn a_deployment_with_nothing_to_connect_says_so_plainly() {
+        // Not an empty list with a header, which reads as a failure to load.
+        let out = render_source_list(&[]);
+        assert!(out.contains("no sources"), "{out}");
+        assert!(!out.contains("Sources you can connect:"), "an empty header is a broken page:\n{out}");
+    }
+}
+
+#[cfg(test)]
+mod the_connect_wait {
+    //! What the wait may and may not call a success.
+    //!
+    //! `docbrain connect` printed a URL and returned. It now waits — and the interesting
+    //! part is not the waiting, it is WHICH SIGNAL it waits on.
+    //!
+    //! The first version waited for `status == "active"` and therefore could not confirm a
+    //! re-authorisation at all: a connected source is still `active` a second later, so
+    //! the command refused to wait whenever the source was already connected. The owner
+    //! ran exactly that and got no wait. The signal is now `refreshed_at` — the moment a
+    //! grant was WRITTEN — which is evidence of the event rather than of the state, and
+    //! covers a first connect and a re-connect with one rule.
+
+    use super::{connect_wait_state, ConnectWait, Connection};
+
+    fn conn(status: &str, written_at: Option<&str>) -> Connection {
+        Connection {
+            status: Some(status.to_string()),
+            written_at: written_at.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn a_first_connect_is_confirmed() {
+        let before = Connection { status: Some("not_connected".into()), written_at: None };
+        let now = conn("active", Some("2026-09-16T18:00:00Z"));
+        assert_eq!(connect_wait_state(&before, &now), ConnectWait::Connected);
+    }
+
+    #[test]
+    fn a_re_authorisation_of_an_already_connected_source_is_confirmed_too() {
+        // The case the owner ran. The old rule saw "active" before and after and refused
+        // to wait; this one sees that the grant was rewritten.
+        let before = conn("active", Some("2026-09-16T17:00:00Z"));
+        let now = conn("active", Some("2026-09-16T18:00:00Z"));
+        assert_eq!(connect_wait_state(&before, &now), ConnectWait::Connected);
+    }
+
+    #[test]
+    fn an_untouched_connection_is_never_reported_as_connected() {
+        // The false pass this guards: the grant is the same one that was there before the
+        // browser was opened. Saying "Connected." for it is a success message for
+        // something nobody did — the same shape as a health check that cannot fail.
+        let before = conn("active", Some("2026-09-16T17:00:00Z"));
+        let now = conn("active", Some("2026-09-16T17:00:00Z"));
+        assert_eq!(connect_wait_state(&before, &now), ConnectWait::Pending);
+    }
+
+    #[test]
+    fn a_rewritten_grant_that_is_not_active_keeps_waiting() {
+        // A revoked or scope-drifted token can be rewritten and still be unusable. The
+        // dance is done when the grant is BOTH new and usable.
+        let before = conn("needs_reconnect", Some("2026-09-16T17:00:00Z"));
+        let now = conn("needs_reconnect", Some("2026-09-16T18:00:00Z"));
+        assert_eq!(connect_wait_state(&before, &now), ConnectWait::Pending);
+    }
+
+    #[test]
+    fn a_source_still_waiting_keeps_the_wait_going() {
+        let before = Connection { status: Some("not_connected".into()), written_at: None };
+        for state in ["needs_reconnect", "not_connected"] {
+            let now = Connection { status: Some(state.into()), written_at: None };
+            assert_eq!(connect_wait_state(&before, &now), ConnectWait::Unknowable, "{state}");
+        }
+    }
+
+    #[test]
+    fn a_server_that_cannot_report_the_moment_stops_the_wait() {
+        // An older server has no `connected_at`. Ten minutes of polling would end in a
+        // timeout that blames the reader for a dance they completed correctly.
+        let before = conn("not_connected", None);
+        let now = Connection { status: Some("active".into()), written_at: None };
+        assert_eq!(connect_wait_state(&before, &now), ConnectWait::Unknowable);
+    }
+
+    #[test]
+    fn the_wait_cannot_outlive_the_link_it_is_waiting_on() {
+        // The state token lives ten minutes (docbrain-oauth dance.rs STATE_TTL_SECONDS).
+        // A longer wait would report a timeout for a link that expired minutes earlier.
+        assert_eq!(super::CONNECT_WAIT.as_secs(), 600);
+        assert!(super::CONNECT_POLL.as_secs() <= 5, "a poll nobody notices");
+    }
 }
 
 #[cfg(test)]
@@ -2188,10 +2549,30 @@ async fn main() -> Result<()> {
             }
             // Deliberately before any key or server lookup: validating a file
             // is the one thing in this CLI that needs nothing but the file.
-            HealthAction::Validate { file } => {
+            HealthAction::KfSchema => {
+                let key = api_key.clone().ok_or_else(|| anyhow::anyhow!(
+                    "API key required to fetch the schema. Run `docbrain login`."
+                ))?;
+                println!("{}", fetch_kf_schema(&server_url, &key).await?);
+            }
+            HealthAction::Validate { file, schema } => {
                 let text = std::fs::read_to_string(&file)
                     .map_err(|e| anyhow::anyhow!("cannot read {}: {e}", file.display()))?;
-                match validate_kf_file_contents(&text) {
+                // A schema on disk needs no server and no key — that is the CI case. Only
+                // the absence of one sends us to the network.
+                let schema_json = match &schema {
+                    Some(path) => std::fs::read_to_string(path)
+                        .map_err(|e| anyhow::anyhow!("cannot read the schema {}: {e}", path.display()))?,
+                    None => {
+                        let key = api_key.clone().ok_or_else(|| anyhow::anyhow!(
+                            "No --schema given and no API key to fetch one with.\n\
+                             Either pass a schema file (`--schema kf.json`) or run \
+                             `docbrain login` so it can be fetched from the server."
+                        ))?;
+                        fetch_kf_schema(&server_url, &key).await?
+                    }
+                };
+                match validate_kf_file_contents(&text, &schema_json) {
                     Ok(n) => println!("valid: {n} kf/1 finding(s)"),
                     Err(violations) => {
                         for v in &violations {
@@ -2317,7 +2698,13 @@ async fn main() -> Result<()> {
             let key = api_key.ok_or_else(|| anyhow::anyhow!(
                 "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
             ))?;
-            handle_connect(&server_url, &source, &key).await?;
+            match source {
+                Some(s) => handle_connect(&server_url, &s, &key).await?,
+                // No argument is not an error: it is how someone finds out what the ids
+                // are. A CLI that demands an exact id it never shows you is a CLI you use
+                // by opening the web console first.
+                None => handle_connect_list(&server_url, &key).await?,
+            }
         }
         Commands::Version => {
             show_version(&server_url, api_key.as_deref()).await?;
@@ -6033,16 +6420,34 @@ async fn evidence_export(
 // Knowledge health (kf/1)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// The published `kf/1` schema, embedded so `validate` needs nothing but the
-/// file it is given — no network, no server, no config.
+
+/// This deployment's kf/1 schema, over the wire.
 ///
-/// `docbrain-core` embeds the same file for the server's own validation.
-/// The duplication is deliberate and bounded: this crate is the public,
-/// MIT-licensed client and does not depend on the server's crates, and the
-/// SCHEMA is the single source of truth that both copies read. What could
-/// drift between them is the wording of a violation message, not what counts
-/// as valid.
-const KF_SCHEMA_JSON: &str = include_str!("../../../docs/schemas/knowledge-finding.v1.json");
+/// Fetched rather than embedded: a validator that carries a schema validates against
+/// whatever was true on the day it was built, and — the reason this changed on
+/// 2026-09-16 — it carries whoever wrote that schema into every copy of a generic tool.
+async fn fetch_kf_schema(server_url: &str, api_key: &str) -> Result<String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()?;
+    let response = client
+        .get(format!("{}/api/v1/health/kf-schema", server_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .await?;
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    if !status.is_success() {
+        anyhow::bail!(
+            "Could not fetch the kf/1 schema from {} ({}): {}\n\
+             A server older than this command does not serve it; pass `--schema <path>`.",
+            server_url,
+            status,
+            body.trim()
+        );
+    }
+    Ok(body)
+}
 
 /// Validate one `kf/1` object, or an array of them.
 ///
@@ -6055,18 +6460,18 @@ const KF_SCHEMA_JSON: &str = include_str!("../../../docs/schemas/knowledge-findi
 /// it came from, rather than stopping at the first: a person fixing a
 /// 900-finding export should go round the loop once, and `[417]` is the only
 /// thing that says which one to look at.
-fn validate_kf_file_contents(text: &str) -> Result<usize, Vec<String>> {
+fn validate_kf_file_contents(text: &str, schema_json: &str) -> Result<usize, Vec<String>> {
     let value: serde_json::Value =
         serde_json::from_str(text).map_err(|e| vec![format!("not JSON: {e}")])?;
-    let schema: serde_json::Value =
-        serde_json::from_str(KF_SCHEMA_JSON).expect("the embedded kf/1 schema is valid JSON");
-    // Both `expect`s are on a constant compiled into this binary, and
-    // `the_embedded_schema_is_the_published_one_and_it_compiles` fails the
-    // build's test run rather than a user's command if either could fire.
+    // The schema now arrives from outside this binary — a file or the server — so a
+    // malformed one is a runtime answer to the reader, not a panic. It used to be a
+    // constant, and `expect` was right for a constant; it would be a crash here.
+    let schema: serde_json::Value = serde_json::from_str(schema_json)
+        .map_err(|e| vec![format!("the schema is not JSON: {e}")])?;
     let compiled = jsonschema::JSONSchema::options()
         .with_draft(jsonschema::Draft::Draft202012)
         .compile(&schema)
-        .expect("the embedded kf/1 schema compiles");
+        .map_err(|e| vec![format!("the schema does not compile: {e}")])?;
 
     // An array is the export; a bare object is one finding, which is what the
     // single-finding route serves and what a person writes by hand. Anything
@@ -7499,99 +7904,71 @@ mod a_warning_must_look_like_a_warning {
 
 #[cfg(test)]
 mod health_validate_tests {
-    use super::{
-        findings_request, validate_kf_file_contents, FindingsRequest, HealthFormat, KF_SCHEMA_JSON,
-    };
+    use super::{findings_request, validate_kf_file_contents, FindingsRequest, HealthFormat};
 
-    /// One finding that satisfies every rule in the published schema, with a
-    /// hole where `state` and `state_reason` go — so a test can vary exactly
-    /// the thing it is about and nothing else.
-    fn finding(state: &str, state_reason: &str) -> String {
-        format!(
-            r#"{{"kf":"1","id":"kf_0123456789abcdef0123456789abcdef","type":"wrong-now",
-            "subject":{{"kind":"document","key":"doc:confluence:1","label":"x"}},
-            "impact":{{"score":1,"reach":1,"severity":"low","human":"x"}},
-            "evidence":[{{"kind":"retrieval_stats","window_days":30,"retrievals":1}}],
-            "action":{{"kind":"fix","target":{{"kind":"document","ref":"confluence:1"}},
-                      "deep_link":"/health/kf_0123456789abcdef0123456789abcdef"}},
-            "state":"{state}","state_reason":{state_reason},
-            "coverage":{{"detector":"wrong-now/1","observed":1,"window_days":30}},
-            "first_seen":"2026-09-12T00:00:00Z","last_seen":"2026-09-12T00:00:00Z",
-            "expires":"2026-10-12T00:00:00Z"}}"#
-        )
-    }
+    /// A schema this test owns.
+    ///
+    /// Not the kf/1 schema: what this crate does is "given a schema, validate a file and
+    /// report the violations usefully", and that is testable against any schema. WHAT
+    /// COUNTS AS A VALID FINDING belongs to whoever owns kf/1 and is asserted in
+    /// `docbrain-core/tests/kf_schema_rules.rs`, where the schema lives.
+    ///
+    /// The distinction is not pedantry. These tests read the real schema from the
+    /// repository for one afternoon, and the published crate's test run then failed
+    /// wherever that private file was absent — the same defect as the `include_str!` this
+    /// change removed, moved into the test suite.
+    const SCHEMA: &str = r#"{
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind"],
+        "properties": {
+            "id": { "type": "string" },
+            "kind": { "type": "string", "enum": ["fix", "review"] }
+        }
+    }"#;
 
-    #[test]
-    fn a_dismissal_without_a_reason_is_reported_as_a_violation() {
-        // The one rule in kf/1 that is conditional rather than structural: a
-        // finding may be dismissed only with a reason from the fixed list, so
-        // "we looked at this and decided no" is always answerable later. A
-        // validator that checked only the flat shape would pass this.
-        let text = format!("[{}]", finding("dismissed", "null"));
-        let violations = validate_kf_file_contents(&text).unwrap_err();
-        assert!(!violations.is_empty());
-        assert!(violations.iter().any(|v| v.contains("state_reason")), "{violations:?}");
+    fn item(id: &str, kind: &str) -> String {
+        format!(r#"{{"id":"{id}","kind":"{kind}"}}"#)
     }
 
     #[test]
     fn a_valid_array_and_a_valid_single_object_both_pass() {
-        // A file is whatever the producer had: the export is an array, one
-        // finding fetched by id is an object, and a person hand-writing a
-        // fixture writes one object. All three are the same format.
-        let one = finding("open", "null");
-        assert_eq!(validate_kf_file_contents(&one), Ok(1));
-        assert_eq!(validate_kf_file_contents(&format!("[{one},{one}]")), Ok(2));
-    }
-
-    #[test]
-    fn a_dismissal_with_a_reason_from_the_list_is_valid_and_an_invented_one_is_not() {
-        // The other half of the dismissal rule. Without this, a validator that
-        // simply required `state_reason` to be non-null would pass the first
-        // test and still accept any invented reason.
-        assert_eq!(validate_kf_file_contents(&finding("dismissed", "\"already_handled\"")), Ok(1));
-        let violations = validate_kf_file_contents(&finding("dismissed", "\"because i said so\""))
-            .unwrap_err();
-        assert!(violations.iter().any(|v| v.contains("state_reason")), "{violations:?}");
-    }
-
-    #[test]
-    fn a_file_that_is_not_json_is_one_clear_violation_and_not_a_panic() {
-        let violations = validate_kf_file_contents("{ this is not json").unwrap_err();
-        assert_eq!(violations.len(), 1, "{violations:?}");
-        assert!(violations[0].starts_with("not JSON"), "{violations:?}");
+        // A file is whatever the producer had: an export is an array, one record fetched
+        // by id is an object, and a person writing a fixture writes one object.
+        let one = item("a", "fix");
+        assert_eq!(validate_kf_file_contents(&one, SCHEMA), Ok(1));
+        assert_eq!(validate_kf_file_contents(&format!("[{one},{one}]"), SCHEMA), Ok(2));
     }
 
     #[test]
     fn an_empty_export_is_valid_and_says_it_carried_nothing() {
-        // An organisation with nothing wrong exports `[]`, and that really is
-        // a valid kf/1 file — so this must not be an error. But `Ok` alone
-        // would read identically to a file full of findings, and a truncated
-        // or half-written file arrives looking exactly like a healthy one.
-        // The count is what separates them, which is why it is the success
-        // value and why the command prints it.
-        assert_eq!(validate_kf_file_contents("[]"), Ok(0));
+        // `[]` is a valid file, and the count is the only thing that distinguishes it from
+        // a full one on the verdict alone.
+        assert_eq!(validate_kf_file_contents("[]", SCHEMA), Ok(0));
     }
 
     #[test]
-    fn a_finding_missing_a_required_field_is_refused_rather_than_half_read() {
-        let one = finding("open", "null");
-        let without_impact: serde_json::Value = {
-            let mut v: serde_json::Value = serde_json::from_str(&one).expect("the fixture is JSON");
-            v.as_object_mut().expect("an object").remove("impact");
-            v
-        };
-        let violations = validate_kf_file_contents(&without_impact.to_string()).unwrap_err();
-        assert!(violations.iter().any(|v| v.contains("impact")), "{violations:?}");
+    fn every_violation_is_reported_with_the_index_of_the_record_it_came_from() {
+        // A person fixing a 900-record export should go round the loop once, and the
+        // index is the only thing that says which one to open.
+        let text = format!("[{},{},{}]", item("a", "fix"), item("b", "nonsense"), item("c", "review"));
+        let violations = validate_kf_file_contents(&text, SCHEMA).unwrap_err();
+        assert!(violations.iter().any(|v| v.starts_with("[1]")), "{violations:?}");
+        assert!(!violations.iter().any(|v| v.starts_with("[0]")), "{violations:?}");
     }
 
     #[test]
-    fn every_violation_in_a_file_is_reported_with_the_index_of_the_finding_it_came_from() {
-        // A validator that stopped at the first bad object would send someone
-        // round the loop once per violation. The index is the only thing that
-        // says WHICH finding in a 900-finding export is wrong.
-        let text = format!("[{},{}]", finding("open", "null"), finding("dismissed", "null"));
-        let violations = validate_kf_file_contents(&text).unwrap_err();
-        assert!(violations.iter().all(|v| v.starts_with("[1] ")), "{violations:?}");
+    fn a_record_missing_a_required_field_is_refused_rather_than_half_read() {
+        let violations = validate_kf_file_contents(r#"{"id":"a"}"#, SCHEMA).unwrap_err();
+        assert!(violations.iter().any(|v| v.contains("kind")), "{violations:?}");
+    }
+
+    #[test]
+    fn a_file_that_is_not_json_is_one_clear_violation_and_not_a_panic() {
+        let violations = validate_kf_file_contents("{ not json", SCHEMA).unwrap_err();
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("not JSON"), "{violations:?}");
     }
 
     #[test]
@@ -7626,20 +8003,17 @@ mod health_validate_tests {
     }
 
     #[test]
-    fn the_embedded_schema_is_the_published_one_and_it_compiles() {
-        // `validate_kf_file_contents` compiles this with `expect`, which is
-        // only honest if nothing can reach the field with a broken schema.
-        // The file is embedded at build time, so this test is what makes that
-        // true: it fails the build's test run, not a user's command.
-        let schema: serde_json::Value =
-            serde_json::from_str(KF_SCHEMA_JSON).expect("the embedded schema is JSON");
-        assert_eq!(schema["$id"], "https://docbrain.ai/schemas/knowledge-finding.v1.json");
-        assert!(
-            jsonschema::JSONSchema::options()
-                .with_draft(jsonschema::Draft::Draft202012)
-                .compile(&schema)
-                .is_ok(),
-            "the embedded kf/1 schema does not compile"
-        );
+    fn a_schema_that_is_not_json_is_answered_not_a_panic() {
+        // It was a constant compiled into the binary, where `expect` was honest. It now
+        // arrives from a file or the wire, so a broken one must reach the reader as a
+        // sentence rather than a stack trace.
+        let errs = validate_kf_file_contents("{}", "not a schema").unwrap_err();
+        assert!(errs[0].contains("schema is not JSON"), "{errs:?}");
+    }
+
+    #[test]
+    fn a_schema_that_does_not_compile_is_answered_not_a_panic() {
+        let errs = validate_kf_file_contents("{}", r#"{"type": 7}"#).unwrap_err();
+        assert!(errs[0].contains("does not compile"), "{errs:?}");
     }
 }
