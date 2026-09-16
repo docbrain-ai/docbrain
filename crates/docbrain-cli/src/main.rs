@@ -78,6 +78,17 @@ enum Commands {
         #[arg(long)]
         docs_only: bool,
     },
+    /// Knowledge health — what DocBrain has found wrong with your knowledge
+    /// base, and a validator for the open `kf/1` format.
+    ///
+    /// `findings` reads them from your server. `validate` reads a file and
+    /// needs no server, no API key and no config: it is the reference
+    /// implementation of the format, so anything that produces `kf/1` can be
+    /// checked against the same schema DocBrain itself validates with.
+    Health {
+        #[command(subcommand)]
+        action: HealthAction,
+    },
     /// Trace the retrieval pipeline for a question (admin only).
     ///
     /// Sends the question to `/api/v1/ask` with `trace: true`, receives the
@@ -263,6 +274,11 @@ enum Commands {
         #[command(subcommand)]
         action: EvidenceAction,
     },
+    /// Connect (or reconnect) a source this deployment can OAuth — prints the URL to open
+    Connect {
+        /// The source id as the server names it, e.g. `slack`
+        source: String,
+    },
     /// Show CLI and server version, and which instance answers at this URL
     Version,
 }
@@ -398,6 +414,40 @@ enum TokenAction {
         /// Token ID (from `docbrain token list`)
         id: String,
     },
+}
+
+#[derive(Subcommand)]
+enum HealthAction {
+    /// List findings as a table, or export them as kf/1 JSON
+    Findings {
+        /// Only findings in this state: queued, open, in_progress, done,
+        /// dismissed, resolved, or `all`. Defaults to open — the findings
+        /// waiting on someone. The server owns this list and refuses any
+        /// other value, naming the ones it takes; the CLI does not keep a
+        /// second copy of it to drift from.
+        #[arg(long)]
+        state: Option<String>,
+        /// `table` to read, `kf` for the export as kf/1 JSON on stdout
+        #[arg(long, value_enum, default_value_t = HealthFormat::Table)]
+        format: HealthFormat,
+    },
+    /// Validate a kf/1 JSON file — one object, or an array of them.
+    ///
+    /// Offline: no server, no API key. Exit 0 when every finding in the file
+    /// is valid, 1 with one line per violation when any is not, so it can
+    /// gate a pipeline directly.
+    Validate {
+        /// Path to the JSON file
+        file: std::path::PathBuf,
+    },
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+enum HealthFormat {
+    /// Columns for a person to read.
+    Table,
+    /// The findings as `kf/1` JSON, the same objects the API serves.
+    Kf,
 }
 
 #[derive(Subcommand)]
@@ -1685,6 +1735,41 @@ fn display_phase_event(event: &PipelineEvent, phase_count: &mut u32, style: Prog
     }
 }
 
+/// Start an OAuth connect for one source and print the URL to open.
+///
+/// The dance finishes in the browser and the callback lands on the server, so this does
+/// not wait for it: a terminal that blocks on a browser the reader may open on another
+/// machine is a terminal they kill. `docbrain version` says whether it took.
+async fn handle_connect(server_url: &str, source: &str, api_key: &str) -> Result<()> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()?;
+    let response = client
+        .post(format!("{}/api/v1/oauth/mcp/init/{}", server_url, source))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&serde_json::json!({}))
+        .send()
+        .await?;
+
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    if !status.is_success() {
+        // The server's own words. A client that paraphrases a 403 into "connection
+        // failed" costs the reader the one sentence that says why.
+        anyhow::bail!("Could not start a connect for '{}' ({}): {}", source, status, body.trim());
+    }
+
+    let parsed: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| anyhow::anyhow!("unreadable response from the server: {e}"))?;
+    let url = parsed["authorize_url"]
+        .as_str()
+        .ok_or_else(|| anyhow::anyhow!("the server did not return an authorize_url"))?;
+
+    println!("Open this to connect {}:\n\n  {}\n", source, url);
+    println!("Then run `docbrain version` — the source stops being listed as unavailable.");
+    Ok(())
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Which instance is answering
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1722,6 +1807,33 @@ async fn observe_instance(
     Some(instance_check::Observed {
         install_id: body["install_id"].as_str().map(|s| s.to_string()),
         documents: body["documents"].as_i64()?,
+        // The server words each sentence; the client only decides where to put it. A
+        // server that does not send the field at all (an older one) yields none, and the
+        // caller prints nothing — silence is the healthy state and an old server must not
+        // look unhealthy.
+        unavailable: body["unavailable"]
+            .as_array()
+            .map(|rows| {
+                rows.iter()
+                    .filter_map(|r| {
+                        let label = r["label"].as_str()?;
+                        let effect = r["effect"].as_str()?;
+                        // The server states the fact; the action is this binary's to
+                        // offer, and only one it actually has. The server used to send
+                        // `docbrain connect slack` before that subcommand existed, and a
+                        // reader who runs a command that does not exist trusts the next
+                        // warning less.
+                        let source = r["source"].as_str().unwrap_or_default();
+                        let reader_can_fix = r["scope"].as_str() == Some("you");
+                        Some(if reader_can_fix && !source.is_empty() {
+                            format!("{label} — {effect}. Fix: docbrain connect {source}")
+                        } else {
+                            format!("{label} — {effect}.")
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
     })
 }
 
@@ -1736,6 +1848,165 @@ fn report_instance_change(server_url: &str, observed: &instance_check::Observed)
         eprintln!("\x1b[33m⚠ {}\x1b[0m", change.message());
     }
     instance_check::record(server_url, observed);
+}
+
+#[cfg(test)]
+mod a_command_we_print_is_a_command_we_have {
+    //! Every command this binary prints as a fix exists in this binary.
+    //!
+    //! The server used to send the sentence whole, ending in `Fix: docbrain connect
+    //! slack`, and that subcommand did not exist. Nothing failed: the string was true
+    //! JSON, the tests were green, and the first person to follow the instruction would
+    //! have got `unrecognized subcommand`. The owner caught it by reading it — "this reads
+    //! like docbrain cli has a connect subcommand" — which is not a control anyone should
+    //! rely on twice.
+    //!
+    //! Introspecting clap rather than comparing against a hand-kept list: a list of
+    //! commands beside the commands is a second copy waiting to drift, and drift is the
+    //! whole defect.
+
+    use clap::CommandFactory;
+
+    fn subcommands() -> Vec<String> {
+        super::Cli::command()
+            .get_subcommands()
+            .map(|c| c.get_name().to_string())
+            .collect()
+    }
+
+    /// The commands this binary can put in front of a reader as an instruction.
+    const OFFERED_AS_FIXES: &[&str] = &["connect", "login", "version"];
+
+    #[test]
+    fn every_command_offered_as_a_fix_exists() {
+        let have = subcommands();
+        assert!(
+            have.len() > 5,
+            "clap introspection returned {have:?}; if it stops seeing the commands this              test passes whatever is printed"
+        );
+        for offered in OFFERED_AS_FIXES {
+            assert!(
+                have.iter().any(|c| c == offered),
+                "this binary prints `docbrain {offered}` as a fix and has no such                  subcommand. Known: {have:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_fix_line_names_the_subcommand_it_claims() {
+        // The exact string the renderer builds, checked against clap rather than against
+        // the author's memory of what exists.
+        let line = format!("Slack — answers won't include Slack. Fix: docbrain connect slack");
+        let cmd = line
+            .split("Fix: docbrain ")
+            .nth(1)
+            .and_then(|rest| rest.split_whitespace().next())
+            .expect("the renderer's fix line names a command");
+        assert!(
+            subcommands().iter().any(|c| c == cmd),
+            "the renderer offers `docbrain {cmd}`, which this binary does not have"
+        );
+    }
+}
+
+#[cfg(test)]
+mod what_an_answer_cannot_use {
+    //! The client renders the server's sentences and invents none of its own.
+    //!
+    //! Every surface — this CLI, the IDE through MCP, Slack, the console — prints the
+    //! same sentence for the same fact. A client that composes its own wording gives one
+    //! deployment three vocabularies for "Slack needs reconnecting", and a reader who
+    //! learns one of them is lost on the next surface.
+
+    use super::*;
+    use std::net::TcpListener;
+
+    /// A server that answers `/api/v1/instance` with exactly `body`.
+    fn server_returning(body: &'static str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        std::thread::spawn(move || {
+            use std::io::{Read, Write};
+            for stream in listener.incoming().take(1) {
+                let Ok(mut stream) = stream else { continue };
+                let mut buf = [0u8; 2048];
+                let _ = stream.read(&mut buf);
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+            }
+        });
+        format!("http://{}", addr)
+    }
+
+    #[tokio::test]
+    async fn a_healthy_deployment_produces_no_lines_at_all() {
+        // The silence rule: an empty list is the healthy state, and nothing is printed for
+        // it. No "all connectors OK" — a line that appears on every answer is a line
+        // people stop reading, including the day it says something.
+        let url = server_returning(r#"{"install_id":"i","documents":10}"#);
+        let observed = observe_instance(&reqwest::Client::new(), &url, Some("k")).await.unwrap();
+        assert!(observed.unavailable.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_dead_connector_is_one_line_naming_the_loss_and_the_fix() {
+        let url = server_returning(
+            r#"{"install_id":"i","documents":10,"unavailable":[
+                 {"source":"slack","label":"Slack","state":"needs_reconnect","scope":"you",
+                  "effect":"answers won't include Slack",
+                  "fix":{"cli":"docbrain connect slack","url":"/integrations?connect=slack"}}]}"#,
+        );
+        let observed = observe_instance(&reqwest::Client::new(), &url, Some("k")).await.unwrap();
+        assert_eq!(observed.unavailable.len(), 1);
+        let line = &observed.unavailable[0];
+        assert!(line.contains("Slack"), "{line}");
+        assert!(line.contains("won't include"), "the loss is not named: {line}");
+        assert!(line.contains("docbrain connect slack"), "no runnable fix: {line}");
+        assert!(!line.contains('\n'), "one line, not a paragraph: {line}");
+    }
+
+    #[tokio::test]
+    async fn something_only_an_admin_can_fix_offers_no_command() {
+        // Telling a reader to run something they cannot is worse than telling them
+        // nothing: they try it, it fails, and the next warning gets ignored.
+        let url = server_returning(
+            r#"{"install_id":"i","documents":10,"unavailable":[
+                 {"source":"jira_rest","label":"Jira","state":"probe_failing","scope":"deployment",
+                  "effect":"answers won't include Jira; an administrator has to fix it",
+                  "fix":{"url":"/admin/sources/tools"}}]}"#,
+        );
+        let observed = observe_instance(&reqwest::Client::new(), &url, Some("k")).await.unwrap();
+        let line = &observed.unavailable[0];
+        assert!(line.contains("administrator"), "{line}");
+        assert!(!line.contains("Fix:"), "a command was offered for something they cannot run: {line}");
+    }
+
+    #[tokio::test]
+    async fn an_older_server_that_does_not_send_the_field_is_silent_not_broken() {
+        // The field is absent, not empty. A client that treated absence as a fault would
+        // make every older deployment look unhealthy the day this shipped.
+        let url = server_returning(r#"{"install_id":"i","documents":10}"#);
+        let observed = observe_instance(&reqwest::Client::new(), &url, Some("k")).await.unwrap();
+        assert!(observed.unavailable.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_row_the_client_cannot_read_is_skipped_rather_than_half_printed() {
+        // A malformed entry must not produce "— . Fix:" in front of someone's answer.
+        let url = server_returning(
+            r#"{"install_id":"i","documents":10,"unavailable":[
+                 {"source":"broken"},
+                 {"source":"slack","label":"Slack","state":"needs_reconnect","scope":"you",
+                  "effect":"answers won't include Slack","fix":{"cli":"docbrain connect slack"}}]}"#,
+        );
+        let observed = observe_instance(&reqwest::Client::new(), &url, Some("k")).await.unwrap();
+        assert_eq!(observed.unavailable.len(), 1, "the unreadable row should be dropped whole");
+        assert!(observed.unavailable[0].contains("Slack"));
+    }
 }
 
 #[cfg(test)]
@@ -1904,6 +2175,33 @@ async fn main() -> Result<()> {
         Commands::Ask { question, session, new, verbose, json, docs_only } => {
             ask(&server_url, &question, session.as_deref(), new, verbose, json, docs_only, api_key.as_deref()).await?;
         }
+        Commands::Health { action } => match action {
+            HealthAction::Findings { state, format } => {
+                // Resolved BEFORE the key is required: a caller who asked for
+                // something the server cannot answer should be told that, not
+                // told to log in first and then told it.
+                let request = findings_request(format, state.as_deref())?;
+                let key = api_key.ok_or_else(|| anyhow::anyhow!(
+                    "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
+                ))?;
+                health_findings(&server_url, &key, request).await?;
+            }
+            // Deliberately before any key or server lookup: validating a file
+            // is the one thing in this CLI that needs nothing but the file.
+            HealthAction::Validate { file } => {
+                let text = std::fs::read_to_string(&file)
+                    .map_err(|e| anyhow::anyhow!("cannot read {}: {e}", file.display()))?;
+                match validate_kf_file_contents(&text) {
+                    Ok(n) => println!("valid: {n} kf/1 finding(s)"),
+                    Err(violations) => {
+                        for v in &violations {
+                            eprintln!("{v}");
+                        }
+                        anyhow::bail!("{} violation(s)", violations.len());
+                    }
+                }
+            }
+        },
         Commands::TraceQuery { question, json } => {
             let key = api_key.ok_or_else(|| anyhow::anyhow!(
                 "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
@@ -2014,6 +2312,12 @@ async fn main() -> Result<()> {
                 "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
             ))?;
             handle_license(&server_url, action, &key).await?;
+        }
+        Commands::Connect { source } => {
+            let key = api_key.ok_or_else(|| anyhow::anyhow!(
+                "API key required. Run `docbrain login` or set DOCBRAIN_API_KEY."
+            ))?;
+            handle_connect(&server_url, &source, &key).await?;
         }
         Commands::Version => {
             show_version(&server_url, api_key.as_deref()).await?;
@@ -2600,6 +2904,12 @@ async fn ask(
     // than the endpoint: a check that cannot run must not become noise.
     if let Some(observed) = observe_instance(&client, server_url, api_key).await {
         report_instance_change(server_url, &observed);
+        // Before the question is sent, not after the answer comes back: a connector that
+        // needs reconnecting is otherwise discovered half way through an answer the
+        // reader has already paid for.
+        for line in &observed.unavailable {
+            eprintln!("\x1b[33m⚠ {}\x1b[0m", line);
+        }
     }
 
     // --json wants one parseable document, so ask the server not to stream.
@@ -5720,6 +6030,161 @@ async fn evidence_export(
 
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Knowledge health (kf/1)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// The published `kf/1` schema, embedded so `validate` needs nothing but the
+/// file it is given — no network, no server, no config.
+///
+/// `docbrain-core` embeds the same file for the server's own validation.
+/// The duplication is deliberate and bounded: this crate is the public,
+/// MIT-licensed client and does not depend on the server's crates, and the
+/// SCHEMA is the single source of truth that both copies read. What could
+/// drift between them is the wording of a violation message, not what counts
+/// as valid.
+const KF_SCHEMA_JSON: &str = include_str!("../../../docs/schemas/knowledge-finding.v1.json");
+
+/// Validate one `kf/1` object, or an array of them.
+///
+/// `Ok(n)` with the number of findings checked — `n` is part of the answer,
+/// not decoration: `[]` is a perfectly valid `kf/1` file, and an empty one is
+/// indistinguishable from a full one on the verdict alone, so the count is
+/// what tells a reader whether the file they validated carried anything.
+///
+/// `Err` carries EVERY violation, each prefixed with the index of the finding
+/// it came from, rather than stopping at the first: a person fixing a
+/// 900-finding export should go round the loop once, and `[417]` is the only
+/// thing that says which one to look at.
+fn validate_kf_file_contents(text: &str) -> Result<usize, Vec<String>> {
+    let value: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| vec![format!("not JSON: {e}")])?;
+    let schema: serde_json::Value =
+        serde_json::from_str(KF_SCHEMA_JSON).expect("the embedded kf/1 schema is valid JSON");
+    // Both `expect`s are on a constant compiled into this binary, and
+    // `the_embedded_schema_is_the_published_one_and_it_compiles` fails the
+    // build's test run rather than a user's command if either could fire.
+    let compiled = jsonschema::JSONSchema::options()
+        .with_draft(jsonschema::Draft::Draft202012)
+        .compile(&schema)
+        .expect("the embedded kf/1 schema compiles");
+
+    // An array is the export; a bare object is one finding, which is what the
+    // single-finding route serves and what a person writes by hand. Anything
+    // else is one item that will fail the schema's `type: object` and say so,
+    // which is a better message than one this function could invent.
+    let items: Vec<&serde_json::Value> = match &value {
+        serde_json::Value::Array(a) => a.iter().collect(),
+        v => vec![v],
+    };
+
+    let mut violations = Vec::new();
+    for (i, item) in items.iter().enumerate() {
+        if let Err(errs) = compiled.validate(item) {
+            for e in errs {
+                violations.push(format!("[{i}] {}: {}", e.instance_path, e));
+            }
+        }
+    }
+    if violations.is_empty() {
+        Ok(items.len())
+    } else {
+        Err(violations)
+    }
+}
+
+/// Which route `docbrain health findings` reads, once a format and a state
+/// have been reconciled. The kf export takes no state filter, so the
+/// combination that would need one cannot be built.
+#[derive(Debug, PartialEq, Eq)]
+enum FindingsRequest {
+    /// `/health/findings/export` — every live finding as `kf/1`, under the
+    /// server's own row cap, with no state filter of any kind.
+    Export,
+    /// `/health/findings?state=…` — the table, narrowed to one state.
+    List { state: String },
+}
+
+/// Reconcile `--format` and `--state`, or say why they cannot be.
+///
+/// The two formats are two different endpoints, and that is not an internal
+/// detail a caller can be left to discover: the export takes no state filter
+/// at all. Passing one through anyway would return findings in states the
+/// caller did not ask for while looking like the request had been honoured —
+/// a wrong answer with no signal in it. So the pairing is refused here, with
+/// the reason and the two ways out, before anything else happens.
+fn findings_request(format: HealthFormat, state: Option<&str>) -> Result<FindingsRequest> {
+    match (format, state) {
+        (HealthFormat::Kf, Some(asked)) => anyhow::bail!(
+            "--format kf exports every finding your organisation still has in front of it and \
+             cannot be narrowed to one state, so `--state {asked}` would not be honoured. Drop \
+             --state to export them all, or use --format table to look at one state."
+        ),
+        (HealthFormat::Kf, None) => Ok(FindingsRequest::Export),
+        // Open is the default because it is the set waiting on someone. The
+        // server owns the vocabulary and refuses anything it does not know,
+        // naming what it takes — this does not keep a second copy to drift.
+        (HealthFormat::Table, s) => Ok(FindingsRequest::List { state: s.unwrap_or("open").to_string() }),
+    }
+}
+
+/// `docbrain health findings` — the table people read, or the `kf/1` export.
+async fn health_findings(server_url: &str, api_key: &str, request: FindingsRequest) -> Result<()> {
+    let client = reqwest::Client::new();
+    let get = match &request {
+        FindingsRequest::Export => {
+            client.get(format!("{server_url}/api/v1/health/findings/export"))
+        }
+        // `.query` rather than a formatted URL: the state is whatever was
+        // typed, and a formatted one would put it into the URL unencoded.
+        FindingsRequest::List { state } => client
+            .get(format!("{server_url}/api/v1/health/findings"))
+            .query(&[("state", state.as_str())]),
+    };
+
+    let response = get.header("Authorization", format!("Bearer {api_key}")).send().await?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await?;
+        anyhow::bail!("Server error ({}): {}", status, body);
+    }
+    let body: serde_json::Value = response.json().await?;
+
+    let state = match request {
+        // The export is served as a bare kf/1 array. Printed as it arrived,
+        // so a file written from this command is the format itself — nothing
+        // of this CLI's making wrapped around it.
+        FindingsRequest::Export => {
+            println!("{}", serde_json::to_string_pretty(&body)?);
+            return Ok(());
+        }
+        FindingsRequest::List { state } => state,
+    };
+
+    let findings = body["findings"].as_array().cloned().unwrap_or_default();
+    if findings.is_empty() {
+        println!("no {state} findings");
+        return Ok(());
+    }
+
+    // `state` is a column rather than a line above the table because
+    // `--state all` mixes live findings with dismissed and resolved ones, and
+    // a row that does not say which it is reads as work someone still has to do.
+    println!("  {:<35}  {:<22}  {:<12}  {:>6}  what", "id", "type", "state", "impact");
+    println!("  {}", "-".repeat(110));
+    for f in &findings {
+        println!(
+            "  {:<35}  {:<22}  {:<12}  {:>6}  {}",
+            f["id"].as_str().unwrap_or(""),
+            f["type"].as_str().unwrap_or(""),
+            f["state"].as_str().unwrap_or(""),
+            f["impact"]["score"].as_i64().unwrap_or(0),
+            f["impact"]["human"].as_str().unwrap_or("")
+        );
+    }
+    Ok(())
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Tests
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -7025,5 +7490,156 @@ mod a_warning_must_look_like_a_warning {
     #[test]
     fn an_empty_block_is_still_dropped() {
         assert!(block_text_coloured(&block("warning", ""), true).is_none());
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The kf/1 validator's own tests
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[cfg(test)]
+mod health_validate_tests {
+    use super::{
+        findings_request, validate_kf_file_contents, FindingsRequest, HealthFormat, KF_SCHEMA_JSON,
+    };
+
+    /// One finding that satisfies every rule in the published schema, with a
+    /// hole where `state` and `state_reason` go — so a test can vary exactly
+    /// the thing it is about and nothing else.
+    fn finding(state: &str, state_reason: &str) -> String {
+        format!(
+            r#"{{"kf":"1","id":"kf_0123456789abcdef0123456789abcdef","type":"wrong-now",
+            "subject":{{"kind":"document","key":"doc:confluence:1","label":"x"}},
+            "impact":{{"score":1,"reach":1,"severity":"low","human":"x"}},
+            "evidence":[{{"kind":"retrieval_stats","window_days":30,"retrievals":1}}],
+            "action":{{"kind":"fix","target":{{"kind":"document","ref":"confluence:1"}},
+                      "deep_link":"/health/kf_0123456789abcdef0123456789abcdef"}},
+            "state":"{state}","state_reason":{state_reason},
+            "coverage":{{"detector":"wrong-now/1","observed":1,"window_days":30}},
+            "first_seen":"2026-09-12T00:00:00Z","last_seen":"2026-09-12T00:00:00Z",
+            "expires":"2026-10-12T00:00:00Z"}}"#
+        )
+    }
+
+    #[test]
+    fn a_dismissal_without_a_reason_is_reported_as_a_violation() {
+        // The one rule in kf/1 that is conditional rather than structural: a
+        // finding may be dismissed only with a reason from the fixed list, so
+        // "we looked at this and decided no" is always answerable later. A
+        // validator that checked only the flat shape would pass this.
+        let text = format!("[{}]", finding("dismissed", "null"));
+        let violations = validate_kf_file_contents(&text).unwrap_err();
+        assert!(!violations.is_empty());
+        assert!(violations.iter().any(|v| v.contains("state_reason")), "{violations:?}");
+    }
+
+    #[test]
+    fn a_valid_array_and_a_valid_single_object_both_pass() {
+        // A file is whatever the producer had: the export is an array, one
+        // finding fetched by id is an object, and a person hand-writing a
+        // fixture writes one object. All three are the same format.
+        let one = finding("open", "null");
+        assert_eq!(validate_kf_file_contents(&one), Ok(1));
+        assert_eq!(validate_kf_file_contents(&format!("[{one},{one}]")), Ok(2));
+    }
+
+    #[test]
+    fn a_dismissal_with_a_reason_from_the_list_is_valid_and_an_invented_one_is_not() {
+        // The other half of the dismissal rule. Without this, a validator that
+        // simply required `state_reason` to be non-null would pass the first
+        // test and still accept any invented reason.
+        assert_eq!(validate_kf_file_contents(&finding("dismissed", "\"already_handled\"")), Ok(1));
+        let violations = validate_kf_file_contents(&finding("dismissed", "\"because i said so\""))
+            .unwrap_err();
+        assert!(violations.iter().any(|v| v.contains("state_reason")), "{violations:?}");
+    }
+
+    #[test]
+    fn a_file_that_is_not_json_is_one_clear_violation_and_not_a_panic() {
+        let violations = validate_kf_file_contents("{ this is not json").unwrap_err();
+        assert_eq!(violations.len(), 1, "{violations:?}");
+        assert!(violations[0].starts_with("not JSON"), "{violations:?}");
+    }
+
+    #[test]
+    fn an_empty_export_is_valid_and_says_it_carried_nothing() {
+        // An organisation with nothing wrong exports `[]`, and that really is
+        // a valid kf/1 file — so this must not be an error. But `Ok` alone
+        // would read identically to a file full of findings, and a truncated
+        // or half-written file arrives looking exactly like a healthy one.
+        // The count is what separates them, which is why it is the success
+        // value and why the command prints it.
+        assert_eq!(validate_kf_file_contents("[]"), Ok(0));
+    }
+
+    #[test]
+    fn a_finding_missing_a_required_field_is_refused_rather_than_half_read() {
+        let one = finding("open", "null");
+        let without_impact: serde_json::Value = {
+            let mut v: serde_json::Value = serde_json::from_str(&one).expect("the fixture is JSON");
+            v.as_object_mut().expect("an object").remove("impact");
+            v
+        };
+        let violations = validate_kf_file_contents(&without_impact.to_string()).unwrap_err();
+        assert!(violations.iter().any(|v| v.contains("impact")), "{violations:?}");
+    }
+
+    #[test]
+    fn every_violation_in_a_file_is_reported_with_the_index_of_the_finding_it_came_from() {
+        // A validator that stopped at the first bad object would send someone
+        // round the loop once per violation. The index is the only thing that
+        // says WHICH finding in a 900-finding export is wrong.
+        let text = format!("[{},{}]", finding("open", "null"), finding("dismissed", "null"));
+        let violations = validate_kf_file_contents(&text).unwrap_err();
+        assert!(violations.iter().all(|v| v.starts_with("[1] ")), "{violations:?}");
+    }
+
+    #[test]
+    fn asking_for_the_export_of_one_state_is_refused_rather_than_answered_with_another() {
+        // The export takes no state filter. Sending one anyway would hand
+        // back every live finding while the caller believed they had asked
+        // for `done` — right-looking output, wrong set, no signal.
+        let err = findings_request(HealthFormat::Kf, Some("done")).unwrap_err().to_string();
+        assert!(err.contains("--state done"), "{err}");
+        assert!(err.contains("--format table"), "the refusal must name a way through: {err}");
+    }
+
+    #[test]
+    fn the_export_reads_the_export_and_the_table_defaults_to_the_findings_waiting_on_someone() {
+        assert_eq!(findings_request(HealthFormat::Kf, None).unwrap(), FindingsRequest::Export);
+        assert_eq!(
+            findings_request(HealthFormat::Table, None).unwrap(),
+            FindingsRequest::List { state: "open".to_string() },
+            "no --state must mean the findings waiting on someone, not every state ever recorded"
+        );
+        assert_eq!(
+            findings_request(HealthFormat::Table, Some("all")).unwrap(),
+            FindingsRequest::List { state: "all".to_string() }
+        );
+        // Nonsense goes to the server untouched, which owns the vocabulary
+        // and answers 400 naming the states it takes. A second copy of that
+        // list here is a second thing to keep in step.
+        assert_eq!(
+            findings_request(HealthFormat::Table, Some("not-a-state")).unwrap(),
+            FindingsRequest::List { state: "not-a-state".to_string() }
+        );
+    }
+
+    #[test]
+    fn the_embedded_schema_is_the_published_one_and_it_compiles() {
+        // `validate_kf_file_contents` compiles this with `expect`, which is
+        // only honest if nothing can reach the field with a broken schema.
+        // The file is embedded at build time, so this test is what makes that
+        // true: it fails the build's test run, not a user's command.
+        let schema: serde_json::Value =
+            serde_json::from_str(KF_SCHEMA_JSON).expect("the embedded schema is JSON");
+        assert_eq!(schema["$id"], "https://docbrain.ai/schemas/knowledge-finding.v1.json");
+        assert!(
+            jsonschema::JSONSchema::options()
+                .with_draft(jsonschema::Draft::Draft202012)
+                .compile(&schema)
+                .is_ok(),
+            "the embedded kf/1 schema does not compile"
+        );
     }
 }

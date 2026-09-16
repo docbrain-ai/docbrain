@@ -37,6 +37,11 @@ pub struct Observed {
     /// completed a boot. Not a mismatch: nothing to compare.
     pub install_id: Option<String>,
     pub documents: i64,
+    /// What this deployment cannot currently use to answer, one sentence each, already
+    /// worded by the server. The CLI does not compose its own: a command line, a Slack
+    /// message and a web page that word one fact differently teach three vocabularies for
+    /// it.
+    pub unavailable: Vec<String>,
 }
 
 /// What this client recorded at the same URL last time.
@@ -193,7 +198,7 @@ mod tests {
         Seen { install_id: Some(id.to_string()), documents: docs }
     }
     fn now(id: &str, docs: i64) -> Observed {
-        Observed { install_id: Some(id.to_string()), documents: docs }
+        Observed { install_id: Some(id.to_string()), documents: docs, unavailable: Vec::new() }
     }
 
     #[test]
@@ -273,7 +278,7 @@ mod tests {
     #[test]
     fn an_instance_that_has_not_minted_an_id_is_not_a_mismatch() {
         // Nothing to compare against: report on the corpus alone, never on a missing id.
-        let observed = Observed { install_id: None, documents: 100 };
+        let observed = Observed { install_id: None, documents: 100, unavailable: Vec::new() };
         assert_eq!(compare(Some(&seen("a", 100)), &observed, 0.10), None);
         let previous = Seen { install_id: None, documents: 100 };
         assert_eq!(compare(Some(&previous), &now("a", 100), 0.10), None);

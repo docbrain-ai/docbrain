@@ -13,6 +13,15 @@ anyhow = "1"
 chrono = "0.4"
 dotenvy = "0.15"
 serde_json = "1"
+# `docbrain health validate` is the reference implementation of kf/1: it
+# checks a file against the SAME schema the server validates with, embedded
+# at build time. `draft202012` is named explicitly, not inherited — the
+# schema declares that draft and `Draft::Draft202012` only exists behind this
+# feature, so relying on another crate in the workspace to turn it on would
+# compile here and fail wherever this crate is built on its own. No default
+# features: they pull in an HTTP/file `$ref` resolver and a clap-based binary,
+# none of which a validator for one embedded schema has any use for.
+jsonschema = { version = "0.18", default-features = false, features = ["draft202012"] }
 dirs = "5"
 futures-util = "0.3"
 rpassword = "7"
