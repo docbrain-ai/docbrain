@@ -466,6 +466,7 @@ rag:
   # sufficiencyCriticSkipAboveConfidence: 0.85  # DOCBRAIN_SUFFICIENCY_CRITIC_SKIP_ABOVE_CONFIDENCE
   # sufficiencyCriticMinCoverage: 0.9           # DOCBRAIN_SUFFICIENCY_CRITIC_MIN_COVERAGE
   # sufficiencyCriticMinRecoveryBudgetMs: 20000 # DOCBRAIN_SUFFICIENCY_CRITIC_MIN_RECOVERY_BUDGET_MS — min wall-clock headroom (ms) to allow a recovery round; below this the critic ships an honest gap instead of a round the cliff would kill. Set 0 to disable.
+  # askWallClockSecs: 600 # ASK_WALL_CLOCK_SECS — hard cap on a whole /ask, in seconds. Every stage inside has its own budget and none of them bounds the sum: one measured question ran 1077s (18 minutes) with every stage within its limit, holding a connection and its share of the pools the whole time. 600 is deliberately generous — the slowest honest answer measured was 248s — so this bounds the pathological case rather than truncating a slow legitimate one. A request cut off here returns 504 with a sentence saying so, never a partial answer. Set 0 to disable the cap.
   # Freshness Critic — the doc-generation reviewer. Flags only evidence-contradicted
   # claims (conservative-KEEP). ON by default; fail-OPEN; bounds cap cost per draft.
   # freshnessCriticEnabled: true                # DOCBRAIN_FRESHNESS_CRITIC_ENABLED (disable only with false/0/no/off)

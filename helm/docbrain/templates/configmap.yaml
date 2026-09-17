@@ -291,6 +291,7 @@ data:
   {{- end }}
   {{- if hasKey .Values.rag "sufficiencyCriticMinRecoveryBudgetMs" }}
   DOCBRAIN_SUFFICIENCY_CRITIC_MIN_RECOVERY_BUDGET_MS: {{ .Values.rag.sufficiencyCriticMinRecoveryBudgetMs | quote }}
+  ASK_WALL_CLOCK_SECS: {{ .Values.rag.askWallClockSecs | quote }}
   {{- end }}
   {{/* Freshness Critic (doc-generation reviewer). `enabled` uses hasKey so an
        explicit `false` is emitted to disable — a bare `if` would skip on false

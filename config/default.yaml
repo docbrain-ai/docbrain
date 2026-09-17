@@ -51,6 +51,15 @@ rag:
                             # a git source records a listing.
   cache_threshold: 0.95   # Min cosine similarity for cache hit
   cache_ttl_hours: 24     # Cache max age in hours
+
+  # Hard cap on a whole /ask, in seconds. Every stage inside has its own budget
+  # and none of them bounds the sum: one measured question ran 1077s (18 minutes)
+  # with every stage inside its limit, holding a connection and its share of the
+  # pools throughout. 600 is generous — the slowest honest answer measured was
+  # 248s — so this bounds the pathological case, not a slow legitimate one. A
+  # request stopped here returns 504 with an explanation, never a partial answer.
+  # 0 disables the cap.
+  ask_wall_clock_secs: 600 # ASK_WALL_CLOCK_SECS
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
 
   # ── Staged retrieval pipeline tuning ─────────────────────────────────
