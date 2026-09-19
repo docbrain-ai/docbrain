@@ -97,3 +97,31 @@ rbac:
 
 retention:
   audit_log_days: 90
+
+# The fields on a result record that carry this connector's substance. Its results are
+# mostly presentation metadata (blocks, attachments, reactions, profiles) — many times
+# larger than the content — and without this the size cap drops WHOLE records, in the
+# order the upstream returned them, to get under it. Dropping the bloat instead keeps
+# every record. This list used to live in the dispatcher, applied to any manifest whose
+# id began with this product's name: a deployment reaching the same product through a
+# gateway (named for the gateway) never got it.
+compact_keep_fields:
+  - text
+  - user
+  - username
+  - real_name
+  - ts
+  - thread_ts
+  - permalink
+  - url
+  - name
+  - id
+  - channel
+  - channel_id
+  - title
+  - created
+  - updated
+  - is_member
+  - num_members
+  - topic
+  - purpose
