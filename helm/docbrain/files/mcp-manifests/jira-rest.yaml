@@ -155,3 +155,6 @@ search_argument:
   key: jql
   template: 'text ~ "{terms}"'
   max_bytes: 500
+
+# Which ingested source_type values this connector's live search can corroborate.
+verifies_source_types: ["jira"]

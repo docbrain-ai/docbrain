@@ -168,3 +168,8 @@ search_argument:
   key: cql
   template: 'text ~ "{terms}" ORDER BY lastmodified DESC'
   max_bytes: 500
+
+# Which ingested source_type values this connector's live search can corroborate.
+# The claim cross-check used to hold this link as a table of two products in the
+# engine, which also declared every OTHER connector un-verifiable by construction.
+verifies_source_types: ["confluence"]
