@@ -155,6 +155,11 @@ search_argument:
   key: jql
   template: 'text ~ "{terms}"'
   max_bytes: 500
+  # An unbounded full-text search makes this backend scan its whole text index and
+  # time out; a date-bounded query is an indexed scan. `{days}` is the window the
+  # deployment configures. The dispatcher used to decide this by testing whether the
+  # manifest's id began with a product name.
+  recency_clause: 'updated >= -{days}d'
 
 # Which ingested source_type values this connector's live search can corroborate.
 verifies_source_types: ["jira"]
