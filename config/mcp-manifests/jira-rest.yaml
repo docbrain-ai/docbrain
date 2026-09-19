@@ -147,3 +147,11 @@ url_sources:
   - pattern: '^(?i:https?://(?:[^/]+\.)?atlassian\.net)/(?:[^?#]*/)?browse/(?P<key>[A-Z][A-Z0-9]+-\d+)(?:[/?#].*)?$'
     tool: jira_rest.get_issue
     args: { key: '{key}' }
+
+# How this connector's free-text search wants a question turned into an argument.
+# No recency clause on purpose: jql_bound appends one after dispatch, and adding it
+# here would bound the query twice.
+search_argument:
+  key: jql
+  template: 'text ~ "{terms}"'
+  max_bytes: 500

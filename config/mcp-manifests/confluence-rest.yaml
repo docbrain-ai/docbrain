@@ -158,3 +158,13 @@ url_sources:
   - pattern: '^(?i:https?://(?:[^/]+\.)?atlassian\.net)/(?:[^?#]*/)?wiki/(?:[^?#]*/)?pages/(?P<id>\d{4,})(?:[/?#].*)?$'
     tool: confluence_rest.get_page
     args: { id: '{id}' }
+
+# How this connector's free-text search wants a question turned into an argument.
+# The engine used to decide this by looking for the word "confluence" inside the
+# tool's name — a vendor table in the engine, wrong for anyone not running these
+# products. It is stated here instead, beside the tool it describes.
+# `{terms}` receives the question's extracted terms, escaped for the quoted literal.
+search_argument:
+  key: cql
+  template: 'text ~ "{terms}" ORDER BY lastmodified DESC'
+  max_bytes: 500
