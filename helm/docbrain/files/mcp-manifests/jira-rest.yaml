@@ -66,6 +66,11 @@ auth:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
 
+content_domains:
+  - tickets
+  - planning
+coverage: narrow
+
 tools:
   - name: jira_rest.get_issue
     upstream_name: get_issue

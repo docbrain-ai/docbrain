@@ -73,6 +73,12 @@ auth:
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
     use_pkce: true
 
+content_domains:
+  - discussion
+  - decisions
+  - tribal-knowledge
+coverage: broad
+
 # Empty tools + dynamic discovery: the hosted server is probed at boot and on
 # the refresh interval; only readOnlyHint:true tools survive the D1 gate.
 tools: []

@@ -134,6 +134,12 @@ auth:
     # resolves the user's token internally.
     shim_internal: true
 
+content_domains:
+  - discussion
+  - decisions
+  - tribal-knowledge
+coverage: narrow
+
 # Static tool catalog — declared here rather than discovered, because the
 # shim's endpoint is in-process and we want explicit, schema-validated
 # inputs (especially the D-prefix refusal which must be deterministic at
