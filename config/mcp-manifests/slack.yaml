@@ -79,6 +79,17 @@ auth:
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
     use_pkce: true
 
+# D1 (issue #326): a search across everything the connected user can see —
+# every public channel plus their own private ones — so it speaks for the
+# whole discussion domain, not one topic. `coverage: broad` marks that: the
+# discovery routing floor consults every broad discussion source before
+# falling back to keyword search.
+content_domains:
+  - discussion
+  - decisions
+  - tribal-knowledge
+coverage: broad
+
 # Empty tools + dynamic discovery: the hosted server is probed at boot and on
 # the refresh interval; only readOnlyHint:true tools survive the D1 gate.
 tools: []

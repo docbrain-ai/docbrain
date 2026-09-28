@@ -79,6 +79,13 @@ auth:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
 
+# D1 (issue #326): wiki/documentation content. `coverage: narrow` (the
+# default) — its search tool is topic/parameter-scoped (CQL against page
+# title/body/space), not a broad span over every discussion in the deployment.
+content_domains:
+  - docs
+coverage: narrow
+
 tools:
   - name: confluence_rest.get_page
     upstream_name: get_page

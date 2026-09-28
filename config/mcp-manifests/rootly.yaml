@@ -59,6 +59,13 @@ auth:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
 
+# D1 (issue #326): incident-management content. `coverage: narrow` (the
+# default) — its tools are parameter-scoped (on-call lookups, incident
+# fetches), not a broad span over every discussion in the deployment.
+content_domains:
+  - incidents
+coverage: narrow
+
 tools:
   - name: rootly.get_oncall
     upstream_name: get_oncall

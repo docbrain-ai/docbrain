@@ -120,6 +120,14 @@ auth:
     client_secret_ref: ATLASSIAN_OAUTH_CLIENT_SECRET
     use_pkce: true
 
+# D1 (issue #326): tickets/planning content via the Teamwork Graph.
+# `coverage: narrow` (the default) — topic/parameter-scoped queries, not a
+# broad span over every discussion in the deployment.
+content_domains:
+  - tickets
+  - planning
+coverage: narrow
+
 tools:
   - name: jira.get_teamwork_graph_context
     # Our manifest naming convention is snake_case prefixed by the
