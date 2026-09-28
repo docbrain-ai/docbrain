@@ -79,9 +79,6 @@ auth:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
 
-# D1 (issue #326): wiki/documentation content. `coverage: narrow` (the
-# default) — its search tool is topic/parameter-scoped (CQL against page
-# title/body/space), not a broad span over every discussion in the deployment.
 content_domains:
   - docs
 coverage: narrow
@@ -109,7 +106,7 @@ tools:
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 7000
-    # D1 invariant: read-only fetch of a single Confluence page by id.
+    # read-only fetch of a single Confluence page by id.
     read_only: true
 
   - name: confluence_rest.search
@@ -138,7 +135,7 @@ tools:
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
     latency_budget_ms: 7000
-    # D1 invariant: CQL search returns matching pages; never mutates.
+    # CQL search returns matching pages; never mutates.
     read_only: true
 
 egress:

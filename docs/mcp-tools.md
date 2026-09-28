@@ -133,6 +133,57 @@ For self-hosted manifests, the gateway dispatches via service-account auth (an i
 
 ---
 
+## Tuning routing: `content_domains` and `coverage`
+
+The picker infers intent from the question, but it has no idea what a given manifest actually *covers* unless the manifest says so. Two optional fields let you tell it:
+
+```yaml
+content_domains:
+  - discussion
+  - decisions
+coverage: broad
+```
+
+### `content_domains`
+
+A list of free-form strings naming the kinds of knowledge this connector's content covers — `discussion`, `decisions`, `tribal-knowledge`, `docs`, `tickets`, `planning`, `metrics`, `logs`, `incidents`, `code`, `releases`, or anything else that describes your deployment. There's no fixed enum: pick the words that describe what's actually in the system, consistently across your manifests, and the picker matches a question's inferred intent against them.
+
+### `coverage`
+
+How much of its declared domain a single dispatch actually reaches:
+
+| Value | Meaning | Example |
+|---|---|---|
+| `broad` | One search spans the *entire* domain — every topic, not a slice of it. | A chat platform's "search all messages" tool. |
+| `narrow` (default) | The tool is scoped to a topic or a specific parameter — an id, a query, a filter. | A metrics query, a ticket-by-key fetch, a CQL/JQL search. |
+
+### How routing uses them
+
+The dispatcher routes a question to the manifests whose `content_domains` match its inferred intent. `coverage: broad` carries an extra guarantee: a broad-coverage source for the `discussion` (or `decisions`, or similarly conversational) domain is **always** consulted on a discussion/decision/status/how-to style question, alongside whatever narrow-coverage tools also match — so an answer that only exists in chat is never missed because the question didn't name the platform. Narrow-coverage tools are consulted only when their declared domains line up with the question.
+
+```yaml
+# A generic "chat" connector — one search tool spans every channel the
+# caller can see, so it speaks for the whole discussion domain.
+content_domains:
+  - discussion
+  - decisions
+coverage: broad
+```
+
+```yaml
+# A generic "tickets" connector — its search tool is query-scoped, not a
+# blanket sweep, so it's the narrow (default) case.
+content_domains:
+  - tickets
+  - planning
+coverage: narrow
+```
+
+!!! info "Optional — undeclared connectors still work"
+    Both fields are optional. A manifest that declares neither falls back to today's behavior: keyword search, with no domain-aware routing boost. Declaring `content_domains` and `coverage` is the upgrade path to precise, intent-based routing — add it to a manifest whenever you want the picker to reason about what that connector is actually good for.
+
+---
+
 ## Auth modes
 
 Each manifest declares one or more `modes` under `auth:`. The orchestrator picks the most specific mode the user is eligible for.
@@ -228,7 +279,7 @@ auth:
     2. **Confluence API** — Add `read:confluence-content.all`, `read:confluence-content.summary`, `read:confluence-space.summary`, `read:confluence-user`, `search:confluence`. Both `.all` and `.summary` are required — they are independent gates, not a hierarchy.
     3. **Jira API** — `read:jira-work` and `read:jira-user`. Beyond these two, the modern Jira REST API does NOT expose a separate Teamwork Graph scope on classic 3LO apps — traversal is gated on having the underlying read scopes across Jira + Confluence + User Identity.
 
-    All scopes above are read-only. **Do NOT add** anything starting with `write:`, `delete:`, `manage:`, or `admin:` — DocBrain's MCP layer is read-only by design (D1 invariant) and would refuse to dispatch a write tool even if one were granted, but extra scopes widen the blast radius if the OAuth token is ever stolen.
+    All scopes above are read-only. **Do NOT add** anything starting with `write:`, `delete:`, `manage:`, or `admin:` — DocBrain's MCP layer is read-only by design and would refuse to dispatch a write tool even if one were granted, but extra scopes widen the blast radius if the OAuth token is ever stolen.
 
     **Existing connected users must reconnect after a scope change.** Adding scopes to the app does not update tokens already in `mcp_oauth_tokens`. Either ask each user to click **Disconnect** → **Connect** on `/integrations`, or as admin delete the relevant rows from `mcp_oauth_tokens` to force a fresh OAuth dance on next dispatch.
 

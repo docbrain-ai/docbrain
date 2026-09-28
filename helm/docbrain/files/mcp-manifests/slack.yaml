@@ -13,8 +13,8 @@
 #
 # Tool catalog: DYNAMIC discovery. Slack's hosted server exposes many tools
 # (search messages/files/users/channels, read history, AND write tools like
-# send-message and canvas management). DocBrain's discovery probe applies the
-# D1 read-only gate (annotations.readOnlyHint == true), so only the read/search
+# send-message and canvas management). DocBrain's discovery probe applies a
+# read-only gate (annotations.readOnlyHint == true), so only the read/search
 # tools are imported — the write tools are dropped automatically. This is safer
 # than hand-declaring a schema and enforces the MCP read-only invariant at the
 # gate rather than by hand.
@@ -80,7 +80,7 @@ content_domains:
 coverage: broad
 
 # Empty tools + dynamic discovery: the hosted server is probed at boot and on
-# the refresh interval; only readOnlyHint:true tools survive the D1 gate.
+# the refresh interval; only readOnlyHint:true tools survive the gate.
 tools: []
 tool_discovery:
   mode: dynamic

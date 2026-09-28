@@ -134,12 +134,6 @@ auth:
     # resolves the user's token internally.
     shim_internal: true
 
-# D1 (issue #326): same discussion-kind content as `slack`, but declared
-# `coverage: narrow` — every tool here is a parameter-scoped fetch (a
-# specific thread/channel/message by id or URL), not a search spanning the
-# whole domain. The `slack` manifest's search tools are the broad-coverage
-# connector for this domain; this shim's own description already defers
-# keyword-style queries to it.
 content_domains:
   - discussion
   - decisions

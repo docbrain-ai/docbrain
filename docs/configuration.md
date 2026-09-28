@@ -1141,7 +1141,7 @@ tool_discovery:
     latency_budget_ms: 7000         # <= 8000 ceiling
 ```
 
-**Read-only invariant (D1).** DocBrain only registers tools where the upstream
+**Read-only invariant.** DocBrain only registers tools where the upstream
 declares `annotations.readOnlyHint == true`. Tools without the hint, or marked
 `false`, are silently dropped at probe time. DocBrain does not dispatch write
 operations via MCP; this is a platform-wide invariant enforced at three gates:
