@@ -2169,8 +2169,8 @@ Each section is independently fetched with a 5-second timeout. If a section fail
   },
   "quality": {
     "overall_avg": 68.5,
-    "by_space": [{ "space": "PAYMENTS", "avg_score": 72.3, "doc_count": 15 }],
-    "worst_docs": [{ "document_id": "uuid", "title": "Old Guide", "composite_score": 23.4 }]
+    "scored_count": 1234,
+    "scorable_count": 1500
   },
   "fragments": {
     "total": 147,
@@ -2596,25 +2596,30 @@ Triggers a rescore of all documents. Returns immediately — rescoring happens a
 GET /api/v1/quality/report
 ```
 
-Aggregate quality report with per-space breakdown and worst-scoring documents. **Requires analyst role.**
+Aggregate structure-score report over the scorable documents (live, chunked, with at least one chunk). `scored_count` of `scorable_count` documents have a current structural score; `overall_avg` averages `structural_total` over those and is `null` when `scored_count` is 0 ("not measured" is never a number). `by_space` and `worst_docs` (the 20 lowest, ordered by `structural_total` then id) cover the same scored documents. **Requires analyst role.**
 
 **Response:**
 ```json
 {
   "overall_avg": 72.5,
-  "total_scored": 1234,
+  "scored_count": 1234,
+  "scorable_count": 1500,
   "by_space": [
+    { "space": "ENGINEERING", "avg_score": 78.3, "doc_count": 450 }
+  ],
+  "worst_docs": [
     {
-      "space": "ENGINEERING",
-      "avg_score": 78.3,
-      "document_count": 450,
-      "worst_docs": [
-        {
-          "document_id": "uuid",
-          "title": "Legacy Migration Guide",
-          "composite_score": 23.5
-        }
-      ]
+      "document_id": "uuid",
+      "title": "Legacy Migration Guide",
+      "content_type": "howto",
+      "structural_total": 23.5,
+      "heading_score": 2.0,
+      "completeness_score": 5.0,
+      "code_block_score": 0.0,
+      "link_score": 0.0,
+      "length_score": 6.0,
+      "readability_score": 7.5,
+      "metadata_score": 3.0
     }
   ]
 }
