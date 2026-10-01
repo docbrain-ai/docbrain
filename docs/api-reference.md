@@ -2218,7 +2218,7 @@ Sections that fail to load return `null` with an entry in `errors`:
 
 ## Governance SLAs
 
-SLA policies define maximum acceptable times for gap acknowledgment, gap resolution, draft review, and document freshness. Policies can be set per-space or org-wide (default). A periodic background checker detects breaches and emits `SlaBreached` events.
+SLA policies define maximum acceptable times for gap acknowledgment, gap resolution, draft review, and document freshness. Policies can be set per-space or org-wide (default). A periodic background checker detects breaches and emits `SlaBreached` events. The `freshness` SLA (the document-quality check) is not run yet; it returns with #371.
 
 ### GET /api/v1/governance/slas
 
@@ -2579,14 +2579,14 @@ Status values: `high` (80+), `acceptable` (60+), `needs_improvement` (40+), `poo
 POST /api/v1/quality/rescore
 ```
 
-Triggers a rescore of all documents. Returns immediately — rescoring happens asynchronously during the next ingest cycle. **Requires admin role.**
+Starts a background rescore of every scorable document. Returns immediately; progress is in the server logs, and `/api/v1/quality/report` shows the result. A background pass also scores any document without a current score every 15 minutes, so a rescore is only needed to force a re-read. **Requires admin role.**
 
 **Response:**
 ```json
 {
   "status": "accepted",
   "documents_to_score": 1234,
-  "message": "Rescoring will happen during the next ingest cycle"
+  "message": "Rescoring started in background — progress in server logs; check /api/v1/quality/report when complete."
 }
 ```
 
@@ -2682,7 +2682,7 @@ When semantic quality scoring is enabled, documents are also assessed by an LLM 
 | `clarity` | 0-25 | Understandable without external help |
 | `actionability` | 0-25 | Provides concrete steps, commands, and examples |
 
-The semantic score (0-100) is stored in the `semantic_score` field with per-dimension details in `semantic_details`. The `composite_score` becomes a 50/50 blend of structural and semantic scores once both are available.
+The semantic score (0-100) is stored in the `semantic_score` field with per-dimension details in `semantic_details`. The `composite_score` becomes a blend of structural (0.4/0.7) and semantic (0.3/0.7) scores, but only when both describe the same content version; otherwise it is the structural score alone.
 
 Semantic scoring runs as a background sweep (configurable interval, default 24h) and only evaluates documents with `structural_total >= 40` to avoid wasting LLM calls on obviously poor content. Newly generated drafts are scored immediately after creation.
 
