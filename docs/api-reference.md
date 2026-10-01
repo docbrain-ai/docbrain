@@ -1806,7 +1806,7 @@ Query the persistent event log. **Requires admin role.**
 }
 ```
 
-**Event types:** `document.ingested`, `document.updated`, `document.deleted`, `freshness.changed`, `quality.scored`, `fragment.captured`, `fragment.indexed`, `fragment.promoted`, `gap.detected`, `gap.assigned`, `gap.resolved`, `draft.generated`, `draft.review_requested`, `draft.published`, `draft.rejected`, `query.answered`, `feedback.received`, `sla.breached`, `maintenance.fix_proposed`
+**Event types:** `document.ingested`, `document.updated`, `document.deleted`, `freshness.changed`, `fragment.captured`, `fragment.indexed`, `fragment.promoted`, `gap.detected`, `gap.assigned`, `gap.resolved`, `draft.generated`, `draft.review_requested`, `draft.published`, `draft.rejected`, `query.answered`, `feedback.received`, `sla.breached`, `maintenance.fix_proposed`
 
 ### GET /api/v1/events/stream
 
@@ -3074,7 +3074,6 @@ All event types from the internal event bus are available for webhook subscripti
 | `document.updated` | Existing document re-indexed |
 | `document.deleted` | Document removed |
 | `freshness.changed` | Document freshness status changed |
-| `quality.scored` | Quality score computed or updated |
 | `fragment.captured` | Knowledge fragment captured |
 | `fragment.indexed` | Fragment auto-indexed into search |
 | `fragment.promoted` | Fragment promoted from review queue |
