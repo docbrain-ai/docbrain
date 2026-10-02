@@ -2152,12 +2152,12 @@ Total spaces are derived from the `documents` table (distinct space values), not
 
 What needs a decision across governance, and the figures the Govern Overview draws. **Requires viewer role. Refused (403) for an API key limited to some spaces**, because every section counts across spaces.
 
-Each section is read with its own 5-second timeout. A section that cannot be read is `null` and named in `errors`; the endpoint answers 200 with the rest. Fields are shaped by role on the server: owner, steward and assignee names and per-gap spaces are for editors and up; `reviews` is present for editors and up; `setup` for admins only. A gap's topic is shown only when at least two people other than the reader asked, or the reader is its assignee or an owner of its space; who asked is never returned.
+Each section is read with its own 5-second timeout. A section that cannot be read is `null` and named in `errors`; the endpoint answers 200 with the rest. Fields are shaped by role on the server: owner, steward and assignee names and per-gap spaces are for editors and up; `reviews` is present for editors and up; `setup` for admins only. A gap's topic is shown only when at least two people other than the reader asked, or the reader is its assignee or has a role on its space; who asked is never returned. A subject's `label` (a gap) and `title` (a draft) are therefore nullable: `null` means the reader may not see that topic, and a late draft's title follows the same rule through the gap it was written for.
 
 ```json
 {
   "as_of": "2026-10-01T13:40:00Z",
-  "late": { "as_of": "…", "items": [ /* up to 8, most overdue first */ ], "counts": [{ "kind": "not_picked_up", "count": 7 }],
+  "late": { "as_of": "…", "items": [ /* up to 8, most overdue first; subject.label / subject.title may be null */ ], "counts": [{ "kind": "not_picked_up", "count": 7 }],
             "truncated": true, "ranges": [{ "kind": "not_picked_up", "shortest_late_by_secs": 950400, "longest_late_by_secs": 1382400 }],
             "policy_set": true },
   "routing": { "analysed": true, "open_gaps": 15, "waiting": 7, "steward": null, "space_owners": null, "team": null, "nobody": null,
@@ -2235,36 +2235,40 @@ Delete a space-specific override (space falls back to org default). **Requires a
 
 ### GET /api/v1/governance/breaches
 
-List SLA breaches with optional filters. **Requires viewer role.**
+What is late now, most overdue first. **Requires viewer role. Refused (403) for an API key limited to some spaces.** Returns the 100 most overdue subjects, every kind's uncapped count, and the instant they were judged at. Below editor, an assignee is sent empty (`{}`) and a row's `space` is `null`.
 
-**Query parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `space` | string | — | Filter by space |
-| `sla_type` | string | — | Filter: `acknowledgment`, `resolution`, `review`, `freshness` |
-| `open_only` | bool | `false` | Only show unacknowledged breaches |
-| `limit` | int | `50` | Max results (up to 200) |
-| `offset` | int | `0` | Pagination offset |
+A gap's `label` and a draft's `title` are `null` when the reader may not see the topic (same rule as the overview: two other askers, or you are its assignee or have a role on its space; a draft follows its source gap).
 
 **Response:**
 ```json
 {
-  "breaches": [
+  "as_of": "2026-10-01T13:40:00Z",
+  "items": [
     {
-      "id": "uuid",
-      "entity_type": "gap",
-      "entity_id": "uuid",
-      "sla_type": "acknowledgment",
+      "kind": "not_picked_up",
+      "subject": { "type": "gap", "id": "uuid", "label": null },
       "space": "ENGINEERING",
-      "owner_id": null,
-      "hours_overdue": 12.5,
-      "acknowledged_at": null,
-      "acknowledged_by": null,
-      "created_at": "2025-01-01T00:00:00Z",
-      "updated_at": "2025-01-01T00:00:00Z"
+      "assignee": null,
+      "draft": null,
+      "policy_hours": 48,
+      "clock_start": "2026-09-20T09:00:00Z",
+      "due_at": "2026-09-22T09:00:00Z",
+      "late_by_secs": 1382400
+    },
+    {
+      "kind": "not_reviewed",
+      "subject": { "type": "draft", "id": "uuid", "title": "Rotating the widget service" },
+      "space": "ENGINEERING",
+      "assignee": null,
+      "draft": null,
+      "policy_hours": 72,
+      "clock_start": "2026-09-25T09:00:00Z",
+      "due_at": "2026-09-28T09:00:00Z",
+      "late_by_secs": 273600
     }
-  ]
+  ],
+  "counts": [{ "kind": "not_picked_up", "count": 7 }, { "kind": "no_draft_yet", "count": 0 }, { "kind": "draft_not_submitted", "count": 0 }, { "kind": "not_reviewed", "count": 3 }],
+  "truncated": false
 }
 ```
 

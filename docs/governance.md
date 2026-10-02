@@ -141,26 +141,41 @@ POST /api/v1/governance/slas/breaches/{id}/acknowledge
 
 ---
 
-## Governance Dashboard
+## Govern Overview
 
-The dashboard provides a single view of documentation health:
+The Govern overview (`/govern` in the console) opens on what needs a decision, then draws the figures behind it. Every figure is counted across all spaces, so a key limited to some spaces is refused.
 
-- **Coverage** — Percentage of topics with documentation per space
-- **SLA Compliance** — Which spaces are meeting their SLAs, which are in breach
-- **Quality Distribution** — Document scores across spaces (how many are A/B/C/D/F)
-- **Capture Velocity** — Fragments captured per week, trending up or down
-- **Top Contributors** — Who is contributing the most knowledge, by space
+**Needs a decision** — one row per fact, shown only while it is true:
+
+- **Late** — gaps nobody has picked up, assigned gaps with no draft yet, gaps whose draft nobody submitted, and drafts that waited past their review stage, each with how late it is and the term it is judged by.
+- **Reaches nobody** — open gaps that no steward or space owner would be told about.
+- **Not set up** (admins only) — no SLA policy while gaps exist, no review workflow while drafts wait, ownership not learned while a source is connected.
+
+**Panels**
+
+- **Ownership coverage** — documents per space, and whether anyone with a role on the space can sign in and has notifications on.
+- **SLAs against the clock** — what is late now and by how much.
+- **Review flow** (editors and up) — where drafts wait in the default workflow's stages, and what entered, was published or was rejected in the last 30 days.
+- **Structure score by space** — scores per space and the weekly line.
+
+**Who sees what**
+
+| | Viewer | Editor and up | Admin |
+|---|---|---|---|
+| Late, reaches-nobody rows, coverage, SLAs, structure | yes | yes | yes |
+| Names of owners, stewards and assignees; a late row's space | no ("Assigned", counts only) | yes | yes |
+| Review flow | no | yes | yes |
+| Not-set-up rows | no | no | yes |
+
+A gap's topic is shown only when at least two people other than the reader asked it, or the reader is its assignee or has a role on its space; a late draft's title follows the same rule through the gap it was written for. Who asked is never shown.
 
 **API:**
 ```bash
 # The Govern overview: what needs a decision, coverage, SLAs, review flow, structure scores
 GET /api/v1/governance/overview
-
-# Coverage report
-GET /api/v1/governance/coverage
 ```
 
-The overview needs `viewer`; coverage needs `viewer`. Both refuse a key limited to some spaces.
+The overview needs `viewer`. Capture velocity and top contributors are not part of it.
 
 ---
 
