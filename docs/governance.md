@@ -8,7 +8,7 @@ Governance in DocBrain has four pillars:
 
 1. **Space Ownership** — Who is responsible for which knowledge areas
 2. **Topic Stewardship** — Subject-matter experts for specific topics within spaces
-3. **SLA Policies** — Deadlines for gap resolution, draft review, and freshness
+3. **SLA Policies** — Deadlines for picking up and resolving gaps and for draft review (a freshness term is stored but no check reads it today)
 4. **Breach Detection** — Automated scanning that surfaces violations before they become incidents
 
 All governance features are accessible from the **Governance** page in the web UI (sidebar → Govern → Governance), which shows the Govern overview and rules/owners management via tab navigation.
@@ -181,10 +181,10 @@ The overview needs `viewer`. Capture velocity and top contributors are not part 
 | Variable | Default | Description |
 |---|---|---|
 | `SLA_CHECK_INTERVAL_SECS` | `3600` | How often the SLA checker runs (seconds) |
-| `SLA_DEFAULT_GAP_ACK_HOURS` | `24` | Default hours before a gap must be acknowledged |
+| `SLA_DEFAULT_GAP_ACK_HOURS` | `24` | Default hours before a gap must be picked up (assigned) |
 | `SLA_DEFAULT_GAP_RESOLUTION_DAYS` | `7` | Default days before a gap must be resolved |
 | `SLA_DEFAULT_DRAFT_REVIEW_HOURS` | `48` | Default hours for draft review completion |
-| `SLA_DEFAULT_FRESHNESS_DAYS` | `90` | Default days before a document is stale |
+| `SLA_DEFAULT_FRESHNESS_DAYS` | `90` | Default freshness term stored with new policies; no check reads it today |
 
 ### config/default.yaml
 
