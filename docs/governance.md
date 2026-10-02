@@ -11,7 +11,7 @@ Governance in DocBrain has four pillars:
 3. **SLA Policies** — Deadlines for gap resolution, draft review, and freshness
 4. **Breach Detection** — Automated scanning that surfaces violations before they become incidents
 
-All governance features are accessible from the **Governance** page in the web UI (sidebar → Govern → Governance), which shows the dashboard and rules/owners management via tab navigation.
+All governance features are accessible from the **Governance** page in the web UI (sidebar → Govern → Governance), which shows the Govern overview and rules/owners management via tab navigation.
 
 ---
 
@@ -90,7 +90,7 @@ SLA policies define deadlines for documentation activities. They can be set glob
 
 ### Configuring SLAs
 
-**Web UI:** Governance → Dashboard → SLA section shows compliance. Rules & Owners tab lets you manage per-space policies.
+**Web UI:** Govern › SLAs shows what is late now. Rules & Owners tab lets you manage per-space policies.
 
 **API:**
 ```bash
@@ -100,23 +100,23 @@ GET /api/v1/governance/slas
 # Set default SLA policy
 PUT /api/v1/governance/slas/default
 {
-  "gap_ack_hours": 24,
+  "gap_acknowledgment_hours": 24,
   "gap_resolution_days": 7,
   "draft_review_hours": 48,
-  "freshness_days": 90
+  "freshness_review_days": 90
 }
 
 # Set space-specific SLA (overrides default)
-PUT /api/v1/governance/slas/spaces/{space}
+PUT /api/v1/governance/slas/{space}
 {
-  "gap_ack_hours": 12,
+  "gap_acknowledgment_hours": 12,
   "gap_resolution_days": 3,
   "draft_review_hours": 24,
-  "freshness_days": 60
+  "freshness_review_days": 60
 }
 
 # Delete a space-specific policy (falls back to default)
-DELETE /api/v1/governance/slas/spaces/{space}
+DELETE /api/v1/governance/slas/{space}
 ```
 
 ### Breach Detection
@@ -129,14 +129,8 @@ DocBrain runs an automated SLA checker on a configurable interval (default: ever
 4. If webhooks are configured, external systems are notified
 
 ```bash
-# List current breaches
-GET /api/v1/governance/slas/breaches
-
-# Get breach summary (counts by type and space)
-GET /api/v1/governance/slas/breaches/summary
-
-# Acknowledge a breach (stops re-alerting)
-POST /api/v1/governance/slas/breaches/{id}/acknowledge
+# What is late now, most overdue first (viewer; refused for a key limited to some spaces)
+GET /api/v1/governance/breaches
 ```
 
 ---
@@ -148,7 +142,6 @@ The Govern overview (`/govern` in the console) opens on what needs a decision, t
 **Needs a decision** — one row per fact, shown only while it is true:
 
 - **Late** — gaps nobody has picked up, assigned gaps with no draft yet, gaps whose draft nobody submitted, and drafts that waited past their review stage, each with how late it is and the term it is judged by.
-- **Reaches nobody** — open gaps that no steward or space owner would be told about.
 - **Not set up** (admins only) — no SLA policy while gaps exist, no review workflow while drafts wait, ownership not learned while a source is connected.
 
 **Panels**
@@ -162,12 +155,14 @@ The Govern overview (`/govern` in the console) opens on what needs a decision, t
 
 | | Viewer | Editor and up | Admin |
 |---|---|---|---|
-| Late, reaches-nobody rows, coverage, SLAs, structure | yes | yes | yes |
+| Late rows, coverage, SLAs, structure | yes | yes | yes |
 | Names of owners, stewards and assignees; a late row's space | no ("Assigned", counts only) | yes | yes |
 | Review flow | no | yes | yes |
 | Not-set-up rows | no | no | yes |
 
 A gap's topic is shown only when at least two people other than the reader asked it, or the reader is its assignee or has a role on its space; a late draft's title follows the same rule through the gap it was written for. Who asked is never shown.
+
+How many open gaps each routing step (steward, space owners, team, nobody) would reach is counted only once gap routing runs; until then the overview sends those counts as `null`, never as 0, and shows no "reaches nobody" row.
 
 **API:**
 ```bash
@@ -214,7 +209,7 @@ governance:
 | Manage space owners | `admin` |
 | Manage stewards | `admin` |
 | Configure SLA policies | `admin` |
-| View/acknowledge breaches | `analyst` |
+| List what is late now (`/governance/breaches`) | `viewer` |
 
 ---
 

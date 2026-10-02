@@ -2152,7 +2152,7 @@ Total spaces are derived from the `documents` table (distinct space values), not
 
 What needs a decision across governance, and the figures the Govern Overview draws. **Requires viewer role. Refused (403) for an API key limited to some spaces**, because every section counts across spaces.
 
-Each section is read with its own 5-second timeout. A section that cannot be read is `null` and named in `errors`; the endpoint answers 200 with the rest. Fields are shaped by role on the server: owner, steward and assignee names and per-gap spaces are for editors and up; `reviews` is present for editors and up; `setup` for admins only. A gap's topic is shown only when at least two people other than the reader asked, or the reader is its assignee or has a role on its space; who asked is never returned. A subject's `label` (a gap) and `title` (a draft) are therefore nullable: `null` means the reader may not see that topic, and a late draft's title follows the same rule through the gap it was written for.
+Each section is read with its own 5-second timeout. A section that cannot be read is `null` and named in `errors`; the endpoint answers 200 with the rest. Fields are shaped by role on the server: owner, steward and assignee names and per-gap spaces are for editors and up; `reviews` is present for editors and up; `setup` for admins only. A gap's topic is shown only when at least two people other than the reader asked, or the reader is its assignee or anyone with a role on the gap's space; who asked is never returned. A subject's `label` (a gap) and `title` (a draft) are therefore nullable: `null` means the reader may not see that topic, and a late draft's title follows the same rule through the gap it was written for.
 
 ```json
 {
@@ -2162,7 +2162,7 @@ Each section is read with its own 5-second timeout. A section that cannot be rea
             "policy_set": true },
   "routing": { "analysed": true, "open_gaps": 15, "waiting": 7, "steward": null, "space_owners": null, "team": null, "nobody": null,
                "items": [{ "gap_id": "uuid", "topic": null, "opened_at": "…" }] },
-  "coverage": { "total_documents": 14882, "spaces": [{ "space": "ENG", "documents": 13571, "owners": 1 }], "more": null },
+  "coverage": { "total_documents": 14882, "spaces": [{ "space": "ENG", "documents": 13571, "owners": 1, "with_role": 2 }], "more": null },
   "reviews": { "workflow": { "name": "Sample review", "stages": [{ "name": "sme_review", "display_name": "SME Review" }] },
                "workflows": 1, "review_term_hours": 72, "written_ages_secs": [1500000], "stages": [{ "name": "sme_review", "display_name": "SME Review", "waiting_ages_secs": [] }],
                "last_30d": { "entered": [0], "published": 0, "rejected": 0 }, "failed": { "total": 8, "first": "…", "latest": "…" } },
@@ -2175,11 +2175,17 @@ Each section is read with its own 5-second timeout. A section that cannot be rea
 }
 ```
 
+`as_of` is the moment the late list was read; the other sections are read within a few seconds of it. If the late list could not be read, it is the server's clock.
+
+`coverage.spaces[].owners` is the people with a role on the space who can sign in and have notifications on (the people gap routing will tell, once it runs); `with_role` is the people with any role on the space, in any state (so `with_role` is never below `owners`). `with_role > 0` with `owners == 0` means people hold a role but nobody can be reached; `with_role == 0` means the space has no owner at all. Owner names are sent to editors and up only.
+
 `quality.weekly` is the average over the documents you have today (`docs` is how many a point covers): a document deleted, archived or moved since then changes past weeks.
 
 `routing.steward`, `space_owners`, `team` and `nobody` are `null` until gap routing runs: a step is counted only once it runs, and is never reported as 0 before that. `routing.items` lists the open gaps nobody has picked up, oldest first.
 
 `GET /api/v1/governance/dashboard` was removed in this release; nothing in the console read it.
+
+---
 
 ## Governance SLAs
 
@@ -2271,30 +2277,6 @@ A gap's `label` and a draft's `title` are `null` when the reader may not see the
   "truncated": false
 }
 ```
-
-### GET /api/v1/governance/breaches/summary
-
-Aggregate breach statistics for dashboards. **Requires viewer role.**
-
-**Response:**
-```json
-{
-  "total_open": 5,
-  "total_acknowledged": 12,
-  "by_type": [
-    { "sla_type": "acknowledgment", "count": 3 },
-    { "sla_type": "freshness", "count": 2 }
-  ],
-  "by_space": [
-    { "space": "ENGINEERING", "count": 4 },
-    { "space": "(org-wide)", "count": 1 }
-  ]
-}
-```
-
-### POST /api/v1/governance/breaches/:id/acknowledge
-
-Mark a breach as acknowledged. **Requires editor role.** The acknowledging user is recorded. Returns `{ "acknowledged": true }` on success, `404` if the breach doesn't exist or was already acknowledged.
 
 ---
 
