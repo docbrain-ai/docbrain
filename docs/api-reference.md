@@ -766,6 +766,8 @@ GET /api/v1/autopilot/drafts/{draft_id}
 
 Returns full draft content for review.
 
+A key limited to some spaces lists only the drafts in its spaces (a draft with no space counts as `GENERAL`), and gets `404` for any other draft by id — the same as for an id that does not exist.
+
 ---
 
 ### Generate Draft for a Gap
@@ -2146,75 +2148,38 @@ Ownership coverage report across all spaces. **Requires viewer role.**
 
 Total spaces are derived from the `documents` table (distinct space values), not from governance tables — ensuring unowned spaces are visible.
 
-### GET /api/v1/governance/dashboard
+### GET /api/v1/governance/overview
 
-Aggregated governance overview combining ownership coverage, SLA compliance, quality scores, fragment stats, review queue, velocity, and top contributors. **Requires analyst role.**
+What needs a decision across governance, and the figures the Govern Overview draws. **Requires viewer role. Refused (403) for an API key limited to some spaces**, because every section counts across spaces.
 
-Each section is independently fetched with a 5-second timeout. If a section fails, it returns `null` and the failure is recorded in `errors`. The endpoint always returns 200 with partial data.
+Each section is read with its own 5-second timeout. A section that cannot be read is `null` and named in `errors`; the endpoint answers 200 with the rest. Fields are shaped by role on the server: owner, steward and assignee names and per-gap spaces are for editors and up; `reviews` is present for editors and up; `setup` for admins only. A gap's topic is shown only when at least two people other than the reader asked, or the reader is its assignee or an owner of its space; who asked is never returned.
 
-**Response:**
 ```json
 {
-  "coverage": {
-    "total_spaces": 12,
-    "owned_spaces": 9,
-    "coverage_pct": 75.0,
-    "unowned_spaces": ["INFRA"]
-  },
-  "sla_breaches": {
-    "total_open": 3,
-    "total_acknowledged": 12,
-    "by_type": [{ "sla_type": "gap_acknowledgment", "count": 2 }],
-    "by_space": [{ "space": "INFRA", "count": 2 }]
-  },
-  "quality": {
-    "overall_avg": 68.5,
-    "scored_count": 1234,
-    "scorable_count": 1500
-  },
-  "fragments": {
-    "total": 147,
-    "by_status": [{ "status": "approved", "count": 89 }],
-    "by_source_type": [{ "source_type": "pr_merge", "count": 68 }],
-    "by_space": [{ "space": "PAYMENTS", "count": 45 }]
-  },
-  "review_queue": [
-    {
-      "draft_id": "uuid",
-      "draft_title": "Deployment Runbook",
-      "current_stage": "sme_review",
-      "stage_display_name": "SME Review",
-      "workflow_name": "Default",
-      "space": "INFRA",
-      "entered_stage_at": "2024-01-15T10:00:00Z"
-    }
-  ],
-  "velocity": {
-    "current_velocity": 1.2,
-    "velocity_trend": "accelerating",
-    "grade": "B",
-    "weekly_snapshots": [
-      { "week_start": "2024-01-08", "docs_created": 5, "docs_updated": 12, "gaps_opened": 3, "gaps_resolved": 4, "velocity": 1.1 }
-    ]
-  },
-  "top_contributors": [
-    { "author_id": "alice", "author_name": "Alice Smith", "fragment_count": 23, "approved_count": 18 }
-  ],
-  "errors": [],
-  "generated_at": "2024-01-15T12:00:00Z"
+  "as_of": "2026-10-01T13:40:00Z",
+  "late": { "as_of": "…", "items": [ /* up to 8, most overdue first */ ], "counts": [{ "kind": "not_picked_up", "count": 7 }],
+            "truncated": true, "ranges": [{ "kind": "not_picked_up", "shortest_late_by_secs": 950400, "longest_late_by_secs": 1382400 }],
+            "policy_set": true },
+  "routing": { "analysed": true, "open_gaps": 15, "waiting": 7, "steward": null, "space_owners": null, "team": null, "nobody": null,
+               "items": [{ "gap_id": "uuid", "topic": null, "opened_at": "…" }] },
+  "coverage": { "total_documents": 14882, "spaces": [{ "space": "ENG", "documents": 13571, "owners": 1 }], "more": null },
+  "reviews": { "workflow": { "name": "Sample review", "stages": [{ "name": "sme_review", "display_name": "SME Review" }] },
+               "workflows": 1, "review_term_hours": 72, "written_ages_secs": [1500000], "stages": [{ "name": "sme_review", "display_name": "SME Review", "waiting_ages_secs": [] }],
+               "last_30d": { "entered": [0], "published": 0, "rejected": 0 }, "failed": { "total": 8, "first": "…", "latest": "…" } },
+  "quality": { "scorable": 14882, "scored": 14882, "avg": 57.2, "measured_since": "…",
+               "by_space": [{ "space": "ENG", "scorable": 13571, "scored": 13571, "avg": 57.5, "hist": [ /* 30 bins of 2 points, 30–90 */ ], "under_40": 0 }],
+               "more": null, "weekly": [{ "space": "ENG", "week_start": "2026-09-28", "avg": 57.5, "docs": 13571, "rescored": false }] },
+  "attribution": { "gate_open": false, "sources": [{ "source": "jira", "connected": true }] },
+  "setup": { "sla_policy": true, "workflows": 1, "stewards": 0 },
+  "errors": []
 }
 ```
 
-Sections that fail to load return `null` with an entry in `errors`:
-```json
-{
-  "errors": [
-    { "section": "velocity", "reason": "timeout" }
-  ]
-}
-```
+`quality.weekly` is the average over the documents you have today (`docs` is how many a point covers): a document deleted, archived or moved since then changes past weeks.
 
----
+`routing.steward`, `space_owners`, `team` and `nobody` are `null` until gap routing runs: a step is counted only once it runs, and is never reported as 0 before that. `routing.items` lists the open gaps nobody has picked up, oldest first.
+
+`GET /api/v1/governance/dashboard` was removed in this release; nothing in the console read it.
 
 ## Governance SLAs
 

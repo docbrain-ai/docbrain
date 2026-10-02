@@ -125,7 +125,7 @@ DocBrain runs an automated SLA checker on a configurable interval (default: ever
 
 1. A `sla.breached` event is emitted to the event bus
 2. Space owners receive in-app notifications
-3. The breach appears on the governance dashboard
+3. The late subject is listed under Govern › SLAs and counted on the Govern overview
 4. If webhooks are configured, external systems are notified
 
 ```bash
@@ -153,14 +153,14 @@ The dashboard provides a single view of documentation health:
 
 **API:**
 ```bash
-# Full governance dashboard data
-GET /api/v1/governance/dashboard
+# The Govern overview: what needs a decision, coverage, SLAs, review flow, structure scores
+GET /api/v1/governance/overview
 
 # Coverage report
 GET /api/v1/governance/coverage
 ```
 
-Both require `analyst` role or higher.
+The overview needs `viewer`; coverage needs `viewer`. Both refuse a key limited to some spaces.
 
 ---
 
@@ -193,7 +193,7 @@ governance:
 
 | Endpoint | Minimum Role |
 |---|---|
-| View governance dashboard | `analyst` |
+| Read the Govern overview | `viewer` |
 | View coverage report | `viewer` |
 | View spaces and stewards | `viewer` |
 | Manage space owners | `admin` |
@@ -213,4 +213,4 @@ governance:
 
 4. **Set SLA policies** — Override defaults if the space has stricter requirements (e.g., SRE runbooks need 12h gap acknowledgment).
 
-5. **Monitor** — The governance dashboard shows compliance. SLA breaches trigger notifications automatically.
+5. **Monitor** — The Govern overview shows what is late and what needs a decision. SLA breaches trigger notifications automatically.
