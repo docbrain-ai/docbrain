@@ -2065,7 +2065,7 @@ At least one field must be provided.
 
 ### GET /api/v1/governance/stewards
 
-List all topic stewards with their regex patterns and auto-assign settings. **Requires viewer role.**
+List all topic stewards with their regex patterns and auto-assign settings. **Requires viewer role.** Who a steward is (`user_id`, `display_name`, `user_email`, `user_display_name`) is for editors and up: below editor each steward keeps its pattern and flags, `user_id` and `display_name` are `null` and the other two are left out; a reader always sees their own steward rows in full. `GET /stewards/:id` and `GET /my-stewardships` follow the same rule.
 
 **Response:**
 ```json
