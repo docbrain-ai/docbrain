@@ -36,6 +36,10 @@ GET /api/v1/governance/spaces
 POST /api/v1/governance/spaces/{space}/owners
 { "user_id": "uuid", "role": "owner" }
 
+# Make a person the owner, optionally replacing another owner (one idempotent step; admin)
+PUT /api/v1/governance/spaces/{space}/owner
+{ "user_id": "uuid", "replaces": "uuid-or-null" }
+
 # Remove an owner
 DELETE /api/v1/governance/spaces/{space}/owners/{user_id}
 ```

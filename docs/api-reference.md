@@ -2007,7 +2007,7 @@ List all spaces with ownership summary (owner/maintainer/contributor counts). **
 
 ### GET /api/v1/governance/spaces/:space/owners
 
-List owners, maintainers, and contributors for a specific space. **Requires viewer role.**
+List owners, maintainers, and contributors for a specific space. **Requires viewer role.** The space is matched case-insensitively. Who each person is (`user_id`, `user_email`, `user_display_name`) is for editors and up: below editor a row keeps its role and notification flag, `user_id` is `null` and the email and name are left out; a reader always sees their own row in full.
 
 **Response:**
 ```json
@@ -2042,6 +2042,17 @@ Add a user as owner, maintainer, or contributor of a space. **Requires admin rol
 Valid roles: `owner`, `maintainer`, `contributor`.
 
 **Status codes:** `201` Created, `409` if user already assigned, `400` if user not found.
+
+### PUT /api/v1/governance/spaces/:space/owner
+
+Make a person the owner of a space, and optionally take the owner role from someone else, in one idempotent step. **Requires admin role. Refused (403) for an API key limited to some spaces.** The space is matched case-insensitively and stored upper-case.
+
+**Request body:**
+```json
+{ "user_id": "uuid", "replaces": "uuid-or-null" }
+```
+
+`user_id` must be a person who can sign in (an active account); otherwise `400`. Afterwards that person holds the `owner` role on the space: a new row is added, or an existing maintainer or contributor row is promoted (its notification setting is kept; a new row has notifications on). If `replaces` names a different person, that person's row on the space is removed when it is an owner row; if they have no row, or are not an owner, nothing happens and there is no error. The whole change is one transaction, and repeating the same request changes nothing, so a retry after a lost response is always safe. Answers `200` with the space's rows after the change, in the shape of `GET /owners`.
 
 ### DELETE /api/v1/governance/spaces/:space/owners/:user_id
 
