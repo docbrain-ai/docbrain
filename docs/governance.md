@@ -83,10 +83,10 @@ SLA policies define deadlines for documentation activities. They can be set glob
 
 | SLA Type | What It Measures | Default |
 |---|---|---|
-| **Gap Acknowledgment** | Time from gap detection to someone acknowledging it | 24 hours |
+| **Gap Acknowledgment** | Time from a gap opening until someone picks it up (it is assigned) | 24 hours |
 | **Gap Resolution** | Time from gap detection to documentation being written | 7 days |
 | **Draft Review** | Time from draft submission to review completion | 48 hours |
-| **Freshness** | Maximum age before a document is considered stale | 90 days |
+| **Freshness** | Stored with the policy; no check reads it today, so nothing is reported late for it | 90 days |
 
 ### Configuring SLAs
 

@@ -2189,7 +2189,7 @@ Each section is read with its own 5-second timeout. A section that cannot be rea
 
 ## Governance SLAs
 
-SLA policies define maximum acceptable times for gap acknowledgment, gap resolution, draft review, and document freshness. Policies can be set per-space or org-wide (default). A periodic background checker detects breaches and emits `SlaBreached` events. The `freshness` SLA (the document-quality check) is not run yet; it returns with #371.
+SLA policies define maximum acceptable times for gap acknowledgment, gap resolution, draft review, and document freshness. Policies can be set per-space or org-wide (default). A periodic background checker detects breaches and emits `SlaBreached` events. `freshness_review_days` is stored and returned with each policy, but no check reads it today: nothing is reported late for freshness.
 
 ### GET /api/v1/governance/slas
 
@@ -2259,7 +2259,7 @@ A gap's `label` and a draft's `title` are `null` when the reader may not see the
       "policy_hours": 48,
       "clock_start": "2026-09-20T09:00:00Z",
       "due_at": "2026-09-22T09:00:00Z",
-      "late_by_secs": 1382400
+      "late_by_secs": 794400
     },
     {
       "kind": "not_reviewed",
@@ -2270,7 +2270,7 @@ A gap's `label` and a draft's `title` are `null` when the reader may not see the
       "policy_hours": 72,
       "clock_start": "2026-09-25T09:00:00Z",
       "due_at": "2026-09-28T09:00:00Z",
-      "late_by_secs": 273600
+      "late_by_secs": 276000
     }
   ],
   "counts": [{ "kind": "not_picked_up", "count": 7 }, { "kind": "no_draft_yet", "count": 0 }, { "kind": "draft_not_submitted", "count": 0 }, { "kind": "not_reviewed", "count": 3 }],
