@@ -52,7 +52,7 @@ A **topic steward** takes the open gaps whose label matches their pattern. After
 # List stewards
 GET /api/v1/governance/stewards
 
-# Create a steward (the person must be able to sign in)
+# Create a steward (the person must be able to sign in; auto_assign_gaps is required)
 POST /api/v1/governance/stewards
 {
   "topic_pattern": "kubernetes|k8s",

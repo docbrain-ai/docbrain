@@ -2110,7 +2110,7 @@ Create a topic steward. The `topic_pattern` is a regular expression, matched wit
 }
 ```
 
-`auto_assign_gaps` defaults to `true`; with `false` routing never gives this steward a gap. Pattern validation: at most 500 characters, a valid regular expression, and not one that matches the empty string (use `.+` to take every gap). The person must be able to sign in (active, not a stub or an unaccepted invite). An `auto_assign_fragments` field from an older client is accepted and ignored. **Status codes:** `201` Created, `400` invalid pattern, user not found, or "This person cannot sign in, so they cannot take gaps".
+`auto_assign_gaps` is required (`400` without it): `true` lets routing give this steward gaps, `false` never does. Pattern validation: at most 500 characters, a valid regular expression, and not one that matches the empty string (use `.+` to take every gap). The person must be able to sign in (active, not a stub or an unaccepted invite). An `auto_assign_fragments` field from an older client is accepted and ignored. **Status codes:** `201` Created, `400` a missing `auto_assign_gaps`, an invalid pattern, user not found, or "This person cannot sign in, so they cannot take gaps".
 
 **How a gap is routed.** After every gap analysis (where autopilot runs), each open gap with no assignee that routing has not acted on goes to the first of:
 
@@ -2118,7 +2118,7 @@ Create a topic steward. The `topic_pattern` is a regular expression, matched wit
 2. the owners of the first space its questions looked in (most pages first) that has owners who can sign in. Those with notifications on get a `gap_routed` notification and nobody is assigned; if none of them would hear, the gap stays undecided;
 3. the team that owns the source, and then the org: neither acts yet, so such a gap stays undecided and is considered again at the next analysis.
 
-A gap a person has assigned or unassigned is never routed again, and a gap whose owners were told is not told twice. Routing never changes who can see a topic. `user_is_active: false` on a steward means its person can no longer sign in, so routing passes it over.
+A gap a person has assigned or unassigned is never routed again, and a gap whose owners were told is not told twice. Routing grants topic visibility only as the visibility rules say: to the assignee, and to anyone with a role on the space routing told; it grants nothing else. `user_is_active: false` on a steward means its person can no longer sign in, so routing passes it over.
 
 ### POST /api/v1/governance/stewards/preview
 
