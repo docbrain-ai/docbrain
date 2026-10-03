@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -351,6 +351,21 @@ enum AdminAction {
     Ingest {
         #[command(subcommand)]
         action: AdminIngestAction,
+    },
+    /// Teams & Access
+    Access {
+        #[command(subcommand)]
+        action: AdminAccessAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum AdminAccessAction {
+    /// Per source: how much of the corpus has fresh permission evidence
+    Coverage {
+        /// Print the raw report JSON
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -1457,6 +1472,13 @@ struct CliBlock {
 /// the same to a reader. Law 4 still holds: the server's text is rendered
 /// verbatim and the CLI adds no words, only emphasis.
 ///
+/// `degraded` is painted the same way. It carries the cut-turn warning — the
+/// ask deadline stopping the turn, in retrieval or in the synthesis the loop
+/// finishes with — and a truncated answer that looks exactly like a complete
+/// one is the failure this whole change exists to prevent. (The loop stopping
+/// on a repeated tool call is recorded at `info`, which renders no block, so it
+/// never reaches this paint.)
+///
 /// Colour is gated by the caller via `stdout_colour_enabled`, so a pipe, a
 /// `NO_COLOR` environment or `TERM=dumb` gets the plain text unchanged.
 fn block_text_coloured(block: &CliBlock, colour: bool) -> Option<String> {
@@ -1471,7 +1493,14 @@ fn block_text_coloured(block: &CliBlock, colour: bool) -> Option<String> {
     // most answers (recall is scoped to the user, so `-n` does not clear it),
     // which would have made orange ordinary and the one line that must not be
     // missed ordinary with it.
-    if colour && block.severity.as_deref() == Some("stale") {
+    // `degraded` joins `stale` for the same reason: it says the answer below is
+    // not the answer that would have been given — a turn cut at its wall-clock
+    // limit, a reranker that fell back to keyword scores. A cut answer and a
+    // whole one are otherwise identical bytes in a terminal. It is still the one
+    // other severity that means "read this differently"; `memory` and
+    // `unconnected` remain plain. A loop that stopped early is NOT one of these:
+    // that note is recorded at `info`, and only `degraded` becomes a block.
+    if colour && matches!(block.severity.as_deref(), Some("stale") | Some("degraded")) {
         return Some(format!("\x1b[38;5;208m{}\x1b[0m", block.text));
     }
     Some(block.text.clone())
@@ -5232,7 +5261,60 @@ async fn handle_admin(server_url: &str, action: AdminAction, api_key: &str) -> R
                 admin_ingest_trigger(server_url, sources.as_deref(), api_key).await
             }
         },
+        AdminAction::Access { action } => match action {
+            AdminAccessAction::Coverage { json } => admin_access_coverage(server_url, json, api_key).await,
+        },
     }
+}
+
+async fn admin_access_coverage(server_url: &str, json: bool, api_key: &str) -> Result<()> {
+    let response = reqwest::Client::new()
+        .get(format!("{}/api/v1/access/coverage", server_url))
+        .header("X-Api-Key", api_key)
+        .send()
+        .await
+        .context("request access coverage")?;
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        anyhow::bail!("Server error ({}): {}", status, body);
+    }
+    let report: serde_json::Value = response.json().await.context("parse access coverage report")?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&report).context("render access coverage report")?);
+        return Ok(());
+    }
+    print!("{}", render_access_coverage(&report));
+    Ok(())
+}
+
+fn render_access_coverage(report: &serde_json::Value) -> String {
+    let dash = || "-".to_string();
+    let secs = |v: &serde_json::Value| v.as_f64().map(|a| format!("{a:.0}s")).unwrap_or_else(dash);
+    let count = |v: &serde_json::Value| v.as_i64().map(|n| n.to_string()).unwrap_or_else(dash);
+    // FAILED counts scopes whose latest read failed; MEMBER P99 is the membership evidence age.
+    let mut out = format!(
+        "  {:<16} {:<12} {:>9} {:>10} {:>10} {:>6} {:>9} {:>10}  {}\n",
+        "SOURCE", "MODEL", "DOCUMENTS", "CAPTURED", "UNCAPTURED", "FAILED", "P99 AGE", "MEMBER P99", "NOTE"
+    );
+    for s in report["sources"].as_array().map(Vec::as_slice).unwrap_or(&[]) {
+        let pct = s["captured_pct"].as_f64().map(|p| format!("{p:.2}%")).unwrap_or_else(dash);
+        // A source with no evidence model captures nothing, so it has no "uncaptured" count either.
+        let uncaptured = if s["captured_pct"].is_null() { dash() } else { count(&s["uncaptured_documents"]) };
+        out.push_str(&format!(
+            "  {:<16} {:<12} {:>9} {:>10} {:>10} {:>6} {:>9} {:>10}  {}\n",
+            s["source"].as_str().unwrap_or("?"),
+            s["permission_model"].as_str().unwrap_or("?"),
+            s["documents"].as_i64().unwrap_or(0),
+            pct,
+            uncaptured,
+            count(&s["failed_scopes"]),
+            secs(&s["measured_age_p99"]),
+            secs(&s["membership_age_p99"]),
+            s["note"].as_str().unwrap_or(""),
+        ));
+    }
+    out
 }
 
 async fn admin_ingest_trigger(
@@ -6574,15 +6656,22 @@ async fn health_findings(server_url: &str, api_key: &str, request: FindingsReque
     // `state` is a column rather than a line above the table because
     // `--state all` mixes live findings with dismissed and resolved ones, and
     // a row that does not say which it is reads as work someone still has to do.
-    println!("  {:<35}  {:<22}  {:<12}  {:>6}  what", "id", "type", "state", "impact");
+    // Severity and reach, never `impact.score`: since #308 the score is an
+    // ORDERING (a severity band plus a log-damped position for reach), so
+    // printing it would put a number like 787 in front of a person and
+    // invite them to compare it with a 305 as if the difference were a
+    // quantity of anything. The two facts it is built from are on the wire
+    // beside it and are what the rows are actually sorted by.
+    println!("  {:<35}  {:<22}  {:<12}  {:<9}  {:>5}  what", "id", "type", "state", "severity", "reach");
     println!("  {}", "-".repeat(110));
     for f in &findings {
         println!(
-            "  {:<35}  {:<22}  {:<12}  {:>6}  {}",
+            "  {:<35}  {:<22}  {:<12}  {:<9}  {:>5}  {}",
             f["id"].as_str().unwrap_or(""),
             f["type"].as_str().unwrap_or(""),
             f["state"].as_str().unwrap_or(""),
-            f["impact"]["score"].as_i64().unwrap_or(0),
+            f["impact"]["severity"].as_str().unwrap_or(""),
+            f["impact"]["reach"].as_i64().unwrap_or(0),
             f["impact"]["human"].as_str().unwrap_or("")
         );
     }
@@ -6767,6 +6856,54 @@ mod tests {
             ProgressStyle::decide(true, false, false, true),
             ProgressStyle::Silent
         );
+    }
+
+    #[test]
+    fn admin_access_coverage_parses_with_and_without_json() {
+        let cli = Cli::try_parse_from(["docbrain", "admin", "access", "coverage", "--json"]).expect("parses");
+        match cli.command {
+            Commands::Admin { action: AdminAction::Access { action: AdminAccessAction::Coverage { json } } } => {
+                assert!(json)
+            }
+            _ => panic!("expected admin access coverage"),
+        }
+        assert!(Cli::try_parse_from(["docbrain", "admin", "access", "coverage"]).is_ok());
+    }
+
+    #[test]
+    fn access_coverage_table_shows_dashes_for_sources_without_evidence() {
+        let report = serde_json::json!({"sources": [
+            {"source": "confluence", "permission_model": "snapshot", "documents": 3, "captured_pct": 66.67,
+             "measured_age_p99": 120.4, "membership_age_p99": 95.2, "uncaptured_documents": 1, "failed_scopes": 2,
+             "note": null},
+            {"source": "local", "permission_model": "org_visible", "documents": 1, "captured_pct": null,
+             "measured_age_p99": null, "membership_age_p99": null, "uncaptured_documents": 0, "failed_scopes": 0,
+             "note": null}
+        ]});
+        let out = render_access_coverage(&report);
+        let cells = |needle: &str| -> Vec<String> {
+            let line = out.lines().find(|l| l.contains(needle)).unwrap_or_else(|| panic!("no {needle} row in {out}"));
+            line.split_whitespace().map(str::to_string).collect()
+        };
+        assert_eq!(
+            out.lines().next().expect("header").split_whitespace().collect::<Vec<_>>(),
+            ["SOURCE", "MODEL", "DOCUMENTS", "CAPTURED", "UNCAPTURED", "FAILED", "P99", "AGE", "MEMBER", "P99", "NOTE"]
+        );
+        assert_eq!(cells("confluence"), ["confluence", "snapshot", "3", "66.67%", "1", "2", "120s", "95s"]);
+        // No evidence model: nothing to capture, so nothing is "uncaptured" either.
+        assert_eq!(cells("local"), ["local", "org_visible", "1", "-", "-", "0", "-", "-"]);
+    }
+
+    /// A report from a server that predates the newer fields still renders.
+    #[test]
+    fn access_coverage_table_renders_a_report_without_the_newer_fields() {
+        let report = serde_json::json!({"sources": [
+            {"source": "jira", "permission_model": "snapshot", "documents": 4, "captured_pct": 100.0,
+             "measured_age_p99": 30.0, "note": "n"}
+        ]});
+        let out = render_access_coverage(&report);
+        let row: Vec<&str> = out.lines().nth(1).expect("row").split_whitespace().collect();
+        assert_eq!(row, ["jira", "snapshot", "4", "100.00%", "-", "-", "30s", "-", "n"]);
     }
 
     /// `--docs-only` parses and defaults off. Mirrors the web Sources control:
@@ -7851,6 +7988,9 @@ mod a_warning_must_look_like_a_warning {
     /// answer), not danger. Painting on the kind painted all three, and the
     /// memory block appears on most answers, since recall is scoped to the user
     /// and `-n` does not clear it. Orange on every answer is orange on none.
+    ///
+    /// `degraded` is the one other severity that earns the colour (see
+    /// `a_degraded_answer_is_painted`); the two kinds pinned below do not.
     #[test]
     fn only_a_stale_claim_is_painted_not_every_warning_kind() {
         let memory = block_sev("warning", "memory", "Drew on memory as well as documentation");
@@ -7868,6 +8008,18 @@ mod a_warning_must_look_like_a_warning {
             block_text_coloured(&stale, true).unwrap().starts_with(ORANGE),
             "the stale claim still is"
         );
+    }
+
+    /// A turn cut at its wall-clock limit carries `severity: "degraded"`. It
+    /// printed as plain prose, so half an answer read exactly like a whole one
+    /// — the same disappearance the stale warning had.
+    #[test]
+    fn a_degraded_answer_is_painted() {
+        let text = "Stopped at the 120 s turn limit during synthesis after retrieval and 3 tool calls.";
+        let out = block_text_coloured(&block_sev("warning", "degraded", text), true).unwrap();
+        assert!(out.starts_with(ORANGE), "got: {out:?}");
+        assert!(out.ends_with("\x1b[0m"), "and must reset: {out:?}");
+        assert!(out.contains(text), "text is rendered verbatim");
     }
 
     /// Law 4: the CLI adds emphasis, never words.
