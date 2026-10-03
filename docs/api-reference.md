@@ -766,7 +766,7 @@ GET /api/v1/autopilot/drafts/{draft_id}
 
 Returns full draft content for review.
 
-A key limited to some spaces lists only the drafts in its spaces (a draft with no space counts as `GENERAL`), and gets `404` for any other draft by id — the same as for an id that does not exist.
+A key limited to some spaces lists only the drafts in its spaces (a draft with no space is not visible to a restricted key, even one that lists `GENERAL`), and gets `404` for any other draft by id — the same as for an id that does not exist.
 
 ---
 
