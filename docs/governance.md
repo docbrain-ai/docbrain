@@ -46,20 +46,24 @@ DELETE /api/v1/governance/spaces/{space}/owners/{user_id}
 
 ### Topic Stewards
 
-A **topic steward** is a subject-matter expert responsible for a specific topic within a space. When a documentation gap is detected in their topic area, they're notified and can be assigned to resolve it.
+A **topic steward** takes the open gaps whose label matches their pattern. After every gap analysis, an open gap nobody has decided goes to the first of: the steward whose pattern matches the most of its label (they get a `gap_assigned` notification); the owners of the space its questions looked in, who would hear (they get a `gap_routed` notification and nobody is assigned); the team that owns the source and then the org, which do not act yet, so the gap waits. A gap someone assigned or unassigned by hand is left alone.
 
 ```bash
 # List stewards
 GET /api/v1/governance/stewards
 
-# Create a steward assignment
+# Create a steward (the person must be able to sign in)
 POST /api/v1/governance/stewards
 {
+  "topic_pattern": "kubernetes|k8s",
+  "display_name": "Kubernetes",
   "user_id": "uuid",
-  "space": "PLATFORM",
-  "topic": "kubernetes-networking",
-  "description": "Owns all K8s networking documentation"
+  "auto_assign_gaps": true
 }
+
+# What a pattern would take at the next routing run (admin; counts only topics you may see)
+POST /api/v1/governance/stewards/preview
+{ "topic_pattern": "kubernetes|k8s" }
 
 # Remove a steward
 DELETE /api/v1/governance/stewards/{id}

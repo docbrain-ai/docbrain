@@ -2076,7 +2076,7 @@ At least one field must be provided.
 
 ### GET /api/v1/governance/stewards
 
-List all topic stewards with their regex patterns and auto-assign settings. **Requires viewer role.** Who a steward is (`user_id`, `display_name`, `user_email`, `user_display_name`) is for editors and up: below editor each steward keeps its pattern and flags, `user_id` and `display_name` are `null` and the other two are left out; a reader always sees their own steward rows in full. `GET /stewards/:id` and `GET /my-stewardships` follow the same rule.
+List all topic stewards with their regex patterns and the gap switch. **Requires viewer role.** Who a steward is (`user_id`, `display_name`, `user_email`, `user_display_name`) is for editors and up: below editor each steward keeps its pattern and flags, `user_id` and `display_name` are `null` and the other two are left out; a reader always sees their own steward rows in full. `GET /stewards/:id` and `GET /my-stewardships` follow the same rule.
 
 **Response:**
 ```json
@@ -2088,7 +2088,7 @@ List all topic stewards with their regex patterns and auto-assign settings. **Re
       "display_name": "Kubernetes Infrastructure",
       "user_id": "uuid",
       "auto_assign_gaps": true,
-      "auto_assign_fragments": true,
+      "user_is_active": true,
       "user_email": "carol@acme.com",
       "user_display_name": "Carol"
     }
@@ -2098,7 +2098,7 @@ List all topic stewards with their regex patterns and auto-assign settings. **Re
 
 ### POST /api/v1/governance/stewards
 
-Create a topic steward. The `topic_pattern` is a regex matched against gap labels and fragment content for auto-assignment. **Requires admin role.**
+Create a topic steward. The `topic_pattern` is a regular expression, matched without regard to case against the labels of open gaps. **Requires admin role.**
 
 **Request body:**
 ```json
@@ -2106,12 +2106,29 @@ Create a topic steward. The `topic_pattern` is a regex matched against gap label
   "topic_pattern": "kubernetes|k8s|eks",
   "display_name": "Kubernetes Infrastructure",
   "user_id": "uuid",
-  "auto_assign_gaps": true,
-  "auto_assign_fragments": true
+  "auto_assign_gaps": true
 }
 ```
 
-Pattern validation: max 500 characters, must be valid regex. **Status codes:** `201` Created, `400` invalid pattern or user not found.
+`auto_assign_gaps` defaults to `true`; with `false` routing never gives this steward a gap. Pattern validation: at most 500 characters, a valid regular expression, and not one that matches the empty string (use `.+` to take every gap). The person must be able to sign in (active, not a stub or an unaccepted invite). An `auto_assign_fragments` field from an older client is accepted and ignored. **Status codes:** `201` Created, `400` invalid pattern, user not found, or "This person cannot sign in, so they cannot take gaps".
+
+**How a gap is routed.** After every gap analysis (where autopilot runs), each open gap with no assignee that routing has not acted on goes to the first of:
+
+1. the steward who takes gaps, can sign in, and whose pattern matches the most characters of the gap's label (ties: the oldest steward). The gap is assigned to them and they get a `gap_assigned` notification;
+2. the owners of the first space its questions looked in (most pages first) that has owners who can sign in. Those with notifications on get a `gap_routed` notification and nobody is assigned; if none of them would hear, the gap stays undecided;
+3. the team that owns the source, and then the org: neither acts yet, so such a gap stays undecided and is considered again at the next analysis.
+
+A gap a person has assigned or unassigned is never routed again, and a gap whose owners were told is not told twice. Routing never changes who can see a topic. `user_is_active: false` on a steward means its person can no longer sign in, so routing passes it over.
+
+### POST /api/v1/governance/stewards/preview
+
+What a pattern would take at the next routing run. **Requires admin role. Refused (403) for an API key limited to some spaces.**
+
+```json
+{ "topic_pattern": "billing", "steward_id": "uuid" }
+```
+
+`steward_id` is given when editing that steward: its new pattern is tried in its own place (its age). The answer is `{ "wins": 1, "visible": 3, "undecided": 3 }`: of the open gaps routing may still act on (`undecided`), those whose topic the caller may see (`visible`), how many the pattern would win once the stored stewards are counted (`wins`). Only topics the caller may see are matched, so a pattern cannot be used to probe a withheld topic. **Status codes:** `200`, `400` with the reason the pattern would be refused on save, `403`, `404` for an unknown `steward_id`.
 
 ### GET /api/v1/governance/stewards/:id
 
@@ -2123,7 +2140,7 @@ Remove a topic steward. **Requires admin role.** Returns `204` or `404`.
 
 ### PATCH /api/v1/governance/stewards/:id
 
-Update a topic steward's pattern, display name, or auto-assign settings. **Requires admin role.**
+Update a topic steward's pattern, display name, or `auto_assign_gaps`. **Requires admin role.**
 
 **Request body:**
 ```json
@@ -2133,7 +2150,7 @@ Update a topic steward's pattern, display name, or auto-assign settings. **Requi
 }
 ```
 
-At least one field must be provided. New patterns are validated before saving.
+At least one field must be provided, and a pattern that matches the empty string is refused. New patterns are validated before saving.
 
 ### GET /api/v1/governance/my-spaces
 
@@ -2171,8 +2188,8 @@ Each section is read with its own 5-second timeout. A section that cannot be rea
   "late": { "as_of": "…", "items": [ /* up to 8, most overdue first; subject.label / subject.title may be null */ ], "counts": [{ "kind": "not_picked_up", "count": 7 }],
             "truncated": true, "ranges": [{ "kind": "not_picked_up", "shortest_late_by_secs": 950400, "longest_late_by_secs": 1382400 }],
             "policy_set": true },
-  "routing": { "analysed": true, "open_gaps": 15, "waiting": 7, "steward": null, "space_owners": null, "team": null, "nobody": null,
-               "items": [{ "gap_id": "uuid", "topic": null, "opened_at": "…" }] },
+  "routing": { "analysed": true, "open_gaps": 15, "waiting": 7, "visible": 7, "steward": 0, "space_owners": 1, "team": null, "nobody": 1, "told": 4, "left": 1,
+               "items": [{ "gap_id": "uuid", "topic": "…", "opened_at": "…", "route": "space_owners", "space": "ENG", "names": ["Dana Reyes"] }] },
   "coverage": { "total_documents": 14882, "spaces": [{ "space": "ENG", "documents": 13571, "owners": 1, "with_role": 2 }], "more": { "spaces": 3, "documents": 120, "owned": 1, "unreachable": 2 } },
   "reviews": { "workflow": { "name": "Sample review", "stages": [{ "name": "sme_review", "display_name": "SME Review" }] },
                "workflows": 1, "review_term_hours": 72, "written_ages_secs": [1500000], "stages": [{ "name": "sme_review", "display_name": "SME Review", "waiting_ages_secs": [] }],
@@ -2192,7 +2209,7 @@ Each section is read with its own 5-second timeout. A section that cannot be rea
 
 `quality.weekly` is the average over the documents you have today (`docs` is how many a point covers): a document deleted, archived or moved since then changes past weeks.
 
-`routing.steward`, `space_owners`, `team` and `nobody` are `null` until gap routing runs: a step is counted only once it runs, and is never reported as 0 before that. `routing.items` lists the open gaps nobody has picked up, oldest first.
+`routing.waiting` is every open gap with no assignee. `visible` is how many of those the reader may see the topic of, and every other figure is over those: `steward + space_owners + nobody + told + left = visible`. `steward`, `space_owners` and `nobody` are what the next routing run will do with the gaps it may still act on, decided as the sweep decides them (a space whose owners all have notifications off counts under `nobody`); `told` is the gaps whose space's owners were already told and no one has taken; `left` is those routing will not act on again. `team` is `null` (not connected). All of them are `null` where no gap analyzer runs, never 0. `routing.items` lists the open gaps nobody has picked up, oldest first (at most 100); each carries its `route` (`steward`, `space_owners`, `nobody`, `told`, `left`), with `space`, `spaces`, `names` for editors and up (never names on a `told` gap) and `told_at` on a `told` one. A gap whose topic the reader may not see has a null topic and no route, and is in no figure but `waiting`.
 
 `GET /api/v1/governance/dashboard` was removed in this release; nothing in the console read it.
 
