@@ -1,0 +1,6 @@
+{
+  "_source": "GitLab REST API error shape for a project that does not exist OR exists but is private to the caller: GitLab answers both with 404 and this message, so a reader cannot tell them apart.",
+  "_request": "GET /api/v4/projects/acme%2FSub%2FGone",
+  "_status": 404,
+  "message": "404 Project Not Found"
+}

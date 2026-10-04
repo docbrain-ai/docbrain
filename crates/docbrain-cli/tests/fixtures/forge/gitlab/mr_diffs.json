@@ -1,0 +1,11 @@
+{
+  "_source": "GitLab REST API, Merge requests, 'List merge request diffs' (GET /projects/:id/merge_requests/:merge_request_iid/diffs; the '/changes' endpoint was deprecated in GitLab 15.7). Each entry: old_path, new_path, new_file, renamed_file, deleted_file.",
+  "_request": "GET /api/v4/projects/acme%2FSub%2FTwin/merge_requests/3/diffs",
+  "_status": 200,
+  "_body": [
+    { "old_path": "docs/twin-only.md", "new_path": "docs/twin-only.md", "a_mode": "100644", "b_mode": "0", "new_file": false, "renamed_file": false, "deleted_file": true, "diff": "" },
+    { "old_path": "docs/shared.md", "new_path": "docs/moved/shared.md", "a_mode": "100644", "b_mode": "100644", "new_file": false, "renamed_file": true, "deleted_file": false, "diff": "" },
+    { "old_path": "docs/edited.md", "new_path": "docs/edited.md", "a_mode": "100644", "b_mode": "100644", "new_file": false, "renamed_file": false, "deleted_file": false, "diff": "@@ -1 +1 @@" },
+    { "old_path": "docs/new.md", "new_path": "docs/new.md", "a_mode": "0", "b_mode": "100644", "new_file": true, "renamed_file": false, "deleted_file": false, "diff": "" }
+  ]
+}

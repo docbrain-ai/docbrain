@@ -115,7 +115,13 @@ dated to the commit it was observed at.
 - **Web:** the **Premises** page — broken premises newest-first with verdicts and bases, a
   collapsed Uncheckable section, and monitor health.
 - **API:** `GET /api/v1/premises/broken` (any state via `?state=`, paginated, analyst+),
-  `GET /api/v1/premises/health` (analyst+), `POST /api/v1/premises/backfill` (admin).
+  `GET /api/v1/premises/health` (analyst+), `POST /api/v1/premises/backfill` (admin),
+  `POST /api/v1/premises/check` (viewer; the pull-request check below).
+- **Pull requests:** `docbrain check-claims` — see [The pull-request check](#the-pull-request-check).
+- **What is counted:** a claim made by a document that has since been deleted is not current
+  content. The page, `/premises/health` and the pull-request check leave it out. The sweep
+  still reads such rows, so beside its figure the page says how many of the rows it reads
+  belong to deleted documents.
 - **Events:** `premise.broken` and `premise.restored` are emitted on state transitions,
   persisted to the event log, and deliverable by [webhooks](configuration.md) — subscribe an
   endpoint to those event types and a premise death is POSTed to it (signed) the moment the
@@ -124,6 +130,87 @@ dated to the commit it was observed at.
   (`RAG_CLAIM_VERIFICATION`) independently checks any path an *answer* cites against the
   same listings. An answer that cites a dead path carries its own correction note, whether
   or not the underlying fragment's premise has been swept yet.
+
+## The pull-request check
+
+`docbrain check-claims --diff <file|->` asks which live claims a change would falsify, for
+the **repository the change is in**. A repository is named by its forge:
+`github:owner/repo` or `gitlab:group/project`, GitLab nested groups kept whole
+(`gitlab:group/sub/project`), lower-case, host dropped. The CLI makes the name on the
+runner and sends only the name — never a URL, which in CI can carry a job token:
+
+1. `--repo <name or clone URL>`;
+2. GitHub Actions: `GITHUB_REPOSITORY` (not on Gitea or Forgejo runners, which set
+   `GITEA_ACTIONS` / `FORGEJO_ACTIONS`);
+3. GitLab CI: `CI_MERGE_REQUEST_PROJECT_PATH` (the merge request's target, also in a fork's
+   pipeline), else `CI_PROJECT_PATH`;
+4. the `origin` remote (`git remote get-url origin`); an ssh alias is resolved once with
+   `ssh -G`;
+5. none of these: exit 3, nothing sent.
+
+A web URL is not a name: give the clone URL or the name. A local checkout is tied to a
+repository by its own `origin` remote, read at ingest (on github.com, gitlab.com, or the
+GitHub or GitLab host the deployment is configured for).
+
+For each live claim on a removed path the server decides from recorded facts only: which
+repositories' listings hold the path, and the claiming document's own repository. A claim
+about the named repository is a **finding**; a claim about another repository is counted;
+anything that cannot be told is listed with its reason and one action — the page's own
+repository does not have the path, the page lives in a checkout DocBrain cannot name, a
+capture carries no repository while more than one repository holds the path, or DocBrain's
+listing does not include the path. A key restricted to spaces sees only those spaces, and
+the answer says so.
+
+| Exit | Meaning |
+|---|---|
+| `0` | Nothing at risk in that repository, or the change removes and renames nothing. |
+| `2` | Findings: the change falsifies live claims about this repository. `--warn-only` reports them and exits 0 — unless something could not be told. |
+| `3` | Could not run, or could not tell: no repository name; an empty diff on stdin; and, when the change removes or renames a path, a repository DocBrain does not read, claims it cannot tie to a repository, a key that may see no spaces, or a server too old to scope the check. Never 0, `--warn-only` included. |
+
+The diff must be complete, or the check is answering a question nobody asked. A shallow
+checkout has no base branch to diff against, `git diff` then fails, and in a pipe without
+`pipefail` the check would read nothing. So fetch the history, write the diff to a file
+under a shell that stops on error, and pass the file. (`--diff -` with an empty stdin is
+refused with exit 3 for the same reason; an empty file means "nothing removed".)
+
+```yaml
+# GitHub Actions
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0            # the base branch must exist locally
+- shell: bash                 # bash -eo pipefail: a failed git diff fails the step
+  run: |
+    git diff --find-renames --name-status "origin/${{ github.base_ref }}..." > change.diff
+    docbrain check-claims --diff change.diff
+```
+
+```yaml
+# GitLab CI
+check-claims:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: 0              # the default shallow clone may not hold the target branch
+  script:
+    - git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - git diff --find-renames --name-status "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME..." > change.diff
+    - docbrain check-claims --diff change.diff
+```
+
+Limits, stated:
+
+- Ingest reads a checkout's remote with `git -c safe.directory=<dir>`, because in a
+  container the mounted checkout belongs to another user. Git reads that setting from the
+  command line from version 2.38; the DocBrain image ships a newer git. On an older git
+  outside the image, each such checkout is logged once as "dubious ownership" and stays
+  unnamed (its claims are "could not tell", never findings).
+- A key restricted to spaces sees only its spaces' claims, but the reasons can still say
+  that another repository holds a path (listings carry no space); no claim, count or name
+  from another space is shown. Whether a repository name is one DocBrain reads is likewise
+  answered for any name the caller supplies.
+- The premises page's sweep figures (checked, unsettleable, and how many of the checked
+  rows belong to deleted documents) describe the whole corpus, not only the spaces a
+  restricted key may see.
 
 ## Behaviors worth knowing
 

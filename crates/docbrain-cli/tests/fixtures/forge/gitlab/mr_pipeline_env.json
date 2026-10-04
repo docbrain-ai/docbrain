@@ -1,0 +1,27 @@
+{
+  "_source": "GitLab CI/CD predefined variables, as a merge request pipeline sets them (rules: - if: $CI_PIPELINE_SOURCE == \"merge_request_event\"). GITLAB_CI 'true'; CI_PROJECT_PATH 'The project namespace with the project name included'; CI_MERGE_REQUEST_PROJECT_PATH 'The path of the project of the merge request' (merge request pipelines only); CI_MERGE_REQUEST_SOURCE_PROJECT_PATH; CI_SERVER_HOST 'without protocol or port'; CI_REPOSITORY_URL 'https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.example.com/my-group/my-project.git'. The fork case follows 'merge request pipelines': a fork MR 'is created and runs in the fork (source) project, not the parent (target) project'.",
+  "parent_target": {
+    "GITLAB_CI": "true",
+    "CI_PIPELINE_SOURCE": "merge_request_event",
+    "CI_SERVER_HOST": "gitlab.com",
+    "CI_PROJECT_PATH": "acme/Sub/Twin",
+    "CI_MERGE_REQUEST_PROJECT_PATH": "acme/Sub/Twin",
+    "CI_MERGE_REQUEST_SOURCE_PROJECT_PATH": "acme/Sub/Twin",
+    "CI_REPOSITORY_URL": "https://gitlab-ci-token:FAKEJOBTOKEN0123@gitlab.com/acme/Sub/Twin.git"
+  },
+  "fork": {
+    "GITLAB_CI": "true",
+    "CI_PIPELINE_SOURCE": "merge_request_event",
+    "CI_SERVER_HOST": "gitlab.com",
+    "CI_PROJECT_PATH": "forker/Twin",
+    "CI_MERGE_REQUEST_PROJECT_PATH": "acme/Sub/Twin",
+    "CI_MERGE_REQUEST_SOURCE_PROJECT_PATH": "forker/Twin",
+    "CI_REPOSITORY_URL": "https://gitlab-ci-token:FAKEJOBTOKEN0123@gitlab.com/forker/Twin.git"
+  },
+  "fork_branch_pipeline": {
+    "GITLAB_CI": "true",
+    "CI_PIPELINE_SOURCE": "push",
+    "CI_SERVER_HOST": "gitlab.com",
+    "CI_PROJECT_PATH": "forker/Twin"
+  }
+}

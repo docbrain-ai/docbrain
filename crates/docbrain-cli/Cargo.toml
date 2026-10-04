@@ -42,3 +42,7 @@ hex = "0.4"
 name = "docbrain-verify"
 path = "src/bin/docbrain_verify.rs"
 
+
+[dev-dependencies]
+# Scratch HOME and checkouts for the check-claims binary tests.
+tempfile = "3"

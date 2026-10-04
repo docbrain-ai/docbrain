@@ -1,0 +1,11 @@
+{
+  "_source": "GitLab REST API, Projects, 'Get a single project', on a self-managed instance served under a relative URL root (/gl), https on 8443 and ssh on 2222 (ssh_url_to_repo then takes the ssh:// form with the port).",
+  "_request": "GET /gl/api/v4/projects/Grp%2FSub%2FProj",
+  "_status": 200,
+  "id": 12,
+  "path_with_namespace": "Grp/Sub/Proj",
+  "ssh_url_to_repo": "ssh://git@code.example.net:2222/Grp/Sub/Proj.git",
+  "http_url_to_repo": "https://code.example.net:8443/gl/Grp/Sub/Proj.git",
+  "web_url": "https://code.example.net:8443/gl/Grp/Sub/Proj",
+  "namespace": { "kind": "group", "full_path": "Grp/Sub" }
+}

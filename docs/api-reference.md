@@ -128,9 +128,7 @@ POST /api/v1/ask
       "heading": "Production Deployment",
       "content": "...",
       "source_url": "https://...",
-      "score": 0.92,
-      "freshness_score": 82.0,
-      "freshness_status": "fresh"
+      "score": 0.92
     }
   ],
   "session_id": "uuid",
@@ -351,6 +349,36 @@ GET /api/v1/freshness?archived=true
   ]
 }
 ```
+
+---
+
+### GET /api/v1/documents/review-priority?picture=1
+
+The web console's Documents picture on Home: the pages worth a look and the corpus around them,
+drawn on evidence, never on age. Analyst and above; a key limited to some spaces is refused (403),
+as for the review-priority list itself. `picture=1` is served with the FIRST page only (`limit` as
+usual; with a `cursor` it is a 400; any value but `0` or `1` is a 400). The response is the
+ordinary review-priority response plus `picture`, and every reach number in it — `reach.read_docs`,
+`reach.answered_docs`, each row's `reach.times_cited` and everything in `picture` — is read by one
+statement, so the panel's numbers and the picture's agree.
+
+- `segments` partitions `reach.total_docs`: `wrong` and `watch` (the scored pages' tiers),
+  `clear` (reached in the window, not listed, judged by the run `checked_at` names), `since`
+  (reached, not listed, with no reach inside that run's own window `(started_at − window_days,
+  started_at]`, so the run could not judge it; `null` when the run did not record its window) and
+  `unreached` (`total_docs − read_docs − listed_unreached`).
+- `listed_unreached`: listed pages no question reached in the window.
+- `grid`: clear pages no answer cited — drawn as a count, never named.
+- `listed`: every scored page — `document_id`, `tier`, `times_cited`, `title`, `space`,
+  `source_url`, `source_type`, and `main_reason` (`kind`, `more_kinds`, and the superseded
+  counts, without the other page).
+- `clear`: the cited clear pages, most cited first, at most `clear_cap` (5,000) of
+  `clear_cited_total`.
+- `table`: `wrong` / `watch` / `clear` / `since` (`null` when not measured), each by citation
+  bucket `b0` (not cited), `b1` (1–9), `b10` (10–99), `b100` (100+); exact over the scored set,
+  never cut by the dot cap.
+
+No date, age or score is in `picture`.
 
 ---
 

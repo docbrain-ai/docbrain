@@ -1,0 +1,15 @@
+{
+  "_source": "GitHub REST API, Repositories, 'Get a repository' (GET /repos/{owner}/{repo}), 200. Fields kept: the ones a repository name is derived from. Field names as documented for the endpoint; not re-read from the docs during this build.",
+  "_request": "GET /repos/octo-org/Docs-Probe",
+  "_status": 200,
+  "id": 900001,
+  "name": "Docs-Probe",
+  "full_name": "octo-org/Docs-Probe",
+  "private": true,
+  "owner": { "login": "octo-org", "type": "Organization" },
+  "html_url": "https://github.com/octo-org/Docs-Probe",
+  "clone_url": "https://github.com/octo-org/Docs-Probe.git",
+  "ssh_url": "git@github.com:octo-org/Docs-Probe.git",
+  "git_url": "git://github.com/octo-org/Docs-Probe.git",
+  "default_branch": "main"
+}

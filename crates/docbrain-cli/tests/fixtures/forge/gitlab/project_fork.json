@@ -1,0 +1,15 @@
+{
+  "_source": "GitLab REST API, Projects, 'Get a single project' for a fork: 'forked_from_project' carries the parent. Two projects, two names.",
+  "_request": "GET /api/v4/projects/forker%2FTwin",
+  "_status": 200,
+  "id": 5001,
+  "path_with_namespace": "forker/Twin",
+  "ssh_url_to_repo": "git@gitlab.com:forker/Twin.git",
+  "http_url_to_repo": "https://gitlab.com/forker/Twin.git",
+  "web_url": "https://gitlab.com/forker/Twin",
+  "forked_from_project": {
+    "id": 4021,
+    "path_with_namespace": "acme/Sub/Twin",
+    "http_url_to_repo": "https://gitlab.com/acme/Sub/Twin.git"
+  }
+}

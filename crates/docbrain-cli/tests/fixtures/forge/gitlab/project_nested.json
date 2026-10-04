@@ -1,0 +1,16 @@
+{
+  "_source": "GitLab REST API, Projects, 'Get a single project' (GET /projects/:id; ':id' is 'The ID or URL-encoded path of the project'). Shape of a 200 for a project in a nested group, mixed case. Fields kept: the ones a repository name is derived from.",
+  "_request": "GET /api/v4/projects/acme%2FSub%2FTwin",
+  "_status": 200,
+  "id": 4021,
+  "name": "Twin",
+  "path": "Twin",
+  "name_with_namespace": "Acme / Sub / Twin",
+  "path_with_namespace": "acme/Sub/Twin",
+  "default_branch": "main",
+  "visibility": "private",
+  "ssh_url_to_repo": "git@gitlab.com:acme/Sub/Twin.git",
+  "http_url_to_repo": "https://gitlab.com/acme/Sub/Twin.git",
+  "web_url": "https://gitlab.com/acme/Sub/Twin",
+  "namespace": { "id": 77, "name": "Sub", "path": "Sub", "kind": "group", "full_path": "acme/Sub" }
+}

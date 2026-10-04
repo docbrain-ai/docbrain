@@ -8,6 +8,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 mod instance_check;
+mod repository;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CLI structure
@@ -232,6 +233,15 @@ enum Commands {
         /// workflow file they own.
         #[arg(long = "warn-only")]
         warn_only: bool,
+        /// The repository this change is in: `github:owner/repo`,
+        /// `gitlab:group/project` (nested groups kept whole), or a clone URL.
+        ///
+        /// Optional in CI: derived from GitHub Actions' or GitLab CI's own
+        /// variables, else from the `origin` remote. Only claims ABOUT this
+        /// repository can fail the check; without a name there is nothing to
+        /// check against, and the command exits 3.
+        #[arg(long = "repo", value_name = "NAME|CLONE_URL")]
+        repo: Option<String>,
     },
     /// View usage analytics
     Analytics {
@@ -2671,9 +2681,9 @@ async fn main() -> Result<()> {
             )
             .await?;
         }
-        Commands::CheckClaims { diff, json, warn_only } => {
+        Commands::CheckClaims { diff, json, warn_only, repo } => {
             // Never returns — it is a policy exit, like `generate`'s.
-            check_claims(&server_url, &diff, json, warn_only, api_key.as_deref()).await?;
+            check_claims(&server_url, &diff, json, warn_only, repo.as_deref(), api_key.as_deref()).await?;
         }
         Commands::Analytics { days } => {
             show_analytics(&server_url, days, api_key.as_deref()).await?;
@@ -5906,14 +5916,17 @@ use docbrain_evidence::{
 /// A missing/unreadable file, a bad argument, or a failed local write.
 const EXIT_CLI_ERROR: i32 = 3;
 
-/// The CI gate. Reads a diff, asks the server what it would falsify, reports,
-/// and sets the process exit code.
+/// The CI gate. Reads a diff, names the repository it is in, asks the server
+/// what it would falsify there, reports, and sets the process exit code.
 ///
 /// # Exit codes — the same vocabulary `generate` established
 ///
-/// - `0` nothing at risk, or `--warn-only`
+/// - `0` nothing at risk, or `--warn-only` with nothing left uncertain
 /// - `2` a POLICY exit: the check ran fine and found something. Fail the step.
-/// - `3` [`EXIT_CLI_ERROR`]: the check could not run at all.
+/// - `3` [`EXIT_CLI_ERROR`]: the check could not run, or ran and could not
+///   tell — no repository name, a repository DocBrain does not read, claims
+///   it cannot tie to a repository, an old server. `--warn-only` never turns
+///   a 3 into a 0: "could not tell" is never shown as clean.
 ///
 /// The 2/3 split is the point. "Your documentation is now wrong" and "DocBrain
 /// was unreachable" must never arrive as the same signal: the first should stop
@@ -5928,6 +5941,7 @@ async fn check_claims(
     diff_arg: &str,
     json: bool,
     warn_only: bool,
+    repo_flag: Option<&str>,
     api_key: Option<&str>,
 ) -> Result<()> {
     use anyhow::Context as _;
@@ -5954,11 +5968,40 @@ async fn check_claims(
             exit_with(EXIT_CLI_ERROR);
         }
     };
+    // Nothing at all on stdin is what a FAILED producer looks like in a pipe:
+    // `git diff … | check-claims --diff -` without pipefail hands over an empty
+    // stream when the base branch was never fetched, and "nothing to check"
+    // would be a green build on a diff that was never read. A change with
+    // edits or additions still prints lines, so a truly empty diff is rare,
+    // and a file says it unambiguously: an empty FILE is "nothing removed".
+    if diff_arg == "-" && diff.trim().is_empty() {
+        eprintln!(
+            "uncheckable: the diff read from stdin is empty. If the command producing it failed (an unfetched base branch is the usual cause: fetch it, or check out with full history), fix that; if this change really touches no file, write the diff to a file and pass that."
+        );
+        exit_with(EXIT_CLI_ERROR);
+    }
+
+    // The name is made here, on the runner; only the canonical name is sent.
+    let env = |k: &str| std::env::var(k).ok();
+    let runner = repository::Runner {
+        env: &env,
+        origin: &repository::git_origin,
+        ssh_hostname: &repository::ssh_hostname,
+    };
+    let (repo, from) = match repository::derive(repo_flag, &runner) {
+        Ok(found) => found,
+        Err(why) => {
+            eprintln!("{why}");
+            exit_with(EXIT_CLI_ERROR);
+        }
+    };
+    let repo = repo.to_string();
+    eprintln!("repository: {repo} (from {})", from.label());
 
     let client = reqwest::Client::new();
     let mut req = client
         .post(format!("{server_url}/api/v1/premises/check"))
-        .json(&serde_json::json!({ "diff": diff }));
+        .json(&serde_json::json!({ "diff": diff, "repository": repo }));
     if let Some(k) = api_key {
         req = req.bearer_auth(k);
     }
@@ -5985,47 +6028,123 @@ async fn check_claims(
         }
     };
 
-    let findings = body.get("findings").and_then(|f| f.as_array()).cloned().unwrap_or_default();
+    // An older server ignores `repository` and answers about every repository.
+    // The answer must name, byte for byte, the repository that was sent.
+    if body.get("repository").and_then(serde_json::Value::as_str) != Some(repo.as_str()) {
+        eprintln!("uncheckable: this DocBrain server does not scope the check to a repository; upgrade it");
+        exit_with(EXIT_CLI_ERROR);
+    }
+    let spaces = match body.get("scoped_to_spaces") {
+        None | Some(serde_json::Value::Null) => None,
+        Some(v) => Some(v.as_array().map(Vec::len).unwrap_or(0)),
+    };
+    if spaces == Some(0) {
+        if json {
+            println!("{}", serde_json::to_string_pretty(&body).unwrap_or_else(|_| "{}".into()));
+        }
+        eprintln!("uncheckable: this key may see no spaces; nothing was checked");
+        exit_with(EXIT_CLI_ERROR);
+    }
+
+    let list = |v: Option<&serde_json::Value>| v.and_then(|f| f.as_array()).cloned().unwrap_or_default();
+    let findings = list(body.get("findings"));
+    let not_checked = body.get("not_checked");
+    let could_not_tell = list(not_checked.and_then(|n| n.get("could_not_tell")));
+    let others = not_checked
+        .and_then(|n| n.get("other_repositories"))
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0);
     let checked = body.get("paths_checked").and_then(serde_json::Value::as_u64).unwrap_or(0);
+    let known = body.get("repository_known").and_then(serde_json::Value::as_bool).unwrap_or(false);
+    let listed_at = body
+        .get("listed_at")
+        .and_then(serde_json::Value::as_str)
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .map(|d| d.with_timezone(&chrono::Utc).format("%Y-%m-%d %H:%M UTC").to_string())
+        .unwrap_or_else(|| "an unknown date".to_string());
+    let suffix = repository::scope_suffix(spaces);
+    let code = repository::exit_code(findings.len(), could_not_tell.len(), known, checked, warn_only);
 
     if json {
         println!("{}", serde_json::to_string_pretty(&body).unwrap_or_else(|_| "{}".into()));
-    } else if findings.is_empty() {
+    } else if checked == 0 {
         // Says which of the two empty cases this is: nothing was checked, or
         // nothing was at risk. A gate that prints "OK" when it examined zero
         // paths teaches a team to trust a check that is not running.
-        if checked == 0 {
-            println!("No removed or renamed paths in this change — nothing to check.");
-        } else {
-            println!("Checked {checked} removed path(s); no live documentation claims affected.");
-        }
+        println!("No removed or renamed paths in this change — nothing to check.");
     } else {
-        println!("{} live documentation claim(s) would be falsified by this change:\n", findings.len());
-        for f in &findings {
-            let s = |k: &str| f.get(k).and_then(serde_json::Value::as_str).unwrap_or("");
-            println!("  {}", s("expression"));
-            println!("    claimed by: {}", s("claimed_by"));
-            if !s("url").is_empty() {
-                println!("    page:       {}", s("url"));
+        if !findings.is_empty() {
+            println!(
+                "{} live documentation claim(s) about {repo} would be falsified by this change{suffix}:\n",
+                findings.len()
+            );
+            for f in &findings {
+                let s = |k: &str| f.get(k).and_then(serde_json::Value::as_str).unwrap_or("");
+                println!("  {}", s("expression"));
+                println!("    claimed by: {}", s("claimed_by"));
+                if !s("url").is_empty() {
+                    println!("    page:       {}", s("url"));
+                }
+                match f.get("successor").and_then(serde_json::Value::as_str) {
+                    Some(to) => println!("    fix:        this change renames it to {to}"),
+                    // Said out loud rather than left blank: a deletion with no
+                    // stated destination is a decision for a human, not a gap for
+                    // DocBrain to fill with a guess.
+                    None => println!("    fix:        not automatic — the change does not say where it went"),
+                }
+                println!();
             }
-            match f.get("successor").and_then(serde_json::Value::as_str) {
-                Some(to) => println!("    fix:        this change renames it to {to}"),
-                // Said out loud rather than left blank: a deletion with no
-                // stated destination is a decision for a human, not a gap for
-                // DocBrain to fill with a guess.
-                None => println!("    fix:        not automatic — the change does not say where it went"),
+        }
+        if !could_not_tell.is_empty() && known {
+            println!(
+                "DocBrain cannot tell whether {} claim(s) on these paths are about {repo}{suffix}:\n",
+                could_not_tell.len()
+            );
+        }
+        // One group per reason, each with its one action; every claim named.
+        let reason_of = |c: &serde_json::Value| c.get("reason").and_then(serde_json::Value::as_str).unwrap_or("unknown").to_string();
+        let mut reasons: Vec<String> = repository::REASON_ORDER.iter().map(|r| r.to_string()).collect();
+        for c in &could_not_tell {
+            let r = reason_of(c);
+            if !reasons.contains(&r) {
+                reasons.push(r);
+            }
+        }
+        for reason in &reasons {
+            let group: Vec<&serde_json::Value> = could_not_tell.iter().filter(|c| &reason_of(c) == reason).collect();
+            if group.is_empty() {
+                continue;
+            }
+            println!("{}", repository::group_line(reason, group.len(), &repo, &listed_at));
+            for c in group {
+                let s = |k: &str| c.get(k).and_then(serde_json::Value::as_str).unwrap_or("");
+                let place = if s("url").is_empty() { s("premise_id") } else { s("url") };
+                println!("  {}  {}  ({place})", s("expression"), s("claimed_by"));
             }
             println!();
         }
+        if !known && could_not_tell.is_empty() {
+            println!("{}", repository::group_line("repository_unknown", 0, &repo, &listed_at));
+        }
+        if findings.is_empty() && could_not_tell.is_empty() && known {
+            println!(
+                "Checked {checked} removed path(s) about {repo} (listing from {listed_at}); no live documentation claims affected{suffix}."
+            );
+        }
+        if others > 0 {
+            println!("{others} claim(s) about other repositories name these paths{suffix}.");
+        }
     }
 
-    if findings.is_empty() || warn_only {
-        exit_with(0);
+    match code {
+        2 => eprintln!(
+            "Documentation claim(s) falsified — exiting non-zero. Pass --warn-only to report without failing."
+        ),
+        3 if !known => eprintln!("uncheckable: DocBrain reads no repository named {repo}."),
+        3 => eprintln!("uncheckable: some claims on these paths could not be tied to {repo}; see above."),
+        _ => {}
     }
-    eprintln!(
-        "Documentation claim(s) falsified — exiting non-zero. Pass --warn-only to report without failing."
-    );
-    exit_with(2);
+    exit_with(code);
 }
 
 async fn handle_evidence(action: EvidenceAction, server_url: &str, api_key: Option<&str>) -> Result<()> {

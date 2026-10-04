@@ -1,0 +1,7 @@
+{
+  "_source": "GitHub REST API, 'Get a repository', 403 Forbidden (the endpoint documents 403 among its status codes; the message varies by cause and is not relied on).",
+  "_request": "GET /repos/octo-org/Docs-Blocked",
+  "_status": 403,
+  "message": "Forbidden",
+  "documentation_url": "https://docs.github.com/rest/repos/repos#get-a-repository"
+}

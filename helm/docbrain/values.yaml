@@ -114,6 +114,7 @@ gitlabCapture:
   # tlsInsecure: false   # GITLAB_CAPTURE_TLS_INSECURE — set true for self-hosted GitLab with self-signed certs
   # allowedUsers: ""     # GITLAB_CAPTURE_ALLOWED_USERS — comma-separated usernames; empty = all
   # allowedProjects: ""  # GITLAB_CAPTURE_ALLOWED_PROJECTS — comma-separated group/project paths; empty = all
+  # botUserId: ""        # GITLAB_BOT_USER_ID — numeric user id of the account behind token; its own notes never trigger an ask reply
 
 # -- Confluence real-time webhook sync
 # Enables POST /confluence/events for instant page indexing on create/update/delete.

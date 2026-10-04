@@ -1,0 +1,1957 @@
+{
+"known_hosts": [
+[
+"code.example.net",
+"gitlab",
+"gl"
+],
+[
+"git.corp.example",
+"github",
+""
+]
+],
+"secret": "S3CRETtok",
+"cases": [
+{
+"input": "https://github.com/Owner/Repo",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://github.com/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://github.com/Owner/Repo/",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://github.com/Owner/Repo.git/",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "http://github.com/Owner/Repo",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://github.com:8443/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "ssh://git@github.com/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "ssh://git@github.com:2222/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "git://github.com/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "git@github.com:Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "github.com:Owner/Repo",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://user:S3CRETtok@github.com/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://S3CRETtok@github.com/Owner/Repo",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@github.com/Owner/Repo.git",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "  https://GITHUB.COM/Owner/Repo.GIT  ",
+"typed": "github:owner/repo",
+"remote": "github:owner/repo"
+},
+{
+"input": "https://www.github.com/Owner/Repo",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.com/o-1/r.x_y",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://github.com/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://github.com/o-1/r.x_y/",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://github.com/o-1/r.x_y.git/",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "http://github.com/o-1/r.x_y",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://github.com:8443/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "ssh://git@github.com/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "ssh://git@github.com:2222/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "git://github.com/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "git@github.com:o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "github.com:o-1/r.x_y",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://user:S3CRETtok@github.com/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://S3CRETtok@github.com/o-1/r.x_y",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@github.com/o-1/r.x_y.git",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "  https://GITHUB.COM/o-1/r.x_y.GIT  ",
+"typed": "github:o-1/r.x_y",
+"remote": "github:o-1/r.x_y"
+},
+{
+"input": "https://www.github.com/o-1/r.x_y",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.example.com/Acme/Platform",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.example.com/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.example.com/Acme/Platform/",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.example.com/Acme/Platform.git/",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "http://github.example.com/Acme/Platform",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.example.com:8443/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "ssh://git@github.example.com/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=github.example.com]",
+"remote": "REFUSE:UnknownHost[host=github.example.com]"
+},
+{
+"input": "ssh://git@github.example.com:2222/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=github.example.com]",
+"remote": "REFUSE:UnknownHost[host=github.example.com]"
+},
+{
+"input": "git://github.example.com/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=github.example.com]",
+"remote": "REFUSE:UnknownHost[host=github.example.com]"
+},
+{
+"input": "git@github.example.com:Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=github.example.com]",
+"remote": "REFUSE:UnknownHost[host=github.example.com]"
+},
+{
+"input": "github.example.com:Acme/Platform",
+"typed": "REFUSE:UnknownHost[host=github.example.com]",
+"remote": "REFUSE:UnknownHost[host=github.example.com]"
+},
+{
+"input": "https://user:S3CRETtok@github.example.com/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://S3CRETtok@github.example.com/Acme/Platform",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@github.example.com/Acme/Platform.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "  https://GITHUB.EXAMPLE.COM/Acme/Platform.GIT  ",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://www.github.example.com/Acme/Platform",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.com/G/P",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab.com/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab.com/G/P/",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab.com/G/P.git/",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "http://gitlab.com/G/P",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab.com:8443/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "ssh://git@gitlab.com/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "ssh://git@gitlab.com:2222/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "git://gitlab.com/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "git@gitlab.com:G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "gitlab.com:G/P",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://user:S3CRETtok@gitlab.com/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://S3CRETtok@gitlab.com/G/P",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@gitlab.com/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "  https://GITLAB.COM/G/P.GIT  ",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://www.gitlab.com/G/P",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.com/g/Sub/Deep/p",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://gitlab.com/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://gitlab.com/g/Sub/Deep/p/",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://gitlab.com/g/Sub/Deep/p.git/",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "http://gitlab.com/g/Sub/Deep/p",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://gitlab.com:8443/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "ssh://git@gitlab.com/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "ssh://git@gitlab.com:2222/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "git://gitlab.com/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "git@gitlab.com:g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "gitlab.com:g/Sub/Deep/p",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://user:S3CRETtok@gitlab.com/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://S3CRETtok@gitlab.com/g/Sub/Deep/p",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@gitlab.com/g/Sub/Deep/p.git",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "  https://GITLAB.COM/g/Sub/Deep/p.GIT  ",
+"typed": "gitlab:g/sub/deep/p",
+"remote": "gitlab:g/sub/deep/p"
+},
+{
+"input": "https://www.gitlab.com/g/Sub/Deep/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.com/g.dot/p-x",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://gitlab.com/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://gitlab.com/g.dot/p-x/",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://gitlab.com/g.dot/p-x.git/",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "http://gitlab.com/g.dot/p-x",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://gitlab.com:8443/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "ssh://git@gitlab.com/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "ssh://git@gitlab.com:2222/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "git://gitlab.com/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "git@gitlab.com:g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "gitlab.com:g.dot/p-x",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://user:S3CRETtok@gitlab.com/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://S3CRETtok@gitlab.com/g.dot/p-x",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@gitlab.com/g.dot/p-x.git",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "  https://GITLAB.COM/g.dot/p-x.GIT  ",
+"typed": "gitlab:g.dot/p-x",
+"remote": "gitlab:g.dot/p-x"
+},
+{
+"input": "https://www.gitlab.com/g.dot/p-x",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.example.internal/g/s/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.example.internal/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.example.internal/g/s/p/",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.example.internal/g/s/p.git/",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "http://gitlab.example.internal/g/s/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.example.internal:8443/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "ssh://git@gitlab.example.internal/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=gitlab.example.internal]",
+"remote": "REFUSE:UnknownHost[host=gitlab.example.internal]"
+},
+{
+"input": "ssh://git@gitlab.example.internal:2222/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=gitlab.example.internal]",
+"remote": "REFUSE:UnknownHost[host=gitlab.example.internal]"
+},
+{
+"input": "git://gitlab.example.internal/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=gitlab.example.internal]",
+"remote": "REFUSE:UnknownHost[host=gitlab.example.internal]"
+},
+{
+"input": "git@gitlab.example.internal:g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=gitlab.example.internal]",
+"remote": "REFUSE:UnknownHost[host=gitlab.example.internal]"
+},
+{
+"input": "gitlab.example.internal:g/s/p",
+"typed": "REFUSE:UnknownHost[host=gitlab.example.internal]",
+"remote": "REFUSE:UnknownHost[host=gitlab.example.internal]"
+},
+{
+"input": "https://user:S3CRETtok@gitlab.example.internal/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://S3CRETtok@gitlab.example.internal/g/s/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@gitlab.example.internal/g/s/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "  https://GITLAB.EXAMPLE.INTERNAL/g/s/p.GIT  ",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://www.gitlab.example.internal/g/s/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "GitHub:Acme/Platform/",
+"typed": "github:acme/platform",
+"remote": "github:acme/platform"
+},
+{
+"input": "github:o/r.git",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "git@github:o/r.git",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "gitlab:g/p.git",
+"typed": "REFUSE:UnknownHost[host=gitlab]",
+"remote": "REFUSE:UnknownHost[host=gitlab]"
+},
+{
+"input": "local:x",
+"typed": "REFUSE:Local",
+"remote": "REFUSE:Local"
+},
+{
+"input": "bitbucket:o/r",
+"typed": "REFUSE:UnknownHost[host=bitbucket]",
+"remote": "REFUSE:UnknownHost[host=bitbucket]"
+},
+{
+"input": "https://bitbucket.org/o/r.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitea.example.com/o/r.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.com.evil.example/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.attacker.example/g/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github-enterprise.corp/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://user:p@ssS3CRETtok@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://oauth2:ab/S3CRETtok@gitlab.com/g/p.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://oauth2:S3CRETtok%40x@gitlab.com/g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://github.com/o/r?access_token=S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.git#S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://gitlab.com/g/p.git?private_token=S3CRETtok",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://github.com/o/r/pull/3",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r/tree/main",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/-/tree/main",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/-/merge_requests/3",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/tree/main",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/p/tree/main"
+},
+{
+"input": "https://gitlab.com/g/p/merge_requests/3",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/p/merge_requests/3"
+},
+{
+"input": "https://gitlab.com/g/p/blob/main/README.md",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/p/blob/main/readme.md"
+},
+{
+"input": "https://gitlab.com/g/p.wiki.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r.wiki.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.git.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "ssh://git@[::1]:2222/g/p.git",
+"typed": "REFUSE:UnknownHost[host=[::1]]",
+"remote": "REFUSE:UnknownHost[host=[::1]]"
+},
+{
+"input": "git@[2001:db8::1]:g/p.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://[2001:db8::1]/g/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://xn--gthub-n4a.com/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gіthub.com/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.com/o/rеpo",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r%2Fx",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o%20x/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/../r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com//o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o//r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "git+ssh://git@github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "ssh+git://git@github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "file:///srv/git/r.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "/srv/git/r.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "../sibling.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "C:/repos/x",
+"typed": "REFUSE:UnknownHost[host=c]",
+"remote": "REFUSE:UnknownHost[host=c]"
+},
+{
+"input": "https://code.example.net/gl/g/p",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "ssh://git@code.example.net/g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://code.example.net/gl/gl/p",
+"typed": "gitlab:gl/p",
+"remote": "gitlab:gl/p"
+},
+{
+"input": "https://code.example.net/g/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://git.corp.example/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://GitHub.com/O/R",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.GIT",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r/x",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "",
+"typed": "REFUSE:Empty",
+"remote": "REFUSE:Empty"
+},
+{
+"input": "   ",
+"typed": "REFUSE:Empty",
+"remote": "REFUSE:Empty"
+},
+{
+"input": "github:",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o/r ",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:o/ r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com:443/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "ssh://ssh.github.com:443/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "ssh://git@altssh.gitlab.com:443/g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab/g/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github/o/r.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gitlab.com/-/g/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r/-/x",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/-",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/sub/-/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "ssh://git@github-work/o/r.git",
+"typed": "REFUSE:UnknownHost[host=github-work]",
+"remote": "REFUSE:UnknownHost[host=github-work]"
+},
+{
+"input": "git@github-work:o/r.git",
+"typed": "REFUSE:UnknownHost[host=github-work]",
+"remote": "REFUSE:UnknownHost[host=github-work]"
+},
+{
+"input": "https://user@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://S3CRETtok:x-oauth-basic@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.git/info/refs",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.git/",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "HTTPS://GITHUB.COM/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r\n",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r\u0000",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/-o/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o_x/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.atom",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "git@gitlab.com:g/s/p.git",
+"typed": "gitlab:g/s/p",
+"remote": "gitlab:g/s/p"
+},
+{
+"input": "gitlab.com:g/s/p",
+"typed": "gitlab:g/s/p",
+"remote": "gitlab:g/s/p"
+},
+{
+"input": "https://gitlab.example.internal/gitlab/g/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.example.com/api/v3/repos/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://api.github.com/repos/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://raw.githubusercontent.com/o/r/main/x",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://gist.github.com/o/abc123",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git+ssh://git@github.com:22/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "ssh+git://git@gitlab.com/g/s/p.git",
+"typed": "gitlab:g/s/p",
+"remote": "gitlab:g/s/p"
+},
+{
+"input": "GIT+SSH://git@github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git+ssh://S3CRETtok@github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git+ssh://git@code.example.net:2222/gl/g/p.git",
+"typed": "gitlab:gl/g/p",
+"remote": "gitlab:gl/g/p"
+},
+{
+"input": "git+https://github.com/o/r.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "ssh://github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "gitlab:G/S/P.git/",
+"typed": "REFUSE:UnknownHost[host=gitlab]",
+"remote": "REFUSE:UnknownHost[host=gitlab]"
+},
+{
+"input": "GITHUB:O/R.GIT",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "git@gitlab:g/p.git",
+"typed": "REFUSE:UnknownHost[host=gitlab]",
+"remote": "REFUSE:UnknownHost[host=gitlab]"
+},
+{
+"input": "ssh://github/o/r.git",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "github-work:o/r.git",
+"typed": "REFUSE:UnknownHost[host=github-work]",
+"remote": "REFUSE:UnknownHost[host=github-work]"
+},
+{
+"input": "work.github:o/r.git",
+"typed": "REFUSE:UnknownHost[host=work.github]",
+"remote": "REFUSE:UnknownHost[host=work.github]"
+},
+{
+"input": "github:o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "gitlab:g/p",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "github:o/r.git.git",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "https://github.com/o/r.wiki",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.WIKI.GIT",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.atom.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.wikis.git",
+"typed": "gitlab:g/p.wikis",
+"remote": "gitlab:g/p.wikis"
+},
+{
+"input": "https://github.com/o/wiki.git",
+"typed": "github:o/wiki",
+"remote": "github:o/wiki"
+},
+{
+"input": "https://gitlab.com/g.wiki/p.git",
+"typed": "gitlab:g.wiki/p",
+"remote": "gitlab:g.wiki/p"
+},
+{
+"input": "github:o/r.wiki",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "gitlab:g/p.atom",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://code.example.net/gl/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://code.example.net/gl/gl/G/P",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:gl/g/p"
+},
+{
+"input": "https://code.example.net/glx/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://code.example.net/GL/g/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://code.example.net:8443/gl/g/s/p.git/",
+"typed": "gitlab:g/s/p",
+"remote": "gitlab:g/s/p"
+},
+{
+"input": "ssh://git@code.example.net/gl/g/p.git",
+"typed": "gitlab:gl/g/p",
+"remote": "gitlab:gl/g/p"
+},
+{
+"input": "git@code.example.net:gl/g/p.git",
+"typed": "gitlab:gl/g/p",
+"remote": "gitlab:gl/g/p"
+},
+{
+"input": "git@code.example.net:g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://other.example.net/gl/g/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://code.example.net/gl",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://code.example.net/gl/",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://CODE.EXAMPLE.NET/gl/g/p",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://git.corp.example/O/R.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://git.corp.example/o/r/x",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "ssh://git@[::1]/g/p.git",
+"typed": "REFUSE:UnknownHost[host=[::1]]",
+"remote": "REFUSE:UnknownHost[host=[::1]]"
+},
+{
+"input": "https://[::ffff:1.2.3.4]:8443/g/p",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "git@[::1]:g/p.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "ssh://git@[github.com]/o/r.git",
+"typed": "REFUSE:UnknownHost[host=[github.com]]",
+"remote": "REFUSE:UnknownHost[host=[github.com]]"
+},
+{
+"input": "https://[::1/o/r",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://gitlab.com/g%2Fsub/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r%2Egit",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g%40x/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/%6F/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r?%23",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com./o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.",
+"typed": "github:o/r.",
+"remote": "github:o/r."
+},
+{
+"input": "https://github.com/o./r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p..",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/.p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/.r",
+"typed": "github:o/.r",
+"remote": "github:o/.r"
+},
+{
+"input": "https://github.com/o/r..git",
+"typed": "github:o/r.",
+"remote": "github:o/r."
+},
+{
+"input": "https://GITHUB.COM/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://GitLab.Com/G/P.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "ssh://git@SSH.GITHUB.COM:443/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git@GITHUB.COM:o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://user:p@ss@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://u:@@@@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://user:pa@ss:word@gitlab.com/g/p",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://S3CRETtok@S3CRETtok@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "u@S3CRETtok@github.com:o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://:S3CRETtok@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://S3CRETtok:@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://user:p@ssS3CRETtok@gitlab.com/g/p.git?private_token=S3CRETtok#S3CRETtok",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://github.com/o/r?token=S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://gitlab.com/g/p.git?private_token=S3CRETtok&x=1",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://github.com/o/r#S3CRETtok?x",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r?#S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:o/r?t=S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:o/r.git?t=S3CRETtok",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "git@github.com:o/r.git?t=S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r?",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.git/?token=S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://S3CRETtok@github.com/o/r?S3CRETtok",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/?token=S3CRETtok",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "?S3CRETtok",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://github.com/o/r#",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://abc/S3CRETtok@github.com/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://user:ab/S3CRETtok@github.com/o/r",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "ssh://u:p/S3CRETtok@github.com/o/r.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://S3CRETtok/x@github.com/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.com:evil/o/r",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://github.com:443:1/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "ssh://git@github.com:o/r.git",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://github.com:/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com:S3CRETtok/o/r",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "https://github.com/o/r/",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o//r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:o/r/.git",
+"typed": "REFUSE:UnknownHost[host=github]",
+"remote": "REFUSE:UnknownHost[host=github]"
+},
+{
+"input": "gitlab:g/p/",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "gitlab:g",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "gitlab:/g/s/p/",
+"typed": "gitlab:g/s/p",
+"remote": "gitlab:g/s/p"
+},
+{
+"input": "Gitlab:G/S/P",
+"typed": "gitlab:g/s/p",
+"remote": "gitlab:g/s/p"
+},
+{
+"input": "github: o/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o/r\r\n",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:o/r\t",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:o/р",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o/r/",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "github:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+"typed": "github:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+"remote": "github:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r"
+},
+{
+"input": "github:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"typed": "github:o/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"remote": "github:o/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+},
+{
+"input": "github:o/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o-/r",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o/r-",
+"typed": "github:o/r-",
+"remote": "github:o/r-"
+},
+{
+"input": "gitlab:g-/p",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "gitlab:g/p_",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "gitlab:g_x/p",
+"typed": "gitlab:g_x/p",
+"remote": "gitlab:g_x/p"
+},
+{
+"input": "gitlab:g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g",
+"typed": "gitlab:g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g",
+"remote": "gitlab:g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g"
+},
+{
+"input": "Local:x",
+"typed": "REFUSE:Local",
+"remote": "REFUSE:Local"
+},
+{
+"input": "local:",
+"typed": "REFUSE:Local",
+"remote": "REFUSE:Local"
+},
+{
+"input": "local:x.git",
+"typed": "REFUSE:Local",
+"remote": "REFUSE:Local"
+},
+{
+"input": "https://github.com/o/r.git/////",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.git.git.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/info.git",
+"typed": "gitlab:g/info",
+"remote": "gitlab:g/info"
+},
+{
+"input": "ssh://git@gitlab.com/g/info",
+"typed": "gitlab:g/info",
+"remote": "gitlab:g/info"
+},
+{
+"input": "https://gitlab.com/g/environments.git",
+"typed": "gitlab:g/environments",
+"remote": "gitlab:g/environments"
+},
+{
+"input": "https://gitlab.com/g/gitlab-lfs.git",
+"typed": "gitlab:g/gitlab-lfs",
+"remote": "gitlab:g/gitlab-lfs"
+},
+{
+"input": "https://gitlab.com/g/tree/p.git",
+"typed": "gitlab:g/tree/p",
+"remote": "gitlab:g/tree/p"
+},
+{
+"input": "ssh://git@gitlab.com/g/blob/p",
+"typed": "gitlab:g/blob/p",
+"remote": "gitlab:g/blob/p"
+},
+{
+"input": "gitlab:g/raw/p",
+"typed": "gitlab:g/raw/p",
+"remote": "gitlab:g/raw/p"
+},
+{
+"input": "git@gitlab.com:g/files/p.git",
+"typed": "gitlab:g/files/p",
+"remote": "gitlab:g/files/p"
+},
+{
+"input": "https://gitlab.com/g/new.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/wikis.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/-/blob/main/x.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p/-/raw/main/a.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p.git/info/lfs/objects/batch",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/p.git/info/lfs/objects/batch"
+},
+{
+"input": "https://gitlab.com/g/p.git/info/refs",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/TREE/p.git",
+"typed": "gitlab:g/tree/p",
+"remote": "gitlab:g/tree/p"
+},
+{
+"input": "https://gitlab.com/tree/p.git",
+"typed": "gitlab:tree/p",
+"remote": "gitlab:tree/p"
+},
+{
+"input": "https://gitlab.com/g/create_dir/p.git",
+"typed": "gitlab:g/create_dir/p",
+"remote": "gitlab:g/create_dir/p"
+},
+{
+"input": "https://gitlab.com/groups/g",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:groups/g"
+},
+{
+"input": "https://gitlab.com/users/alice",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:users/alice"
+},
+{
+"input": "https://gitlab.com/explore/projects",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:explore/projects"
+},
+{
+"input": "https://gitlab.com/dashboard/issues",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:dashboard/issues"
+},
+{
+"input": "https://gitlab.com/api/v4",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:api/v4"
+},
+{
+"input": "https://gitlab.com/snippets/123",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:snippets/123"
+},
+{
+"input": "https://gitlab.com/-/profile",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab.com/g/p?ref_type=heads",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://gitlab.com/g/sub",
+"typed": "gitlab:g/sub",
+"remote": "gitlab:g/sub"
+},
+{
+"input": "https://github.com/orgs/acme",
+"typed": "github:orgs/acme",
+"remote": "github:orgs/acme"
+},
+{
+"input": "https://github.com/settings/profile",
+"typed": "github:settings/profile",
+"remote": "github:settings/profile"
+},
+{
+"input": "https://github.com/features/actions",
+"typed": "github:features/actions",
+"remote": "github:features/actions"
+},
+{
+"input": "https://github.com/o/r/pull/5",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://github.com/o/r?tab=readme-ov-file",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.git/info/refs?service=git-upload-pack",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/sub/p",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/p"
+},
+{
+"input": "https://gitlab-ci-token:S3CRETtok@gitlab.com/g/sub/p",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/p"
+},
+{
+"input": "https://code.example.net/gl/g/sub/p",
+"typed": "REFUSE:BadPath",
+"remote": "gitlab:g/sub/p"
+},
+{
+"input": "https://github.com../o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://GITHUB.COM./O/R",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://CODE.EXAMPLE.NET/gl/g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "https://code.example.net:8443/GL/g/p.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://ssh.github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://altssh.gitlab.com/g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+},
+{
+"input": "C:\\Users\\x\\repo",
+"typed": "REFUSE:UnknownHost[host=c]",
+"remote": "REFUSE:UnknownHost[host=c]"
+},
+{
+"input": "https:/github.com/o/r",
+"typed": "REFUSE:UnknownHost[host=https]",
+"remote": "REFUSE:UnknownHost[host=https]"
+},
+{
+"input": "github :o/r",
+"typed": "REFUSE:UnknownHost[host=github ]",
+"remote": "REFUSE:UnknownHost[host=github ]"
+},
+{
+"input": "-oProxyCommand=x:o/r.git",
+"typed": "REFUSE:UnknownHost[host=-oproxycommand=x]",
+"remote": "REFUSE:UnknownHost[host=-oproxycommand=x]"
+},
+{
+"input": "git@-host:o/r.git",
+"typed": "REFUSE:UnknownHost[host=-host]",
+"remote": "REFUSE:UnknownHost[host=-host]"
+},
+{
+"input": "https://github.com:0443/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com:443443443443/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://[::1]:443/g/p.git",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://[github.com]/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://github.com@evil.example/o/r",
+"typed": "REFUSE:UnknownHost[host=None]",
+"remote": "REFUSE:UnknownHost[host=None]"
+},
+{
+"input": "https://evil.example@github.com/o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/.github",
+"typed": "github:o/.github",
+"remote": "github:o/.github"
+},
+{
+"input": "https://gitlab.com/g/p--x.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/p+x.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "https://gitlab.com/g/_p.git",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "gitlab:g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/p",
+"typed": "gitlab:g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/p",
+"remote": "gitlab:g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/g/p"
+},
+{
+"input": "github:o/r​",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "github:o/r\u0000",
+"typed": "REFUSE:BadPath",
+"remote": "REFUSE:BadPath"
+},
+{
+"input": "origin",
+"typed": "REFUSE:Unsupported",
+"remote": "REFUSE:Unsupported"
+},
+{
+"input": "ssh://git@github.com:22/o/r.git/",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git://github.com/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "https://github.com/o/r.git/",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git@github.com:/o/r.git",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "git@github.com:o/r",
+"typed": "github:o/r",
+"remote": "github:o/r"
+},
+{
+"input": "gitlab.com:g/p.git",
+"typed": "gitlab:g/p",
+"remote": "gitlab:g/p"
+}
+]
+}

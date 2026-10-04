@@ -2,7 +2,7 @@
 
 GitLab MR Capture lets DocBrain learn directly from your engineering work in real time. When a team member comments `@docbrain capture` on a merge request, DocBrain ingests the MR title, description, and full discussion thread — turning institutional knowledge that lives in GitLab into searchable, citable documentation.
 
-Beyond capture, DocBrain can also **answer questions** inline: comment `@docbrain <question>` on any MR and DocBrain will reply with a RAG-generated answer sourced from your knowledge base.
+Beyond capture, `@docbrain <question>` on an MR replies with a link that opens the question in DocBrain, where it is answered under the reader's own access (set `DOCBRAIN_WEB_BASE_URL` so the link can be built).
 
 ---
 
@@ -62,7 +62,10 @@ GITLAB_CAPTURE_BASE_URL=https://gitlab.com             # default; change for sel
 GITLAB_CAPTURE_TLS_INSECURE=false                      # set true for self-signed certs (self-hosted GitLab)
 GITLAB_CAPTURE_ALLOWED_USERS=alice,bob                 # only process commands from these usernames
 GITLAB_CAPTURE_ALLOWED_PROJECTS=group/repo,org/app     # only process these projects
+GITLAB_BOT_USER_ID=1234                                # numeric GitLab user id of the account behind GITLAB_CAPTURE_TOKEN
 ```
+
+**`GITLAB_BOT_USER_ID`** is the numeric user id of the account that owns `GITLAB_CAPTURE_TOKEN` (GitLab: the user's profile, or `GET /api/v4/user`). DocBrain's own replies are notes on the MR; with this set, notes authored by that account never trigger an ask reply (loop guard). Unset, the guard is off and only the create-only filter (edited notes are ignored) applies, so set it whenever the token belongs to a dedicated bot account.
 
 **`GITLAB_CAPTURE_TOKEN`** (PAT) is needed to fetch the full MR note thread via the GitLab API. Without it, DocBrain can only read the triggering note body, not the full discussion.
 
@@ -119,22 +122,20 @@ The MR content is now searchable via the Q&A API and the web UI.
 @docbrain How does the new auth middleware handle token refresh?
 ```
 
-DocBrain replies with a sourced answer:
+DocBrain replies:
 
 ```
-DocBrain — answering: How does the new auth middleware handle token refresh?
-
-The middleware checks the token expiry window (configurable via TOKEN_REFRESH_WINDOW_SECS)...
-
-Sources: [Auth Architecture](https://...) · [Confluence: Auth Design] · Confidence: 87%
+Ask this in DocBrain: https://docbrain.example.com/ask
 ```
+
+The MR carries no answer text, no source titles and no question: a merge request can be visible to people who cannot read the documents behind the answer, so the answer is produced only after the reader opens the link and signs in. Without `DOCBRAIN_WEB_BASE_URL` the reply is "Ask this in DocBrain." with no link, and the server logs a warning.
 
 ### Commands Summary
 
 | Comment | Effect |
 |---|---|
 | `@docbrain capture` | Index the full MR thread into DocBrain |
-| `@docbrain <question>` | Run RAG on your knowledge base and post the answer |
+| `@docbrain <question>` | Reply with a link to ask it in DocBrain |
 
 Both triggers are **case-insensitive**. The `@docbrain` prefix must appear somewhere in the note.
 

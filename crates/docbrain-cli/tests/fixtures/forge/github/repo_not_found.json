@@ -1,0 +1,7 @@
+{
+  "_source": "GitHub REST API, 'Get a repository', 404: returned both for a repository that does not exist and for a private one the token cannot see, so the two cannot be told apart.",
+  "_request": "GET /repos/octo-org/Docs-Private",
+  "_status": 404,
+  "message": "Not Found",
+  "documentation_url": "https://docs.github.com/rest/repos/repos#get-a-repository"
+}

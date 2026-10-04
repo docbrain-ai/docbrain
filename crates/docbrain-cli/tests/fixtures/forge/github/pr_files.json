@@ -1,0 +1,10 @@
+{
+  "_source": "GitHub REST API, Pulls, 'List pull requests files' (GET /repos/{owner}/{repo}/pulls/{pull_number}/files): status is one of added, removed, modified, renamed, copied, changed, unchanged; a rename carries previous_filename.",
+  "_request": "GET /repos/octo-org/Docs-Probe/pulls/1/files",
+  "_status": 200,
+  "_body": [
+    { "filename": "docs/probe.md", "status": "removed" },
+    { "filename": "docs/moved/shared.md", "previous_filename": "docs/shared.md", "status": "renamed" },
+    { "filename": "README.md", "status": "modified" }
+  ]
+}

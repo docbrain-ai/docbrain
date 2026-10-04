@@ -13,6 +13,7 @@ pub mod hash;
 pub mod keys;
 pub mod manifest;
 pub mod pae;
+pub mod repo;
 mod strict;
 pub mod verdict;
 pub mod verify;

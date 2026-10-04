@@ -27,7 +27,7 @@ DocBrain answers (with confidence score)
                               │  Doc Drafter            │
                               │  - pulls episodic notes │
                               │  - queries KG for facts │
-                              │  - applies freshness    │
+                              │  - gathers live tools   │
                               └───────────┬────────────┘
                                           │
                               ┌───────────▼────────────┐

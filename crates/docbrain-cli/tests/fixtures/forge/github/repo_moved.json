@@ -1,0 +1,9 @@
+{
+  "_source": "GitHub REST API, 'Get a repository', 301 Moved Permanently: the repository was renamed or transferred; the body points at the repository by id, and following it yields the new full_name (second part).",
+  "_request": "GET /repos/octo-org/Docs-Old",
+  "_status": 301,
+  "message": "Moved Permanently",
+  "url": "https://api.github.com/repositories/900001",
+  "documentation_url": "https://docs.github.com/rest/repos/repos#get-a-repository",
+  "_followed": { "full_name": "octo-org/Docs-Probe", "clone_url": "https://github.com/octo-org/Docs-Probe.git" }
+}

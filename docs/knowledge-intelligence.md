@@ -187,11 +187,9 @@ Knowledge Stream shifts DocBrain from reactive (answering questions) to proactiv
 
 **Incident early warnings:** Monitors the pattern of queries in real-time. When multiple users start asking similar questions within a short window (default: ≥2 unique users within 2 hours), it infers a possible incident in progress and fires an early warning. This can catch incidents via documentation access patterns before monitoring alerts fire.
 
-**Knowledge decay risk:** Identifies documents that are highly accessed but haven't been updated recently. High traffic on a stale document is a risk indicator — the team is relying on it, but it may be wrong. Sends proactive alerts to document authors.
-
 **Expertise gap detection:** Monitors expert activity. When a recognized domain expert (identified via expertise routing) hasn't interacted with DocBrain in more than the configured threshold (default: 90 days), their knowledge areas are flagged as at-risk single points of failure.
 
-**Context-aware author notifications:** Combines signals from multiple sources (freshness scores, query patterns, code changes, expertise gaps) to generate context-aware recommendations for document authors. Rather than generic "this doc is stale" notifications, authors receive: "Your 'Redis Configuration' doc is being accessed by 3x its normal volume, hasn't been updated in 8 months, and 2 recent PRs have changed the Redis configuration. Here's what might need updating."
+**Context-aware author notifications:** Combines signals from multiple sources (query patterns, code changes, expertise gaps) to generate context-aware recommendations for document authors. Rather than generic "please update your docs" reminders, authors receive: "Your 'Redis Configuration' doc is being accessed by 3x its normal volume and 2 recent PRs have changed the Redis configuration. Here's what might need updating."
 
 ### API Endpoints
 

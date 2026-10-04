@@ -84,6 +84,9 @@ data:
   {{- if .Values.gitlabCapture.allowedProjects }}
   GITLAB_CAPTURE_ALLOWED_PROJECTS: {{ .Values.gitlabCapture.allowedProjects | quote }}
   {{- end }}
+  {{- if .Values.gitlabCapture.botUserId }}
+  GITLAB_BOT_USER_ID: {{ .Values.gitlabCapture.botUserId | quote }}
+  {{- end }}
   {{- end }}
   {{- if and .Values.confluenceWebhook.enabled (not .Values.ingest.confluence) }}
   CONFLUENCE_BASE_URL: {{ .Values.confluenceWebhook.baseUrl | default "" | quote }}

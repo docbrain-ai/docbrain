@@ -1,0 +1,9 @@
+{
+  "_source": "GitLab REST API, Projects, 'Get a single project' for a project whose group path contains a dot (allowed by the reserved-names page: letters, digits, '_', '-', '.').",
+  "_request": "GET /api/v4/projects/my.group%2Fsub%2Fp",
+  "_status": 200,
+  "path_with_namespace": "my.group/sub/p",
+  "ssh_url_to_repo": "git@gitlab.com:my.group/sub/p.git",
+  "http_url_to_repo": "https://gitlab.com/my.group/sub/p.git",
+  "web_url": "https://gitlab.com/my.group/sub/p"
+}

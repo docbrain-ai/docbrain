@@ -103,6 +103,7 @@ https://<your-domain>/slack/events
 |-------|-----|
 | `commands` | Handle `/docbrain` slash commands |
 | `chat:write` | Post answers and notifications |
+| `users:read` | Decide whether the asker is a workspace member or a guest (required: without it every asker is treated as a guest) |
 | `users:read.email` | Look up doc authors by email for stale-doc DMs |
 | `app_mentions:read` | Handle `@DocBrain capture` mentions in threads |
 | `channels:history` | Read thread messages for auto-listen / capture in public channels |

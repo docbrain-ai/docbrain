@@ -1,0 +1,9 @@
+{
+  "_source": "GitHub Actions default environment variables on a pull_request event: GITHUB_ACTIONS 'Always set to true'; GITHUB_REPOSITORY 'The owner and repository name' (on pull_request, the base repository); GITHUB_SERVER_URL is not used for naming. Gitea's act_runner sets GITEA_ACTIONS=true and Forgejo's runner FORGEJO_ACTIONS=true alongside GITHUB_* variables.",
+  "pull_request": {
+    "GITHUB_ACTIONS": "true",
+    "GITHUB_EVENT_NAME": "pull_request",
+    "GITHUB_REPOSITORY": "octo-org/Docs-Probe",
+    "GITHUB_SERVER_URL": "https://github.com"
+  }
+}

@@ -727,11 +727,10 @@ When a draft is reviewed and approved, DocBrain can publish it directly to your 
 
 **How it works:**
 1. Users ask questions → DocBrain detects a gap (unanswered / low confidence)
-2. Autopilot clusters related queries and generates a draft using all 5 memory layers:
+2. Autopilot clusters related queries and generates a draft using its memory layers:
    - **Layer 2 (Episodic):** User feedback notes and failed answers inform what was missing
    - **Layer 3 (Semantic):** Knowledge graph entities provide verified org context
    - **Layer 4 (Procedural):** Retrieval rules steer search toward relevant spaces
-   - **Layer 5 (Freshness):** Stale source docs are flagged so the draft warns readers
 3. Admin reviews draft → clicks **Publish** (or auto-publish fires if `AUTOPILOT_AUTO_DRAFT=true`)
 4. DocBrain creates the page in Confluence with labels and provenance metadata
 5. The gap cluster is automatically marked **resolved**
@@ -929,12 +928,12 @@ velocity:
 
 ## Knowledge Stream
 
-The Knowledge Stream proactively detects and pushes intelligence: incident early warnings (multiple users hitting the same issue), knowledge decay risks (popular but stale docs), expertise gaps (domains with single-point-of-failure risk), and context-aware doc updates.
+The Knowledge Stream proactively detects and pushes intelligence: incident early warnings (multiple users hitting the same issue), expertise gaps (domains with single-point-of-failure risk), and context-aware doc updates.
 
 | Variable | Default | Description |
 |---|---|---|
 | `STREAM_ENABLED` | `false` | Enable the knowledge stream (proactive push intelligence). Opt-in. |
-| `STREAM_INTERVAL_MINUTES` | `30` | How often the stream engine scans for incidents, decay, and expertise gaps. |
+| `STREAM_INTERVAL_MINUTES` | `30` | How often the stream engine scans for incidents and expertise gaps. |
 | `STREAM_INCIDENT_WARNING_MIN_USERS` | `2` | Minimum unique users asking troubleshoot questions about the same service in 2 hours to trigger an incident warning. |
 | `STREAM_ALERT_CHANNEL` | — | Slack channel for critical stream alerts (optional). |
 | `STREAM_EXPERTISE_GAP_DAYS` | `90` | Days without expert activity before triggering an expertise gap alert. |
@@ -1045,8 +1044,8 @@ architecture decisions, how-to answers, anything marked with a target reaction.
 |---|---|---|
 | `SLACK_BOT_TOKEN` | — | Slack bot token starting with `xoxb-` |
 | `SLACK_SIGNING_SECRET` | — | Slack app signing secret for webhook verification |
-| `NOTIFICATION_INTERVAL_HOURS` | `24` | How often stale doc notifications are sent (requires Slack) |
-| `NOTIFICATION_SPACE_FILTER` | — | Restrict notifications to a specific Confluence space |
+| `NOTIFICATION_INTERVAL_HOURS` | `24` | How often health alerts are posted to the alert channel (requires Slack) |
+| `NOTIFICATION_SPACE_FILTER` | — | No longer read: it scoped the author DMs about documents, which were retired. Setting it logs a warning |
 
 ### Slack Capture Access Control
 
@@ -1093,8 +1092,8 @@ When a rate limit is exceeded, DocBrain returns `429 Too Many Requests` with a `
 
 ## MCP Tool Platform
 
-Master switch for the live-tool orchestrator (Plan 4). When disabled (the
-default), the synthesis path is byte-identical to pre-Plan-4: no orchestrator
+Master switch for the live-tool orchestrator. When disabled (the
+default), the synthesis path is byte-identical to a build without the tool platform: no orchestrator
 round-trip, no fast-LLM dispatch, no measurable overhead. Flip to `true`
 once `MCP_OAUTH_ENCRYPTION_KEY` and `MCP_MANIFEST_DIR` are configured to
 enable live tool fan-out at answer time.
