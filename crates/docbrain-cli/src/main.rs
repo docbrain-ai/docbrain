@@ -831,10 +831,6 @@ struct SourceResponse {
     /// can send it as source_ref.key.
     #[serde(default)]
     document_id: String,
-    #[serde(default)]
-    freshness_status: Option<String>,
-    #[serde(default)]
-    freshness_score: Option<f32>,
 }
 
 #[derive(Deserialize)]
@@ -1467,10 +1463,9 @@ struct CliBlock {
 /// in a real terminal it disappeared into the answer. Found by looking at a
 /// recorded frame: the warning was there and read like a sentence.
 ///
-/// Orange `38;5;208` is not a new choice — it is the code `freshness_tag`
-/// already uses for `stale`, so a stale premise and a stale source now look
-/// the same to a reader. Law 4 still holds: the server's text is rendered
-/// verbatim and the CLI adds no words, only emphasis.
+/// Orange `38;5;208` is the colour this warning has always used. Law 4 still
+/// holds: the server's text is rendered verbatim and the CLI adds no words,
+/// only emphasis.
 ///
 /// `degraded` is painted the same way. It carries the cut-turn warning — the
 /// ask deadline stopping the turn, in retrieval or in the synthesis the loop
@@ -1603,22 +1598,15 @@ fn stdout_colour_enabled() -> bool {
     std::io::stdout().is_terminal()
 }
 
-/// Freshness marker appended to a source line.
-///
-/// Printed on stdout as part of the sources list, so colour is gated — see
-/// `stdout_colour_enabled`.
-fn freshness_tag(status: Option<&str>, colour: bool) -> String {
-    let (code, label) = match status {
-        Some("stale")        => ("38;5;208", "⚠ stale"),
-        Some("outdated")     => ("31",       "⚠ outdated"),
-        Some("needs_review") => ("33",       "⚠ needs review"),
-        _                    => return String::new(),
+/// One numbered source line. No age tag (#412, step 1): the tag that ended
+/// this line was the source's freshness band, which is not a reason to doubt
+/// it.
+fn source_line(i: usize, source: &SourceResponse) -> String {
+    let section = match &source.heading {
+        Some(h) => format!(" > {}", h),
+        None => String::new(),
     };
-    if colour {
-        format!(" \x1b[{code}m{label}\x1b[0m")
-    } else {
-        format!(" {label}")
-    }
+    format!("  [{}] {}{} (score: {:.2})", i + 1, source.title, section, source.score)
 }
 
 fn print_sources(result: &AskResponse) {
@@ -1632,12 +1620,7 @@ fn print_sources(result: &AskResponse) {
     // list the user sees. Index counts EVERY source in display order (matching
     // the last-answer cache), even visually-deduped URLs, so N stays stable.
     for (i, source) in result.sources.iter().enumerate() {
-        let section = match &source.heading {
-            Some(h) => format!(" > {}", h),
-            None => String::new(),
-        };
-        let tag = freshness_tag(source.freshness_status.as_deref(), stdout_colour_enabled());
-        println!("  [{}] {}{} (score: {:.2}){}", i + 1, source.title, section, source.score, tag);
+        println!("{}", source_line(i, source));
         println!("      {}", source.source_url);
     }
 }
@@ -6830,23 +6813,16 @@ mod tests {
     /// they must be plain when colour is off — a redirected answer carrying
     /// escape codes is the same scriptability problem as the spinner, just
     /// quieter.
+    /// #412: a source the server still describes as "outdated" (a released
+    /// server, or an old cached answer) prints as a plain numbered line.
     #[test]
-    fn freshness_tag_is_plain_without_colour() {
-        let tag = freshness_tag(Some("needs_review"), false);
-        assert!(!tag.contains('\x1b'), "no escapes without colour; got {tag:?}");
-        assert!(tag.contains("needs review"), "the text itself must survive");
-    }
-
-    #[test]
-    fn freshness_tag_is_coloured_with_colour() {
-        let tag = freshness_tag(Some("needs_review"), true);
-        assert!(tag.contains('\x1b'), "colour requested, escapes expected");
-    }
-
-    #[test]
-    fn freshness_tag_empty_for_unknown_status() {
-        assert_eq!(freshness_tag(None, true), "");
-        assert_eq!(freshness_tag(Some("fresh"), true), "");
+    fn a_source_line_carries_no_age_tag() {
+        let s: SourceResponse = serde_json::from_value(serde_json::json!({
+            "heading": null, "score": 0.5, "source_url": "https://example.invalid/p", "title": "A page",
+            "freshness_status": "outdated", "freshness_score": 12.0
+        }))
+        .unwrap();
+        assert_eq!(source_line(0, &s), "  [1] A page (score: 0.50)");
     }
 
     /// --json wins over an interactive terminal: the caller asked for data.
