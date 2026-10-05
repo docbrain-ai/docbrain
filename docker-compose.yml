@@ -177,7 +177,11 @@ services:
   # everything else → web. Without it the two services sit on separate host
   # origins and the browser's login fetch is blocked by CSP.
   proxy:
-    image: caddy:2-alpine
+    # Pinned to 2.10: with Caddy 2.11.6 a streamed answer that is quiet for
+    # 60 s while the model writes is cut at 60 s ("Connection error: network
+    # error" in Ask). 2.10.2 returns the full answer. Keep the pin until the
+    # server sends keep-alive events during a long answer.
+    image: caddy:2.10-alpine
     pull_policy: always
     depends_on:
       - server
