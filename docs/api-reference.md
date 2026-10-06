@@ -1103,7 +1103,7 @@ POST /api/v1/admin/keys
 
 - `viewer` — ask questions, browse answers, give feedback, and access all intelligence dashboards (Documentation Analytics, Predictive Gaps, Autonomous Document Maintenance, Knowledge Stream)
 - `editor` — everything viewer can + manage spaces and captures
-- `analyst` — everything editor can; reserved for future role-based scoping, currently equivalent to `editor`
+- `analyst` — everything editor can + review actions (approve or discard queued captures, and other endpoints marked **Requires analyst role**); editors cannot use these
 - `admin` — full access including user management, RBAC config, and ingest triggers
 
 `allowed_spaces`: hard-filters all queries and ingestion to the listed spaces. Empty array = no restriction.
@@ -1853,7 +1853,15 @@ Each SSE message includes:
 
 Create a new knowledge fragment. **Requires editor role.**
 
-Fragments are routed by confidence: `>= auto_index_threshold` (default 0.7) → auto-indexed into search; `>= review_threshold` (default 0.4) → queued for review; below → auto-discarded.
+Fragments are routed by a confidence the server derives from how the capture is anchored to code. A `confidence` sent in the request is ignored.
+
+| Capture carries | Derived confidence | Routing (default thresholds) |
+|-----------------|--------------------|------------------------------|
+| `code_location` and at least one premise (declared in `premises`, or derived from the file list of a `commit` capture) | 0.9 | Auto-indexed |
+| `code_location` only | 0.75 | Auto-indexed |
+| No `code_location` | 0.5 | Queued for review |
+
+The derived value is compared against `auto_index_threshold` (default 0.7) and `review_threshold` (default 0.4): at or above the first it is auto-indexed into search, at or above the second it is queued for review, below it is discarded. With the default thresholds nothing is discarded; unanchored captures wait for an analyst or admin to approve them (see [review queue](#get-apiv1fragmentsreview-queue)).
 
 **Request body:**
 ```json
@@ -1864,10 +1872,10 @@ Fragments are routed by confidence: `>= auto_index_threshold` (default 0.7) → 
   "source_type": "pr_merge",
   "source_ref": "https://github.com/acme/platform/pull/1234",
   "source_id": "github:acme/platform#1234",
-  "confidence": 0.85,
   "space": "PLATFORM",
   "related_doc_ids": ["550e8400-e29b-41d4-a716-446655440000"],
-  "code_location": "src/events/publisher.rs:42"
+  "code_location": "src/events/publisher.rs:42",
+  "premises": [{ "premise_type": "path", "expression": "src/events/publisher.rs" }]
 }
 ```
 
@@ -1879,10 +1887,10 @@ Fragments are routed by confidence: `>= auto_index_threshold` (default 0.7) → 
 | `source_type` | string | yes | `pr_merge`, `commit`, `ide_annotation`, `conversation_distill`, `deploy`, `incident`, `manual`, `ci_analyze` |
 | `source_ref` | string | no | URL or reference to the source |
 | `source_id` | string | no | Dedup key (unique per source_type) |
-| `confidence` | float | no | 0.0–1.0, default 0.5 |
 | `space` | string | no | Space for routing/filtering |
 | `related_doc_ids` | UUID[] | no | Related document IDs |
 | `code_location` | string | no | File path and line (e.g. `src/foo.rs:42`) |
+| `premises` | object[] | no | Conditions that must stay true for the fragment to hold, each `{"premise_type": "path", "expression": "<repo-relative path>"}`. Makes an anchored capture falsifiable. `path` is the only type checked in v1. |
 
 **Response:** `201 Created`
 ```json
@@ -1911,7 +1919,7 @@ Get a single fragment by ID.
 
 ### PATCH /api/v1/fragments/:id
 
-Update a fragment. **Requires editor role.** Only provided fields are updated.
+Update a fragment. **Requires editor role.** Only provided fields are updated. Sending `confidence` returns `400`: it is derived from the capture's anchors and cannot be set.
 
 ### DELETE /api/v1/fragments/:id
 

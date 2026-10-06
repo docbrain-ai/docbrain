@@ -10,7 +10,7 @@ DocBrain supports three SSO providers for login — **GitHub OAuth**, **GitLab O
 |------|-----------------|
 | `viewer` | Ask questions, view answers, give feedback, and access all intelligence dashboards (Documentation Analytics, Predictive Gaps, Autonomous Document Maintenance, Knowledge Stream). Default for new SSO users. |
 | `editor` | Everything viewer can + manage knowledge spaces and captures. |
-| `analyst` | Everything editor can. Reserved for future role-based scoping; currently equivalent to `editor`. |
+| `analyst` | Everything editor can + review actions: approve or discard captures in the fragment review queue, and the other endpoints marked **Requires analyst role** in the API reference. Editors cannot use these. |
 | `admin` | Full access: manage users, API keys, RBAC config, trigger ingests. |
 
 ---
