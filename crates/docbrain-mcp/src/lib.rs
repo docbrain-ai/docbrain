@@ -15,8 +15,8 @@ const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 ///
 /// DocBrain's `/api/v1/ask` handler reads `X-DocBrain-Caller` to set the
 /// request's `Surface` (computed server-side).
-/// `mcp-host` -> `Surface::McpHost` -> `tools_enabled` defaults to FALSE so we
-/// don't double-fetch live data the MCP host already has.
+/// `mcp-host` -> `Surface::McpHost`, which calls live tools by default (R8 /
+/// #443): the host's own tools are not the sources DocBrain consults.
 ///
 /// Producer/receiver contract: this value MUST match the literal `"mcp-host"`
 /// in `compute_surface()`. Mis-spelling either side silently breaks the
@@ -109,6 +109,10 @@ pub struct McpServer {
     pub server_url: String,
     pub api_key: Option<String>,
     pub client: reqwest::Client,
+    /// For `/api/v1/ask` only: no client timeout, as the CLI's ask client. An ask
+    /// that calls live tools can outlast `client`'s 120 s, and the server's own turn
+    /// clock is what bounds it (#443).
+    ask_client: reqwest::Client,
     /// Caller role string ("viewer"/"editor"/"analyst"/"admin"), resolved once
     /// from `/api/v1/auth/me` in `validate_connection`. `None` until validated.
     /// Used to fail-fast write-tool calls from a viewer-scoped key with a clear
@@ -228,6 +232,7 @@ impl McpServer {
                 .timeout(std::time::Duration::from_secs(120))
                 .build()
                 .expect("Failed to build HTTP client"),
+            ask_client: reqwest::Client::new(),
             role: std::sync::OnceLock::new(),
         }
     }
@@ -246,6 +251,7 @@ impl McpServer {
                 .timeout(std::time::Duration::from_secs(120))
                 .build()
                 .expect("Failed to build HTTP client"),
+            ask_client: reqwest::Client::new(),
             role: std::sync::OnceLock::new(),
         }
     }
@@ -366,7 +372,7 @@ impl McpServer {
                             },
                             "session_id": {
                                 "type": "string",
-                                "description": "UUID to group follow-up questions into a conversation. Omit for standalone questions."
+                                "description": SESSION_ID_DESCRIPTION
                             }
                         },
                         "required": ["question"]
@@ -643,9 +649,22 @@ impl McpServer {
             code: -32602,
             message: "Missing 'question' parameter".into(),
         })?;
+        let session_id = args["session_id"].as_str();
 
-        let body = json!({ "question": question });
-        let response = self.api_call("/api/v1/ask", &body).await?;
+        let mut body = json!({ "question": question });
+        if let Some(sid) = session_id {
+            body["session_id"] = json!(sid);
+        }
+        let response = match self.post(&self.ask_client, "/api/v1/ask", &body).await {
+            Ok(v) => v,
+            Err(f) if session_id.is_some() && f.names_a_dead_session() => {
+                return Err(JsonRpcError {
+                    code: -32000,
+                    message: START_NEW_CONVERSATION.into(),
+                });
+            }
+            Err(f) => return Err(f.into()),
+        };
 
         let answer = response["answer"].as_str().unwrap_or("No answer available");
         let sources: Vec<String> = response["sources"]
@@ -679,6 +698,11 @@ impl McpServer {
             ));
         }
         text.push_str(&verdict_after);
+        if let Some(sid) = response["session_id"].as_str() {
+            text.push_str(&format!(
+                "\n\n<!-- session_id: {sid} — pass as session_id to docbrain_ask to ask a follow-up in this conversation -->"
+            ));
+        }
 
         Ok(json!({
             "content": [{
@@ -1614,12 +1638,20 @@ impl McpServer {
     }
 
     pub async fn api_call(&self, path: &str, body: &Value) -> Result<Value, JsonRpcError> {
+        self.post(&self.client, path, body).await.map_err(JsonRpcError::from)
+    }
+
+    async fn post(
+        &self,
+        client: &reqwest::Client,
+        path: &str,
+        body: &Value,
+    ) -> Result<Value, ApiFailure> {
         let url = format!("{}{}", self.server_url, path);
 
         // Caller header attached on the request builder before auth so the
         // header is present regardless of whether DOCBRAIN_API_KEY is set.
-        let mut request = self
-            .client
+        let mut request = client
             .post(&url)
             .json(body)
             .header(DOCBRAIN_CALLER_HEADER, DOCBRAIN_CALLER_VALUE);
@@ -1627,24 +1659,62 @@ impl McpServer {
             request = request.header("Authorization", format!("Bearer {}", key));
         }
 
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
+        let response = request.send().await.map_err(|e| ApiFailure {
+            status: None,
+            body: String::new(),
             message: format!("API call failed: {}", e),
         })?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(JsonRpcError {
-                code: -32000,
+            return Err(ApiFailure {
+                status: Some(status.as_u16()),
                 message: format!("API error ({}): {}", status, body),
+                body,
             });
         }
 
-        response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
+        response.json().await.map_err(|e| ApiFailure {
+            status: None,
+            body: String::new(),
             message: format!("Invalid response: {}", e),
         })
+    }
+}
+
+/// `docbrain_ask`'s `session_id` description, shared with the docs.
+const SESSION_ID_DESCRIPTION: &str = "Continue a conversation: pass only a session_id returned by a previous docbrain_ask, so a follow-up is understood in context. Omit it to start a new conversation. A conversation can be continued by the same DocBrain user (the API key's linked user, or the key itself when it has none).";
+
+/// The tool error for a `session_id` the server will not continue.
+const START_NEW_CONVERSATION: &str = "start a new conversation: omit session_id";
+
+/// A failed API call, with what the caller may need to classify it.
+struct ApiFailure {
+    status: Option<u16>,
+    body: String,
+    message: String,
+}
+
+impl ApiFailure {
+    /// The server refused the session itself: someone else's (403), expired (409),
+    /// or not an id at all (400 "Invalid session_id"). Any other failure — an
+    /// over-long question is also a 400 — is not about the session.
+    fn names_a_dead_session(&self) -> bool {
+        match self.status {
+            Some(403 | 409) => true,
+            Some(400) => self.body.starts_with("Invalid session_id"),
+            _ => false,
+        }
+    }
+}
+
+impl From<ApiFailure> for JsonRpcError {
+    fn from(f: ApiFailure) -> Self {
+        JsonRpcError {
+            code: -32000,
+            message: f.message,
+        }
     }
 }
 
@@ -1729,6 +1799,7 @@ mod tests {
             server_url: "http://localhost:9999".to_string(),
             api_key: Some("test_key".to_string()),
             client: reqwest::Client::new(),
+            ask_client: reqwest::Client::new(),
             role: std::sync::OnceLock::new(),
         }
     }

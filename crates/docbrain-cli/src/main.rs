@@ -58,13 +58,16 @@ enum Commands {
     Ask {
         /// The question to ask
         question: String,
-        /// Continue a specific session (pass session_id from a previous response)
+        /// Follow up in your last conversation, so the question is understood
+        /// in its context. Without it, every ask starts a new conversation.
+        #[arg(long = "continue", conflicts_with = "session")]
+        cont: bool,
+        /// Follow up in a specific conversation (the session id of an earlier
+        /// answer, shown with --verbose)
         #[arg(long)]
         session: Option<String>,
-        /// Force a fresh session (ignore auto-resume). Starts a new conversation
-        /// thread; it does NOT clear what DocBrain remembers — episodic recall is
-        /// scoped to your user, not to the session, so answers may still draw on
-        /// earlier questions you asked in other sessions.
+        /// Accepted for compatibility and changes nothing: an ask without
+        /// --continue or --session already starts a new conversation.
         #[arg(long, short = 'n')]
         new: bool,
         /// Show raw UUIDs (session/episode IDs)
@@ -2555,8 +2558,9 @@ async fn main() -> Result<()> {
             ))?;
             handle_token(&server_url, action, &key).await?;
         }
-        Commands::Ask { question, session, new, verbose, json, docs_only } => {
-            ask(&server_url, &question, session.as_deref(), new, verbose, json, docs_only, api_key.as_deref()).await?;
+        Commands::Ask { question, cont, session, new: _, verbose, json, docs_only } => {
+            let session = session_for_ask(session.as_deref(), cont, read_local_session);
+            ask(&server_url, &question, session.as_deref(), verbose, json, docs_only, api_key.as_deref()).await?;
         }
         Commands::Health { action } => match action {
             HealthAction::Findings { state, format } => {
@@ -3282,11 +3286,35 @@ fn apply_docs_only(body: &mut serde_json::Value, docs_only: bool) {
     }
 }
 
+/// The conversation an ask continues (R3, #443): `--session <id>` names one,
+/// `--continue` resends the last one saved, and anything else — a bare ask, or
+/// `--continue` with nothing saved — starts a new one.
+fn session_for_ask(
+    session: Option<&str>,
+    cont: bool,
+    saved: impl FnOnce() -> Option<String>,
+) -> Option<String> {
+    match session {
+        Some(sid) => Some(sid.to_string()),
+        None if cont => saved(),
+        None => None,
+    }
+}
+
+/// The error for a failed ask, other than a 401 (which needs its own hints).
+fn ask_error_message(status: reqwest::StatusCode, body: &str) -> String {
+    if status == reqwest::StatusCode::CONFLICT {
+        return "This conversation has expired. Start a new one: run `docbrain ask` \
+                without --continue or --session."
+            .to_string();
+    }
+    format!("Server error ({}): {}", status, body)
+}
+
 async fn ask(
     server_url: &str,
     question: &str,
     session_id: Option<&str>,
-    new_session: bool,
     verbose: bool,
     json: bool,
     docs_only: bool,
@@ -3325,12 +3353,8 @@ async fn ask(
     let mut body = serde_json::json!({ "question": question, "stream": !json });
     apply_docs_only(&mut body, docs_only);
 
-    if new_session {
-        body["session_id"] = serde_json::Value::String("new".to_string());
-    } else if let Some(sid) = session_id {
+    if let Some(sid) = session_id {
         body["session_id"] = serde_json::Value::String(sid.to_string());
-    } else if let Some(local_sid) = read_local_session() {
-        body["session_id"] = serde_json::Value::String(local_sid);
     }
 
     let mut request = client.post(format!("{}/api/v1/ask", server_url))
@@ -3374,7 +3398,7 @@ async fn ask(
                 status, server_url, body
             );
         }
-        anyhow::bail!("Server error ({}): {}", status, body);
+        anyhow::bail!("{}", ask_error_message(status, &body));
     }
 
     let content_type = response.headers()
@@ -6999,6 +7023,50 @@ mod tests {
         let out = render_access_coverage(&report);
         let row: Vec<&str> = out.lines().nth(1).expect("row").split_whitespace().collect();
         assert_eq!(row, ["jira", "snapshot", "4", "100.00%", "-", "-", "30s", "-", "n"]);
+    }
+
+    // R3 / #443: a bare `ask` is a new conversation; only `--continue` or
+    // `--session <id>` follow up. `--new` is accepted and changes nothing.
+    fn ask_session(args: &[&str], saved: Option<&str>) -> Option<String> {
+        let mut argv = vec!["docbrain", "ask", "q"];
+        argv.extend_from_slice(args);
+        let cli = Cli::try_parse_from(argv).expect("ask parses");
+        match cli.command {
+            Commands::Ask { session, cont, .. } => {
+                session_for_ask(session.as_deref(), cont, || saved.map(str::to_string))
+            }
+            _ => panic!("expected Commands::Ask"),
+        }
+    }
+
+    #[test]
+    fn a_bare_ask_starts_a_new_conversation_even_with_a_saved_one() {
+        assert_eq!(ask_session(&[], Some("saved")), None);
+        assert_eq!(ask_session(&["--new"], Some("saved")), None, "--new is a no-op");
+    }
+
+    #[test]
+    fn continue_resends_the_saved_conversation() {
+        assert_eq!(ask_session(&["--continue"], Some("saved")), Some("saved".into()));
+        assert_eq!(ask_session(&["--continue"], None), None, "nothing saved: a new one");
+    }
+
+    #[test]
+    fn session_continues_the_named_conversation() {
+        assert_eq!(ask_session(&["--session", "abc"], Some("saved")), Some("abc".into()));
+    }
+
+    #[test]
+    fn continue_and_session_cannot_be_combined() {
+        assert!(
+            Cli::try_parse_from(["docbrain", "ask", "q", "--continue", "--session", "abc"]).is_err()
+        );
+    }
+
+    #[test]
+    fn an_expired_conversation_says_how_to_start_a_new_one() {
+        let msg = ask_error_message(reqwest::StatusCode::CONFLICT, "conversation expired, start a new one");
+        assert!(msg.contains("without --continue"), "{msg}");
     }
 
     /// `--docs-only` parses and defaults off. Mirrors the web Sources control:

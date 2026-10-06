@@ -212,14 +212,18 @@ Generates an AI-curated reading list of the most important docs in the ENG space
 
 DocBrain remembers prior turns in a conversation, so follow-up questions resolve in context instead of starting from scratch:
 
-- **Threaded mentions** share history within the thread — everyone in the thread builds on the same conversation.
-- **Top-level mentions** share history per `(channel, user)` — your follow-ups continue your own conversation.
+- **Each top-level mention starts a new conversation.** Replying in its thread — with or without re-mentioning DocBrain — follows it up.
+- **Conversations are per person.** In a thread several people use, each person's follow-ups continue only their own conversation; another member's questions never enter yours.
+- **Answers sent to you privately continue too.** When you ask in a channel, DocBrain answers you in a direct message; replying in a thread under that message continues the same conversation.
+- **Not continued:** an answer shown only to you in the channel (when DocBrain could not message you directly) and answers to `/docbrain ask` start no conversation.
+
+A conversation is remembered for 30 minutes after its last turn.
 
 **Auto-listen.** Once the `message.*` events are subscribed (Step 3c) and the bot is a member of the channel, you no longer need to re-mention it on every turn — DocBrain answers un-mentioned follow-ups in any thread it already participated in. Top-level (non-thread) messages still require an explicit `@mention` to start a conversation.
 
 **Safety.** The bot ignores its own and other bots' messages (no reply loops) and only responds in threads it actually joined. It must be a member of the channel to receive messages at all.
 
-This conversation-memory behavior is consistent across surfaces — the same follow-up-in-context experience applies on the web UI and the CLI.
+A follow-up is understood as a full question on every surface — the web UI, the CLI (`docbrain ask --continue`) and MCP hosts (pass the `session_id` a previous `docbrain_ask` returned).
 
 ## Proactive Notifications
 

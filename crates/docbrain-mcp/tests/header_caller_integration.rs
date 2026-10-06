@@ -4,10 +4,9 @@
 //!
 //! Producer half of the surface-detection contract (the receiver lives
 //! server-side — see `compute_surface`). DocBrain reads this header to set
-//! `Surface::McpHost`, which defaults `tools_enabled = false`. Without
-//! this header DocBrain would treat MCP-host traffic as `Surface::Web`
-//! and dispatch live tools, causing double-fetches against APIs the
-//! MCP host already invoked.
+//! `Surface::McpHost`, which the audit log records for every live-tool call
+//! an MCP ask makes (R8 / #443). Without this header DocBrain would record
+//! MCP-host traffic as `Surface::Web`.
 //!
 //! The test drives `McpServer` directly via the `docbrain_mcp` lib
 //! against an in-tree axum mock that captures incoming headers — no

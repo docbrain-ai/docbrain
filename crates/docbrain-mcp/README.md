@@ -33,7 +33,7 @@ server-side: a read-only key can `ask` but cannot capture.
 | Tool | What it does |
 |------|--------------|
 | `docbrain_context` | What your organisation already decided about specific files. Takes repo-relative paths, returns the decision, the constraint, and — first, and dated — any warning that a premise it rests on has stopped being true. The tool to call *before* an edit. |
-| `docbrain_ask` | Cited answers from your org's memory, in the editor |
+| `docbrain_ask` | Cited answers from your org's memory, in the editor, using the live tools connected to DocBrain. Each answer ends with a `session_id` line; pass that id back as `session_id` to ask a follow-up in the same conversation, omit it to start a new one |
 | `docbrain_incident` | Incident-mode search: prioritises runbooks, past incident resolutions, on-call procedures and troubleshooting guides over general documentation |
 | `docbrain_freshness` | How current the knowledge about a file or area is, and what has gone stale |
 | `docbrain_suggest_capture` | Checks for documentation gaps around a file or function — a corpus check, not a guess |

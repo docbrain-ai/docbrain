@@ -29,7 +29,7 @@
             "type": "string"
           },
           "session_id": {
-            "description": "UUID to group follow-up questions into a conversation. Omit for standalone questions.",
+            "description": "Continue a conversation: pass only a session_id returned by a previous docbrain_ask, so a follow-up is understood in context. Omit it to start a new conversation. A conversation can be continued by the same DocBrain user (the API key's linked user, or the key itself when it has none).",
             "type": "string"
           }
         },
