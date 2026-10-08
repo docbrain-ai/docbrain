@@ -43,7 +43,7 @@ also instructs the agent to say so rather than guess.
 URL before wiring anything up:
 
 ```bash
-DOCBRAIN_SERVER_URL=http://localhost:3000 DOCBRAIN_API_KEY=... \
+DOCBRAIN_SERVER_URL=http://localhost:3001 DOCBRAIN_API_KEY=... \
   npx -y docbrain-mcp@latest <<'EOF'
 {"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
 EOF

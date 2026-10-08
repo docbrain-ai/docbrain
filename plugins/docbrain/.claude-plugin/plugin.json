@@ -19,9 +19,9 @@
     "server_url": {
       "type": "string",
       "title": "DocBrain server URL",
-      "description": "Where your DocBrain server answers, for example https://docbrain.your-org.internal or http://localhost:3000.",
+      "description": "Where your DocBrain server answers, for example https://docbrain.your-org.internal or http://localhost:3001 with Docker Compose.",
       "required": true,
-      "default": "http://localhost:3000"
+      "default": "http://localhost:3001"
     },
     "api_key": {
       "type": "string",

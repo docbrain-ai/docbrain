@@ -211,7 +211,7 @@ Configure it to point at your DocBrain server:
 
 ```bash
 export DOCBRAIN_API_KEY="db_sk_..."
-export DOCBRAIN_SERVER_URL="http://localhost:3000"
+export DOCBRAIN_SERVER_URL="http://localhost:3001"
 ```
 
 ## Use the CLI
@@ -274,7 +274,7 @@ The server takes 10-20 seconds to start. Wait and retry:
 
 ```bash
 # Check if the server is ready
-curl http://localhost:3000/api/v1/config
+curl http://localhost:3001/api/v1/config
 ```
 
 If using Ollama, make sure it's running: `ollama list` should show your models.
