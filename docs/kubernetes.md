@@ -240,14 +240,25 @@ kubectl logs deployment/docbrain-server | grep -i bootstrap
 
 ### 5. Access the UI
 
-By default, the UI is only accessible within the cluster. Forward the web port to test locally:
+The web UI needs the Ingress. It sends its API calls to the same address the page was loaded from, and the Ingress is what routes `/api/*` on that address to the server. Port-forwarding only the web service gives you a page that loads, but every API call (sign-in included) returns 404.
+
+To try it locally, on a cluster with an ingress controller:
 
 ```bash
-kubectl port-forward svc/docbrain-web 3001:3001
-# open http://localhost:3001
+helm upgrade docbrain ./helm/docbrain --reuse-values \
+  --set ingress.enabled=true \
+  --set ingress.host=localhost
+# open http://localhost (or whatever address your ingress controller listens on)
 ```
 
-For production access, enable Ingress — see [Ingress](#ingress) below.
+For production, set a real host and TLS: see [Ingress](#ingress) below.
+
+The CLI and coding agents don't need the web UI. To reach the API directly, forward the server port and point them at it:
+
+```bash
+kubectl port-forward svc/docbrain-server 3000:3000
+export DOCBRAIN_SERVER_URL="http://localhost:3000"
+```
 
 ---
 
