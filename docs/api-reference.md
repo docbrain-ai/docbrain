@@ -1,6 +1,6 @@
 # API Reference
 
-Base URL: `http://localhost:3000` (default)
+Base URL: `http://localhost:3001` with Docker Compose, where the proxy forwards `/api/*` to the server. The server itself listens on port 3000, so use `http://<host>:3000` when you reach it directly (for example a Kubernetes port-forward).
 
 Most endpoints require authentication via Bearer token or API key:
 

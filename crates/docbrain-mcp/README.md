@@ -55,7 +55,7 @@ server-side: a read-only key can `ask` but cannot capture.
 
 | Variable | Meaning |
 |---|---|
-| `DOCBRAIN_SERVER_URL` | Your instance. Defaults to `http://localhost:3000`. **Not** `DOCBRAIN_API_URL`, which is the HTTP/CI variable — setting the wrong one leaves the server on its default port and the error names a port you never configured. |
+| `DOCBRAIN_SERVER_URL` | Your instance. Defaults to `http://localhost:3000`, the server's own port; with Docker Compose use `http://localhost:3001`. **Not** `DOCBRAIN_API_URL`, which is the HTTP/CI variable — setting the wrong one leaves the server on its default port and the error names a port you never configured. |
 | `DOCBRAIN_API_KEY` | From `docbrain token create --name "MCP" --role viewer`. Required. |
 
 Ready-made configs for Claude Code, Cursor and VS Code are in

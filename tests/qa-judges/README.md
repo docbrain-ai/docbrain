@@ -43,7 +43,7 @@ Run the batch end-to-end against a live DocBrain server:
 
 ```bash
 RUN_SEED_BATCH=1 \
-  DOCBRAIN_SERVER_URL=http://localhost:3000 \
+  DOCBRAIN_SERVER_URL=http://localhost:3001 \
   DOCBRAIN_API_KEY=$(grep BOOTSTRAP_ADMIN_KEY .env | cut -d= -f2) \
   cargo test -p docbrain-core --test qa_judge_seed_batch -- --nocapture
 ```

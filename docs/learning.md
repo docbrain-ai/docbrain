@@ -227,15 +227,15 @@ Navigate to **Settings → Learning Pipeline** in the DocBrain web UI. The dashb
 ```bash
 # Training run history
 curl -H "Authorization: Bearer db_sk_..." \
-  http://localhost:3000/api/v1/admin/learning/versions
+  http://localhost:3001/api/v1/admin/learning/versions
 
 # Manually trigger a learning cycle (bypasses the scheduler — useful for testing)
 curl -X POST -H "Authorization: Bearer db_sk_..." \
-  http://localhost:3000/api/v1/admin/learning/trigger
+  http://localhost:3001/api/v1/admin/learning/trigger
 
 # Promote a shadow or canary model to active
 curl -X POST -H "Authorization: Bearer db_sk_..." \
-  http://localhost:3000/api/v1/admin/learning/versions/{version_id}/promote
+  http://localhost:3001/api/v1/admin/learning/versions/{version_id}/promote
 
 # Trainer sidecar health
 curl http://localhost:8765/health

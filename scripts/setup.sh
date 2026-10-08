@@ -273,7 +273,7 @@ done
 
 echo -n "Waiting for OpenSearch"
 for i in $(seq 1 45); do
-    if curl -sf http://localhost:9200/_cluster/health > /dev/null 2>&1; then
+    if docker compose exec -T opensearch curl -sf http://localhost:9200/_cluster/health > /dev/null 2>&1; then
         echo -e " ${GREEN}ready${NC}"
         break
     fi
@@ -283,7 +283,7 @@ done
 
 echo -n "Waiting for server"
 for i in $(seq 1 45); do
-    if curl -sf http://localhost:3000/api/v1/health > /dev/null 2>&1; then
+    if curl -sf http://localhost:3001/api/v1/health > /dev/null 2>&1; then
         echo -e " ${GREEN}ready${NC}"
         break
     fi
@@ -293,13 +293,13 @@ done
 
 # ── Auto-ingest sample docs on first run ─────────────────────────────────
 
-INDEX_COUNT=$(curl -sf "http://localhost:9200/docbrain-chunks/_count" 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
+INDEX_COUNT=$(docker compose exec -T opensearch curl -sf "http://localhost:9200/docbrain-chunks/_count" 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
 
 if [[ "${INDEX_COUNT:-0}" -eq 0 ]]; then
     echo ""
     echo -e "${BOLD}Ingesting sample docs so you can try it immediately...${NC}"
     docker compose exec -T server docbrain-ingest 2>&1 | tail -5
-    NEW_COUNT=$(curl -sf "http://localhost:9200/docbrain-chunks/_count" 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
+    NEW_COUNT=$(docker compose exec -T opensearch curl -sf "http://localhost:9200/docbrain-chunks/_count" 2>/dev/null | grep -o '"count":[0-9]*' | cut -d: -f2 || echo "0")
     if [[ "${NEW_COUNT:-0}" -gt 0 ]]; then
         echo -e "${GREEN}Ingested sample docs (${NEW_COUNT} chunks). You can ask questions now!${NC}"
     fi
@@ -318,8 +318,8 @@ echo -e "${GREEN}║          DocBrain is running!                ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Web UI       ${BLUE}http://localhost:3001${NC}"
-echo -e "  API Server   ${BLUE}http://localhost:3000${NC}"
-echo -e "  Health       ${BLUE}http://localhost:3000/api/v1/health${NC}"
+echo -e "  API          ${BLUE}http://localhost:3001/api/v1${NC}"
+echo -e "  Health       ${BLUE}http://localhost:3001/api/v1/health${NC}"
 echo ""
 
 if [[ -n "$BOOTSTRAP_KEY" ]]; then
@@ -327,7 +327,7 @@ if [[ -n "$BOOTSTRAP_KEY" ]]; then
     echo ""
     echo "  This key expires in 120 minutes. Create a permanent admin account:"
     echo ""
-    echo "    curl -X POST http://localhost:3000/api/v1/admin/users \\"
+    echo "    curl -X POST http://localhost:3001/api/v1/admin/users \\"
     echo "      -H 'X-API-Key: ${BOOTSTRAP_KEY}' \\"
     echo "      -H 'Content-Type: application/json' \\"
     echo "      -d '{\"email\":\"admin@example.com\",\"password\":\"yourpassword\",\"display_name\":\"Admin\",\"role\":\"admin\"}'"
