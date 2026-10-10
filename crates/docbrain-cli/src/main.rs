@@ -3301,6 +3301,12 @@ async fn trace_query(
 /// turns live tools off. `tools_enabled: false` disables MCP/live connector
 /// tools ONLY; internal ownership/metadata tools stay eligible
 /// (`crates/docbrain-core/src/rag/synthesis.rs:4327`).
+fn apply_docs_only(body: &mut serde_json::Value, docs_only: bool) {
+    if docs_only {
+        body["tools_enabled"] = serde_json::Value::Bool(false);
+    }
+}
+
 /// Ask the server for the documents its answer's model was given (#467).
 fn apply_evidence(body: &mut serde_json::Value, evidence: bool) {
     if evidence {
@@ -3319,12 +3325,6 @@ fn require_evidence(result: &AskResponse, asked: bool) -> Result<()> {
         );
     }
     Ok(())
-}
-
-fn apply_docs_only(body: &mut serde_json::Value, docs_only: bool) {
-    if docs_only {
-        body["tools_enabled"] = serde_json::Value::Bool(false);
-    }
 }
 
 /// The conversation an ask continues (R3, #443): `--session <id>` names one,
@@ -3468,11 +3468,13 @@ async fn ask(
         // Machine-readable: the response document, verbatim, nothing else on
         // stdout. Session bookkeeping still happens so follow-ups work.
         let result: AskResponse = response.json().await?;
-        require_evidence(&result, evidence)?;
+        // Bookkeeping first: the server ran and stored this turn either way, so a
+        // later --continue must find it even when the evidence check below fails.
         write_last_answer(&result);
         if let Some(ref sid) = result.session_id {
             write_local_session(sid);
         }
+        require_evidence(&result, evidence)?;
         println!("{}", serde_json::to_string_pretty(&result)?);
         return Ok(());
     } else {
