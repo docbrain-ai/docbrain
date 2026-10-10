@@ -1,4 +1,4 @@
-# Three finished captures
+# Finished captures
 
 Each is what the person saw before saying yes, and what was sent.
 
@@ -79,3 +79,30 @@ Diff:     MAX_ATTEMPTS 3 → 1 in the webhook handler; the backoff table removed
 
 Sent as `docbrain_commit_capture` with `intent`, `file_paths: ["services/payments/webhook.py"]`,
 `commit_message` and `diff_summary`. Reported back as indexed, anchored to the file.
+
+## A fix that involves a credential
+
+The token was pasted into the conversation while debugging. The capture says where it lives and
+which variable carries it; the value appears nowhere.
+
+```
+Type:   procedure
+File:   ci/publish.sh   Lines: 9-14
+
+Publishing a package fails with HTTP 401 after the registry token is rotated, until the CI secret is
+updated too.
+
+The publish script reads the token from $REGISTRY_TOKEN, which the CI system fills from its own secret
+store; the token itself is kept in the team vault. A rotation changes the vault entry, not the CI
+secret, so the old token is still sent.
+
+1. After a rotation, copy the new token from the team vault entry "package registry" into the CI
+   secret REGISTRY_TOKEN.
+2. Re-run the publish job; ci/publish.sh does not change.
+
+Premises:
+  - ci/publish.sh
+```
+
+Sent as `docbrain_annotate`, like the first example. The token is named by where it lives, never by
+its value.

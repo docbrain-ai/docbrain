@@ -23,7 +23,7 @@ Prefer a plain directory with no plugin? Copy `skills/docbrain-capture` into you
 
 ## Test it
 
-The plugin ships an eval suite under `evals/` with the connector mocked, so it runs anywhere with no server and no key: `claude plugin eval plugins/docbrain --scaffold --trust-plugin --ablation none`. Seven cases check what the skill makes Claude do — checks first, drafts with the anchor and a premise, writes once after a yes, offers an update when the capture exists, refuses lines that do not hold the fix, leaves secrets and names out, reports a refused write once. Add `--json results.json --threshold 1.0` in CI.
+The plugin ships an eval suite under `evals/` with the connector mocked, so it runs anywhere with no server and no key: `claude plugin eval plugins/docbrain --scaffold --trust-plugin --ablation none`. Eight cases check what the skill makes Claude do — checks first, drafts with the anchor and a premise, writes once after a yes, offers an update when the capture exists, refuses lines that do not hold the fix, leaves secrets and names out, files where a pasted credential lives instead of its value, reports a refused write once. Add `--json results.json --threshold 1.0` in CI.
 
 ## Prove it before you trust it
 

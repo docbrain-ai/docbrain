@@ -39,7 +39,7 @@ interrupt a task to offer. Never offer twice for the same thing. If the person s
 
 ## Step 2 — draft, in the team's words
 
-One capture per fact. Fill `resources/capture-template.md`; three finished examples are in
+One capture per fact. Fill `resources/capture-template.md`; finished examples are in
 `resources/examples.md`. The rules:
 
 - Say what, why and how, with the exact command, path, flag and value. A capture a stranger can act on
@@ -74,10 +74,26 @@ One capture per fact. Fill `resources/capture-template.md`; three finished examp
   gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
   explains why), `context` (background a reader needs first).
 - Keep it to what was actually established. No guesses, no "probably", no restating the code.
-- Leave out: secrets, tokens, keys, hostnames from `.env` files, customer or personal names, pasted
-  logs, chat, opinions without a reason, and anything the person said to keep out. When in doubt,
-  leave it out. Say what kind of thing was left out ("a key, a hostname, a name") — never repeat the
-  value, not even to say it was omitted.
+- Leave out: hostnames from `.env` files, customer or personal names, pasted logs, chat, opinions
+  without a reason, and anything the person said to keep out; secrets have their own section below.
+  When in doubt, leave it out. Say what kind of thing was left out ("a key, a hostname, a name") —
+  never repeat the value, not even to say it was omitted.
+
+## Secrets
+
+Other people retrieve what you capture, so a secret in a capture is shared with every one of them.
+
+- Never put a secret value in a draft: no password, token, API key, private key, or connection string
+  or URL with credentials. Say where it lives instead: "the database password is in the team vault",
+  or the variable that carries it, `${DB_PASSWORD}`.
+- Never paste a `.env` file, a credential file or a connection string with a password, not even part
+  of one.
+- Before you show the draft, read it for anything that looks like a credential — a value after
+  `password`, `token`, `secret` or `key`, an `Authorization` header, a private key block, a URL with
+  `user:password@`, a long random string that is not a hash or an id — and replace it with where it
+  lives.
+- If DocBrain refuses the capture for a secret, say so, take the value out and show the corrected
+  draft for a new yes. Never encode, split, space out or reword the value to get past the check.
 
 ## Step 3 — ask once, then write
 
@@ -88,7 +104,7 @@ that was shown and answered with a yes, unchanged, with `docbrain_annotate` (or
 
 If the write fails — permission, validation, the server unreachable — say exactly what the tool
 reported and stop: no silent retry, no writing anywhere else. Leave the draft in the conversation so it
-can be sent once the cause is fixed.
+can be sent once the cause is fixed. A refusal for a secret goes by Secrets above.
 
 ## Step 4 — report in one line, then stop
 
