@@ -43,7 +43,6 @@ learning:
   trainer_url: "${TRAINER_URL:-http://localhost:8765}"
 
 rag:
-  cache_threshold: 0.95
   cache_ttl_hours: 24
 
 ingest:

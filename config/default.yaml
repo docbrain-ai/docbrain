@@ -49,8 +49,8 @@ rag:
   claim_verification: true  # Check file paths an answer cites against ingest-recorded
                             # listings before returning it. No LLM call; inert until
                             # a git source records a listing.
-  cache_threshold: 0.95   # Min cosine similarity for cache hit
-  cache_ttl_hours: 24     # Cache max age in hours
+  cache_ttl_hours: 24     # Cache max age in hours; 0 turns the answer cache off.
+                          # A cached answer is served only to the exact same question.
 
   # Hard cap on a whole /ask, in seconds. Every stage inside has its own budget
   # and none of them bounds the sum: one measured question ran 1077s (18 minutes)

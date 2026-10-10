@@ -264,7 +264,11 @@ data:
   PREMISE_MONITOR_ENABLED: {{ if kindIs "invalid" .Values.premises.monitorEnabled }}"true"{{ else }}{{ .Values.premises.monitorEnabled | quote }}{{ end }}
   PREMISE_SWEEP_INTERVAL_SECS: {{ if kindIs "invalid" .Values.premises.sweepIntervalSeconds }}"300"{{ else }}{{ .Values.premises.sweepIntervalSeconds | quote }}{{ end }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
-  RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | default "0.95" | quote }}
+  {{- /* Retired (#467): rendered only when a values file still sets it, so the server's
+         startup warning tells that deployment to use cacheTtlHours: 0 instead. */}}
+  {{- if hasKey .Values.rag "cacheThreshold" }}
+  RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | quote }}
+  {{- end }}
   {{- if .Values.rag.mcpOutputCeilingBytes }}
   DOCBRAIN_MCP_OUTPUT_CEILING_BYTES: {{ .Values.rag.mcpOutputCeilingBytes | quote }}
   {{- end }}

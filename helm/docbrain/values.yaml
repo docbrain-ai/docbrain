@@ -436,7 +436,6 @@ rag:
   # a deployment with no git sources connected.
   claimVerification: true
   cacheTtlHours: 24
-  cacheThreshold: "0.95"
   # -- Tool-output caps (the truncation chain). All THREE must rise together —
   # raising one alone has no effect because the smallest still truncates. The
   # two outputCap values also gate the manifest validator (which runs in a
