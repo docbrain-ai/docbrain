@@ -81,6 +81,12 @@ enum Commands {
         /// Ownership and metadata lookups still work.
         #[arg(long)]
         docs_only: bool,
+        /// Also return every document the answer's model was given and the
+        /// text it was given (`evidence` in the JSON), so a quoted line can be
+        /// checked against it. Implies --json; the answer is never served from
+        /// the server's cache.
+        #[arg(long)]
+        evidence: bool,
     },
     /// Knowledge health — what DocBrain has found wrong with your knowledge
     /// base, and a validator for the open `kf/1` format.
@@ -738,6 +744,21 @@ struct AskResponse {
     /// by the web client, and absent from `--json` for months.
     #[serde(default)]
     degradations: Vec<CliDegradation>,
+    /// Every document the answer's model was given, with the text it was given —
+    /// present only when the request set `include_evidence` (`--evidence`).
+    /// Absent stays absent: an older server that ignored the flag is told apart
+    /// from one that gave the model nothing (an empty list).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    evidence: Option<Vec<CliEvidence>>,
+}
+
+/// One entry of `evidence` (#467): mirrors the server's `EvidenceResponse`.
+#[derive(Deserialize, Serialize)]
+struct CliEvidence {
+    document_id: String,
+    title: String,
+    source_url: String,
+    text: String,
 }
 
 /// One fallback the answer path took, as the CLI receives it.
@@ -2558,9 +2579,9 @@ async fn main() -> Result<()> {
             ))?;
             handle_token(&server_url, action, &key).await?;
         }
-        Commands::Ask { question, cont, session, new: _, verbose, json, docs_only } => {
+        Commands::Ask { question, cont, session, new: _, verbose, json, docs_only, evidence } => {
             let session = session_for_ask(session.as_deref(), cont, read_local_session);
-            ask(&server_url, &question, session.as_deref(), verbose, json, docs_only, api_key.as_deref()).await?;
+            ask(&server_url, &question, session.as_deref(), verbose, json || evidence, docs_only, evidence, api_key.as_deref()).await?;
         }
         Commands::Health { action } => match action {
             HealthAction::Findings { state, format } => {
@@ -3280,6 +3301,26 @@ async fn trace_query(
 /// turns live tools off. `tools_enabled: false` disables MCP/live connector
 /// tools ONLY; internal ownership/metadata tools stay eligible
 /// (`crates/docbrain-core/src/rag/synthesis.rs:4327`).
+/// Ask the server for the documents its answer's model was given (#467).
+fn apply_evidence(body: &mut serde_json::Value, evidence: bool) {
+    if evidence {
+        body["include_evidence"] = serde_json::Value::Bool(true);
+    }
+}
+
+/// A server that predates `include_evidence` ignores it and answers without the
+/// key. Printing that answer would read as "the model was given nothing", so it
+/// is an error, the same way a server that streams despite `--json` is.
+fn require_evidence(result: &AskResponse, asked: bool) -> Result<()> {
+    if asked && result.evidence.is_none() {
+        anyhow::bail!(
+            "--evidence requested but the server returned no `evidence`. It may predate the \
+             `include_evidence` request field; upgrade the server."
+        );
+    }
+    Ok(())
+}
+
 fn apply_docs_only(body: &mut serde_json::Value, docs_only: bool) {
     if docs_only {
         body["tools_enabled"] = serde_json::Value::Bool(false);
@@ -3318,6 +3359,7 @@ async fn ask(
     verbose: bool,
     json: bool,
     docs_only: bool,
+    evidence: bool,
     api_key: Option<&str>,
 ) -> Result<()> {
     let client = reqwest::Client::new();
@@ -3352,6 +3394,7 @@ async fn ask(
     // --json wants one parseable document, so ask the server not to stream.
     let mut body = serde_json::json!({ "question": question, "stream": !json });
     apply_docs_only(&mut body, docs_only);
+    apply_evidence(&mut body, evidence);
 
     if let Some(sid) = session_id {
         body["session_id"] = serde_json::Value::String(sid.to_string());
@@ -3425,6 +3468,7 @@ async fn ask(
         // Machine-readable: the response document, verbatim, nothing else on
         // stdout. Session bookkeeping still happens so follow-ups work.
         let result: AskResponse = response.json().await?;
+        require_evidence(&result, evidence)?;
         write_last_answer(&result);
         if let Some(ref sid) = result.session_id {
             write_local_session(sid);
@@ -7109,6 +7153,30 @@ mod tests {
         let mut body = serde_json::json!({ "question": "q", "stream": true });
         apply_docs_only(&mut body, true);
         assert_eq!(body["tools_enabled"], serde_json::Value::Bool(false));
+    }
+
+    #[test]
+    fn evidence_is_asked_for_only_with_the_flag() {
+        let mut body = serde_json::json!({ "question": "q", "stream": false });
+        apply_evidence(&mut body, false);
+        assert!(body.get("include_evidence").is_none());
+        apply_evidence(&mut body, true);
+        assert_eq!(body["include_evidence"], serde_json::Value::Bool(true));
+    }
+
+    #[test]
+    fn a_server_that_ignored_the_evidence_flag_is_an_error_not_an_empty_list() {
+        let parse = |v: serde_json::Value| serde_json::from_value::<AskResponse>(v).expect("parses");
+        let older = parse(serde_json::json!({ "answer": "a" }));
+        assert!(require_evidence(&older, true).is_err(), "no key while asked: refuse");
+        assert!(require_evidence(&older, false).is_ok(), "not asked: nothing to check");
+        let empty = parse(serde_json::json!({ "answer": "a", "evidence": [] }));
+        assert!(require_evidence(&empty, true).is_ok(), "an empty list is a real answer");
+        let full = parse(serde_json::json!({ "answer": "a", "evidence": [
+            { "document_id": "d1", "title": "t", "source_url": "https://docs.example/d1", "text": "window" } ] }));
+        let round = serde_json::to_value(&full).expect("serialise");
+        assert_eq!(round["evidence"][0]["text"], "window", "--json keeps evidence when it re-serialises");
+        assert!(serde_json::to_value(&older).expect("serialise").get("evidence").is_none());
     }
 
     #[test]
