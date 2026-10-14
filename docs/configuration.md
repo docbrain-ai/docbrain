@@ -993,11 +993,11 @@ DocBrain's episodic memory grows with every user query. Without retention, the `
 
 | Variable | Default | Description |
 |---|---|---|
-| `EPISODE_RETENTION_DAYS` | `0` (disabled) | Delete episodes older than N days. Set `90`–`180` for production. `0` = keep forever. |
+| `EPISODE_RETENTION_DAYS` | `90` | Delete answers (episodes) older than N days; `0` or less keeps them forever. An answer's page (`/answers/<id>`) stops opening the moment its answer passes this age, before the daily prune removes it, and states "Kept until <date>". A pruned answer leaves its answer topic; empty topics are removed hourly. |
 | `AUDIT_RETENTION_DAYS` | `0` (disabled) | Delete audit log entries older than N days. |
 
 **Production recommendations:**
-- Set `EPISODE_RETENTION_DAYS=90` to cap memory growth. Consolidation distills patterns into procedural rules before pruning, so learning is preserved.
+- Set `EPISODE_RETENTION_DAYS=90` to cap memory growth. Consolidation distills patterns into procedural rules before pruning, so learning is preserved. Answer pages follow the same window.
 - Back up the `episodes` and `procedural_rules` tables before enabling retention.
 - OpenSearch episode vectors are pruned separately. If OpenSearch is larger than expected, verify `P1-2` (prune OS episodes on PG delete) is resolved.
 - Protect your PostgreSQL with: network-level access controls (VPC/security groups), encrypted backups, and a read-only replica for analytics queries.
@@ -1328,7 +1328,7 @@ See **[docs/sso.md](sso.md)** for full setup instructions and a provider compari
 | `OIDC_CLIENT_SECRET` | — | OAuth2 client secret |
 | `OIDC_REDIRECT_URI` | — | Redirect URI registered with the provider. e.g. `https://docbrain.co/api/v1/auth/oidc/callback` |
 | `OIDC_WEB_UI_URL` | `http://localhost:3001` | Where to redirect the browser after a successful login |
-| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin — **not** the API host if they differ. Unset → no link is offered (never guessed or hardcoded). Trailing slash trimmed. |
+| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin — **not** the API host if they differ. Also builds the **Open this answer** link on Slack answers and the **Answer page:** line in IDE answers. Unset → no link is offered (never guessed or hardcoded; the console's own Copy link still works). Trailing slash trimmed. |
 | `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` to skip TLS verification for OIDC discovery. Use for corporate/self-signed CAs. |
 
 ### GitHub OAuth 2.0
