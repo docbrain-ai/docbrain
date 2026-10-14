@@ -232,8 +232,9 @@ An admin can add a rule for a secret shape your organisation uses (Govern → Qu
   them for good — a capture a person wrote stays withdrawn without them, a summary DocBrain made is served again — or
   **Restore these captures** (Decline) serves them again as written. An admin can also confirm or restore a single
   capture from the captures list.
-- **Restored values are shown in full for that rule version.** After a restore, the rule no longer masks those
-  values in anything DocBrain serves, for as long as the rule stays at that version.
+- **Restored values are shown for that rule version.** After a restore, the values that rule matched in the
+  restored captures when the decision was made are no longer masked by it, in those captures and in the answers and
+  sources served from them, for as long as the rule stays at that version (see the limits below).
 - **A new rule version checks again.** Editing a rule makes a new version: every capture is checked again under it,
   and restorations made under the old version do not carry over.
 - **A person must decide.** An admin key with no user behind it (a keyless key) cannot create, change, enable,
@@ -260,6 +261,10 @@ declined finding. See [the fingerprint key](configuration.md#the-fingerprint-key
 - Ingested documents keep their secrets at their source; DocBrain removes recognised secrets from what it serves,
   and the source system is where they must be removed.
 - Links are not followed: a link to a paste or file share that holds a secret is served as a link.
+- A restore covers less than everything: it exempts only the values present when the admin decided (a value found
+  later at the same rule version stays masked); the question as stored and shown keeps `[removed: …]`; copies
+  DocBrain wrote itself (summaries) stay redacted; and passages DocBrain joins from references are checked without
+  the exemption. Each of these masks more, never less.
 - What contains these limits: a capture is visible only to its space, says who wrote it, and can be withdrawn at once
   or erased by an admin. If a secret was ever served, treat it as exposed and rotate it.
 

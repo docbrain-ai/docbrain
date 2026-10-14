@@ -62,8 +62,8 @@ fingerprint cannot be, without the key. That is also why the key is never stored
 
 | Deployment | Where the key comes from | Where it lives |
 |---|---|---|
-| Docker Compose | The one-shot `keys` service writes 32 random bytes (base64, mode 600) on first start, unless you supplied a key or one exists. It never replaces a key and never prints one. | The `docbrain-keys` volume, file `fingerprint.key`, mounted read-only into the server (`DOCBRAIN_FINGERPRINT_KEY_FILE=/keys/fingerprint.key`). |
-| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade, rollback and reinstall, so it is never rotated. | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (`<release>-docbrain-fingerprint-key` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
+| Docker Compose | The one-shot `keys` service writes 32 random bytes (base64, mode 600) on first start, unless you supplied a key or one exists. It never replaces a key and never prints one; a key file that exists but is empty or not a key stops the start with a message (restore it from backup, or delete it to generate a new one). | The `docbrain-keys` volume, file `fingerprint.key`, mounted read-only into the server (`DOCBRAIN_FINGERPRINT_KEY_FILE=/keys/fingerprint.key`). |
+| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade and reinstall, so it is never rotated (a rollback reapplies a stored manifest that carries the same value). | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (`<release>-docbrain-fingerprint-key` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
 | Anything else (bare metal, your own manifests) | You: `openssl rand -base64 32`. | `DOCBRAIN_FINGERPRINT_KEY`, or a file named by `DOCBRAIN_FINGERPRINT_KEY_FILE`. |
 
 `helm template`, and GitOps tools that render charts offline (Argo CD, Flux with offline rendering), cannot look up
@@ -78,11 +78,19 @@ characters (an optional `0x` prefix) or standard base64:
 openssl rand -base64 32     # or: openssl rand -hex 32
 ```
 
-When both are set, `DOCBRAIN_FINGERPRINT_KEY` wins and the file is not read. A value set but invalid is refused; it
-never falls back to the file.
+When both are set, `DOCBRAIN_FINGERPRINT_KEY` wins and the file is not read. A value set but invalid (including one
+that is not valid UTF-8) is refused; it never falls back to the file.
 
-**Required at boot.** When neither yields a valid key the server writes one line to standard error and exits with
-status 1, before it opens the database:
+Supplying your own key after one was generated (or replacing a supplied one) is a key change: see **Keep it stable**
+below.
+
+**Where Helm holds it.** A key supplied with `--set fingerprintKey=...` (or a values file) is stored by Helm in the
+release's values (`helm get values`) and its manifest; a generated key is in the stored release manifest. Both are
+Secrets in the release namespace, readable by whoever can read Secrets there. To keep the key out of Helm's release
+records, create the Secret yourself and set `fingerprintKeySecret.existingSecret`.
+
+**Required at boot.** When neither yields a valid key the server prints the refusal (to standard error, and as an
+error line in its log) and exits with status 1, before it opens the database:
 
 ```text
 DOCBRAIN_FINGERPRINT_KEY is not set (nor DOCBRAIN_FINGERPRINT_KEY_FILE): the server needs it to fingerprint secret findings; expected at least 64 hex characters (`openssl rand -hex 32`) or standard base64 of at least 32 bytes (`openssl rand -base64 32`), generated at random, never typed
@@ -103,7 +111,8 @@ with its key gives the reader back exactly what the key protects. Restoring a da
 a key change.
 
 **Keep it stable.** Changing the key — rotating it, deleting the `docbrain-keys` volume (`docker compose down -v`),
-removing a key you had supplied so a new one is generated, deleting the chart's kept fingerprint-key Secret — makes
+removing a key you had supplied so a new one is generated, supplying your own key after one was generated, deleting
+the chart's kept fingerprint-key Secret — makes
 every stored fingerprint stop matching:
 
 - a finding an admin restored or declined opens again, and waits for a decision again;

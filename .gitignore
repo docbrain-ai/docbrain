@@ -1,4 +1,6 @@
 .env
+# scripts/setup.sh edits .env with sed -i.bak; the backup holds the same API keys.
+.env.bak
 config/local.yaml
 *.log
 .DS_Store

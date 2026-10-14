@@ -732,7 +732,8 @@ existingSecret: ""
 # -- Keys the fingerprints DocBrain stores for secret findings (HMAC-SHA256), so a database or
 # backup reader cannot guess a found value. It lives in its own Secret, <fullname>-fingerprint-key
 # (docbrain-fingerprint-key for a release named docbrain), annotated helm.sh/resource-policy: keep:
-# `helm uninstall` leaves it, and upgrades, rollbacks and reinstalls look it up and reuse it.
+# `helm uninstall` leaves it, and upgrades and reinstalls look it up and reuse it. A value set here
+# is kept by Helm in the release values: prefer fingerprintKeySecret.existingSecret for your own key.
 # Empty (default): generated on first install. Back that Secret up, separately from the database
 # backups: a lost or changed key reopens every restored or declined finding. Delete it by hand only
 # to start fresh. Supply your own (at least 32 random bytes, hex or base64; e.g.

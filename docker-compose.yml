@@ -82,7 +82,13 @@ services:
         if [ -n "$$(printf '%s' "$${DOCBRAIN_FINGERPRINT_KEY:-}" | tr -d '[:space:]')" ]; then
           echo "fingerprint key: supplied in DOCBRAIN_FINGERPRINT_KEY; nothing generated"; exit 0
         fi
-        if [ -s /keys/fingerprint.key ]; then echo "fingerprint key: present in docbrain-keys; kept"; exit 0; fi
+        if [ -e /keys/fingerprint.key ]; then
+          if tr -d '[:space:]' < /keys/fingerprint.key | grep -Eq '^((0[xX])?[0-9a-fA-F]{64,}|[A-Za-z0-9+/]{42,}={0,2})$$'; then
+            echo "fingerprint key: present in docbrain-keys; kept"; exit 0
+          fi
+          echo "fingerprint key: /keys/fingerprint.key exists but is empty or not a key; not replaced. Restore it from your backup, or delete it to generate a new one (every restored or declined finding reopens)." >&2
+          exit 1
+        fi
         tmp="$$(mktemp /keys/.fingerprint.key.XXXXXX)"
         head -c 32 /dev/urandom | base64 > "$$tmp"
         chmod 600 "$$tmp"
