@@ -730,14 +730,22 @@ rbac:
 existingSecret: ""
 
 # -- Keys the fingerprints DocBrain stores for secret findings (HMAC-SHA256), so a database or
-# backup reader cannot guess a found value. Empty (default): the chart generates one on first
-# install and keeps it in the release Secret across upgrades and rollbacks (looked up from the
-# cluster). Back that Secret up, separately from the database backups: a lost or changed key
-# reopens every restored or declined finding. To supply your own (at least 32 random bytes, hex
-# or base64; e.g. openssl rand -base64 32): --set fingerprintKey=... (never commit it), or put
-# DOCBRAIN_FINGERPRINT_KEY in existingSecret. With helm template / Argo CD (no cluster lookup) a
-# new key would be rendered on every run: always supply it there.
+# backup reader cannot guess a found value. It lives in its own Secret, <fullname>-fingerprint-key
+# (docbrain-fingerprint-key for a release named docbrain), annotated helm.sh/resource-policy: keep:
+# `helm uninstall` leaves it, and upgrades, rollbacks and reinstalls look it up and reuse it.
+# Empty (default): generated on first install. Back that Secret up, separately from the database
+# backups: a lost or changed key reopens every restored or declined finding. Delete it by hand only
+# to start fresh. Supply your own (at least 32 random bytes, hex or base64; e.g.
+# openssl rand -base64 32) with --set fingerprintKey=... (never commit it), or point
+# fingerprintKeySecret.existingSecret at a Secret you manage. With helm template / Argo CD (no
+# cluster lookup) a new key would be rendered on every run: always supply it there.
 fingerprintKey: ""
+fingerprintKeySecret:
+  # -- A Secret you manage that holds the key (the chart then renders none). Independent of
+  # existingSecret above, which holds the other credentials.
+  existingSecret: ""
+  # -- The entry in that Secret holding the key.
+  key: DOCBRAIN_FINGERPRINT_KEY
 
 # ── MCP tool platform (Plan 4) ────────────────────────────────────────────
 # Enables answer-time tool dispatch through external MCP servers

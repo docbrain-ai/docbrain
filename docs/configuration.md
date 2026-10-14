@@ -63,15 +63,15 @@ fingerprint cannot be, without the key. That is also why the key is never stored
 | Deployment | Where the key comes from | Where it lives |
 |---|---|---|
 | Docker Compose | The one-shot `keys` service writes 32 random bytes (base64, mode 600) on first start, unless you supplied a key or one exists. It never replaces a key and never prints one. | The `docbrain-keys` volume, file `fingerprint.key`, mounted read-only into the server (`DOCBRAIN_FINGERPRINT_KEY_FILE=/keys/fingerprint.key`). |
-| Helm | Generated on first install (32 random bytes, base64) and looked up from the release Secret on every upgrade and rollback, so it is never rotated. | The release Secret (`docbrain-secret` for a release named `docbrain`; `<release>-docbrain-secret` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`. |
+| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade, rollback and reinstall, so it is never rotated. | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (`<release>-docbrain-fingerprint-key` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
 | Anything else (bare metal, your own manifests) | You: `openssl rand -base64 32`. | `DOCBRAIN_FINGERPRINT_KEY`, or a file named by `DOCBRAIN_FINGERPRINT_KEY_FILE`. |
 
 `helm template`, and GitOps tools that render charts offline (Argo CD, Flux with offline rendering), cannot look up
 the existing Secret, so they render a **new** key on every run. There, always supply the key: `--set
-fingerprintKey=...` from your secret store, or `existingSecret` holding `DOCBRAIN_FINGERPRINT_KEY`.
+fingerprintKey=...` from your secret store, or `fingerprintKeySecret.existingSecret` naming a Secret you manage.
 
-**Supplying your own.** Set `DOCBRAIN_FINGERPRINT_KEY` (in `.env` for Compose, `fingerprintKey` or `existingSecret`
-for Helm), or point `DOCBRAIN_FINGERPRINT_KEY_FILE` at a file holding it. At least 32 random bytes, as 64+ hex
+**Supplying your own.** Set `DOCBRAIN_FINGERPRINT_KEY` (in `.env` for Compose, `fingerprintKey`, or
+`fingerprintKeySecret.existingSecret` + `fingerprintKeySecret.key` for Helm), or point `DOCBRAIN_FINGERPRINT_KEY_FILE` at a file holding it. At least 32 random bytes, as 64+ hex
 characters (an optional `0x` prefix) or standard base64:
 
 ```bash
@@ -97,13 +97,13 @@ that is missing, unreadable, empty or larger than 4 KiB is refused too.
 files, and no log line, error, health or config endpoint, or console page carries it. The boot log says only where
 it came from (`fingerprint key loaded source=Env` or `source=File`).
 
-**Back it up, separately from the database backups.** Back up the `docbrain-keys` volume (Compose) or the release
-Secret (Helm) on the same schedule as the database, but not in the same place: a database backup stored together
+**Back it up, separately from the database backups.** Back up the `docbrain-keys` volume (Compose) or the
+fingerprint-key Secret (Helm) on the same schedule as the database, but not in the same place: a database backup stored together
 with its key gives the reader back exactly what the key protects. Restoring a database without its key behaves like
 a key change.
 
 **Keep it stable.** Changing the key — rotating it, deleting the `docbrain-keys` volume (`docker compose down -v`),
-removing a key you had supplied so a new one is generated, uninstalling the chart and installing it again — makes
+removing a key you had supplied so a new one is generated, deleting the chart's kept fingerprint-key Secret — makes
 every stored fingerprint stop matching:
 
 - a finding an admin restored or declined opens again, and waits for a decision again;

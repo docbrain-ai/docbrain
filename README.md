@@ -223,8 +223,9 @@ docker compose up -d
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
   --set llm.anthropicApiKey=sk-ant-...
-# the fingerprint key is generated on first install and kept across upgrades;
-# with helm template / Argo CD supply it (--set fingerprintKey=... or existingSecret)
+# the fingerprint key is generated on first install into its own Secret, kept across upgrades
+# and on uninstall; with helm template / Argo CD supply it (--set fingerprintKey=... or
+# fingerprintKeySecret.existingSecret)
 ```
 
 [Kubernetes guide →](docs/kubernetes.md) · [Configuration →](docs/configuration.md)

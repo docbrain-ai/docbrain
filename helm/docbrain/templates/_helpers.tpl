@@ -77,3 +77,20 @@ when configuration changes. Append to pod template metadata.annotations.
 checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{- end }}
+
+{{/* The Secret (and its key) the server reads DOCBRAIN_FINGERPRINT_KEY from. */}}
+{{- define "docbrain.fingerprintKeySecretName" -}}
+{{- if .Values.fingerprintKeySecret.existingSecret }}
+{{- .Values.fingerprintKeySecret.existingSecret }}
+{{- else }}
+{{- include "docbrain.fullname" . }}-fingerprint-key
+{{- end }}
+{{- end }}
+
+{{- define "docbrain.fingerprintKeySecretKey" -}}
+{{- if .Values.fingerprintKeySecret.existingSecret }}
+{{- default "DOCBRAIN_FINGERPRINT_KEY" .Values.fingerprintKeySecret.key }}
+{{- else }}
+{{- "DOCBRAIN_FINGERPRINT_KEY" }}
+{{- end }}
+{{- end }}

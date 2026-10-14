@@ -24,19 +24,24 @@ The chart is in `helm/docbrain/`. You don't need a Helm repository — install d
 #### The fingerprint key
 
 DocBrain needs `DOCBRAIN_FINGERPRINT_KEY` to fingerprint the secrets it finds. The chart generates one on first
-install (32 random bytes) and keeps it in the release Secret: every `helm upgrade` and `helm rollback` looks it up
-and reuses it, so it is never rotated. Back that Secret up, separately from your database backups: a lost or changed
-key reopens every restored or declined secret finding.
+install (32 random bytes) into its own Secret, `<fullname>-fingerprint-key` (`docbrain-fingerprint-key` for a release
+named `docbrain`), annotated `helm.sh/resource-policy: keep`. Every `helm upgrade`, `helm rollback` and reinstall
+looks it up and reuses it, and `helm uninstall` leaves it in place. Delete it by hand only to start fresh: a new key
+reopens every restored or declined secret finding. Back that Secret up, separately from your database backups. The
+other credentials stay in the main Secret, which uninstall removes as before.
 
 Supply your own when you want to hold it in your secret store, and always when the chart is rendered offline
 (`helm template`, Argo CD): `lookup` returns nothing there, so a new key would be rendered every time.
 
 ```bash
 --set fingerprintKey="$DOCBRAIN_FINGERPRINT_KEY"   # e.g. generated once with: openssl rand -base64 32
+# or a Secret you manage (the chart then renders none):
+--set fingerprintKeySecret.existingSecret=my-fingerprint-key --set fingerprintKeySecret.key=DOCBRAIN_FINGERPRINT_KEY
 ```
 
-With `existingSecret`, that Secret must carry a `DOCBRAIN_FINGERPRINT_KEY` entry (the chart does not generate one
-there). See [configuration.md](./configuration.md#the-fingerprint-key).
+`existingSecret` (the other credentials) does not cover the key; the chart still generates and keeps its own
+fingerprint-key Secret unless `fingerprintKeySecret.existingSecret` is set. See
+[configuration.md](./configuration.md#the-fingerprint-key).
 
 ### 2. Choose your LLM provider
 

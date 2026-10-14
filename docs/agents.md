@@ -244,7 +244,7 @@ An admin can add a rule for a secret shape your organisation uses (Govern → Qu
 
 Never the secret. A finding is stored as a keyed fingerprint (HMAC-SHA256 under the deployment's fingerprint key), so
 someone holding the database or a backup cannot guess a short value from it. The key is generated on first start
-(Docker Compose: the `docbrain-keys` volume; Helm: the release Secret) unless you supply one, and is never stored in
+(Docker Compose: the `docbrain-keys` volume; Helm: its own Secret, kept on uninstall) unless you supply one, and is never stored in
 the database. Back it up, separately from the database backups: a lost or changed key reopens every restored or
 declined finding. See [the fingerprint key](configuration.md#the-fingerprint-key).
 
