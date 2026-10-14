@@ -18,11 +18,15 @@ The server also accepts `--config-dir <path>` as a CLI argument (takes precedenc
 
 **Deployment examples:**
 ```bash
+# Every start needs a fingerprint key: DOCBRAIN_FINGERPRINT_KEY, or a file named by
+# DOCBRAIN_FINGERPRINT_KEY_FILE. Compose and Helm generate one; elsewhere generate it once with
+# `openssl rand -base64 32`, keep it in .env or your secret store, and never change it casually.
+
 # Bare metal — default (uses ./config/)
 ./docbrain-server
 
 # Docker with mounted config dir
-docker run -e DOCBRAIN_CONFIG_DIR=/etc/docbrain -v /host/config:/etc/docbrain docbrain-server
+docker run -e DOCBRAIN_FINGERPRINT_KEY -e DOCBRAIN_CONFIG_DIR=/etc/docbrain -v /host/config:/etc/docbrain docbrain-server
 
 # Kubernetes ConfigMap
 # Mount ConfigMap at /etc/docbrain and set DOCBRAIN_CONFIG_DIR=/etc/docbrain
@@ -38,6 +42,76 @@ docker run -e DOCBRAIN_CONFIG_DIR=/etc/docbrain -v /host/config:/etc/docbrain do
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string. e.g. `postgres://user:pass@host:5432/db` |
 | `OPENSEARCH_URL` | Yes | `http://localhost:9200` | OpenSearch endpoint |
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis for working memory (session context). Optional — falls back to in-memory if not set. |
+| `DOCBRAIN_FINGERPRINT_KEY` | Yes, or the file below | — | Key for the fingerprints DocBrain stores of secret values it finds (HMAC-SHA256). Docker Compose and the Helm chart generate one on first start when you supply none. See [The fingerprint key](#the-fingerprint-key) below. |
+| `DOCBRAIN_FINGERPRINT_KEY_FILE` | No | — | Path to a file holding the key (what Compose's generated key uses). `DOCBRAIN_FINGERPRINT_KEY` wins when both are set. |
+
+### The fingerprint key
+
+DocBrain checks every capture for secrets (see
+[What a capture never holds](agents.md#what-a-capture-never-holds)), and it has to remember what it found without
+storing the secret itself. So it stores a keyed fingerprint (HMAC-SHA256 under this key) of:
+
+- each secret value a capture was found to hold (a capture's findings);
+- the text the language model judged in the secret check, so an unchanged text is not judged twice;
+- each value an admin restored after a custom secret rule withdrew a capture (that value's exemption).
+
+A plain hash of a short password can be guessed offline by anyone who holds the database or a backup. A keyed
+fingerprint cannot be, without the key. That is also why the key is never stored in the database.
+
+**Generated for you by default.** You do not have to do anything to start:
+
+| Deployment | Where the key comes from | Where it lives |
+|---|---|---|
+| Docker Compose | The one-shot `keys` service writes 32 random bytes (base64, mode 600) on first start, unless you supplied a key or one exists. It never replaces a key and never prints one. | The `docbrain-keys` volume, file `fingerprint.key`, mounted read-only into the server (`DOCBRAIN_FINGERPRINT_KEY_FILE=/keys/fingerprint.key`). |
+| Helm | Generated on first install (32 random bytes, base64) and looked up from the release Secret on every upgrade and rollback, so it is never rotated. | The release Secret (`docbrain-secret` for a release named `docbrain`; `<release>-docbrain-secret` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`. |
+| Anything else (bare metal, your own manifests) | You: `openssl rand -base64 32`. | `DOCBRAIN_FINGERPRINT_KEY`, or a file named by `DOCBRAIN_FINGERPRINT_KEY_FILE`. |
+
+`helm template`, and GitOps tools that render charts offline (Argo CD, Flux with offline rendering), cannot look up
+the existing Secret, so they render a **new** key on every run. There, always supply the key: `--set
+fingerprintKey=...` from your secret store, or `existingSecret` holding `DOCBRAIN_FINGERPRINT_KEY`.
+
+**Supplying your own.** Set `DOCBRAIN_FINGERPRINT_KEY` (in `.env` for Compose, `fingerprintKey` or `existingSecret`
+for Helm), or point `DOCBRAIN_FINGERPRINT_KEY_FILE` at a file holding it. At least 32 random bytes, as 64+ hex
+characters (an optional `0x` prefix) or standard base64:
+
+```bash
+openssl rand -base64 32     # or: openssl rand -hex 32
+```
+
+When both are set, `DOCBRAIN_FINGERPRINT_KEY` wins and the file is not read. A value set but invalid is refused; it
+never falls back to the file.
+
+**Required at boot.** When neither yields a valid key the server writes one line to standard error and exits with
+status 1, before it opens the database:
+
+```text
+DOCBRAIN_FINGERPRINT_KEY is not set (nor DOCBRAIN_FINGERPRINT_KEY_FILE): the server needs it to fingerprint secret findings; expected at least 64 hex characters (`openssl rand -hex 32`) or standard base64 of at least 32 bytes (`openssl rand -base64 32`), generated at random, never typed
+```
+
+A value or file that is too short, not hex or standard base64 (URL-safe base64 and missing padding are refused),
+or that looks typed rather than generated (too few distinct characters, a repeated pattern, a placeholder) is
+refused the same way, naming the setting (and the file's path) and the accepted shapes, never the value. A key file
+that is missing, unreadable, empty or larger than 4 KiB is refused too.
+
+**Never shown.** The key is read from the environment or the key file only. It is not part of the configuration
+files, and no log line, error, health or config endpoint, or console page carries it. The boot log says only where
+it came from (`fingerprint key loaded source=Env` or `source=File`).
+
+**Back it up, separately from the database backups.** Back up the `docbrain-keys` volume (Compose) or the release
+Secret (Helm) on the same schedule as the database, but not in the same place: a database backup stored together
+with its key gives the reader back exactly what the key protects. Restoring a database without its key behaves like
+a key change.
+
+**Keep it stable.** Changing the key — rotating it, deleting the `docbrain-keys` volume (`docker compose down -v`),
+removing a key you had supplied so a new one is generated, uninstalling the chart and installing it again — makes
+every stored fingerprint stop matching:
+
+- a finding an admin restored or declined opens again, and waits for a decision again;
+- a restored value's exemption stops matching, so that value is masked again in what DocBrain serves;
+- texts the model already judged are judged again (more model calls, once).
+
+Nothing is lost or exposed by a change; decisions have to be made again. There is no built-in rotation. All replicas
+of one deployment must use the same key.
 
 ## LLM Provider
 
@@ -47,6 +121,7 @@ Set `LLM_PROVIDER` to choose your LLM backend. Supported providers: `anthropic`,
 |---|---|---|
 | `LLM_PROVIDER` | All | Which LLM to use (see list above) |
 | `LLM_MODEL_ID` | All | Model identifier (e.g. `claude-sonnet-4-5-20250929`, `gpt-4o`). Defaults to a provider-appropriate model if not set. |
+| `LLM_TIMEOUT_SECS` | All except ollama | HTTP timeout in seconds for the LLM client (default: `120`). Applies to anthropic, openai (and its OpenAI-compatible siblings: groq, openrouter, together, deepseek, mistral, xai, gemini), azure_openai and cohere. Ollama has its own `OLLAMA_TIMEOUT_SECS` below, which takes precedence for that provider. Must be a positive integer — `0` fails config load, since a zero-second timeout would fail every call. |
 | `ANTHROPIC_API_KEY` | anthropic | Your Anthropic API key |
 | `OPENAI_API_KEY` | openai | Your OpenAI API key |
 | `AWS_REGION` | bedrock | AWS region for Bedrock (e.g. `us-east-1`) |
@@ -212,7 +287,7 @@ source selection and the resource lists moved to YAML.
 | `CONFLUENCE_SPACE_KEYS` | — | Comma-separated space keys to ingest. e.g. `DOCS,ENG,PLATFORM`. Optional when `CONFLUENCE_PAGE_IDS` is set. |
 | `CONFLUENCE_PAGE_IDS` | — | Comma-separated page IDs to ingest, **including all descendants**. Pages can be from different spaces. e.g. `421856743,41912006`. Can be used alone or together with `CONFLUENCE_SPACE_KEYS`. |
 | `CONFLUENCE_API_VERSION` | `v2` | `v2` for Confluence Cloud, `v1` for self-hosted Data Center |
-| `CONFLUENCE_PAGE_LIMIT` | `0` | Max pages to ingest per space. `0` = unlimited |
+| `CONFLUENCE_PAGE_LIMIT` | `0` | Max pages to ingest per space; `0` (the default) means no limit, so the knob does nothing until set |
 | `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` if using self-signed or internal CA certificates |
 
 **Ingestion modes:**
@@ -534,7 +609,7 @@ ms_teams:
 
 ## Chunking
 
-Controls how documents are split into chunks for embedding. Tuning guidance and the re-ingest requirement are in this section — changing these values only affects documents ingested afterwards, so a change needs a re-ingest to apply to existing content.
+Controls how documents are split into chunks for embedding. See **[docs/chunking.md](chunking.md)** for tuning guidance and re-ingest instructions.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -579,7 +654,7 @@ Three coordinated caps bound how much raw tool output reaches the synthesis prom
 | `DOCBRAIN_SUFFICIENCY_CRITIC_SKIP_ABOVE_CONFIDENCE` | `0.85` | Skip the critic entirely when the mechanical confidence is already ≥ this value (a confidently-answered question doesn't need re-judging). Range `0.0..=1.0`. |
 | `DOCBRAIN_SUFFICIENCY_CRITIC_MIN_COVERAGE` | `0.9` | The coverage-fraction dial the critic prompt judges against (the "how complete is complete" threshold on the question's own sub-questions). Range `0.0..=1.0`. |
 | `DOCBRAIN_SUFFICIENCY_CRITIC_MIN_RECOVERY_BUDGET_MS` | `20000` | Minimum wall-clock headroom (ms) required to **allow** a critic-forced recovery round. A recovery round costs roughly one tool dispatch plus the final synthesis; when fewer than this many ms remain in the surface's wall-clock budget, the critic ships the candidate as an **honest-gap** answer instead of forcing a round the budget cliff would kill (which previously caused a request-level timeout). Set `0` to disable the guard (always allow recovery within the round cap). |
-| `ASK_WALL_CLOCK_SECS` | `600` | Hard cap on a whole `/ask`, in seconds. Every stage inside the request already has a budget — the agentic loop's wall clock, the critic's recovery floor, each tool call's timeout — and none of them bounds their **sum**. A measured question ran **1077 seconds** (eighteen minutes) with every stage inside its own limit; the retrieval pipeline accounted for 25 of those seconds and the rest was the loop and synthesis making model calls. Nobody waits that long, and on a shared instance the request holds a connection and its share of the pools throughout. The default is deliberately generous (the slowest legitimate answer measured in the same run was 248s), so this bounds the pathological case without truncating a slow honest one. A request stopped here returns **504** with a sentence saying what happened and suggesting a narrower question — never a partial answer presented as a complete one. Set `0` to disable the cap. |
+| `ASK_WALL_CLOCK_SECS` | `600` | Hard cap on a whole `/ask`, in seconds. Every stage inside the request already has a budget — the agentic loop's wall clock, the critic's recovery floor, each tool call's timeout — and none of them bounds their **sum**. A measured question ran **1077 seconds** (eighteen minutes) with every stage inside its own limit; the retrieval pipeline accounted for 25 of those seconds and the rest was the loop and synthesis making model calls. Nobody waits that long, and on a shared instance the request holds a connection and its share of the pools throughout. The default is deliberately generous (the slowest legitimate answer measured in the same run was 248s), so this bounds the pathological case without truncating a slow honest one. **The cap is enforced inside the pipeline**, at the two ask entry points, so every surface is bound by it — SSE, JSON, Slack, the webhooks, eval — rather than only the JSON handler that used to own the timer. It also **clamps the agentic loop's own wall clock** (`RAG_AGENTIC_LOOP_BUDGET_MS_*`) down to whatever is left of the turn, which in turn bounds every tool dispatch inside the loop. **A stopped turn is not an error.** It returns the answer it had — the loop's text when there is one, which a streaming asker has already been shown — labelled with a `deadline` degradation naming the limit and the stage it died in; a one-sentence body saying the question was stopped is returned only when nothing was produced at all. Either way the turn is recorded: the `episodes` row carries `metadata.stopped.reason = "deadline"` alongside `elapsed_ms`, `budget_ms` and the stage, so the question that broke the instance is findable. (One exception, shared with every other ending: under ACL enforce mode a turn that retrieved nothing writes no episode at all, because the row would pair the question with an empty document list and tell a later reader what the asker was denied.) A row carrying `metadata.stopped` is **not** counted as an unanswered question by any reader that turns unanswered questions into documentation debt — the gap analyzer, the Knowledge Gap Map, the weekly digest, the retrieved-unhelpful detector, the consolidation job and the enterprise health report's `coverage_gaps` all exclude it — because a turn that never reached an answer is evidence about the instance, not about the corpus. Both arms of `/api/v1/ask` also carry a transport **backstop** at the cap **plus a five-second grace** — the JSON arm's request timeout and the SSE forwarder's — for a pipeline whose own clock failed to land. Reaching one is a bug report, not a slow question, and the two arms do not leave the same trace. The JSON arm answers **504** and records **nothing** — the timeout fires outside the pipeline, and the pipeline that should have written the turn is the thing that did not stop. The SSE arm sends an `error` then `done` and **does record the turn**: the forwarder still holds the question, so it writes the episode itself with `metadata.stopped.reason = "deadline_backstop"` (the same key and shape, under a different reason, as a turn the pipeline's own clock cut — and the reason a closed tab writes is `client_disconnect`). **One limit on how exact the cap is:** it is per **ask**, not per request, so an N-section doc generation is bounded at N × this value. (The agentic loop's last model call — the one that writes the answer text — used to be the other limit, bounded by `LLM_TIMEOUT_SECS` rather than by this cap, so a model hanging there ended the turn at cap + up to two minutes and the transport backstop above reached the asker first. That call now runs under the turn's clock, and a hang there ends the turn at the cap with the one-sentence stopped body.) Set `0` to disable the cap. |
 | `DOCBRAIN_FRESHNESS_CRITIC_ENABLED` | `true` | Master kill-switch for the **freshness critic** — the doc-generation reviewer that runs after a draft is written. It segments the draft (and, for augments, the existing doc) into atomic claims, retrieves ACL-filtered evidence per claim, and **flags only the claims the evidence CONTRADICTS** (conservative-KEEP: uncertainty never flags). **ON by default**. Disable only with `false`/`0`/`no`/`off`. Fail-OPEN: any critic error ships the draft unchanged. |
 | `DOCBRAIN_FRESHNESS_CRITIC_MAX_CLAIMS` | `60` | Hard cap on the number of claims validated per draft (across new + existing-doc content). Over-cap claims are reported as **unchecked** in the freshness report, never silently dropped. Bounds the worst-case LLM cost. Range `1..=1000`. |
 | `DOCBRAIN_FRESHNESS_CRITIC_BATCH_SIZE` | `12` | How many claims (with their evidence) go into one batched judgment LLM call. The number of judgment calls is `ceil(claims / batch_size)`. Range `1..=100`. |
@@ -884,6 +959,19 @@ This makes `allowed_spaces` ACL filtering work correctly for captured content �
 
 **Re-capture:** Running `@docbrain capture` again on the same thread updates the content (picks up new comments) but preserves the original creation date as the age baseline.
 
+### Secret check on captures
+
+Every capture is checked for secrets before it is saved (see
+[What a capture never holds](agents.md#what-a-capture-never-holds)). Two checks run: a fixed check of known secret
+shapes, and then the fast model your DocBrain is configured with reads the capture's text and lists any password,
+key or token written in it. **Every capture's text is sent to the configured fast model's provider for this check.**
+Use a local provider if capture text must not leave your network.
+
+| Variable | Default | Description |
+|---|---|---|
+| `CAPTURE_SECRET_CHECK_TIMEOUT_SECS` | `10` | The model check's whole budget for one text, in seconds (every attempt, the reply and its parsing). The default is about three times the measured 95th-percentile reply time of a hosted fast model; size it at three times your fast model's p95 (a self-hosted model is often slower). When the budget runs out the capture is saved after the fixed check and the model checks it as soon as it can; until then it may be served. `0` is refused at startup. |
+| `CAPTURE_SECRET_CHECK_MAX_REPLY_TOKENS` | `4096` | The reply budget, in tokens, the model check asks the provider for. Many providers refuse a larger output cap. A reply cut off at the budget fails closed (the text is not accepted on that reply) and does not count toward the capture pause. `0` is refused at startup. |
+
 ## Memory Consolidation
 
 | Variable | Default | Description |
@@ -961,7 +1049,25 @@ See [`docs/evidence.md`](evidence.md) for what a bundle is, the verdict taxonomy
 
 The set of event classes journaled (`fragments`, `reviews`, `decisions`, `premises`, `governance` — all on by default) is YAML-only, matching this codebase's convention for other list-shaped config; there is no env override. `governance` (GDPR erasure records) is written unconditionally regardless of this list.
 
-The **default compliance profile** is `eu-ai-act` — a compiled default (there is no env var to change it), selectable per export via `docbrain evidence export --profile <id>`. It is the only profile v1 ships; see [`docs/evidence.md`](evidence.md#regulation-agnostic-engine-pluggable-compliance-profiles).
+The **default compliance framework** is `eu-ai-act` — a compiled default (there is no env var to change it), selectable per export via `docbrain evidence export --framework <id>` (the export API field is `profile`). It is the only framework v1 ships; see [`docs/evidence.md`](evidence.md#regulation-agnostic-engine-pluggable-compliance-frameworks).
+
+## Knowledge Health
+
+The engine that finds what is wrong with your knowledge base — a claim that no
+longer holds on a page people still read — and publishes each one as a `kf/1`
+finding. A run only **observes**: it writes findings and emits
+`health.finding.*` events, and nothing is sent anywhere unless you enable an
+adapter. Findings are readable at `/health` in the console, over
+`GET /api/v1/health/findings`, and from the CLI with `docbrain health findings`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `HEALTH_ENGINE_INTERVAL_SECS` | `21600` | Seconds between scheduled engine runs — four runs a day, with the first one 60 seconds after boot. Set `0` to turn the scheduler off entirely; the boot log then says so, and findings can still be produced on demand with `POST /api/v1/health/run` (admin). A value between `1` and `59` is raised to `60` with a warning: a whole run takes a database-wide lock and walks every detector, so an interval mistyped as `6` would hold that lock continuously. A malformed value warns, naming the value it rejected, and falls back to the default — a typo turns into a slower notice, never into silence. Two servers on one database need no coordination: the second run is refused by an advisory lock, logged as routine, and changes nothing. |
+| `HEALTH_OPEN_CAP` | `10` | The most findings that may be `open` at once, across the organisation. The cap is the product decision, not a performance one — a list nobody can finish is a list nobody reads, so the engine holds the rest at `queued` and promotes them as slots free. Claiming a finding moves it to `in_progress` and frees its slot, so the number of findings *awaiting a decision* stays at the cap; `in_progress` is deliberately uncapped, because only a person can create one and a claim left untouched for 14 days expires back to `open`. Each run also re-contests the open slots: a queued finding that outranks the lowest open one by a clear margin takes its place, and the displaced finding returns to `queued`, never to resolved or dismissed. Minimum `1`. |
+| `HEALTH_WINDOW_DAYS` | `30` | How far back a detector looks when counting the retrievals and questions that give a finding its impact. Clamped to `7..=365`. Widening it raises the reach of long-lived pages; narrowing it makes the list follow what people are reading this week. |
+
+Findings carry no asker identities — evidence is counts and texts. Who changed
+a finding's state is recorded separately and shown to admins only.
 
 ## Ollama-specific Notes
 
@@ -1070,16 +1176,33 @@ Channel check matches against both `channel_name` and `channel_id`. User check m
 
 ## Rate Limiting
 
-DocBrain applies per-IP rate limiting to unauthenticated routes and per-API-key rate limiting to authenticated routes. Rate limiting is enabled by default.
+There are three limiters, and none of them has a global switch. What follows
+is what the server does, checked against the code on 2026-09-13; an earlier
+version of this section described four `RATE_LIMIT_*` variables that nothing
+has ever read.
+
+**Per API key.** Every authenticated request is counted against the key's own
+`rate_limit_rpm`, set when the key is created (`POST /api/v1/admin/keys`,
+default `60`). Login session keys use `SESSION_RATE_LIMIT_RPM` instead (see
+Auth / Sessions, default `240`). Over the limit the server answers
+`429 Too Many Requests` with `Retry-After: 60`.
+
+**Login protection, per account.** Ten failed logins for one email within
+600 seconds lock that email out for the rest of the window. These two numbers
+are constants in the server, not configuration.
+
+**Login protection, per IP.** The public auth routes also count failed
+attempts per client IP:
 
 | Variable | Default | Description |
 |---|---|---|
-| `RATE_LIMIT_ENABLED` | `true` | Set to `false` to disable all rate limiting (not recommended for production) |
-| `RATE_LIMIT_RPM` | `60` | Requests per minute per IP on unauthenticated routes |
-| `RATE_LIMIT_AUTH_RPM` | `120` | Requests per minute per API key on authenticated routes |
-| `RATE_LIMIT_WEBHOOK_RPM` | `30` | Requests per minute per IP on webhook endpoints (`/github/events`, `/gitlab/events`) |
+| `IP_LOGIN_MAX_FAILURES` | `100` | Failed login attempts allowed per IP per window before the IP is answered `429` |
+| `IP_LOGIN_LOCKOUT_WINDOW_SECS` | `600` | Length of that window in seconds; also the `Retry-After` value on the `429` |
+| `TRUSTED_PROXY_HOPS` | unset | Unset: the client IP is the socket address and `X-Forwarded-For` is ignored. `N` ≥ 1: the IP is the Nth entry from the right of `X-Forwarded-For`, i.e. the address your Nth trusted proxy saw. Set this only behind proxies you control — with the wrong value a caller chooses its own IP for the limiter. |
 
-When a rate limit is exceeded, DocBrain returns `429 Too Many Requests` with a `Retry-After` header indicating when the client may retry.
+The webhook endpoints (`/github/events`, `/gitlab/events`, `/confluence/events`,
+`/slack/*`, `/ms-teams/events`) are not rate limited; each verifies its
+provider's signature or shared secret instead.
 
 ## Auth / Sessions
 
@@ -1185,7 +1308,7 @@ in the Kubernetes Secret via `mcpTools.serviceAccount.rootly.*` in Helm):
 
 ## SSO / OIDC
 
-See **[docs/rbac.md](rbac.md)** for full setup instructions and a provider comparison — it covers GitHub OAuth, GitLab OIDC and generic OIDC.
+See **[docs/sso.md](sso.md)** for full setup instructions and a provider comparison.
 
 ### Generic OIDC (Google, Okta, Auth0, Azure AD, Keycloak, …)
 

@@ -31,6 +31,11 @@ Or configure manually:
 cp .env.example .env
 ```
 
+The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys`
+volume, so there is nothing to set. Back that volume up, separately from your database backups: a lost or changed
+key reopens every restored or declined secret finding. To supply your own instead, set `DOCBRAIN_FINGERPRINT_KEY` in
+`.env` (`openssl rand -base64 32`). See [the fingerprint key](./configuration.md#the-fingerprint-key).
+
 Then edit `.env` and set:
 ```env
 LLM_PROVIDER=ollama
@@ -64,6 +69,11 @@ git clone https://github.com/docbrain-ai/docbrain.git
 cd docbrain
 cp .env.example .env
 ```
+
+The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys`
+volume, so there is nothing to set. Back that volume up, separately from your database backups: a lost or changed
+key reopens every restored or declined secret finding. To supply your own instead, set `DOCBRAIN_FINGERPRINT_KEY` in
+`.env` (`openssl rand -base64 32`). See [the fingerprint key](./configuration.md#the-fingerprint-key).
 
 Edit `.env` — add your LLM API key (infrastructure secret). Then:
 
@@ -266,7 +276,7 @@ docker compose logs opensearch
 
 **Common causes:**
 - **OpenSearch crashes:** Not enough memory. OpenSearch needs ~1GB. Check `docker stats`.
-- **Server exits immediately:** Usually a missing or malformed `.env`. Re-copy from `.env.example`.
+- **Server exits immediately:** Usually a missing or malformed `.env`. Re-copy from `.env.example`. If the log names `DOCBRAIN_FINGERPRINT_KEY` or `DOCBRAIN_FINGERPRINT_KEY_FILE`, check `docker compose logs keys` (it generates the key on first start) or the value you set in `.env`.
 
 ### "Connection refused" when asking questions
 

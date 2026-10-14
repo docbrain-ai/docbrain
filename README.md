@@ -78,6 +78,8 @@ git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
 ./scripts/setup.sh    # interactive: picks a provider, sets keys, starts services
 ```
 
+The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys` volume; there is nothing to set. Back that volume up, separately from your database backups: a lost or changed key reopens every restored or declined secret finding. [Details →](docs/configuration.md#the-fingerprint-key)
+
 Or manually:
 
 ```bash
@@ -221,6 +223,8 @@ docker compose up -d
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
   --set llm.anthropicApiKey=sk-ant-...
+# the fingerprint key is generated on first install and kept across upgrades;
+# with helm template / Argo CD supply it (--set fingerprintKey=... or existingSecret)
 ```
 
 [Kubernetes guide →](docs/kubernetes.md) · [Configuration →](docs/configuration.md)

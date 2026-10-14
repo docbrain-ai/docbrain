@@ -729,6 +729,16 @@ rbac:
 # -- Secret (created from values, or use existing)
 existingSecret: ""
 
+# -- Keys the fingerprints DocBrain stores for secret findings (HMAC-SHA256), so a database or
+# backup reader cannot guess a found value. Empty (default): the chart generates one on first
+# install and keeps it in the release Secret across upgrades and rollbacks (looked up from the
+# cluster). Back that Secret up, separately from the database backups: a lost or changed key
+# reopens every restored or declined finding. To supply your own (at least 32 random bytes, hex
+# or base64; e.g. openssl rand -base64 32): --set fingerprintKey=... (never commit it), or put
+# DOCBRAIN_FINGERPRINT_KEY in existingSecret. With helm template / Argo CD (no cluster lookup) a
+# new key would be rendered on every run: always supply it there.
+fingerprintKey: ""
+
 # ── MCP tool platform (Plan 4) ────────────────────────────────────────────
 # Enables answer-time tool dispatch through external MCP servers
 # (Jira, GitHub, Sentry, etc.). Off by default — flip enabled=true once

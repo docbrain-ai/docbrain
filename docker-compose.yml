@@ -3,6 +3,7 @@
 #
 # Usage:
 #   cp .env.example .env        # add your LLM keys, Confluence token, etc.
+#   (the fingerprint key is generated into the docbrain-keys volume on first start; back it up)
 #   docker compose up -d        # starts all services
 #
 # Configuration:
@@ -63,6 +64,32 @@ services:
       timeout: 3s
       retries: 5
 
+  # One-shot: writes a random fingerprint key into the docbrain-keys volume on first start,
+  # unless you supplied DOCBRAIN_FINGERPRINT_KEY or a key file already exists. Never replaces a
+  # key, never prints one. Two starts at once cannot write two keys (the link below is atomic).
+  keys:
+    image: ghcr.io/docbrain-ai/docbrain:latest
+    restart: "no"
+    environment:
+      DOCBRAIN_FINGERPRINT_KEY: ${DOCBRAIN_FINGERPRINT_KEY:-}
+    volumes:
+      - docbrain-keys:/keys
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        umask 077
+        if [ -n "$$(printf '%s' "$${DOCBRAIN_FINGERPRINT_KEY:-}" | tr -d '[:space:]')" ]; then
+          echo "fingerprint key: supplied in DOCBRAIN_FINGERPRINT_KEY; nothing generated"; exit 0
+        fi
+        if [ -s /keys/fingerprint.key ]; then echo "fingerprint key: present in docbrain-keys; kept"; exit 0; fi
+        tmp="$$(mktemp /keys/.fingerprint.key.XXXXXX)"
+        head -c 32 /dev/urandom | base64 > "$$tmp"
+        chmod 600 "$$tmp"
+        if ln "$$tmp" /keys/fingerprint.key 2>/dev/null; then echo "fingerprint key: generated in docbrain-keys (back this volume up)"
+        else echo "fingerprint key: present in docbrain-keys; kept"; fi
+        rm -f "$$tmp"
+
   server:
     image: ghcr.io/docbrain-ai/docbrain:latest
     pull_policy: always
@@ -74,6 +101,8 @@ services:
     expose:
       - "3000"
     depends_on:
+      keys:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       opensearch:
@@ -91,6 +120,13 @@ services:
       OPENSEARCH_URL: http://opensearch:9200
       REDIS_URL: redis://redis:6379
       SERVER_BIND: 0.0.0.0
+      # --- Fingerprint key (required; generated on first start when you supply none)
+      # Keys the fingerprints DocBrain stores for secret findings. Supply your own in .env
+      # (DOCBRAIN_FINGERPRINT_KEY, wins) or let the `keys` service generate one into the
+      # docbrain-keys volume. Back that volume up (separately from the database backups):
+      # a lost or changed key reopens every restored or declined finding.
+      DOCBRAIN_FINGERPRINT_KEY: ${DOCBRAIN_FINGERPRINT_KEY:-}
+      DOCBRAIN_FINGERPRINT_KEY_FILE: /keys/fingerprint.key
       # CORS — the single proxy origin the browser actually talks to. The web app
       # and API are same-origin behind the proxy, so this matters only for any
       # non-simple request; it must equal PROXY_ORIGIN (the published proxy URL).
@@ -147,6 +183,7 @@ services:
       # LEARNING_LOCAL_PATH: /data/models  # must match TRAINER_LOCAL_MODEL_ROOT
       # LEARNING_STORAGE_BACKEND: ${LEARNING_STORAGE_BACKEND:-local}
     volumes:
+      - docbrain-keys:/keys:ro
       - ./examples/sample-docs:/data/docs:ro
       - ./docs:/app/docs:ro
       # Uncomment when trainer service is enabled (shared model volume):
@@ -269,6 +306,7 @@ services:
   #   restart: unless-stopped
 
 volumes:
+  docbrain-keys:        # the fingerprint key; back it up, separately from postgres_data
   postgres_data:
   opensearch_data:
   redis_data:

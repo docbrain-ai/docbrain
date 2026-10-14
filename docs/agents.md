@@ -177,6 +177,92 @@ root, not at an org that has recorded nothing.
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
 5. Approved captures land as fragments, anchored to the file and line range they came from. A capture that declares a premise becomes checkable: DocBrain re-verifies it against your codebase and flags it the moment it stops being true, without anyone reviewing anything. A capture anchored to nothing checkable is queued for a human instead of served.
 
+## What a capture never holds
+
+A capture is shared with everyone who can read its space, so DocBrain checks every capture for secrets before it is
+saved. Two checks run. A fixed check recognises the shapes of private keys, access tokens and API keys in published
+formats, connection strings and links with a password, signed links and long random-looking values, also through
+common encodings and tricks such as invisible characters, look-alike letters and spaced-out text, and together with
+your other captures from the last 24 hours. Then the language model your DocBrain is configured with reads the
+capture's text and lists any password, key or token written in it, including one written in plain words and values
+the text calls test, example or sample values. Write where a secret lives (`${DB_PASSWORD}`, `<password>`, "in the
+team vault") instead of a value. The capture's text is sent to that model's provider for this check.
+
+If a capture you write holds a secret, it is not saved, and you are told what kind it looked like. After three of
+these in ten minutes, capturing pauses for ten minutes. When DocBrain writes a summary for you (from a chat thread or a
+CI run), it removes the secret, keeps the rest, and tells you what kind was removed.
+
+If the model cannot be reached, a capture is saved after the fixed check and checked by the model as soon as it is
+back; if a secret is then found, the capture is withdrawn (a summary has the secret removed), the answers that used it
+are cleaned, and you are told. Until then it may be served. When the detection rules, the model or its instructions
+change, every existing capture is checked again. Every answer and reply is checked again for the fixed shapes just
+before it is sent; plain-word passwords are checked in captures, not in answers.
+
+**What we cannot promise:** a secret described in words, a value deliberately disguised in small pieces, or a value
+deliberately split around a note can pass. Every capture says who wrote it, is visible only to its space, and can be
+withdrawn at once or erased by an admin. Never put a secret in a capture. If one was ever served, treat it as exposed
+and rotate it.
+
+### Refused or redacted
+
+- **A capture a person writes** (the console, the CLI, `docbrain_annotate`, `docbrain_commit_capture`,
+  `docbrain_revise`) is **refused** when it holds a secret: nothing is saved, and the reply names the kind of secret
+  and the field it was in, never the value. Remove the value and send again, saying where the secret lives instead.
+  Do not encode, split, space out or reword the value to get past the check. Repeated refusals count toward the pause.
+- **A summary DocBrain writes** (a chat-thread capture, a CI run analysis) is **redacted**: the secret is replaced by
+  a marker such as `[removed: password]`, the rest is kept, and the person who asked is told the kind that was
+  removed. These never pause anyone.
+
+### The model check
+
+The second check uses your configured fast model. Each capture's text is sent to that model's provider; choose a
+local provider if capture text must not leave your network. The check's time budget is
+`CAPTURE_SECRET_CHECK_TIMEOUT_SECS` (default 10 seconds; see the [configuration reference](configuration.md#secret-check-on-captures)).
+A weaker model finds less: the fixed check does not depend on the model, the plain-word check does.
+
+### Custom secret rules
+
+An admin can add a rule for a secret shape your organisation uses (Govern → Quality, rule type **Secret Pattern**).
+
+- **Dry run before save.** A rule is checked before it can be saved: DocBrain shows how often it matches ordinary
+  notes and existing captures, and refuses a rule that is invalid, too slow, or would refuse too many ordinary notes.
+  The save goes through only after the admin has seen that check. The same applies to enabling or importing a rule.
+- **Second decision on what it withdrew.** When a saved rule matches existing captures, they are withdrawn and wait
+  for an admin's decision on that rule version ("Waiting for your decision"): **Remove the values** (Confirm) removes
+  them for good — a capture a person wrote stays withdrawn without them, a summary DocBrain made is served again — or
+  **Restore these captures** (Decline) serves them again as written. An admin can also confirm or restore a single
+  capture from the captures list.
+- **Restored values are shown in full for that rule version.** After a restore, the rule no longer masks those
+  values in anything DocBrain serves, for as long as the rule stays at that version.
+- **A new rule version checks again.** Editing a rule makes a new version: every capture is checked again under it,
+  and restorations made under the old version do not carry over.
+- **A person must decide.** An admin key with no user behind it (a keyless key) cannot create, change, enable,
+  delete or import a secret rule, and cannot confirm or restore what one withdrew; use a key created by a signed-in
+  admin. Every decision names the admin who made it.
+
+### What DocBrain keeps of a finding
+
+Never the secret. A finding is stored as a keyed fingerprint (HMAC-SHA256 under the deployment's fingerprint key), so
+someone holding the database or a backup cannot guess a short value from it. The key is generated on first start
+(Docker Compose: the `docbrain-keys` volume; Helm: the release Secret) unless you supply one, and is never stored in
+the database. Back it up, separately from the database backups: a lost or changed key reopens every restored or
+declined finding. See [the fingerprint key](configuration.md#the-fingerprint-key).
+
+### Honest limits
+
+- Detection recognises shapes and, through the model, written credentials. A secret described in words, a short
+  value with nothing around it, or one deliberately disguised or split into pieces can pass.
+- The model is not deterministic, and a weaker configured model detects less.
+- While the model is unreachable or over budget, a capture is saved after the fixed check and may be served until the
+  model checks it. Answers already given are cleaned when a secret is found, but replies already sent to chat, MCP
+  clients and webhooks cannot be recalled.
+- Answers are checked for the fixed shapes only; plain-word passwords are checked in captures, not in answers.
+- Ingested documents keep their secrets at their source; DocBrain removes recognised secrets from what it serves,
+  and the source system is where they must be removed.
+- Links are not followed: a link to a paste or file share that holds a secret is served as a link.
+- What contains these limits: a capture is visible only to its space, says who wrote it, and can be withdrawn at once
+  or erased by an admin. If a secret was ever served, treat it as exposed and rotate it.
+
 ## All eleven tools
 
 The five above are the ones this page's workflow uses. The MCP server declares

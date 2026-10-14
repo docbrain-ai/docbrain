@@ -48,6 +48,13 @@ spec:
           env:
             - name: DATABASE_URL
               value: {{ include "docbrain.databaseUrl" . | quote }}
+            # Required: the chart's Secret always carries it (supplied or generated); an
+            # existingSecret without this key fails the pod before the server starts.
+            - name: DOCBRAIN_FINGERPRINT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "docbrain.secretName" . }}
+                  key: DOCBRAIN_FINGERPRINT_KEY
           readinessProbe:
             httpGet:
               path: /api/v1/health

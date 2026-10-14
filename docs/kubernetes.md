@@ -21,6 +21,23 @@ cd docbrain-public
 
 The chart is in `helm/docbrain/`. You don't need a Helm repository — install directly from the local path.
 
+#### The fingerprint key
+
+DocBrain needs `DOCBRAIN_FINGERPRINT_KEY` to fingerprint the secrets it finds. The chart generates one on first
+install (32 random bytes) and keeps it in the release Secret: every `helm upgrade` and `helm rollback` looks it up
+and reuses it, so it is never rotated. Back that Secret up, separately from your database backups: a lost or changed
+key reopens every restored or declined secret finding.
+
+Supply your own when you want to hold it in your secret store, and always when the chart is rendered offline
+(`helm template`, Argo CD): `lookup` returns nothing there, so a new key would be rendered every time.
+
+```bash
+--set fingerprintKey="$DOCBRAIN_FINGERPRINT_KEY"   # e.g. generated once with: openssl rand -base64 32
+```
+
+With `existingSecret`, that Secret must carry a `DOCBRAIN_FINGERPRINT_KEY` entry (the chart does not generate one
+there). See [configuration.md](./configuration.md#the-fingerprint-key).
+
 ### 2. Choose your LLM provider
 
 DocBrain supports Anthropic, OpenAI, AWS Bedrock, and Ollama. Pass the provider and credentials at install time.
