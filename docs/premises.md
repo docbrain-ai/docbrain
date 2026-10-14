@@ -129,7 +129,10 @@ dated to the commit it was observed at.
 - **Answers:** the monitor watches *stored* claims; the answer-time claim verifier
   (`RAG_CLAIM_VERIFICATION`) independently checks any path an *answer* cites against the
   same listings. An answer that cites a dead path carries its own correction note, whether
-  or not the underlying fragment's premise has been swept yet.
+  or not the underlying fragment's premise has been swept yet. An answer's path, never seen
+  to exist, is reported only when a connected repository holds its first two folders, so a
+  one-folder path such as `scripts/x.sh` is not flagged in answers; a premise that has held
+  keeps the first-segment rule below, so it is still caught here.
 
 ## The pull-request check
 
@@ -214,8 +217,9 @@ Limits, stated:
 
 ## Behaviors worth knowing
 
-These follow from the attribution rule — a premise belongs to sources whose listing contains
-its first path segment — and are deliberate trade-offs in favor of precision:
+These follow from the attribution rules — a premise belongs to sources whose listing contains
+its first path segment; a path in an answer, or one a capture declares when it is written, belongs
+to sources that hold its first two folders — and are deliberate trade-offs in favor of precision:
 
 - **Deleting a directory's only file reads as `uncheckable`, not `broken`.** If
   `proof/notes.txt` was the only file under `proof/`, removing it removes the whole
@@ -223,8 +227,15 @@ its first path segment — and are deliberate trade-offs in favor of precision:
   "nothing can speak to this" rather than guessing that a wider deletion was a targeted one.
 - **A premise can re-attribute across sources.** If two connected repos both have a `docs/`
   tree, a `docs/...` premise is checked against both, and is `broken` only when an owning
-  source decisively lacks it. This is the same any-owning-source semantics the answer-time
-  verifier uses.
+  source decisively lacks it. The answer-time verifier also checks against every owning
+  source, but counts as owners only the sources that hold the path's first two folders.
+- **Answers and new captures need two folders, premises need one.** A path nobody has seen
+  exist (one an answer cites, or one a capture declares when it is written) is reported missing
+  only when a connected repository holds its first two folders, because top-level names like
+  `docs/` and `scripts/` are shared by most repositories and would otherwise flag files of
+  codebases you never connected. A premise that has held was seen to exist, which is better
+  evidence of what it is about, so it keeps the first-segment rule and still breaks when its
+  one-folder file is deleted.
 - **Precision over coverage, everywhere.** One false "your runbook is wrong" costs more
   than ten missed ones. That asymmetry drives every rule above: deterministic oracles only,
   dated absences, no guessing between candidates, and silence whenever the evidence is
