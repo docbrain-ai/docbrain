@@ -14,6 +14,40 @@ mod repository;
 // CLI structure
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// Parse the command line, refusing two different `--profile` values. Clap keeps a global
+/// flag's last value across the command and its subcommands, so
+/// `--profile reader ask --profile editor` would otherwise run as `editor` without a word.
+/// The raw arguments are checked up to `--`, after which nothing is a flag.
+fn parse_cli<I, T>(argv: I) -> std::result::Result<Cli, clap::Error>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<std::ffi::OsString> + Clone,
+{
+    use clap::{CommandFactory, Parser};
+    let args: Vec<std::ffi::OsString> = argv.into_iter().map(Into::into).collect();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut it = args.iter().skip(1).map(|a| a.to_string_lossy());
+    while let Some(a) = it.next() {
+        if a == "--" {
+            break;
+        }
+        if a == "--profile" {
+            if let Some(v) = it.next() {
+                seen.insert(v.into_owned());
+            }
+        } else if let Some(v) = a.strip_prefix("--profile=") {
+            seen.insert(v.to_string());
+        }
+    }
+    if seen.len() > 1 {
+        return Err(Cli::command().error(
+            clap::error::ErrorKind::ArgumentConflict,
+            "--profile was given more than once with different names; give one sign-in per command",
+        ));
+    }
+    Cli::try_parse_from(args)
+}
+
 #[derive(Parser)]
 #[command(name = "docbrain", about = "AI-powered documentation intelligence", version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
@@ -21,6 +55,14 @@ struct Cli {
     /// Precedence: --api-key flag > ~/.docbrain/config.json > DOCBRAIN_API_KEY env
     #[arg(long, global = true, hide_env_values = true)]
     api_key: Option<String>,
+
+    /// Named sign-in to use (e.g. `reader`, `editor`): its own server URL and key, saved by
+    /// `docbrain --profile <name> login`. Falls back to DOCBRAIN_PROFILE, then the default
+    /// sign-in. A profile is a separate identity; what it may do is set by the server.
+    /// Accepted anywhere on the command line. It is the only `--profile`: the compliance
+    /// framework of `evidence export` is `--framework`.
+    #[arg(long, value_name = "NAME", global = true, conflicts_with = "api_key")]
+    profile: Option<String>,
 
     #[command(subcommand)]
     command: Commands,
@@ -49,7 +91,7 @@ enum Commands {
     },
     /// Log out — revokes session key server-side and clears local config
     Logout,
-    /// Manage long-lived API tokens (admin only)
+    /// Manage your own API tokens (for CI, scripts and MCP config); they expire
     Token {
         #[command(subcommand)]
         action: TokenAction,
@@ -351,10 +393,11 @@ enum EvidenceAction {
         /// Mutually exclusive with --preset.
         #[arg(long, value_name = "START,END")]
         range: Option<String>,
-        /// Compliance profile id (default: the server's default profile).
-        #[arg(long)]
-        profile: Option<String>,
-        /// Named retention window within the profile (e.g. a "last-N-days"
+        /// Compliance framework id, e.g. `eu-ai-act` (default: the server's
+        /// default framework). Sent as the API's `profile` field.
+        #[arg(long, value_name = "ID")]
+        framework: Option<String>,
+        /// Named retention window within the framework (e.g. a "last-N-days"
         /// preset). Mutually exclusive with --range.
         #[arg(long)]
         preset: Option<String>,
@@ -432,7 +475,7 @@ enum TokenAction {
         /// Token name (e.g., "MCP Server Key", "CI/CD Key")
         #[arg(long)]
         name: String,
-        /// Role: viewer or admin
+        /// Role: viewer, editor, analyst or admin — never above your own
         #[arg(long, default_value = "viewer")]
         role: String,
         /// Requests per minute for this token (server default: 60). Raise it
@@ -590,6 +633,8 @@ enum CiAction {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct Config {
+    /// The default sign-in. Kept at the top level, not under `profiles`, because existing
+    /// tools and older CLI versions read exactly these two fields.
     server_url: Option<String>,
     api_key: Option<String>,
     /// How much of the corpus must disappear between two observations of this URL before
@@ -598,6 +643,28 @@ struct Config {
     /// lower it. `DOCBRAIN_CORPUS_DROP_ALERT` overrides it for a single run.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     corpus_drop_alert_fraction: Option<f64>,
+    /// Named sign-ins (`--profile <name>`), each its own identity. `default` is never read
+    /// from here: it names the top level.
+    #[serde(default, deserialize_with = "null_as_empty", skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    profiles: std::collections::BTreeMap<String, ProfileEntry>,
+    /// Fields this version does not know, carried through a rewrite instead of dropped.
+    #[serde(flatten)]
+    extra: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+struct ProfileEntry {
+    server_url: Option<String>,
+    api_key: Option<String>,
+    #[serde(flatten)]
+    extra: serde_json::Map<String, serde_json::Value>,
+}
+
+fn null_as_empty<'de, D>(d: D) -> std::result::Result<std::collections::BTreeMap<String, ProfileEntry>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Ok(Option::deserialize(d)?.unwrap_or_default())
 }
 
 fn config_file_path() -> Option<PathBuf> {
@@ -605,70 +672,612 @@ fn config_file_path() -> Option<PathBuf> {
 }
 
 fn read_config() -> Config {
-    let path = match config_file_path() {
-        Some(p) => p,
-        None => return Config::default(),
+    read_config_strict().unwrap_or_default()
+}
+
+/// A missing file is an empty config; an unreadable or unparseable one is an error. Writers
+/// use this, so a login never replaces a file it could not read — which, with profiles in
+/// it, would silently delete every other sign-in.
+fn read_config_strict() -> Result<Config> {
+    let Some(path) = config_file_path() else { return Ok(Config::default()) };
+    let text = match std::fs::read_to_string(&path) {
+        Ok(t) => t,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Config::default()),
+        Err(e) => return Err(e).with_context(|| format!("cannot read {}", path.display())),
     };
-    if !path.exists() {
-        return Config::default();
+    // The parser's own message quotes the offending value, which may be a key: report the
+    // position only.
+    let cfg = serde_json::from_str(&text).map_err(|e| {
+        anyhow::anyhow!(
+            "{} is not valid DocBrain config (line {}, column {}); fix or remove it",
+            path.display(), e.line(), e.column()
+        )
+    })?;
+    // A file an older CLI wrote readable by others is made private on first use.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(&path)
+            && meta.permissions().mode() & 0o077 != 0
+        {
+            let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+        }
     }
-    std::fs::read_to_string(&path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    Ok(cfg)
+}
+
+/// Held from reading config.json to replacing it, so two logins at once (say, to two
+/// profiles) cannot drop each other's update. Released when the file is dropped. Never
+/// waits: a login left at its prompt must not silently stall another terminal.
+fn lock_config() -> Result<std::fs::File> {
+    let path = config_file_path()
+        .ok_or_else(|| anyhow::anyhow!("Cannot determine home directory"))?
+        .with_file_name(".config.lock");
+    let dir = path.parent().context("config path has no parent directory")?;
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    builder.create(dir).with_context(|| format!("cannot create {}", dir.display()))?;
+    let mut opts = std::fs::OpenOptions::new();
+    opts.read(true).write(true).create(true).truncate(false);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut opts, 0o600);
+    let f = opts.open(&path).with_context(|| format!("cannot open {}", path.display()))?;
+    match f.try_lock() {
+        Ok(()) => Ok(f),
+        Err(std::fs::TryLockError::WouldBlock) => anyhow::bail!(
+            "another `docbrain login` or `logout` is in progress; finish it (or stop it) and try again"
+        ),
+        Err(std::fs::TryLockError::Error(e)) => Err(e).context("cannot lock the DocBrain config"),
+    }
 }
 
 fn write_config(cfg: &Config) -> Result<()> {
     let path = config_file_path()
         .ok_or_else(|| anyhow::anyhow!("Cannot determine home directory"))?;
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+    write_private(&path, serde_json::to_string_pretty(cfg)?.as_bytes())
+}
+
+/// Write a file only this user can read, atomically: a uniquely named temp file created
+/// 0600 next to the target, synced, then renamed over it. A reader never sees half a file,
+/// two writers never share a temp file, and a file first created by `docbrain login` is
+/// not left world-readable. A symlinked target is written through to the file it names.
+fn write_private(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
+    let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let dir = target.parent().context("config path has no parent directory")?;
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+    builder.create(dir).with_context(|| format!("cannot create {}", dir.display()))?;
+
+    let name = target.file_name().and_then(|n| n.to_str()).unwrap_or("file");
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or_default();
+    let tmp = dir.join(format!(".{name}.{}.{nanos}.tmp", std::process::id()));
+    let result = (|| -> Result<()> {
+        let mut opts = std::fs::OpenOptions::new();
+        opts.write(true).create_new(true);
+        #[cfg(unix)]
+        std::os::unix::fs::OpenOptionsExt::mode(&mut opts, 0o600);
+        let mut f = opts.open(&tmp).with_context(|| format!("cannot create {}", tmp.display()))?;
+        f.write_all(bytes).context("cannot write the temp file")?;
+        f.sync_all().context("cannot sync the temp file")?;
+        std::fs::rename(&tmp, &target)
+            .with_context(|| format!("cannot replace {}", target.display()))
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp);
     }
-    std::fs::write(&path, serde_json::to_string_pretty(cfg)?)?;
-    Ok(())
+    result
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Resolution helpers
+// Profiles and resolution
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Resolve API key: --api-key flag > config file > DOCBRAIN_API_KEY env.
-///
-/// Config file wins over the env var so that `docbrain login` always takes effect immediately,
-/// even when DOCBRAIN_API_KEY is exported in the shell. The env var is still honoured as a
-/// last-resort fallback (useful in CI where there is no config file).
-fn resolve_api_key(flag: Option<&str>) -> Option<String> {
-    if let Some(k) = flag {
-        return Some(k.to_string());
-    }
-    if let Some(k) = read_config().api_key {
-        // Say so when the config is shadowing an exported env var. The
-        // precedence itself is deliberate (above), but it is silent, and silence
-        // is what makes it cost an hour: the user exports DOCBRAIN_API_KEY,
-        // the CLI keeps using a stale config key, and every call 401s with no
-        // indication which key was even tried. Note that `resolve_server_url`
-        // orders these the OTHER way round (env wins), so a reader cannot infer
-        // one from the other. stderr, so `--json` stdout stays machine-readable.
-        if let Ok(env_key) = std::env::var("DOCBRAIN_API_KEY")
-            && !env_key.is_empty()
-            && env_key != k
-        {
-            eprintln!(
-                "  note: DOCBRAIN_API_KEY is set but ~/.docbrain/config.json takes \
-                 precedence — using the config key. Pass --api-key to override."
+const DEFAULT_SERVER_URL: &str = "http://localhost:3000";
+
+/// A validated profile name. `None` everywhere below means the default (top-level) sign-in.
+/// Lowercase only: the name becomes part of a file name, and macOS file systems are
+/// case-insensitive, so `Prod` and `prod` would share local state.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ProfileName(String);
+
+impl ProfileName {
+    /// `default` (or nothing) selects the top-level sign-in.
+    fn parse(raw: &str) -> Result<Option<Self>> {
+        if raw == "default" {
+            return Ok(None);
+        }
+        // A leading '-' would read as a flag on the command line (`--profile -x`).
+        let ok = raw.len() <= 32
+            && raw.bytes().next().is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+            && raw.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_');
+        if !ok {
+            anyhow::bail!(
+                "invalid profile name {raw:?}: use 1-32 characters from a-z, 0-9, '-' and '_', starting with a letter or digit"
             );
         }
-        return Some(k);
+        Ok(Some(Self(raw.to_string())))
     }
-    std::env::var("DOCBRAIN_API_KEY").ok()
+
+    fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
-/// Resolve server URL: DOCBRAIN_SERVER_URL env → config file → default.
-fn resolve_server_url() -> String {
-    std::env::var("DOCBRAIN_SERVER_URL")
-        .ok()
-        .or_else(|| read_config().server_url)
-        .unwrap_or_else(|| "http://localhost:3000".to_string())
+/// `--profile` beats `DOCBRAIN_PROFILE`; neither (or an empty variable) is the default.
+fn select_profile(flag: Option<&str>, env: Option<String>) -> Result<Option<ProfileName>> {
+    match flag.map(str::to_string).or(env.filter(|v| !v.is_empty())) {
+        Some(raw) => ProfileName::parse(&raw),
+        None => Ok(None),
+    }
+}
+
+/// Who this run speaks as, set once in `main`: a short tag derived from the resolved server
+/// and key. Unset when the pair could not be resolved, and then no local state is used.
+static ACTIVE_IDENTITY: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// A short, one-way tag for a server + key pair. Local state (`session`, `last_answer`) is
+/// keyed by it, so `--continue` and `thumbsdown` only ever see the conversation of the exact
+/// identity in use — whether it came from a profile, the default sign-in, the environment or
+/// `--api-key` — and a new login starts fresh.
+fn identity_tag(server_url: &str, api_key: Option<&str>) -> String {
+    use sha2::Digest;
+    let mut h = sha2::Sha256::new();
+    h.update(instance_check::normalise_url(server_url).as_bytes());
+    h.update(b"\n");
+    h.update(api_key.unwrap_or("").as_bytes());
+    hex::encode(&h.finalize()[..8])
+}
+
+/// `~/.docbrain/<stem>-<identity tag><ext>`.
+fn profile_state_path(stem: &str, ext: &str) -> Option<PathBuf> {
+    let dir = dirs::home_dir()?.join(".docbrain");
+    Some(state_path_in(&dir, ACTIVE_IDENTITY.get()?, stem, ext))
+}
+
+fn state_path_in(dir: &std::path::Path, tag: &str, stem: &str, ext: &str) -> PathBuf {
+    dir.join(format!("{stem}-{tag}{ext}"))
+}
+
+fn known_profiles(cfg: &Config) -> String {
+    let names: Vec<&str> = cfg.profiles.keys().map(String::as_str).filter(|n| *n != "default").collect();
+    if names.is_empty() { "none yet".to_string() } else { names.join(", ") }
+}
+
+fn named_entry<'a>(cfg: &'a Config, name: &ProfileName) -> Result<&'a ProfileEntry> {
+    cfg.profiles.get(name.as_str()).ok_or_else(|| {
+        anyhow::anyhow!(
+            "unknown profile \"{}\" (known: {}). Create it with `docbrain --profile {} login --server <url>`.",
+            name.as_str(), known_profiles(cfg), name.as_str()
+        )
+    })
+}
+
+/// Where requests go and which key they carry. One pair, always from one source: a key
+/// saved for one server must never be sent to another.
+#[derive(Debug, PartialEq)]
+struct Target {
+    server_url: String,
+    api_key: Option<String>,
+    /// Said on stderr (so `--json` stdout stays parseable). Names variables, never values.
+    notes: Vec<String>,
+}
+
+/// DOCBRAIN_SERVER_URL, DOCBRAIN_API_KEY and DOCBRAIN_PROFILE as the shell (or CI) set them,
+/// captured before `.env` is loaded. These decide who the CLI speaks as and where a key or a
+/// password goes, so a `.env` file — in this directory or any parent, e.g. a cloned
+/// repository — never sets them. Every read of these three goes through here.
+#[derive(Debug, Default)]
+struct ShellIdentityEnv {
+    server_url: Option<String>,
+    api_key: Option<String>,
+    profile: Option<String>,
+}
+
+static SHELL_ENV: std::sync::OnceLock<ShellIdentityEnv> = std::sync::OnceLock::new();
+
+fn shell_env() -> &'static ShellIdentityEnv {
+    SHELL_ENV.get_or_init(ShellIdentityEnv::default)
+}
+
+/// Pure: the environment is passed in, so every row of the precedence table is testable.
+fn resolve_target(
+    profile: Option<&ProfileName>,
+    flag_key: Option<&str>,
+    cfg: &Config,
+    env_url: Option<String>,
+    env_key: Option<String>,
+) -> Result<Target> {
+    let env_url = env_url.filter(|v| !v.is_empty());
+    let env_key = env_key.filter(|v| !v.is_empty());
+    let mut notes = Vec::new();
+
+    if let Some(name) = profile {
+        if flag_key.is_some() {
+            anyhow::bail!("--api-key cannot be combined with a profile (DOCBRAIN_PROFILE or --profile)");
+        }
+        let entry = named_entry(cfg, name)?;
+        let server_url = entry.server_url.clone().ok_or_else(|| {
+            anyhow::anyhow!(
+                "profile \"{0}\" has no server; run `docbrain --profile {0} login --server <url>`",
+                name.as_str()
+            )
+        })?;
+        if let Some(u) = &env_url
+            && instance_check::normalise_url(u) != instance_check::normalise_url(&server_url)
+        {
+            anyhow::bail!(
+                "profile \"{}\" signs in to {server_url}, but DOCBRAIN_SERVER_URL is {u}.\n  \
+                 Unset one of DOCBRAIN_PROFILE/--profile or DOCBRAIN_SERVER_URL, so it is clear which server is meant.",
+                name.as_str()
+            );
+        }
+        let ignored: Vec<&str> = [("DOCBRAIN_API_KEY", env_key.is_some())]
+            .into_iter().filter(|(_, set)| *set).map(|(n, _)| n).collect();
+        if !ignored.is_empty() {
+            notes.push(format!(
+                "note: profile \"{}\" is selected, so {} {} ignored.",
+                name.as_str(), ignored.join(" and "), if ignored.len() == 1 { "is" } else { "are" }
+            ));
+        }
+        return Ok(Target { server_url, api_key: entry.api_key.clone(), notes });
+    }
+
+    if let Some(k) = flag_key {
+        let server_url = env_url.or_else(|| cfg.server_url.clone()).unwrap_or_else(|| DEFAULT_SERVER_URL.to_string());
+        return Ok(Target { server_url, api_key: Some(k.to_string()), notes });
+    }
+
+    // Config key wins over the env key so that `docbrain login` takes effect immediately even
+    // when DOCBRAIN_API_KEY is exported — but only together with the server it was saved for.
+    if let Some(k) = cfg.api_key.clone() {
+        let saved_url = cfg.server_url.clone().unwrap_or_else(|| DEFAULT_SERVER_URL.to_string());
+        match env_url {
+            Some(u) if instance_check::normalise_url(&u) != instance_check::normalise_url(&saved_url) => {
+                // The env names another server. Sending the saved key there would hand one
+                // server's credential to another; the env pair is one source, so use it whole.
+                return match env_key {
+                    Some(ek) => {
+                        notes.push(
+                            "note: DOCBRAIN_SERVER_URL differs from the saved server, so DOCBRAIN_API_KEY \
+                             is used with it instead of the saved key."
+                                .to_string(),
+                        );
+                        Ok(Target { server_url: u, api_key: Some(ek), notes })
+                    }
+                    None => anyhow::bail!(
+                        "the saved key belongs to {saved_url}, but DOCBRAIN_SERVER_URL is {u}.\n  \
+                         Log in to that server (`docbrain login --server {u}`), use a profile \
+                         (`docbrain --profile <name> login --server {u}`), pass --api-key, or unset DOCBRAIN_SERVER_URL."
+                    ),
+                };
+            }
+            _ => {
+                // Say so when the config is shadowing an exported env var: the precedence is
+                // deliberate, but silent precedence is what makes a stale key cost an hour.
+                if env_key.as_deref().is_some_and(|ek| ek != k) {
+                    notes.push(
+                        "note: DOCBRAIN_API_KEY is set but ~/.docbrain/config.json takes precedence — \
+                         using the config key. Pass --api-key to override."
+                            .to_string(),
+                    );
+                }
+                return Ok(Target { server_url: saved_url, api_key: Some(k), notes });
+            }
+        }
+    }
+
+    let server_url = env_url.or_else(|| cfg.server_url.clone()).unwrap_or_else(|| DEFAULT_SERVER_URL.to_string());
+    Ok(Target { server_url, api_key: env_key, notes })
+}
+
+#[cfg(test)]
+mod profile_tests {
+    use super::*;
+
+    fn name(n: &str) -> ProfileName {
+        ProfileName::parse(n).unwrap().unwrap()
+    }
+
+    fn cfg(json: &str) -> Config {
+        serde_json::from_str(json).unwrap()
+    }
+
+    const TWO: &str = r#"{"server_url":"https://a.example","api_key":"KEY_A",
+        "profiles":{"reader":{"server_url":"https://r.example","api_key":"KEY_R"},
+                    "nokey":{"server_url":"https://n.example"},
+                    "nourl":{"api_key":"KEY_X"}}}"#;
+
+    fn s(v: &str) -> Option<String> {
+        Some(v.to_string())
+    }
+
+    // ── names ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn profile_names_that_could_escape_or_collide_are_refused() {
+        for bad in ["", "../x", "..", "a/b", "a\\b", "Reader", "READER", "-x", "_x", "a b", "a.b",
+                    "a\0b", "é", "x".repeat(33).as_str(), "a\n"] {
+            assert!(ProfileName::parse(bad).is_err(), "{bad:?} must be refused");
+        }
+        for good in ["reader", "editor", "a", "0", "prod-eu_2", &"x".repeat(32)] {
+            assert_eq!(ProfileName::parse(good).unwrap().unwrap().as_str(), good);
+        }
+    }
+
+    #[test]
+    fn default_names_the_top_level() {
+        assert_eq!(ProfileName::parse("default").unwrap(), None);
+    }
+
+    #[test]
+    fn the_flag_beats_the_env_and_an_empty_env_is_the_default() {
+        assert_eq!(select_profile(Some("editor"), s("reader")).unwrap(), Some(name("editor")));
+        assert_eq!(select_profile(None, s("reader")).unwrap(), Some(name("reader")));
+        assert_eq!(select_profile(None, s("")).unwrap(), None);
+        assert_eq!(select_profile(None, None).unwrap(), None);
+        assert!(select_profile(Some(""), None).is_err(), "an explicit empty --profile is a mistake, not the default");
+        assert!(select_profile(None, s("../etc")).is_err());
+    }
+
+    // ── named profile resolution ───────────────────────────────────────────
+
+    #[test]
+    fn a_named_profile_uses_its_own_pair_and_ignores_the_env_key() {
+        let t = resolve_target(Some(&name("reader")), None, &cfg(TWO), None, s("ENV_KEY")).unwrap();
+        assert_eq!(t.server_url, "https://r.example");
+        assert_eq!(t.api_key.as_deref(), Some("KEY_R"));
+        assert_eq!(t.notes.len(), 1);
+        assert!(!t.notes[0].contains("ENV_KEY"), "a note names variables, never values");
+    }
+
+    #[test]
+    fn a_named_profile_with_the_same_env_url_works() {
+        let t = resolve_target(Some(&name("reader")), None, &cfg(TWO), s("https://r.example/"), None).unwrap();
+        assert_eq!(t.api_key.as_deref(), Some("KEY_R"));
+    }
+
+    #[test]
+    fn a_named_profile_refuses_an_env_url_for_another_server() {
+        let e = resolve_target(Some(&name("reader")), None, &cfg(TWO), s("https://evil.example"), None).unwrap_err();
+        let m = format!("{e:#}");
+        assert!(m.contains("DOCBRAIN_SERVER_URL") && !m.contains("KEY_R"), "{m}");
+    }
+
+    #[test]
+    fn an_unknown_profile_fails_naming_the_known_ones_and_never_falls_back() {
+        let e = resolve_target(Some(&name("editor")), None, &cfg(TWO), s("https://a.example"), s("ENV")).unwrap_err();
+        let m = format!("{e:#}");
+        assert!(m.contains("unknown profile \"editor\"") && m.contains("reader"), "{m}");
+        assert!(!m.contains("KEY_"), "{m}");
+    }
+
+    #[test]
+    fn a_profiles_default_entry_is_never_read() {
+        let c = cfg(r#"{"server_url":"https://a.example","api_key":"KEY_A",
+                        "profiles":{"default":{"server_url":"https://evil.example","api_key":"EVIL"}}}"#);
+        let t = resolve_target(ProfileName::parse("default").unwrap().as_ref(), None, &c, None, None).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key.as_deref()), ("https://a.example", Some("KEY_A")));
+        assert!(!known_profiles(&c).contains("default"));
+    }
+
+    #[test]
+    fn a_profile_without_a_server_is_an_error_not_localhost() {
+        assert!(resolve_target(Some(&name("nourl")), None, &cfg(TWO), None, None).is_err());
+    }
+
+    #[test]
+    fn a_logged_out_profile_has_its_server_and_no_key() {
+        let t = resolve_target(Some(&name("nokey")), None, &cfg(TWO), None, s("ENV")).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key), ("https://n.example", None));
+    }
+
+    #[test]
+    fn api_key_flag_with_a_profile_is_refused() {
+        assert!(resolve_target(Some(&name("reader")), Some("FLAG"), &cfg(TWO), None, None).is_err());
+    }
+
+    // ── default resolution ────────────────────────────────────────────────
+
+    #[test]
+    fn default_uses_the_saved_pair() {
+        let t = resolve_target(None, None, &cfg(TWO), None, None).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key.as_deref()), ("https://a.example", Some("KEY_A")));
+    }
+
+    #[test]
+    fn default_with_the_same_env_url_keeps_the_saved_key_and_says_so_about_the_env_key() {
+        let t = resolve_target(None, None, &cfg(TWO), s("https://a.example/"), s("OTHER")).unwrap();
+        assert_eq!(t.api_key.as_deref(), Some("KEY_A"));
+        assert_eq!(t.notes.len(), 1);
+    }
+
+    #[test]
+    fn default_never_sends_the_saved_key_to_another_server() {
+        let e = resolve_target(None, None, &cfg(TWO), s("https://evil.example"), None).unwrap_err();
+        assert!(!format!("{e:#}").contains("KEY_A"));
+    }
+
+    #[test]
+    fn default_with_another_env_server_uses_the_env_pair_whole() {
+        let t = resolve_target(None, None, &cfg(TWO), s("https://b.example"), s("ENV_B")).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key.as_deref()), ("https://b.example", Some("ENV_B")));
+    }
+
+    #[test]
+    fn a_saved_key_without_a_saved_url_belongs_to_localhost_only() {
+        let c = cfg(r#"{"api_key":"KEY_L"}"#);
+        assert_eq!(resolve_target(None, None, &c, None, None).unwrap().server_url, DEFAULT_SERVER_URL);
+        assert!(resolve_target(None, None, &c, s("https://evil.example"), None).is_err());
+    }
+
+    #[test]
+    fn without_a_saved_key_the_env_is_used_as_before() {
+        let c = cfg(r#"{"server_url":"https://a.example"}"#);
+        let t = resolve_target(None, None, &c, s("https://b.example"), s("ENV")).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key.as_deref()), ("https://b.example", Some("ENV")));
+        let t = resolve_target(None, None, &Config::default(), None, None).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key), (DEFAULT_SERVER_URL, None));
+    }
+
+    #[test]
+    fn the_api_key_flag_is_an_explicit_choice() {
+        let t = resolve_target(None, Some("FLAG"), &cfg(TWO), s("https://b.example"), None).unwrap();
+        assert_eq!((t.server_url.as_str(), t.api_key.as_deref()), ("https://b.example", Some("FLAG")));
+    }
+
+    #[test]
+    fn empty_env_values_count_as_unset() {
+        let t = resolve_target(None, None, &cfg(TWO), s(""), s("")).unwrap();
+        assert_eq!(t.api_key.as_deref(), Some("KEY_A"));
+        assert!(t.notes.is_empty());
+    }
+
+    // ── login target ──────────────────────────────────────────────────────
+
+    #[test]
+    fn a_new_profile_must_name_its_server() {
+        assert!(login_server(Some(&name("editor")), None, None, &cfg(TWO)).is_err());
+        assert_eq!(login_server(Some(&name("editor")), Some("https://e.example"), None, &cfg(TWO)).unwrap(), "https://e.example");
+    }
+
+    #[test]
+    fn a_signed_in_profile_is_never_moved_to_another_server() {
+        assert!(login_server(Some(&name("reader")), Some("https://evil.example"), None, &cfg(TWO)).is_err());
+        assert_eq!(login_server(Some(&name("reader")), None, None, &cfg(TWO)).unwrap(), "https://r.example");
+        assert_eq!(login_server(Some(&name("reader")), Some("https://r.example/"), None, &cfg(TWO)).unwrap(), "https://r.example/");
+        // Logged out: the entry may be pointed elsewhere.
+        assert_eq!(login_server(Some(&name("nokey")), Some("https://m.example"), None, &cfg(TWO)).unwrap(), "https://m.example");
+    }
+
+    // ── file format ───────────────────────────────────────────────────────
+
+    #[test]
+    fn a_legacy_file_reads_as_the_default_profile() {
+        let c = cfg(r#"{"server_url":"https://a.example","api_key":"KEY_A","corpus_drop_alert_fraction":0.4}"#);
+        assert!(c.profiles.is_empty() && c.extra.is_empty());
+        assert_eq!(c.corpus_drop_alert_fraction, Some(0.4));
+        let out = serde_json::to_string(&c).unwrap();
+        assert!(!out.contains("profiles"), "an empty map is not written, so older readers see an unchanged shape");
+    }
+
+    #[test]
+    fn unknown_fields_survive_a_rewrite_without_doubling_known_ones() {
+        let c = cfg(r#"{"server_url":"https://a.example","api_key":"K","corpus_drop_alert_fraction":0.4,
+                        "future":{"x":1},"profiles":{"r":{"server_url":"u","api_key":"k","later":true}}}"#);
+        let v: serde_json::Value = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
+        assert_eq!(v["future"]["x"], 1);
+        assert_eq!(v["profiles"]["r"]["later"], true);
+        assert_eq!(v["corpus_drop_alert_fraction"], 0.4);
+        assert!(c.extra.keys().all(|k| k == "future"), "{:?}", c.extra.keys().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn a_null_profiles_is_empty_and_a_wrong_type_is_an_error() {
+        assert!(cfg(r#"{"profiles":null}"#).profiles.is_empty());
+        for bad in [r#"{"profiles":[]}"#, r#"{"profiles":"x"}"#, r#"{"profiles":{"r":5}}"#, r#"{"api_key":5}"#, "not json"] {
+            assert!(serde_json::from_str::<Config>(bad).is_err(), "{bad}");
+        }
+    }
+
+    // ── local state and writes ────────────────────────────────────────────
+
+    #[test]
+    fn local_state_belongs_to_one_identity() {
+        let a = identity_tag("https://a.example", Some("KEY_A"));
+        assert_eq!(a, identity_tag("https://a.example/", Some("KEY_A")), "one server, one key: one tag");
+        assert_ne!(a, identity_tag("https://a.example", Some("KEY_B")), "another key is another identity");
+        assert_ne!(a, identity_tag("https://b.example", Some("KEY_A")), "another server is another identity");
+        assert_ne!(a, identity_tag("https://a.example", None));
+        assert_eq!(a.len(), 16);
+        assert!(a.bytes().all(|b| b.is_ascii_hexdigit()) && !a.contains("KEY"));
+        let d = std::path::Path::new("/h/.docbrain");
+        assert_eq!(state_path_in(d, &a, "session", ""), d.join(format!("session-{a}")));
+        assert_eq!(state_path_in(d, &a, "last_answer", ".json"), d.join(format!("last_answer-{a}.json")));
+    }
+
+    #[test]
+    fn profile_is_one_flag_accepted_anywhere_and_the_framework_is_its_own() {
+        use clap::CommandFactory;
+        Cli::command().debug_assert();
+        for argv in [
+            &["docbrain", "--profile", "reader", "ask", "hi"][..],
+            &["docbrain", "ask", "--profile", "reader", "hi"][..],
+            &["docbrain", "ask", "hi", "--profile", "reader"][..],
+            &["docbrain", "evidence", "export", "--profile", "reader", "-o", "x"][..],
+        ] {
+            assert_eq!(parse_cli(argv).unwrap().profile.as_deref(), Some("reader"), "{argv:?}");
+        }
+        let c = parse_cli(["docbrain", "evidence", "export", "--profile", "reader", "--framework", "soc2", "-o", "x"]).unwrap();
+        assert_eq!(c.profile.as_deref(), Some("reader"));
+        match c.command {
+            Commands::Evidence { action: EvidenceAction::Export { framework, .. } } => assert_eq!(framework.as_deref(), Some("soc2")),
+            _ => panic!("expected evidence export"),
+        }
+        // Two identities on one command line is a mistake, never "the last one wins".
+        for argv in [
+            &["docbrain", "--profile", "reader", "ask", "--profile", "editor", "hi"][..],
+            &["docbrain", "--profile", "reader", "evidence", "export", "--profile", "soc2", "-o", "x"][..],
+            &["docbrain", "ask", "--profile", "reader", "hi", "--profile", "editor"][..],
+            &["docbrain", "--profile", "reader", "admin", "access", "--profile", "editor", "coverage"][..],
+        ] {
+            assert!(parse_cli(argv).is_err(), "{argv:?}");
+        }
+        // The same name twice is not a conflict.
+        assert_eq!(parse_cli(["docbrain", "--profile", "reader", "ask", "--profile", "reader", "hi"]).unwrap().profile.as_deref(), Some("reader"));
+        assert!(parse_cli(["docbrain", "--profile=reader", "ask", "--profile", "editor", "hi"]).is_err());
+        // After `--` nothing is a flag: a question may mention --profile.
+        assert_eq!(parse_cli(["docbrain", "--profile", "reader", "ask", "--", "--profile"]).unwrap().profile.as_deref(), Some("reader"));
+    }
+
+    #[test]
+    fn a_default_login_takes_the_server_from_the_flag_then_the_real_environment() {
+        assert_eq!(login_server(None, Some("  https://f.example  "), Some("https://e.example".into()), &cfg(TWO)).unwrap(), "https://f.example");
+        assert_eq!(login_server(None, None, Some("https://e.example".into()), &cfg(TWO)).unwrap(), "https://e.example");
+        assert_eq!(login_server(None, None, None, &cfg(TWO)).unwrap(), "https://a.example");
+        assert_eq!(login_server(None, Some("   "), None, &cfg(TWO)).unwrap(), "https://a.example");
+        assert_eq!(login_server(Some(&name("editor")), Some(" https://e.example "), None, &cfg(TWO)).unwrap(), "https://e.example");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn writes_are_private_atomic_and_leave_no_temp_file() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join(".docbrain");
+        let path = dir.join("config.json");
+        write_private(&path, b"one").unwrap();
+        assert_eq!(std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700);
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        // A world-readable file from an older CLI is replaced by a private one.
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        write_private(&path, b"two").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"two");
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        let names: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name()).collect();
+        assert_eq!(names, vec![std::ffi::OsString::from("config.json")]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_config_is_written_through_not_replaced() {
+        let home = tempfile::tempdir().unwrap();
+        let real = home.path().join("dotfiles-config.json");
+        std::fs::write(&real, b"old").unwrap();
+        let dir = home.path().join(".docbrain");
+        std::fs::create_dir(&dir).unwrap();
+        let link = dir.join("config.json");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+        write_private(&link, b"new").unwrap();
+        assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert_eq!(std::fs::read(&real).unwrap(), b"new");
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -759,6 +1368,9 @@ struct CliEvidence {
     title: String,
     source_url: String,
     text: String,
+    /// A capture's label (#457), as the server sends it; kept verbatim in `--json`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    capture: Option<serde_json::Value>,
 }
 
 /// One fallback the answer path took, as the CLI receives it.
@@ -1374,7 +1986,7 @@ struct QualityViolationResponse {
 // ═══════════════════════════════════════════════════════════════════════════
 
 fn session_file_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".docbrain").join("session"))
+    profile_state_path("session", "")
 }
 
 fn read_local_session() -> Option<String> {
@@ -1384,10 +1996,7 @@ fn read_local_session() -> Option<String> {
 
 fn write_local_session(session_id: &str) {
     if let Some(path) = session_file_path() {
-        if let Some(parent) = path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
-        let _ = std::fs::write(path, session_id);
+        let _ = write_private(&path, session_id.as_bytes());
     }
 }
 
@@ -1406,7 +2015,7 @@ struct LastAnswer {
 }
 
 fn last_answer_path() -> Option<PathBuf> {
-    dirs::home_dir().map(|h| h.join(".docbrain").join("last_answer.json"))
+    profile_state_path("last_answer", ".json")
 }
 
 fn write_last_answer(result: &AskResponse) {
@@ -1417,11 +2026,8 @@ fn write_last_answer(result: &AskResponse) {
             .map(|s| (s.document_id.clone(), s.title.clone()))
             .collect(),
     };
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
     if let Ok(json) = serde_json::to_string_pretty(&la) {
-        let _ = std::fs::write(path, json);
+        let _ = write_private(&path, json.as_bytes());
     }
 }
 
@@ -2550,28 +3156,98 @@ async fn show_version(server_url: &str, api_key: Option<&str>) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Read before `.env` is loaded: a `.env` in whatever directory the command runs from (a
+    // cloned repository, say) must not pick the identity or the server a password goes to.
+    let shell = SHELL_ENV.get_or_init(|| ShellIdentityEnv {
+        server_url: std::env::var("DOCBRAIN_SERVER_URL").ok(),
+        api_key: std::env::var("DOCBRAIN_API_KEY").ok(),
+        profile: std::env::var("DOCBRAIN_PROFILE").ok(),
+    });
+    // After the capture above: `.env` may still set other variables, never these three.
     dotenv().ok();
 
-    let cli = Cli::parse();
+    let cli = parse_cli(std::env::args_os()).unwrap_or_else(|e| e.exit());
 
-    // Resolve API key and server URL once, falling back to config file.
-    let api_key = resolve_api_key(cli.api_key.as_deref());
-    let server_url = resolve_server_url();
+    let profile = select_profile(cli.profile.as_deref(), shell.profile.clone())?;
+
+    // Resolve the server and key once, as one pair. A failure (unknown profile, a saved key
+    // for another server) stops only the commands that would use the pair: login and logout
+    // resolve their own, and the offline commands need neither.
+    let target = read_config_strict().and_then(|cfg| {
+        resolve_target(
+            profile.as_ref(),
+            cli.api_key.as_deref(),
+            &cfg,
+            shell.server_url.clone(),
+            shell.api_key.clone(),
+        )
+    });
+    let uses_target = !matches!(
+        &cli.command,
+        Commands::Login { .. }
+            | Commands::Logout
+            | Commands::Evidence {
+                action: EvidenceAction::Verify { .. } | EvidenceAction::Why { .. } | EvidenceAction::Tables { .. }
+            }
+            | Commands::Health { action: HealthAction::Validate { schema: Some(_), .. } }
+    );
+    let (server_url, api_key) = match target {
+        Ok(t) => {
+            if uses_target {
+                for n in &t.notes {
+                    eprintln!("  {n}");
+                }
+            }
+            let _ = ACTIVE_IDENTITY.set(identity_tag(&t.server_url, t.api_key.as_deref()));
+            // Local state from CLIs before identity-keyed files: no longer read, and it could
+            // hold a conversation id readable by other users. Removed once, best effort.
+            if let Some(dir) = dirs::home_dir().map(|h| h.join(".docbrain")) {
+                let _ = std::fs::remove_file(dir.join("session"));
+                let _ = std::fs::remove_file(dir.join("last_answer.json"));
+            }
+            (t.server_url, t.api_key)
+        }
+        // `version` is what people run to find out what is wrong: it still answers.
+        Err(e) if matches!(cli.command, Commands::Version) => {
+            println!("docbrain CLI  {}", env!("CARGO_PKG_VERSION"));
+            eprintln!("  server not resolved: {e:#}");
+            return Ok(());
+        }
+        // `evidence export --profile` used to name the compliance framework; it now selects a
+        // sign-in like everywhere else. Say so, so an old command line explains itself.
+        Err(e) if uses_target
+            && cli.profile.is_some()
+            && e.to_string().starts_with("unknown profile")
+            && matches!(cli.command, Commands::Evidence { action: EvidenceAction::Export { .. } }) =>
+        {
+            return Err(e.context(
+                "--profile selects a sign-in; the compliance framework of `evidence export` is --framework",
+            ));
+        }
+        Err(e) if uses_target => return Err(e),
+        Err(_) => (String::new(), None),
+    };
 
     match cli.command {
         Commands::Login { server, email, github, gitlab, oidc } => {
+            let p = profile.as_ref();
+            // Held for the whole login, taken before any credential is sent: if the config
+            // cannot be locked (read-only or unsupported), stop before the server issues a key
+            // that could then be saved nowhere.
+            let _lock = lock_config()?;
+            let server_url = login_server(p, server.as_deref(), shell.server_url.clone(), &read_config_strict()?)?;
             if github {
-                handle_oauth_login(server.as_deref(), "github").await?;
+                handle_oauth_login(&server_url, "github", p).await?;
             } else if gitlab {
-                handle_oauth_login(server.as_deref(), "gitlab").await?;
+                handle_oauth_login(&server_url, "gitlab", p).await?;
             } else if oidc {
-                handle_oauth_login(server.as_deref(), "oidc").await?;
+                handle_oauth_login(&server_url, "oidc", p).await?;
             } else {
-                handle_login(server.as_deref(), email.as_deref()).await?;
+                handle_login(&server_url, email.as_deref(), p).await?;
             }
         }
         Commands::Logout => {
-            handle_logout(&server_url).await?;
+            handle_logout(profile.as_ref()).await?;
         }
         Commands::Token { action } => {
             let key = api_key.ok_or_else(|| anyhow::anyhow!(
@@ -2765,13 +3441,77 @@ async fn main() -> Result<()> {
 // Auth commands
 // ═══════════════════════════════════════════════════════════════════════════
 
-async fn handle_login(server_override: Option<&str>, email_flag: Option<&str>) -> Result<()> {
-    // Server URL: --server flag → DOCBRAIN_SERVER_URL env → saved config → default
-    let server_url = server_override
-        .map(|s| s.to_string())
-        .or_else(|| std::env::var("DOCBRAIN_SERVER_URL").ok())
-        .or_else(|| read_config().server_url)
-        .unwrap_or_else(|| "http://localhost:3000".to_string());
+/// The server a login signs in to. The default sign-in keeps its order: `--server` →
+/// DOCBRAIN_SERVER_URL → saved → localhost. A named profile is one identity on one server:
+/// `--server`, else its saved server, else the caller must say; and a profile that still
+/// holds a key is never moved to another server — that would swap the identity under its name.
+fn login_server(
+    profile: Option<&ProfileName>,
+    server_override: Option<&str>,
+    env_server: Option<String>,
+    cfg: &Config,
+) -> Result<String> {
+    let server_override = server_override.map(str::trim).filter(|s| !s.is_empty());
+    let Some(name) = profile else {
+        return Ok(server_override
+            .map(str::to_string)
+            .or_else(|| env_server.map(|v| v.trim().to_string()).filter(|v| !v.is_empty()))
+            .or_else(|| cfg.server_url.clone())
+            .unwrap_or_else(|| DEFAULT_SERVER_URL.to_string()));
+    };
+    let saved = cfg.profiles.get(name.as_str());
+    let url = match (server_override, saved.and_then(|e| e.server_url.clone())) {
+        (Some(u), _) => u.to_string(),
+        (None, Some(u)) => u,
+        (None, None) => anyhow::bail!(
+            "profile \"{0}\" is new; say which server it signs in to: `docbrain --profile {0} login --server <url>`",
+            name.as_str()
+        ),
+    };
+    if let Some(e) = saved
+        && e.api_key.is_some()
+        && let Some(old) = &e.server_url
+        && instance_check::normalise_url(old) != instance_check::normalise_url(&url)
+    {
+        anyhow::bail!(
+            "profile \"{0}\" is signed in to {old}. Run `docbrain --profile {0} logout` first, or use a new profile name.",
+            name.as_str()
+        );
+    }
+    Ok(url)
+}
+
+/// Save a login's server and key into the chosen sign-in only; every other sign-in and
+/// setting in the file stays as it was. The caller holds `lock_config` for the whole login.
+fn save_login(profile: Option<&ProfileName>, server_url: &str, key: String) -> Result<()> {
+    let mut cfg = read_config_strict()?;
+    match profile {
+        None => {
+            cfg.server_url = Some(server_url.to_string());
+            cfg.api_key = Some(key);
+        }
+        Some(name) => {
+            let e = cfg.profiles.entry(name.as_str().to_string()).or_default();
+            e.server_url = Some(server_url.to_string());
+            e.api_key = Some(key);
+        }
+    }
+    write_config(&cfg)
+}
+
+fn saved_where(profile: Option<&ProfileName>) -> String {
+    match profile {
+        None => "~/.docbrain/config.json".to_string(),
+        Some(p) => format!("~/.docbrain/config.json (profile \"{}\")", p.as_str()),
+    }
+}
+
+/// `server_url` is decided by `login_server` before this runs: a refused server should not
+/// cost a password.
+async fn handle_login(server_url: &str, email_flag: Option<&str>, profile: Option<&ProfileName>) -> Result<()> {
+    let server_url = server_url.to_string();
+    // Named before any credential is typed, so the person sees where the password goes.
+    eprintln!("Signing in to {server_url}");
 
     let email = match email_flag {
         Some(e) => e.to_string(),
@@ -2806,17 +3546,10 @@ async fn handle_login(server_override: Option<&str>, email_flag: Option<&str>) -
 
     let result: LoginResponse = response.json().await?;
 
-    // Persist server URL + session key to config file
-    write_config(&Config {
-        server_url: Some(server_url.clone()),
-        api_key: Some(result.key),
-        // Everything else the user set stays set: a login must not quietly reset
-        // preferences it does not own.
-        ..read_config()
-    })?;
+    save_login(profile, &server_url, result.key)?;
 
     println!("Logged in to {}.", server_url);
-    println!("Session key saved to ~/.docbrain/config.json");
+    println!("Session key saved to {}", saved_where(profile));
     Ok(())
 }
 
@@ -2829,15 +3562,11 @@ async fn handle_login(server_override: Option<&str>, email_flag: Option<&str>) -
 ///   4. CLI reads the OTP from the local request, POSTs it to `/api/v1/auth/exchange`.
 ///   5. Server returns the real API key in the response body.
 ///   6. CLI saves the key and closes the local listener.
-async fn handle_oauth_login(server_override: Option<&str>, provider: &str) -> Result<()> {
+async fn handle_oauth_login(server_url: &str, provider: &str, profile: Option<&ProfileName>) -> Result<()> {
     use tokio::net::TcpListener;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    let server_url = server_override
-        .map(|s| s.to_string())
-        .or_else(|| std::env::var("DOCBRAIN_SERVER_URL").ok())
-        .or_else(|| read_config().server_url)
-        .unwrap_or_else(|| "http://localhost:3000".to_string());
+    let server_url = server_url.to_string();
 
     // Bind on a random OS-assigned port
     let listener = TcpListener::bind("127.0.0.1:0").await
@@ -2942,32 +3671,42 @@ Connection: close\r
         .ok_or_else(|| anyhow::anyhow!("No api_key in exchange response"))?
         .to_string();
 
-    write_config(&Config {
-        server_url: Some(server_url.clone()),
-        api_key: Some(api_key),
-        ..read_config()
-    })?;
+    save_login(profile, &server_url, api_key)?;
 
     println!("Logged in to {} via {}.", server_url, provider);
-    println!("Session key saved to ~/.docbrain/config.json");
+    println!("Session key saved to {}", saved_where(profile));
 
-    // Inform the user if DOCBRAIN_API_KEY is set — the saved config key takes precedence,
-    // but the stale env var may cause confusion in scripts or other tools.
-    if std::env::var("DOCBRAIN_API_KEY").is_ok() {
+    // Inform the user if DOCBRAIN_API_KEY is set — the saved key is used while
+    // DOCBRAIN_SERVER_URL is unset or names this same server, but the stale env var may
+    // cause confusion in scripts or other tools.
+    if profile.is_none() && shell_env().api_key.is_some() {
         println!();
         println!("ℹ  DOCBRAIN_API_KEY is set in your environment.");
-        println!("   The saved session key will be used (config file takes precedence over env).");
+        println!("   The saved session key is used for this server; the env key only if DOCBRAIN_SERVER_URL names another.");
         println!("   To avoid confusion, run:  unset DOCBRAIN_API_KEY");
     }
 
     Ok(())
 }
 
-async fn handle_logout(server_url: &str) -> Result<()> {
-    let cfg = read_config();
-    let api_key = cfg.api_key.ok_or_else(|| {
-        anyhow::anyhow!("Not logged in. Run `docbrain login` first.")
-    })?;
+/// Revoke the chosen sign-in's key at the server it was saved for — never at an
+/// env-named server — and forget the key, keeping the entry and its server.
+async fn handle_logout(profile: Option<&ProfileName>) -> Result<()> {
+    // Taken before revoking: a key must never be revoked and then left in the file because
+    // the write could not happen.
+    let _lock = lock_config()?;
+    let cfg = read_config_strict()?;
+    let (server_url, api_key) = match profile {
+        None => (
+            cfg.server_url.clone().unwrap_or_else(|| DEFAULT_SERVER_URL.to_string()),
+            cfg.api_key.clone(),
+        ),
+        Some(name) => {
+            let e = named_entry(&cfg, name)?;
+            (e.server_url.clone().unwrap_or_else(|| DEFAULT_SERVER_URL.to_string()), e.api_key.clone())
+        }
+    };
+    let api_key = api_key.ok_or_else(|| anyhow::anyhow!("Not logged in. Run `docbrain login` first."))?;
 
     let client = reqwest::Client::new();
     let response = client
@@ -2976,17 +3715,34 @@ async fn handle_logout(server_url: &str) -> Result<()> {
         .send()
         .await?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let body = response.text().await?;
+    // DocBrain's own "this key is not valid" answer: the key expired or was revoked
+    // elsewhere, nothing is left to revoke, so it is removed here too rather than left stuck.
+    // Any other 401 (a proxy in front of the server, say) proves nothing about the key.
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    let already_invalid = status == reqwest::StatusCode::UNAUTHORIZED && body.trim() == "Invalid or expired API key";
+    if !status.is_success() && !already_invalid {
         anyhow::bail!("Logout failed ({}): {}", status, body);
     }
 
-    // Clear the config (keep server_url, remove api_key)
-    let server = cfg.server_url.clone();
-    write_config(&Config { server_url: server, api_key: None, ..cfg })?;
+    // Only this sign-in's key is cleared, and only if it is still the key just revoked.
+    let mut cfg = read_config_strict()?;
+    let slot = match profile {
+        None => Some(&mut cfg.api_key),
+        Some(name) => cfg.profiles.get_mut(name.as_str()).map(|e| &mut e.api_key),
+    };
+    if let Some(k) = slot
+        && k.as_deref() == Some(api_key.as_str())
+    {
+        *k = None;
+    }
+    write_config(&cfg)?;
 
-    println!("Logged out. Session key revoked and removed from config.");
+    if already_invalid {
+        println!("The server no longer accepted this key; removed it from {}.", saved_where(profile));
+    } else {
+        println!("Logged out. Session key revoked and removed from {}.", saved_where(profile));
+    }
     Ok(())
 }
 
@@ -3352,6 +4108,7 @@ fn ask_error_message(status: reqwest::StatusCode, body: &str) -> String {
     format!("Server error ({}): {}", status, body)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn ask(
     server_url: &str,
     question: &str,
@@ -3423,7 +4180,7 @@ async fn ask(
             // the message sends people to re-login against the wrong one — or to
             // conclude their account was deleted, when they are simply pointed
             // somewhere that has never heard of them.
-            if std::env::var("DOCBRAIN_API_KEY").is_ok() {
+            if shell_env().api_key.is_some() {
                 anyhow::bail!(
                     "Server error ({}) from {}: {}
 
@@ -5831,7 +6588,8 @@ struct CiFragmentCliSummary {
     fragment_type: String,
     summary: String,
     confidence: f64,
-    routed_action: String,
+    /// `indexed` for every returned item since #457 (the server no longer routes).
+    status: String,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -5894,17 +6652,16 @@ async fn ci_analyze(
         println!("  \x1b[32m{}\x1b[0m fragment(s) extracted from PR", result.fragments_created);
         println!();
         for frag in &result.fragments {
-            let action_color = match frag.routed_action.as_str() {
-                "auto_index" => "\x1b[32m",    // green
-                "queue_for_review" => "\x1b[33m", // yellow
-                _ => "\x1b[90m",                // gray
+            let status_color = match frag.status.as_str() {
+                "indexed" => "\x1b[32m", // green
+                _ => "\x1b[90m",         // gray
             };
             println!(
                 "  [{:<9}] {:.2} {}{}{}",
                 frag.fragment_type,
                 frag.confidence,
-                action_color,
-                frag.routed_action,
+                status_color,
+                frag.status,
                 "\x1b[0m"
             );
             println!("             {}", frag.summary);
@@ -6229,10 +6986,10 @@ async fn handle_evidence(action: EvidenceAction, server_url: &str, api_key: Opti
         EvidenceAction::Tables { bundle, out } => {
             evidence_tables(&bundle, &out);
         }
-        EvidenceAction::Export { range, profile, preset, out } => {
+        EvidenceAction::Export { range, framework, preset, out } => {
             // The ONLY networked evidence subcommand — returns normally (exit
             // 0 on success, anyhow error → exit 1).
-            evidence_export(server_url, api_key, range.as_deref(), profile.as_deref(), preset.as_deref(), &out).await
+            evidence_export(server_url, api_key, range.as_deref(), framework.as_deref(), preset.as_deref(), &out).await
         }
     }
 }
@@ -6617,7 +7374,7 @@ async fn evidence_export(
     server_url: &str,
     api_key: Option<&str>,
     range: Option<&str>,
-    profile: Option<&str>,
+    framework: Option<&str>,
     preset: Option<&str>,
     out: &std::path::Path,
 ) -> Result<()> {
@@ -6640,8 +7397,9 @@ async fn evidence_export(
         let end: u64 = end.trim().parse().map_err(|_| anyhow::anyhow!("--range END must be a non-negative integer"))?;
         body.insert("range".to_string(), serde_json::json!([start, end]));
     }
-    if let Some(p) = profile {
-        body.insert("profile".to_string(), serde_json::json!(p));
+    // The API names the compliance framework `profile`.
+    if let Some(f) = framework {
+        body.insert("profile".to_string(), serde_json::json!(f));
     }
     if let Some(p) = preset {
         body.insert("preset".to_string(), serde_json::json!(p));
@@ -7178,6 +7936,12 @@ mod tests {
             { "document_id": "d1", "title": "t", "source_url": "https://docs.example/d1", "text": "window" } ] }));
         let round = serde_json::to_value(&full).expect("serialise");
         assert_eq!(round["evidence"][0]["text"], "window", "--json keeps evidence when it re-serialises");
+        let labelled = parse(serde_json::json!({ "answer": "a", "evidence": [
+            { "document_id": "fragment:x", "title": "t", "source_url": "", "text": "note",
+              "capture": { "check_label": "Not checked against code", "attribution_line": "Recorded by Ana" } } ] }));
+        let round = serde_json::to_value(&labelled).expect("serialise");
+        assert_eq!(round["evidence"][0]["capture"]["check_label"], "Not checked against code", "--json keeps a capture's label");
+        assert!(serde_json::to_value(&full).expect("serialise")["evidence"][0].get("capture").is_none(), "a document entry has none");
         assert!(serde_json::to_value(&older).expect("serialise").get("evidence").is_none());
     }
 
