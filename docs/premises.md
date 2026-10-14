@@ -139,8 +139,9 @@ dated to the commit it was observed at.
   (`RAG_CLAIM_VERIFICATION`) independently checks any path an *answer* cites against the
   same listings. An answer that cites a dead path carries its own correction note, whether
   or not the underlying fragment's premise has been swept yet. An answer's path, never seen
-  to exist, is reported only when a connected repository holds its first two folders, so a
-  one-folder path such as `scripts/x.sh` is not flagged in answers; a premise that has held
+  to exist, is reported only when a connected repository holds its first two folders (three
+  when the top folder's name starts with `.`, such as `.github/`), so a one-folder path such
+  as `scripts/x.sh` is not flagged in answers; a premise that has held
   keeps the first-segment rule below, so it is still caught here.
 
 ## The pull-request check
@@ -228,7 +229,8 @@ Limits, stated:
 
 These follow from the attribution rules — a premise belongs to sources whose listing contains
 its first path segment; a path in an answer, or one a capture declares when it is written, belongs
-to sources that hold its first two folders — and are deliberate trade-offs in favor of precision:
+to sources that hold its first two folders, three under a `.`-led top folder — and are deliberate
+trade-offs in favor of precision:
 
 - **Deleting a directory's only file reads as `uncheckable`, not `broken`.** If
   `proof/notes.txt` was the only file under `proof/`, removing it removes the whole
@@ -245,6 +247,12 @@ to sources that hold its first two folders — and are deliberate trade-offs in 
   codebases you never connected. A premise that has held was seen to exist, which is better
   evidence of what it is about, so it keeps the first-segment rule and still breaks when its
   one-folder file is deleted.
+- **A tool's folder needs a third folder.** A top folder whose name starts with `.` (`.github/`,
+  an editor's or an agent's) holds a layout the tool decides, the same in every repository that
+  uses it, so for answers and new captures a connected repository must hold the path's first
+  three folders. The accepted loss: a file directly under such a two-level folder
+  (`.github/workflows/deploy.yml`) that is deleted from a connected repository is not flagged in
+  answers. A premise on it that has held still breaks.
 - **Precision over coverage, everywhere.** One false "your runbook is wrong" costs more
   than ten missed ones. That asymmetry drives every rule above: deterministic oracles only,
   dated absences, no guessing between candidates, and silence whenever the evidence is
