@@ -9,6 +9,8 @@ use sha2::{Digest, Sha256};
 /// Model Context Protocol specification. Calls the DocBrain API server
 /// for actual processing.
 const SERVER_NAME: &str = "docbrain";
+/// Longest withdraw reason, in characters; mirrors docbrain-core `fragments::lifecycle::WITHDRAW_REASON_MAX_CHARS` (this crate cannot depend on core).
+const WITHDRAW_REASON_MAX_CHARS: usize = 1000;
 const SERVER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// HTTP header name identifying this binary as the caller to DocBrain.
@@ -187,6 +189,14 @@ fn verification_lines(response: &Value) -> (String, String) {
     }
 }
 
+/// The answer's own page, when the server offered one as an absolute link: one visible line the
+/// reader can open later. A relative path alone is not shown; an editor has nothing to resolve it against.
+fn answer_page_line(response: &Value) -> Option<String> {
+    let url = response["answer_url"].as_str()?.trim();
+    (url.starts_with("https://") || url.starts_with("http://"))
+        .then(|| format!("\n\nAnswer page: {url}"))
+}
+
 /// Everything the server wants shown before the answer, in the server's order.
 ///
 /// Reads `blocks` and never matches on `kind`: a kind this build has never heard
@@ -362,13 +372,13 @@ impl McpServer {
             "tools": [
                 {
                     "name": "docbrain_ask",
-                    "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume engineers have admin EKS access, it will correct you). Returns a direct, human-like answer — never says 'according to the documentation'. Cites up to 5 real source documents with URLs. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
+                    "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume every engineer can deploy to production, it will correct you). Returns a direct, human-like answer — never says 'according to the documentation'. Cites up to 5 real source documents with URLs. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "question": {
                                 "type": "string",
-                                "description": "The question to ask. Use specific service/team/tool names for best results (e.g. 'Canal V2 logs', 'EKS access for engineers', 'Airflow DAG deployment via ArgoCD')."
+                                "description": "The question to ask. Use specific service/team/tool names for best results (e.g. 'payments service logs', 'production database access for engineers', 'nightly batch job deployment')."
                             },
                             "session_id": {
                                 "type": "string",
@@ -442,7 +452,7 @@ impl McpServer {
                 },
                 {
                     "name": "docbrain_annotate",
-                    "description": "Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge.",
+                    "description": with_secret_guardrail("Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge."),
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -456,7 +466,7 @@ impl McpServer {
                             },
                             "annotation": {
                                 "type": "string",
-                                "description": "The knowledge to capture — a decision, fact, caveat, procedure, or context (max 10000 chars)."
+                                "description": with_secret_guardrail("The knowledge to capture — a decision, fact, caveat, procedure, or context (max 10000 chars).")
                             },
                             "fragment_type": {
                                 "type": "string",
@@ -470,6 +480,10 @@ impl McpServer {
                             "space": {
                                 "type": "string",
                                 "description": "Documentation space to associate with (e.g. team or project name). Optional."
+                            },
+                            "gap_id": {
+                                "type": "string",
+                                "description": "Optional: the id of an open question (a gap) this capture answers; it closes that question"
                             },
                             "premises": {
                                 "type": "array",
@@ -522,21 +536,21 @@ impl McpServer {
                 },
                 {
                     "name": "docbrain_commit_capture",
-                    "description": "Capture knowledge from a commit — why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten.",
+                    "description": with_secret_guardrail("Capture knowledge from a commit — why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten."),
                     "inputSchema": {
                         "type": "object",
                         "properties": {
                             "diff_summary": {
                                 "type": "string",
-                                "description": "Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed."
+                                "description": with_secret_guardrail("Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed.")
                             },
                             "commit_message": {
                                 "type": "string",
-                                "description": "The commit message (max 1000 chars)."
+                                "description": with_secret_guardrail("The commit message (max 1000 chars).")
                             },
                             "intent": {
                                 "type": "string",
-                                "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars)."
+                                "description": with_secret_guardrail("Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars).")
                             },
                             "file_paths": {
                                 "type": "array",
@@ -546,6 +560,10 @@ impl McpServer {
                             "space": {
                                 "type": "string",
                                 "description": "Documentation space to associate with. Optional."
+                            },
+                            "gap_id": {
+                                "type": "string",
+                                "description": "Optional: the id of an open question (a gap) this capture answers; it closes that question"
                             },
                             "premises": {
                                 "type": "array",
@@ -561,6 +579,31 @@ impl McpServer {
                             }
                         },
                         "required": ["intent"]
+                    }
+                },
+                {
+                    "name": "docbrain_revise",
+                    "description": with_secret_guardrail("Edit or withdraw a capture you recorded. Use the id from docbrain_context or from the capture's report. Edit replaces its text and/or its premise set (the same premises as docbrain_annotate) and re-indexes it; withdraw takes it out of answers at once and needs a reason, which is shown with it. Only its author can edit; DocBrain-written summaries can only be withdrawn. A capture already used in an answer cannot be deleted, only withdrawn."),
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "id": { "type": "string", "description": "The capture's id" },
+                            "text": { "type": "string", "description": with_secret_guardrail("The full replacement text (max 10000 characters).") },
+                            "premises": {
+                                "type": "array",
+                                "description": "The full replacement premise set",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "premise_type": { "type": "string" },
+                                        "expression": { "type": "string" }
+                                    },
+                                    "required": ["premise_type", "expression"]
+                                }
+                            },
+                            "withdraw_reason": { "type": "string", "description": with_secret_guardrail("Withdraw instead of editing; why (max 1000 characters, shown with it).") }
+                        },
+                        "required": ["id"]
                     }
                 },
                 {
@@ -609,6 +652,7 @@ impl McpServer {
             "docbrain_commit_capture",
             "docbrain_annotate",
             "docbrain_autopilot_generate",
+            "docbrain_revise",
         ];
         if WRITE_TOOLS.contains(&tool_name) {
             let role = self.role.get().map(String::as_str);
@@ -637,6 +681,7 @@ impl McpServer {
             "docbrain_context" => self.tool_context(arguments).await,
             "docbrain_commit_capture" => self.tool_commit_capture(arguments).await,
             "docbrain_feedback" => self.tool_feedback(arguments).await,
+            "docbrain_revise" => self.tool_revise(arguments).await,
             _ => Err(JsonRpcError {
                 code: -32602,
                 message: format!("Unknown tool: {}", tool_name),
@@ -690,6 +735,9 @@ impl McpServer {
         if !sources.is_empty() {
             text.push_str("\n\nSources:\n");
             text.push_str(&sources.join("\n"));
+        }
+        if let Some(line) = answer_page_line(&response) {
+            text.push_str(&line);
         }
         if let Some(episode_id) = response["episode_id"].as_str() {
             text.push_str(&format!(
@@ -749,6 +797,9 @@ impl McpServer {
         if !sources.is_empty() {
             text.push_str("\n\nRunbooks & Sources:\n");
             text.push_str(&sources.join("\n"));
+        }
+        if let Some(line) = answer_page_line(&response) {
+            text.push_str(&line);
         }
         if let Some(episode_id) = response["episode_id"].as_str() {
             text.push_str(&format!(
@@ -1034,6 +1085,7 @@ impl McpServer {
     /// - `code_location: file_path:line_range` (or just file_path)
     /// - `code_hash: SHA-256(code_snippet)` for drift detection
     async fn tool_annotate(&self, args: &Value) -> Result<Value, JsonRpcError> {
+        let gap_id = gap_cluster_id(args)?;
         let file_path = args["file_path"].as_str().ok_or_else(|| JsonRpcError {
             code: -32602,
             message: "Missing 'file_path' parameter".into(),
@@ -1135,13 +1187,12 @@ impl McpServer {
         if let Some(premises) = args["premises"].as_array() {
             body["premises"] = json!(premises);
         }
+        if let Some(gap) = &gap_id {
+            body["gap_cluster_id"] = json!(gap);
+        }
 
         match self.create_fragment(&body).await? {
             Ok(result) => {
-                let id = result["id"].as_str().unwrap_or("unknown");
-                let status = result["status"].as_str().unwrap_or("unknown");
-                let action = result["routed_action"].as_str().unwrap_or("unknown");
-
                 let drift_note = if code_hash.is_some() {
                     " Code hash saved — annotation will be flagged if the code changes."
                 } else {
@@ -1152,8 +1203,8 @@ impl McpServer {
                     "content": [{
                         "type": "text",
                         "text": format!(
-                            "Knowledge captured: {} annotation at {}\nFragment ID: {} | Status: {} | Action: {}\n{}",
-                            fragment_type, code_location, id, status, action, drift_note
+                            "Knowledge captured: {} annotation at {}\n{}\n{}",
+                            fragment_type, code_location, capture_report(&result), drift_note
                         )
                     }]
                 }))
@@ -1161,7 +1212,7 @@ impl McpServer {
             Err(msg) => Ok(json!({
                 "content": [{
                     "type": "text",
-                    "text": format!("{msg} — no new annotation created for {code_location}.")
+                    "text": msg
                 }]
             })),
         }
@@ -1416,6 +1467,7 @@ impl McpServer {
     /// - `premises`: anything else the reasoning rests on, passed straight
     ///   through the way `docbrain_annotate` passes its own
     async fn tool_commit_capture(&self, args: &Value) -> Result<Value, JsonRpcError> {
+        let gap_id = gap_cluster_id(args)?;
         let intent = args["intent"].as_str().ok_or_else(|| JsonRpcError {
             code: -32602,
             message: "Missing 'intent' parameter — why was this change made?".into(),
@@ -1509,13 +1561,12 @@ impl McpServer {
         if let Some(premises) = args["premises"].as_array() {
             body["premises"] = json!(premises);
         }
+        if let Some(gap) = &gap_id {
+            body["gap_cluster_id"] = json!(gap);
+        }
 
         match self.create_fragment(&body).await? {
             Ok(result) => {
-                let id = result["id"].as_str().unwrap_or("unknown");
-                let status = result["status"].as_str().unwrap_or("unknown");
-                let action = result["routed_action"].as_str().unwrap_or("unknown");
-
                 let files_note = match &code_location {
                     Some(loc) => format!(
                         "\nLinked files: {}\nEach is watched — this capture is flagged if one of them moves or disappears.",
@@ -1530,9 +1581,9 @@ impl McpServer {
                     "content": [{
                         "type": "text",
                         "text": format!(
-                            "Commit knowledge captured.\nFragment ID: {} | Status: {} | Action: {}{}\n\n\
+                            "Commit knowledge captured.\n{}{}\n\n\
                              The intent behind this change has been preserved in DocBrain's knowledge base.",
-                            id, status, action, files_note
+                            capture_report(&result), files_note
                         )
                     }]
                 }))
@@ -1540,7 +1591,7 @@ impl McpServer {
             Err(msg) => Ok(json!({
                 "content": [{
                     "type": "text",
-                    "text": format!("{msg} — no duplicate commit capture created.")
+                    "text": msg
                 }]
             })),
         }
@@ -1586,55 +1637,110 @@ impl McpServer {
         }))
     }
 
-    /// Create a fragment via POST /api/v1/fragments, handling duplicate source_id gracefully.
+    /// Create a fragment via POST /api/v1/fragments.
     ///
-    /// Returns `Ok(Ok(json))` on success, `Ok(Err(message))` on duplicate (409, a real
-    /// unique-constraint violation on the server), or `Err(JsonRpcError)` on real failures.
+    /// Returns `Ok(Ok(json))` on success, `Ok(Err(text))` when the server refused the
+    /// capture (any non-2xx: keyless key, rate limit, duplicate, secret, instruction,
+    /// not saved), with `text` in the server's own words via `describe_failure`, or
+    /// `Err(JsonRpcError)` when the server could not be reached.
     ///
-    /// A 500 is never treated as a duplicate here. It used to be sniffed for
-    /// "unique"/"duplicate"/"23505" in the response text as a fallback — a
-    /// workaround for the server returning 500 for duplicates too, which it no
-    /// longer does. Keeping that sniff would risk the opposite failure: a
-    /// genuine, unrelated server error whose text happened to contain one of
-    /// those words would be silently relabeled "already exists" instead of
-    /// surfaced as the failure it is.
+    /// A 500 is never relabeled a duplicate: only the server's `kind` says what a
+    /// refusal is.
     async fn create_fragment(&self, body: &Value) -> Result<Result<Value, String>, JsonRpcError> {
-        let url = format!("{}/api/v1/fragments", self.server_url);
+        Ok(self
+            .api_request(reqwest::Method::POST, "/api/v1/fragments", body)
+            .await?
+            .map_err(|f| describe_failure(&f)))
+    }
 
-        let mut request = self.client.post(&url).json(body);
+    /// One JSON request to the DocBrain API. The outer `Err` is transport (no key, server
+    /// unreachable); the inner `Err` is the server's refusal, parsed.
+    async fn api_request(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        body: &Value,
+    ) -> Result<Result<Value, CaptureFailure>, JsonRpcError> {
+        let mut request = self
+            .client
+            .request(method, format!("{}{}", self.server_url, path))
+            .header(DOCBRAIN_CALLER_HEADER, DOCBRAIN_CALLER_VALUE)
+            .json(body);
         if let Some(ref key) = self.api_key {
             request = request.header("Authorization", format!("Bearer {}", key));
         }
-
-        let response = request.send().await.map_err(|e| JsonRpcError {
+        let resp = request.send().await.map_err(|e| JsonRpcError {
             code: -32000,
             message: format!("API call failed: {}", e),
         })?;
-
-        let status = response.status();
-
-        if status.as_u16() == 409 {
-            let text = response.text().await.unwrap_or_default();
-            let msg = match extract_trailing_id(&text) {
-                Some(id) => format!("DocBrain already has this capture: {id}"),
-                None => "DocBrain already has this capture (duplicate source_id).".to_string(),
-            };
-            return Ok(Err(msg));
-        }
-
-        if !status.is_success() {
-            let text = response.text().await.unwrap_or_default();
-            return Err(JsonRpcError {
-                code: -32000,
-                message: format!("API error ({}): {}", status, text),
-            });
-        }
-
-        let json = response.json().await.map_err(|e| JsonRpcError {
+        let status = resp.status().as_u16();
+        let text = resp.text().await.map_err(|e| JsonRpcError {
             code: -32000,
             message: format!("Invalid response: {}", e),
         })?;
-        Ok(Ok(json))
+        if (200..300).contains(&status) {
+            if text.trim().is_empty() {
+                return Ok(Ok(Value::Null));
+            }
+            let v = serde_json::from_str(&text).map_err(|e| JsonRpcError {
+                code: -32000,
+                message: format!("Invalid response: {}", e),
+            })?;
+            Ok(Ok(v))
+        } else {
+            Ok(Err(parse_failure(status, &text)))
+        }
+    }
+
+    async fn tool_revise(&self, args: &Value) -> Result<Value, JsonRpcError> {
+        let id = args
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| JsonRpcError {
+                code: -32602,
+                message: "id is required".into(),
+            })?;
+        // The id goes into a URL path: only a UUID-shaped id may.
+        if !is_uuid_shaped(id) {
+            return Err(JsonRpcError {
+                code: -32602,
+                message: "id must be a capture id".into(),
+            });
+        }
+        let intent = revise_intent(args).map_err(|message| JsonRpcError {
+            code: -32602,
+            message,
+        })?;
+        let (method, path, body, done) = match &intent {
+            ReviseIntent::Edit(b) => (
+                reqwest::Method::PATCH,
+                format!("/api/v1/fragments/{id}"),
+                b.clone(),
+                "Capture edited and re-indexed",
+            ),
+            ReviseIntent::Withdraw(r) => (
+                reqwest::Method::POST,
+                format!("/api/v1/fragments/{id}/withdraw"),
+                json!({"reason": r}),
+                "Capture withdrawn: it is no longer used in answers",
+            ),
+        };
+        let text = match self.api_request(method, &path, &body).await? {
+            Ok(v) => {
+                let draft = v
+                    .get("carried_by_draft")
+                    .and_then(Value::as_str)
+                    .map(|d| {
+                        format!("\nA composed draft ({d}) still carries its text; withdraw does not change the draft.")
+                    })
+                    .unwrap_or_default();
+                format!("{done}. id {id}{draft}")
+            }
+            Err(f) => describe_revise_failure(&f),
+        };
+        Ok(json!({"content": [{"type": "text", "text": text}]}))
     }
 
     pub async fn api_call(&self, path: &str, body: &Value) -> Result<Value, JsonRpcError> {
@@ -1689,6 +1795,20 @@ const SESSION_ID_DESCRIPTION: &str = "Continue a conversation: pass only a sessi
 /// The tool error for a `session_id` the server will not continue.
 const START_NEW_CONVERSATION: &str = "start a new conversation: omit session_id";
 
+/// Appended to every capture tool and to each argument whose text becomes the capture, so the
+/// model leaves secrets out before anything leaves the machine. The server's refusal is the
+/// backstop; this is where the model reads what to write.
+const CAPTURE_SECRET_GUARDRAIL: &str = "Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.";
+
+/// A capture tool's description, or a text argument's, followed by the secret guardrail.
+fn with_secret_guardrail(description: &str) -> String {
+    format!("{description} {CAPTURE_SECRET_GUARDRAIL}")
+}
+
+/// What the model is told when the server refuses a capture for a secret. It names no value:
+/// the tool never repeats the text it sent.
+const SECRET_REFUSAL_GUIDANCE: &str = "Remove the value and send again; describe where the secret lives instead. Do not encode, split, space out or reword the value to get past the check.";
+
 /// A failed API call, with what the caller may need to classify it.
 struct ApiFailure {
     status: Option<u16>,
@@ -1718,25 +1838,146 @@ impl From<ApiFailure> for JsonRpcError {
     }
 }
 
-/// Pull a trailing UUID out of a server error message, e.g. `"Fragment with
-/// this source_id already exists: 4e564246-40b5-4245-8615-90d84aacc2c2"`
-/// yields `Some("4e564246-40b5-4245-8615-90d84aacc2c2")`.
-///
-/// Deliberately not a full UUID parse (no new dependency for it): splits on
-/// the LAST `": "` so an id-less message, or one with a colon earlier in its
-/// prose, is not misread, then accepts the tail only if it has the right
-/// length and hyphen positions for a UUID. A message the server sends with no
-/// id (the lookup for the colliding row failed, or found nothing) correctly
-/// yields `None` rather than a wrong or partial id.
-fn extract_trailing_id(text: &str) -> Option<&str> {
-    let candidate = text.rsplit_once(": ").map(|(_, tail)| tail.trim())?;
+fn is_uuid_shaped(candidate: &str) -> bool {
     let bytes = candidate.as_bytes();
-    let looks_like_uuid = candidate.len() == 36
+    candidate.len() == 36
         && bytes.iter().enumerate().all(|(i, b)| match i {
             8 | 13 | 18 | 23 => *b == b'-',
             _ => b.is_ascii_hexdigit(),
-        });
-    looks_like_uuid.then_some(candidate)
+        })
+}
+
+/// The optional `gap_id` argument, sent as `gap_cluster_id`. Absent is fine; present
+/// must be a UUID-shaped string.
+fn gap_cluster_id(args: &Value) -> Result<Option<String>, JsonRpcError> {
+    match args.get("gap_id") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(g)) if is_uuid_shaped(g) => Ok(Some(g.clone())),
+        Some(_) => Err(JsonRpcError {
+            code: -32602,
+            message: "gap_id must be an id".into(),
+        }),
+    }
+}
+
+/// `Fragment ID: .. | Status: ..` plus one `Warning: ` line per server warning.
+fn capture_report(result: &Value) -> String {
+    let id = result["id"].as_str().unwrap_or("unknown");
+    let status = result["status"].as_str().unwrap_or("unknown");
+    let mut out = format!("Fragment ID: {id} | Status: {status}");
+    for w in result["warnings"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+        out.push_str("\nWarning: ");
+        out.push_str(w);
+    }
+    out
+}
+
+#[derive(Debug)]
+enum ReviseIntent {
+    Edit(Value),
+    Withdraw(String),
+}
+
+fn revise_intent(args: &Value) -> Result<ReviseIntent, String> {
+    let text = args.get("text").and_then(Value::as_str);
+    let premises = args.get("premises").filter(|v| v.is_array());
+    let reason = args.get("withdraw_reason").and_then(Value::as_str);
+    match (text.is_some() || premises.is_some(), reason) {
+        (true, Some(_)) => Err("choose one: edit (text/premises) or withdraw (withdraw_reason), not both".into()),
+        (false, None) => Err("nothing to do: give text and/or premises to edit, or withdraw_reason to withdraw".into()),
+        (false, Some(r)) if r.trim().is_empty() => Err("withdraw_reason cannot be blank: it is shown with the capture".into()),
+        (false, Some(r)) if r.chars().count() > WITHDRAW_REASON_MAX_CHARS => Err("withdraw_reason exceeds 1000 characters".into()),
+        (false, Some(r)) => Ok(ReviseIntent::Withdraw(r.trim().to_string())),
+        (true, None) => {
+            if text.is_some_and(|t| t.chars().count() > 10_000) {
+                return Err("text exceeds 10000 characters".into());
+            }
+            let mut body = serde_json::Map::new();
+            if let Some(t) = text {
+                body.insert(
+                    "summary".into(),
+                    Value::String(t.lines().next().unwrap_or("").chars().take(200).collect()),
+                );
+                body.insert("content".into(), Value::String(t.to_string()));
+            }
+            if let Some(p) = premises {
+                body.insert("premises".into(), p.clone());
+            }
+            Ok(ReviseIntent::Edit(Value::Object(body)))
+        }
+    }
+}
+
+/// A refusal from the DocBrain API: `{"error", "kind", "id"?, "retry_after_secs"?}`, or a plain body.
+#[derive(Debug)]
+struct CaptureFailure {
+    status: u16,
+    kind: String,
+    message: String,
+    id: Option<String>,
+    retry_after_secs: Option<u64>,
+}
+
+fn parse_failure(status: u16, body: &str) -> CaptureFailure {
+    match serde_json::from_str::<Value>(body) {
+        Ok(v) if v.get("error").is_some() => CaptureFailure {
+            status,
+            kind: v["kind"].as_str().unwrap_or("unknown").to_string(),
+            message: v["error"].as_str().unwrap_or("").to_string(),
+            id: v.get("id").and_then(Value::as_str).map(str::to_string),
+            retry_after_secs: v.get("retry_after_secs").and_then(Value::as_u64),
+        },
+        _ => CaptureFailure {
+            status,
+            kind: "unknown".into(),
+            message: body.trim().to_string(),
+            id: None,
+            retry_after_secs: None,
+        },
+    }
+}
+
+/// A refusal of a create, in the server's words.
+fn describe_failure(f: &CaptureFailure) -> String {
+    describe_refusal(f, "Not saved")
+}
+
+/// A refusal of an edit or withdraw: "Not changed", so a refused withdraw is never
+/// read as "saved" or as "still live".
+fn describe_revise_failure(f: &CaptureFailure) -> String {
+    describe_refusal(f, "Not changed")
+}
+
+/// What an agent does when the server could not check the text.
+const NOT_CHECKED_GUIDANCE: &str =
+    "Not saved: DocBrain could not check this text; try once more, and if it is refused again, report it and stop";
+/// What an agent does when the capture changed under its edit.
+const CAPTURE_CHANGED_GUIDANCE: &str = "Not saved: the capture changed while you edited; read it again and send your edit";
+
+/// Any 429 is a rate limit, kind or not: the generic limiter answers plain text.
+fn describe_refusal(f: &CaptureFailure, verb: &str) -> String {
+    if f.kind == "capture_limit" || f.status == 429 {
+        let wait = f
+            .retry_after_secs
+            .map(|n| format!(" (retry in {n}s)"))
+            .unwrap_or_default();
+        return format!("{verb}: {}{wait} — do not retry now; report this and stop.", f.message);
+    }
+    match f.kind.as_str() {
+        "already_captured" => format!(
+            "{verb}: DocBrain already has this capture ({}). Use docbrain_revise to change it.",
+            f.id.as_deref().unwrap_or("id not given")
+        ),
+        // Any secret refusal kind: the server's words, then what to do. Only the server's
+        // message is relayed, never the text that was sent.
+        kind if kind.starts_with("secret_") => {
+            format!("{verb} ({}): {}\n{SECRET_REFUSAL_GUIDANCE}", f.status, f.message)
+        }
+        // One retry, then stop, so an agent never loops into the cooldown.
+        "not_checked" => format!("{NOT_CHECKED_GUIDANCE} ({}: {})", f.status, f.message),
+        "capture_changed" => format!("{CAPTURE_CHANGED_GUIDANCE} ({}: {})", f.status, f.message),
+        _ => format!("{verb} ({}): {}", f.status, f.message),
+    }
 }
 
 #[cfg(test)]
@@ -1827,11 +2068,11 @@ mod tests {
             names.contains(&"docbrain_context"),
             "missing docbrain_context"
         );
-        // Verify total tool count: 7 original + 3 new + docbrain_context = 11
+        // Verify total tool count: 11 + docbrain_revise = 12
         assert_eq!(
             names.len(),
-            11,
-            "expected 11 tools, got {}: {:?}",
+            12,
+            "expected 12 tools, got {}: {:?}",
             names.len(),
             names
         );
@@ -2162,52 +2403,213 @@ mod tests {
         assert_eq!(summary.chars().count(), 200);
     }
 
-    /// Attack table for `extract_trailing_id`: a well-formed id after the
-    /// last ": " is found, and everything that is not exactly UUID-shaped —
-    /// short, long, wrong hyphen positions, a non-hex byte, no colon at all,
-    /// or an empty tail — is rejected rather than guessed at.
     #[test]
-    fn extract_trailing_id_only_accepts_a_well_formed_uuid_after_the_last_colon() {
-        let cases: &[(&str, Option<&str>)] = &[
-            (
-                "Fragment with this source_id already exists: 4e564246-40b5-4245-8615-90d84aacc2c2",
-                Some("4e564246-40b5-4245-8615-90d84aacc2c2"),
-            ),
-            ("Fragment with this source_id already exists", None),
-            ("note: short", None),
-            // Multiple colons: only the LAST "\": \"" delimits the id.
-            (
-                "Fragment already exists: for source: 4e564246-40b5-4245-8615-90d84aacc2c2",
-                Some("4e564246-40b5-4245-8615-90d84aacc2c2"),
-            ),
-            // Trailing whitespace is trimmed before the shape check.
-            (
-                "Fragment with this source_id already exists: 4e564246-40b5-4245-8615-90d84aacc2c2\n",
-                Some("4e564246-40b5-4245-8615-90d84aacc2c2"),
-            ),
-            // Uppercase hex is still hex.
-            (
-                "Fragment with this source_id already exists: 4E564246-40B5-4245-8615-90D84AACC2C2",
-                Some("4E564246-40B5-4245-8615-90D84AACC2C2"),
-            ),
-            ("", None),
-            ("Fragment with this source_id already exists: ", None),
-            // 35 chars — one short.
-            ("exists: 4e564246-40b5-4245-8615-90d84aacc2c", None),
-            // 37 chars — one too many.
-            ("exists: 4e564246-40b5-4245-8615-90d84aacc2c22", None),
-            // 36 chars but a hyphen shifted out of position.
-            ("exists: 4e5642460-0b5-4245-8615-90d84aacc2c2", None),
-            // 36 chars, hyphens in the right place, one non-hex byte ('g').
-            ("exists: 4e564246-40b5-4245-8615-90d84aaccgc2", None),
-        ];
+    fn revise_is_listed_with_its_schema() {
+        let s = make_server();
+        let list = s.handle_tools_list();
+        let tools = list["tools"].as_array().expect("tools");
+        assert_eq!(tools.len(), 12);
+        let revise = tools.iter().find(|t| t["name"] == "docbrain_revise").expect("revise");
+        assert_eq!(revise["inputSchema"]["required"], serde_json::json!(["id"]));
+        for p in ["text", "premises", "withdraw_reason"] {
+            assert!(revise["inputSchema"]["properties"].get(p).is_some(), "{p}");
+        }
+        for t in ["docbrain_annotate", "docbrain_commit_capture"] {
+            let tool = tools.iter().find(|x| x["name"] == t).expect(t);
+            assert!(tool["inputSchema"]["properties"].get("gap_id").is_some(), "{t} takes gap_id");
+        }
+    }
 
-        for (input, expected) in cases {
-            assert_eq!(
-                extract_trailing_id(input),
-                *expected,
-                "input: {input:?}"
+    #[test]
+    fn revise_needs_exactly_one_intent() {
+        assert!(revise_intent(&serde_json::json!({"id": "x"})).is_err(), "nothing to do");
+        assert!(revise_intent(&serde_json::json!({"id": "x", "text": "t", "withdraw_reason": "r"})).is_err(), "both");
+        assert!(matches!(revise_intent(&serde_json::json!({"id": "x", "withdraw_reason": "wrong"})), Ok(ReviseIntent::Withdraw(_))));
+        assert!(matches!(revise_intent(&serde_json::json!({"id": "x", "premises": []})), Ok(ReviseIntent::Edit(_))));
+        assert!(revise_intent(&serde_json::json!({"id": "x", "withdraw_reason": "   "})).is_err(), "a blank reason");
+    }
+
+    #[test]
+    fn refusals_are_reported_in_the_servers_words() {
+        let limit = CaptureFailure { status: 429, kind: "capture_limit".into(), message: "capture limit reached: 60 an hour".into(), id: None, retry_after_secs: Some(17) };
+        let text = describe_failure(&limit);
+        assert!(text.contains("capture limit reached: 60 an hour"));
+        assert!(text.contains("do not retry"), "the skill stops, never loops");
+        assert!(text.contains("retry in 17s"), "{text}");
+        let dup = CaptureFailure { status: 409, kind: "already_captured".into(), message: "already captured: abc".into(), id: Some("abc".into()), retry_after_secs: None };
+        assert!(describe_failure(&dup).contains("abc"));
+    }
+
+    #[test]
+    fn a_json_refusal_body_parses_and_a_plain_one_falls_back() {
+        let f = parse_failure(422, r#"{"error":"not saved: secret (github_pat)","kind":"secret_in_capture","rule":"github_pat"}"#);
+        assert_eq!((f.status, f.kind.as_str()), (422, "secret_in_capture"));
+        let p = parse_failure(500, "Internal server error (ref: 1)");
+        assert_eq!(p.kind, "unknown");
+        assert_eq!(p.message, "Internal server error (ref: 1)");
+    }
+
+    #[test]
+    fn gap_id_must_be_a_uuid() {
+        assert!(gap_cluster_id(&serde_json::json!({})).expect("absent is fine").is_none());
+        let ok = gap_cluster_id(&serde_json::json!({"gap_id": "7f3c0000-0000-0000-0000-000000000a91"}));
+        assert_eq!(ok.expect("uuid").as_deref(), Some("7f3c0000-0000-0000-0000-000000000a91"));
+        for bad in ["nope", "", "7f3c0000-0000-0000-0000-000000000a9", "7f3c0000-0000-0000-0000-000000000a9g"] {
+            let e = gap_cluster_id(&serde_json::json!({"gap_id": bad})).expect_err(bad);
+            assert_eq!(e.code, -32602);
+            assert_eq!(e.message, "gap_id must be an id");
+        }
+        assert!(gap_cluster_id(&serde_json::json!({"gap_id": 5})).is_err(), "not a string");
+    }
+
+    #[test]
+    fn capture_success_lists_warnings_and_no_action() {
+        let t = capture_report(&serde_json::json!({"id": "i1", "status": "indexed", "routed_action": "x", "warnings": ["w one", "w two"]}));
+        assert!(t.contains("Fragment ID: i1 | Status: indexed"));
+        assert!(!t.contains("Action:"));
+        assert!(t.contains("Warning: w one") && t.contains("Warning: w two"));
+    }
+
+    #[test]
+    fn a_refused_revise_never_says_not_saved() {
+        let edit = parse_failure(409, r#"{"error":"this capture is withdrawn","kind":"withdrawn"}"#);
+        let t = describe_revise_failure(&edit);
+        assert!(t.starts_with("Not changed (409)") && !t.contains("Not saved"), "{t}");
+        let wd = parse_failure(409, r#"{"error":"already withdrawn","kind":"already_withdrawn"}"#);
+        let t = describe_revise_failure(&wd);
+        assert!(t.starts_with("Not changed") && t.contains("already withdrawn") && !t.contains("Not saved"), "{t}");
+    }
+
+    #[test]
+    fn a_kindless_429_stops_the_agent() {
+        let f = parse_failure(429, "Too many requests");
+        for t in [describe_failure(&f), describe_revise_failure(&f)] {
+            assert!(t.contains("Too many requests") && t.contains("do not retry now"), "{t}");
+        }
+        let body = parse_failure(429, r#"{"error":"capture limit reached","kind":"capture_limit","retry_after_secs":17}"#);
+        assert_eq!(body.retry_after_secs, Some(17));
+    }
+
+    /// Where the model reads a capture tool — its description and the description of each
+    /// argument whose text is stored — it is told to leave secret values out. Every listed
+    /// tool is classified below, so a new tool fails here until someone decides whether text
+    /// written into it becomes a capture other people can retrieve.
+    #[test]
+    fn every_capture_tool_and_its_text_arguments_carry_the_secret_guardrail() {
+        for words in ["Never include a secret value", "Write where it lives instead", "refuses a capture that holds a secret"] {
+            assert!(CAPTURE_SECRET_GUARDRAIL.contains(words), "{words}");
+        }
+        // (tool, arguments whose text is stored in the capture, every other argument)
+        const CAPTURE_TOOLS: &[(&str, &[&str], &[&str])] = &[
+            (
+                "docbrain_annotate",
+                &["annotation"],
+                &["file_path", "line_range", "fragment_type", "code_snippet", "space", "gap_id", "premises"],
+            ),
+            (
+                "docbrain_commit_capture",
+                &["intent", "diff_summary", "commit_message"],
+                &["file_paths", "space", "gap_id", "premises"],
+            ),
+            ("docbrain_revise", &["text", "withdraw_reason"], &["id", "premises"]),
+        ];
+        const OTHER_TOOLS: &[&str] = &[
+            "docbrain_ask",
+            "docbrain_incident",
+            "docbrain_freshness",
+            "docbrain_autopilot_gaps",
+            "docbrain_autopilot_generate",
+            "docbrain_autopilot_summary",
+            "docbrain_suggest_capture",
+            "docbrain_context",
+            "docbrain_feedback",
+        ];
+        let list = make_server().handle_tools_list();
+        let mut capture_tools_seen = Vec::new();
+        for tool in list["tools"].as_array().expect("tools") {
+            let name = tool["name"].as_str().expect("a tool has a name");
+            if OTHER_TOOLS.contains(&name) {
+                continue;
+            }
+            let (_, text, other) = CAPTURE_TOOLS.iter().find(|(n, ..)| *n == name).unwrap_or_else(|| {
+                panic!("{name} is not classified: if text written into it becomes a capture, add it to CAPTURE_TOOLS, otherwise to OTHER_TOOLS")
+            });
+            let description = tool["description"].as_str().unwrap_or_default();
+            assert!(description.contains(CAPTURE_SECRET_GUARDRAIL), "{name}: {description}");
+            let properties = tool["inputSchema"]["properties"].as_object().expect("properties");
+            for (arg, schema) in properties {
+                let arg_description = schema["description"].as_str().unwrap_or_default();
+                if text.contains(&arg.as_str()) {
+                    assert!(arg_description.contains(CAPTURE_SECRET_GUARDRAIL), "{name}.{arg}: {arg_description}");
+                } else {
+                    assert!(other.contains(&arg.as_str()), "{name}.{arg} is not classified: is its text stored in the capture?");
+                }
+            }
+            for arg in *text {
+                assert!(properties.contains_key(*arg), "{name} no longer takes {arg}");
+            }
+            capture_tools_seen.push(name);
+        }
+        assert_eq!(capture_tools_seen.len(), CAPTURE_TOOLS.len(), "every capture tool is listed: {capture_tools_seen:?}");
+    }
+
+    /// A refusal for a secret tells the model what to do next and how not to get past the
+    /// check, keeps the server's words, and relays nothing but the server's message: a body
+    /// that names a rule, or one that carries a field the server never sends, does not put a
+    /// value in front of the model.
+    #[test]
+    fn a_secret_refusal_says_what_to_do_and_never_carries_the_value() {
+        let value = "Synthetic-Pass-4417";
+        for body in [
+            r#"{"error":"not saved: the text contains what looks like a secret (generic_password); remove it and send again","kind":"secret_in_capture","rule":"generic_password","matched":"Synthetic-Pass-4417"}"#,
+            r#"{"error":"not saved: the content holds what looks like a password; remove it and send again","kind":"secret_in_capture","secret_kind":"password","field":"content"}"#,
+        ] {
+            let f = parse_failure(422, body);
+            for t in [describe_failure(&f), describe_revise_failure(&f)] {
+                assert!(t.contains(SECRET_REFUSAL_GUIDANCE), "{t}");
+                assert!(t.contains("describe where the secret lives instead"), "{t}");
+                assert!(t.contains("Do not encode, split, space out or reword the value to get past the check"), "{t}");
+                assert!(t.contains(&f.message), "the server's words are kept: {t}");
+                assert!(!t.contains(value), "never the value: {t}");
+            }
+        }
+        for body in [
+            r#"{"error":"not saved: the text reads as an instruction to DocBrain","kind":"instruction_in_capture"}"#,
+            r#"{"error":"text is blank","kind":"invalid_request"}"#,
+        ] {
+            let t = describe_failure(&parse_failure(422, body));
+            assert!(!t.contains(SECRET_REFUSAL_GUIDANCE), "only a secret refusal gets the secret guidance: {t}");
+        }
+    }
+
+    /// A capture the server could not check, or one that changed under an edit, gets
+    /// one plain next step, so an IDE agent neither loops into the cooldown nor resends stale text.
+    #[test]
+    fn a_not_checked_or_changed_capture_says_what_to_do_once() {
+        let f = parse_failure(503, r#"{"error":"not saved: the text could not be checked; try again","kind":"not_checked"}"#);
+        for t in [describe_failure(&f), describe_revise_failure(&f)] {
+            assert!(
+                t.contains("Not saved: DocBrain could not check this text; try once more, and if it is refused again, report it and stop"),
+                "{t}"
             );
+        }
+        let f = parse_failure(
+            409,
+            r#"{"error":"not saved: the capture changed while you edited; send again","kind":"capture_changed"}"#,
+        );
+        for t in [describe_failure(&f), describe_revise_failure(&f)] {
+            assert!(t.contains("Not saved: the capture changed while you edited; read it again and send your edit"), "{t}");
+        }
+    }
+
+    /// The examples in the tool descriptions are invented, not names that read like a real
+    /// organization's systems.
+    #[test]
+    fn tool_descriptions_use_invented_examples() {
+        let text = serde_json::to_string(&make_server().handle_tools_list()).expect("json");
+        // The examples are invented, never a deployment's own service names.
+        for invented in ["payments service logs", "production database access for engineers", "nightly batch job deployment", "every engineer can deploy to production"] {
+            assert!(text.contains(invented), "{invented}");
         }
     }
 }

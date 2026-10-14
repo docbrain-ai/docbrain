@@ -292,7 +292,7 @@ GITHUB_PUBLISH_DOCS_PATH=docs       # directory in repo
 GITHUB_PUBLISH_CREATE_PR=true       # true = PR for review, false = direct commit
 ```
 
-When `CREATE_PR=true`, DocBrain creates a feature branch (`docbrain/<slug>`), commits the markdown file, and opens a PR with configurable labels. The PR body includes the gap cluster context and a link back to the draft in DocBrain.
+When `CREATE_PR=true`, DocBrain creates a feature branch (`docbrain/draft-<draft id prefix>`), commits the markdown file, and opens a PR with configurable labels. The PR body includes the gap cluster context and a link back to the draft in DocBrain.
 
 ### GitLab (MR-based)
 
@@ -337,7 +337,7 @@ curl -X POST https://docbrain.example.com/api/v1/publish-targets \
 
 **Security:** The `config` JSONB field must use `token_env` (the name of an environment variable) instead of raw tokens. The API rejects any config containing `token`, `api_token`, or `secret` fields directly.
 
-See the [API Reference](api-reference.md#publish-targets) for full CRUD endpoints and the [Configuration Reference](configuration.md#draft-publishing) for all env vars.
+See the [API Reference](api-reference.md#publish-targets) for full CRUD endpoints and the [Configuration Reference](configuration.md#draft-publishing--closing-the-feedback-loop) for all env vars.
 
 ---
 

@@ -31,6 +31,7 @@ llm:
   model_id: "${LLM_MODEL_ID:-}"
   fast_model_id: "${FAST_MODEL_ID:-${HAIKU_MODEL_ID:-}}"
   ingest_model_id: "${INGEST_LLM_MODEL_ID:-}"
+  # ollama_timeout_secs: 300   # optional; use OLLAMA_TIMEOUT_SECS env for large models (70B)
   anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
   openai_api_key: "${OPENAI_API_KEY:-}"
 
@@ -38,12 +39,18 @@ embeddings:
   provider: "${EMBED_PROVIDER:-}"
   model_id: "${EMBED_MODEL_ID:-}"
 
-learning:
-  enabled: "${LEARNING_ENABLED:-false}"
-  trainer_url: "${TRAINER_URL:-http://localhost:8765}"
-
 rag:
   cache_ttl_hours: 24
+
+# Reranker — env-driven so ops can switch providers without a redeploy.
+# See config/default.yaml for the full list of dialect fields, or
+# docs/rerank-providers.md for provider-by-provider examples.
+rerank:
+  provider: "${RAG_RERANK_PROVIDER:-none}"
+  # model_id: "${RAG_RERANK_MODEL_ID:-}"
+  # top_n:       "${RAG_RERANK_TOP_N:-200}"
+  # batch_size:  "${RAG_RERANK_BATCH_SIZE:-100}"
+  # timeout_secs:"${RAG_RERANK_TIMEOUT_SECS:-10}"
 
 ingest:
   image_extraction_enabled: false   # Override with IMAGE_EXTRACTION_ENABLED=true in environment

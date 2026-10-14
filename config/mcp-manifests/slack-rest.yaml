@@ -69,15 +69,41 @@ server:
   protocol_version: "2024-11-05"
 
 auth:
-  # Hybrid OAuth-for-shim pattern. See the canonical comment in
-  # config/mcp-manifests/slack-rest.yaml for the full history.
+  # Hybrid OAuth-for-shim pattern. Both modes are declared so the install
+  # path auto-seeds enablement rows for both AND `/oauth/mcp/init` lets
+  # users grant scopes via the Connect button on /integrations. BUT
+  # `auth.oauth.shim_internal: true` below tells the picker "don't ever
+  # select this manifest's OAuth mode for dispatch" — dispatch ALWAYS
+  # goes via SA (gateway → loopback shim with the internal bearer +
+  # X-Docbrain-User-Id header), and the shim itself resolves the
+  # user's Slack OAuth token from mcp_oauth_tokens at tool-call time.
   #
-  # TL;DR: both modes are declared so install auto-seeds enablements
-  # AND /oauth/mcp/init lets users grant scopes; `auth.oauth.shim_internal:
-  # true` tells the picker "never select OAuth for dispatch" (registry/
-  # manifest.rs honours the flag). Dispatch ALWAYS goes via SA; the
-  # in-process shim resolves the user's Slack OAuth token from
-  # mcp_oauth_tokens at tool-call time.
+  # History — read before changing this block:
+  #
+  #   2026-05-25: original design, modes=[service_account, oauth].
+  #               Picker preferred OAuth when user had a token (registry/
+  #               manifest.rs:732), routing the user's SLACK token as
+  #               Authorization: Bearer to the shim's endpoint. The shim
+  #               expects the internal SA bearer (mcp_slack_rest.rs ~170)
+  #               and returned 401 → "missing Mcp-Session-Id".
+  #
+  #   2026-05-26: panicked fix — dropped `oauth` from modes. Dispatch
+  #               worked again, but the /oauth/mcp/init enablement gate
+  #               (oauth_mcp.rs:182) requires an `auth_mode='oauth'`
+  #               enablement row. With oauth gone from modes, the auto-
+  #               seed never created that row, so /init returned 403
+  #               "no OAuth enablement for this manifest" — the Connect
+  #               button silently dead-ended. UX-broken; the YAML
+  #               comment at the time wrongly claimed the dance still
+  #               worked because resolve_provider read auth.oauth
+  #               directly. It does — but the gate fired earlier.
+  #
+  #   2026-05-28: real fix. Restored modes=[service_account, oauth] AND
+  #               introduced `auth.oauth.shim_internal: true`. Picker
+  #               at registry/manifest.rs now skips OAuth selection
+  #               when shim_internal is true; dispatch goes SA. Connect
+  #               button works (enablement row exists). Dispatch works
+  #               (SA bearer to shim). UX correct end-to-end.
   modes:
     - service_account
     - oauth
@@ -89,6 +115,13 @@ auth:
     secret_refs:
       - DOCBRAIN_INTERNAL_MCP_SECRET
     header_template: "Bearer ${DOCBRAIN_INTERNAL_MCP_SECRET}"
+  # Tool-health: slack_rest's real credential is the PER-USER Slack OAuth token
+  # (resolved inside the shim from mcp_oauth_tokens). Health is therefore
+  # per-caller: a user who HAS connected Slack sees these tools dispatchable; an
+  # unconnected user sees them non-dispatchable. NEVER gate this globally — that
+  # would hide Slack from connected users (the don't-hide-Slack invariant).
+  health_check:
+    kind: per_user_oauth
   oauth:
     # Slack's MODERN OAuth v2 endpoints. Different from the `slack`
     # manifest's `v2_user/` legacy variant:
@@ -129,9 +162,10 @@ auth:
     client_id_secret_ref: SLACK_OAUTH_CLIENT_ID
     client_secret_ref: SLACK_OAUTH_CLIENT_SECRET
     use_pkce: true
-    # See canonical comment in config/mcp-manifests/slack-rest.yaml.
-    # Gateway never dispatches this manifest in OAuth mode; the SHIM
-    # resolves the user's token internally.
+    # Critical: see the long history comment at the top of `auth:`.
+    # This OAuth dance grants a token the SHIM uses internally; the
+    # gateway must NEVER dispatch this manifest in OAuth mode. Picker
+    # honours this flag at registry/manifest.rs.
     shim_internal: true
 
 content_domains:
@@ -163,6 +197,12 @@ tools:
       `channel_id` and `ts`. The shim parses the URL when present.
     args_schema:
       type: object
+      # additionalProperties:false + the anyOf below make a WRONG arg key (e.g.
+      # `channel` instead of `channel_id`) fail at DocBrain's pre-flight gate
+      # with a clear "'channel' unexpected / 'channel_id' required" message,
+      # which the argument-repair loop then corrects — instead of sailing
+      # through the loose gate and 0ms-failing at the upstream shim (which the
+      # repair could not parse). Matches the jira_rest / confluence_rest pattern.
       additionalProperties: false
       properties:
         url:
@@ -184,6 +224,7 @@ tools:
           maximum: 200
           default: 50
           description: "Max number of replies to include (parent always included). Defaults to 50."
+      # Exactly one of: a `url`, OR `channel_id`+`ts`. `limit` is always optional.
       anyOf:
         - required: [url]
         - required: [channel_id, ts]
@@ -203,6 +244,8 @@ tools:
       DM / group-DM channels (D-prefix). Single page, limit-bounded.
     args_schema:
       type: object
+      # See read_thread's note — strict gate so wrong arg keys are repaired,
+      # not silently passed to the upstream shim.
       additionalProperties: false
       properties:
         url:
@@ -220,6 +263,7 @@ tools:
           maximum: 200
           default: 30
           description: "Number of most-recent messages to read."
+      # Exactly one of: a channel `url`, OR a `channel_id`. `limit` optional.
       anyOf:
         - required: [url]
         - required: [channel_id]
@@ -238,6 +282,8 @@ tools:
       policy.
     args_schema:
       type: object
+      # See read_thread's note — strict gate so wrong arg keys are repaired,
+      # not silently passed to the upstream shim.
       additionalProperties: false
       properties:
         url:
@@ -253,6 +299,7 @@ tools:
           type: string
           pattern: "^[0-9]+\\.[0-9]+$"
           description: "Message timestamp."
+      # Exactly one of: a `url`, OR `channel_id`+`ts`.
       anyOf:
         - required: [url]
         - required: [channel_id, ts]

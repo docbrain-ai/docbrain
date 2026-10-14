@@ -214,7 +214,7 @@ sources:
 ```
 
 Every project must be listed explicitly — an empty list is a startup error.
-See [configuration.md](./configuration.md#gitlab-merge-requests) for the full
+See the GitLab MR section of [configuration.md](./configuration.md) for the full
 shape.
 
 Then trigger a manual ingest:

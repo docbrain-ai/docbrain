@@ -25,7 +25,7 @@ Create a scoped key with `docbrain token create --name "MCP Key" --role viewer` 
 
 ## Tools
 
-Eleven, all declared by the server. Write tools are permission-gated
+Twelve, all declared by the server. Write tools are permission-gated
 server-side: a read-only key can `ask` but cannot capture.
 
 ### Read
@@ -44,8 +44,9 @@ server-side: a read-only key can `ask` but cannot capture.
 
 | Tool | What it does |
 |------|--------------|
-| `docbrain_annotate` | Files a fix, decision or caveat as a fragment |
-| `docbrain_commit_capture` | Captures the *why* behind a change at commit time |
+| `docbrain_annotate` | Files a fix, decision or caveat as a fragment. Optional `gap_id` names the open question (a gap) it answers and closes it |
+| `docbrain_commit_capture` | Captures the *why* behind a change at commit time. Optional `gap_id`, as above |
+| `docbrain_revise` | Edits (`text` and/or `premises`) or withdraws (`withdraw_reason`) a capture you recorded, by `id`. Only the author can edit; a capture already used in an answer can only be withdrawn. An older binary lacks this tool and fails closed |
 | `docbrain_autopilot_generate` | Drafts documentation for a gap Autopilot found |
 | `docbrain_feedback` | Records whether an answer was useful, so retrieval learns |
 

@@ -17,7 +17,7 @@ server:
 
 database:
   # url: set DATABASE_URL env var (required — no default)
-  max_connections: 10
+  max_connections: 25
   connect_timeout_secs: 10
   acquire_timeout_secs: 10
   idle_timeout_secs: 300
@@ -30,6 +30,12 @@ opensearch:
 redis:
   url: "redis://127.0.0.1:6379"
 
+rbac:
+  # Default role for new SSO users: viewer (default) | editor | admin
+  defaultRole: "viewer"
+  # Email domain that always gets admin role (e.g. "acme.com")
+  # adminEmails: ~
+
 llm:
   provider: "bedrock"   # bedrock | anthropic | openai | ollama
   # model_id: ~          # defaults to provider-appropriate model
@@ -37,6 +43,8 @@ llm:
   # ingest_model_id: ~   # cheaper model for ingest image extraction (falls back to model_id)
   # thinking_budget: ~   # extended thinking tokens, 0 = disabled
   ollama_base_url: "http://localhost:11434"
+  # ollama_timeout_secs: 120   # HTTP timeout for Ollama (seconds). Increase to 300+ for large models (70B). Env: OLLAMA_TIMEOUT_SECS
+  # timeout_secs: 120    # HTTP timeout (seconds) for anthropic/openai (+ compatible)/azure_openai/cohere. Ollama uses ollama_timeout_secs instead, unaffected by this. Env: LLM_TIMEOUT_SECS
   # anthropic_api_key: ~  # set ANTHROPIC_API_KEY env var
   # openai_api_key: ~     # set OPENAI_API_KEY env var
   # openai_base_url: ~    # optional OpenAI-compatible base URL
@@ -48,20 +56,11 @@ embeddings:
 rag:
   claim_verification: true  # Check file paths an answer cites against ingest-recorded
                             # listings before returning it. No LLM call; inert until
-                            # a git source records a listing.
+                            # a source records a listing.
   cache_ttl_hours: 24     # Cache max age in hours; 0 turns the answer cache off.
                           # A cached answer is served only to the exact same question.
-
-  # Hard cap on a whole /ask, in seconds. Every stage inside has its own budget
-  # and none of them bounds the sum: one measured question ran 1077s (18 minutes)
-  # with every stage inside its limit, holding a connection and its share of the
-  # pools throughout. 600 is generous — the slowest honest answer measured was
-  # 248s — so this bounds the pathological case, not a slow legitimate one. A
-  # request stopped here returns 504 with an explanation, never a partial answer.
-  # 0 disables the cap.
-  ask_wall_clock_secs: 600 # ASK_WALL_CLOCK_SECS
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
-
+  #
   # ── Staged retrieval pipeline tuning ─────────────────────────────────
   # Every field below has a sensible default baked into the code; uncomment
   # only to override. Also configurable via the environment variables listed
@@ -73,14 +72,22 @@ rag:
   # rrf_k: 60                         # RRF damping constant (canonical paper)
   # max_per_source: 3                 # Per-source cap in final top-k
   # max_per_document: 2               # Per-document cap in final top-k
+  # freshness_window_days: 7          # Freshness retriever window (0 to disable)
+  # entity_cache_ttl_secs: 300        # Entity → space cache TTL
+  # max_rewrites: 2                   # Query rewrites per ask (0 to disable)
+  # max_chunks_per_doc_in_retriever: 2  # Per-retriever cap on chunks from one document
   #
-  # ── Grounding floors — calibrated for a real cross-encoder reranker ──
+  # Compound query decomposition is gated on RAG_COMPOUND_DECOMPOSE
+  # (env only, default true). Not a RagConfig field because it is a
+  # behaviour flag, not a numeric tunable.
+
+  # ── Grounding floors — calibrated for a cross-encoder reranker ──────
   #
   # These four values are the single biggest quality lever in the RAG
   # pipeline. They all gate on the reranker's calibrated [0, 1] score.
-  # Recommended defaults below match where Cohere Rerank v3.5 and
-  # similarly tuned cross-encoders separate "actually answers the
-  # question" from "shares a few keywords but is not on-topic".
+  # Recommended defaults below match where Cohere Rerank v3.5 and similar
+  # cross-encoders separate "actually answers the question" from "shares
+  # a few keywords but is not on-topic".
   #
   # Lowering → more recall, noisier citations, higher hallucination risk.
   # Raising  → more precision, more "insufficient information" answers.
@@ -89,21 +96,23 @@ rag:
   # which are NOT calibrated — set them to 0.0 in that mode. See
   # docs/rerank-providers.md § "Tuning the grounding floors" for the
   # full explanation.
-  min_relevance_score: 0.40           # Retrieval floor — chunks below this never reach diversity selection or the LLM. Lowering sends weaker evidence to the LLM (hallucination risk).
-  display_floor: 0.50                 # Display floor — chunks below this are never shown as citations. Lowering surfaces more tangential sources (user trust cost).
-  confidence_gate: 0.40                # Confidence gate — below this, sources are hidden and the answer is shown as "general knowledge". Lowering shows sources on lower-confidence answers.
-  strong_answer_floor: 0.55           # Strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer.
+  min_relevance_score: 0.40   # Retrieval floor — chunks below this never reach the LLM. Lowering sends weaker evidence to the LLM (hallucination risk).
+  display_floor: 0.50         # Display floor — chunks below this are never shown as citations. Lowering surfaces more tangential sources (user trust cost).
+  confidence_gate: 0.40       # Confidence gate — below this, sources are hidden and the answer is shown as "general knowledge".
+  strong_answer_floor: 0.55   # Strong-answer floor — top-1 rerank score required before the answer is emitted without a "low confidence" disclaimer.
 
   # ── Window-expanded synthesis context ────────────────────────────────
   #
   # Retrieval is chunk-granular because small chunks embed and rerank
   # better. Synthesis used to be chunk-granular too, which meant the LLM
-  # saw only the matched fragments — an answer cannot contain what the
-  # context never held, on any provider, local or hosted.
+  # saw only the matched fragments: measured on a 14,680-document corpus,
+  # ten selected chunks carried 4,420 bytes while the runbook they came
+  # from had 15 indexed chunks. An answer cannot contain what the context
+  # never held — on any provider, local or hosted.
   #
   # These widen only what SYNTHESIS sees. Retrieval, ranking, source cards
   # and the grounding floors above are untouched.
-  context_window_chunks: 3            # Sibling chunks fetched either side of each match. 0 disables expansion. Raising it costs synthesis latency and context-window headroom.
+  context_window_chunks: 3          # Sibling chunks fetched either side of each match. 0 disables expansion (synthesis sees only matched fragments). Raising it costs synthesis latency and context-window headroom.
   # Intent-aware: precision lookups (intent find, who_owns) always use radius 0,
   # whatever is set here — on "what is the URL for X" the neighbouring chunks are
   # competing values, and the model picks the wrong one (proven: 4.8KB of matched
@@ -112,32 +121,131 @@ rag:
   # is in the stage="rag.staged.context_window" log line.
   context_window_budget_bytes: 65536  # Total budget across all expanded documents; overflow trimmed from the lowest-ranked end. A BYTE budget, but the real limit is the model's TOKEN window (~3.2 bytes/token measured). Lowering it to 32768 measurably cost answer quality, so it stays generous — if your model's window is smaller, lower it and check the stage="rag.staged.context_window" log line, since providers truncate silently.
   live_data_budget_bytes: 32768  # AGGREGATE ceiling on the LIVE DATA block — the concatenation of EVERY tool block spliced into one synthesis prompt. Each tool's own output is already capped separately (DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES, default 32768), so this is what bounds several tools answering at once; nothing else does. Measured 2026-09-04: one Confluence tool returned 103,479 bytes and reached the prompt as 8,475 after per-tool capping and redaction, so a single tool rarely approaches this. Over budget the block is truncated with a marker and a warn log ("live tool output exceeds the synthesis budget") rather than being dropped silently by the provider, which does not error on an over-long prompt.
-  # ── Tool-output caps (the truncation chain) ───────────────────────────
+
+  # ── Tool-output caps (the truncation chain) ──────────────────────────
+  #
   # Three coordinated caps bound how much raw tool output reaches the
   # synthesis prompt. They MUST rise together — raising one alone has no
-  # effect because the smallest still truncates. Defaults let a high-volume
-  # search (which can return 43-63KB raw) keep ~32KB instead of being cut to
-  # a fraction. The two mcp_* values are also read from the matching
-  # DOCBRAIN_MCP_* env vars by the manifest validator, so override the env
-  # var (not just this YAML) when tuning them.
-  # mcp_output_ceiling_bytes: 32768          # Hard ceiling the manifest validator enforces on any per-tool cap
-  # mcp_default_tool_output_cap_bytes: 32768 # Cap inherited by dynamically-discovered tools (must be ≤ ceiling)
-  # evidence_buffer_cap_bytes: 65536         # SHARED per-loop-round evidence budget (2x the per-tool cap)
-  # mcp_jql_recency_bound_days: 180          # Recency window appended to unbounded full-text Jira searches (avoids 10s timeouts)
-  # freshness_window_days: 7          # Freshness retriever window (0 to disable)
-  # entity_cache_ttl_secs: 300        # Entity → space cache TTL
-  # max_rewrites: 2                   # Query rewrites per ask (0 to disable)
-  # max_chunks_per_doc_in_retriever: 2  # Phase 2 chunk-flood fix — per-retriever cap
-  # fresh_only_phrases:               # Time-sensitive question phrases — a match means
-  #   - "on call"                     # the answer comes ONLY from this request's live
-  #   - "current rotation"            # tool data; a prior answer is never reused (so a
-  #   - "incident commander"          # rotation that changed since yesterday can't leak
-  #                                   # a stale name). Empty list disables the gate.
+  # effect because the smallest in the chain still truncates:
+  #   1. mcp_output_ceiling_bytes        — hard upper bound the manifest
+  #      validator enforces on any per-tool output cap.
+  #   2. mcp_default_tool_output_cap_bytes — cap inherited by tools that are
+  #      discovered dynamically and ship no per-tool cap (e.g. Slack search).
+  #   3. evidence_buffer_cap_bytes       — SHARED budget across every tool in
+  #      one loop round; the real bottleneck. Sized at 2x the per-tool cap so
+  #      a maxed single-source result still leaves headroom for other sources.
   #
-  # Compound query decomposition (Phase 5) is gated on RAG_COMPOUND_DECOMPOSE
-  # (env only, default true). Not a RagConfig struct field because it's a
-  # behavior flag, not a numeric tunable.
+  # Defaults below let a high-volume search (which can return 43-63KB raw)
+  # keep ~32KB instead of being truncated to a fraction. The two mcp_* values
+  # are also read from the matching DOCBRAIN_MCP_* env vars by the manifest
+  # validator (it lives in a crate that does not depend on this config), so
+  # set the env var AND this value together when overriding.
+  mcp_output_ceiling_bytes: 32768          # DOCBRAIN_MCP_OUTPUT_CEILING_BYTES
+  mcp_default_tool_output_cap_bytes: 32768 # DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES
+  evidence_buffer_cap_bytes: 65536         # DOCBRAIN_EVIDENCE_BUFFER_CAP_BYTES
+  # Recency window appended to an unbounded full-text Jira search (text ~ with no
+  # time/project/key clause) so Jira hits the date index instead of scanning the
+  # whole instance and timing out. Already-bounded queries are untouched.
+  mcp_jql_recency_bound_days: 180          # DOCBRAIN_MCP_JQL_RECENCY_BOUND_DAYS
 
+  # Sufficiency critic — a scope-relative answer-quality gate that runs after
+  # synthesis. Judges whether the answer covers the question's sub-parts grounded
+  # in retrieved sources; insufficient → ONE recovery round on the named gap →
+  # re-judge; still short → an honest, specific gap. ON BY DEFAULT (the critic is
+  # the product). Kill-switch disables WITHOUT a code rollback; fail-OPEN on any
+  # critic error (ships the answer unchanged).
+  sufficiency_critic_enabled: true              # DOCBRAIN_SUFFICIENCY_CRITIC_ENABLED
+  sufficiency_critic_max_recovery_rounds: 1     # DOCBRAIN_SUFFICIENCY_CRITIC_MAX_RECOVERY_ROUNDS (0..=2)
+  sufficiency_critic_skip_above_confidence: 0.85 # DOCBRAIN_SUFFICIENCY_CRITIC_SKIP_ABOVE_CONFIDENCE
+  sufficiency_critic_min_coverage: 0.9          # DOCBRAIN_SUFFICIENCY_CRITIC_MIN_COVERAGE
+  sufficiency_critic_min_recovery_budget_ms: 20000 # DOCBRAIN_SUFFICIENCY_CRITIC_MIN_RECOVERY_BUDGET_MS (min wall-clock headroom to allow a recovery round; 0 disables)
+  # Hard cap on a whole /ask, in seconds. Every stage inside has its own budget and
+  # none of them bounds the sum: one measured question ran 1077s (18 minutes) with
+  # every stage within its limit. 600 is deliberately generous — the slowest honest
+  # answer measured was 248s. Enforced inside the pipeline, so every surface (SSE,
+  # JSON, Slack, webhooks, eval) is bound by it, and the agentic loop's own budget
+  # is clamped to whatever is left of the turn. A stopped turn is not an error: it
+  # returns the answer it had with a `deadline` note, and records the turn with
+  # metadata.stopped.reason = "deadline". The agentic loop's last model call is
+  # under this clock too, so a model hanging in synthesis ends the turn at the cap
+  # rather than at cap + LLM_TIMEOUT_SECS. One limit on how exact it is: the cap is
+  # per ask, so an N-section doc generate is bounded at N x this value.
+  # 0 disables the cap.
+  ask_wall_clock_secs: 600 # ASK_WALL_CLOCK_SECS
+
+  # Freshness Critic — the doc-generation reviewer. Segments a generated draft
+  # (and, for augments, the existing doc) into atomic claims, retrieves
+  # ACL-filtered evidence per claim, and FLAGS only the claims the evidence
+  # CONTRADICTS (conservative-KEEP: uncertainty never flags). ON BY DEFAULT;
+  # kill-switch disables WITHOUT a code rollback; fail-OPEN on any critic error
+  # (ships the draft unchanged). Bounds cap LLM + retrieval cost per draft.
+  freshness_critic_enabled: true                # DOCBRAIN_FRESHNESS_CRITIC_ENABLED
+  freshness_critic_max_claims: 60               # DOCBRAIN_FRESHNESS_CRITIC_MAX_CLAIMS (hard cap; over-cap claims reported unchecked, never dropped)
+  freshness_critic_batch_size: 12               # DOCBRAIN_FRESHNESS_CRITIC_BATCH_SIZE (claims per batched judgment LLM call)
+  freshness_critic_evidence_per_claim: 5        # DOCBRAIN_FRESHNESS_CRITIC_EVIDENCE_PER_CLAIM (evidence snippets retrieved per claim)
+  freshness_critic_min_budget_ms: 20000         # DOCBRAIN_FRESHNESS_CRITIC_MIN_BUDGET_MS (min wall-clock headroom to RUN the critic; 0 disables the guard)
+  # Support Critic (grounding): flags claims NO supplied source supports (fabrication)
+  # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
+  # never blocks; fail-open. ON by default.
+  support_critic_enabled: true                  # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
+  support_critic_max_claims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
+
+  # Regenerate loop (Reviewer Part 2). Consumes the freshness critic's flags and
+  # regenerates a draft until they clear. UI = human-in-loop (per click, capped
+  # at max_revisions); CLI/generate = auto-review (capped at max_rounds).
+  # Feedback shapes the WRITING prompt only — it can NEVER clear a contradicted
+  # flag (the critic re-derives flags from evidence). The round cap is the hard
+  # termination backstop; the loop never runs forever, never silently ships flags.
+  regen_loop_enabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
+  regen_loop_max_rounds: 3                       # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; range 1..=20)
+  regen_loop_max_revisions: 10                  # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; range 1..=100)
+  regen_loop_min_budget_ms: 20000               # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to START a round; 0 disables the guard)
+
+  # Generation hollow-doc guard (DELTA #9). Refuses (HTTP 422) a draft ONLY when it
+  # has no inline seed, no High-tier authoritative corpus grounding, AND no Low-tier
+  # live grounding either, AND is mostly unanswered `NEEDS INPUT:` placeholders
+  # (>= this % of its `##` sections). A no-seed/no-High doc that DOES have live/Low
+  # grounding ships UNVERIFIED (barred from auto-publish) rather than refusing. The
+  # guard now applies to SHORT docs too (the old min-sections floor was removed);
+  # the only floor left is `section_count > 0`. Keys on OUTPUT shape + grounding tier.
+  generate_hollow_ratio_pct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT; 50 = half the doc)
+
+  # In-place reconcile of an outdated section. When the reviewer flags a section
+  # of an existing page as stale, reconcile replaces ONLY that section in place
+  # (in storage byte-space) instead of appending a fresh block, so the page does
+  # not accumulate duplicate-but-newer content. Kill-switch defaults ON (the
+  # publish-time version check, the lint floor, and fail-open-to-append keep it
+  # survivable); max-sections bounds the per-draft LLM + splice cost.
+  reconcile_enabled: true                       # DOCBRAIN_RECONCILE_ENABLED (disable only with false/0/no/off)
+  reconcile_max_sections: 5                      # DOCBRAIN_RECONCILE_MAX_SECTIONS (max sections reconciled per draft; range 1..=50)
+
+  # Byte floor below which a SEARCH tool's `ok` result counts as near-empty
+  # (200-but-no-results). Below this, the loop forces ONE broaden-retry of the
+  # same tool with a wider query (the 134-byte github "no results" trap).
+  empty_result_floor_bytes: 256                 # DOCBRAIN_EMPTY_RESULT_FLOOR_BYTES
+
+  # Time-sensitive (freshness-critical) question phrases. A question matching
+  # any phrase (case-insensitive substring) must be answered from THIS request's
+  # live tool data only — a prior episode's ANSWER is never fed back into the
+  # synthesis prompt (otherwise "who is on call" could reuse yesterday's name
+  # after the rotation changed). Episodic memory still informs retrieval; only
+  # the prior-answer text is withheld. Empty list = no question is treated as
+  # time-sensitive (prior behaviour). Stable questions (ownership, docs, how-to)
+  # keep the prior-answer feed for its quality benefit.
+  fresh_only_phrases:
+    - "on call"
+    - "on-call"
+    - "oncall"
+    - "who is paging"
+    - "paging primary"
+    - "paging secondary"
+    - "current rotation"
+    - "on call right now"
+    - "on call today"
+    - "who is on the pager"
+    - "incident commander"
+
+  # Retrieval ladder. Off by default; opt-in per deployment.
   # ── Retrieval ladder (pick the better of corpus-only vs live-tool answer) ──
   # Off by default. When a tool fires, the fused path puts corpus chunks AND
   # live tool output in ONE prompt — and live output can make an otherwise good
@@ -163,43 +271,33 @@ rag:
     judge_timeout_ms: 10000
     # judge_model_id: null        # null = use the configured fast model
 
-  # ── Confidence-retry fallback (intelligent tool fan-out on weak answers) ──
+  # Confidence-retry fallback. Default OFF. When enabled, /ask
+  # responses with very-low confidence AND unused tools in the
+  # eligible catalog re-run once with the picker in widen-mode
+  # (encourages maximal tool selection). The retry's tool set is a
+  # strict superset of the first pass — never narrower.
   #
-  # When a /ask first pass returns very-low confidence AND the user has
-  # unused MCP tools in their eligible catalog, optionally re-run once
-  # with the picker in widen-mode (encouraging maximal tool selection).
-  # The retry's tool set is a strict superset of the first pass — never
-  # narrower. The retry's answer ALWAYS replaces the first-pass answer
-  # when the gate triggers (we trust the broader sweep when confidence
-  # was very low).
-  #
-  # Default OFF — opt in per deployment. When enabled, doubles
-  # worst-case latency on the small fraction of queries that fall
-  # below threshold AND have unused tools. High-confidence answers
-  # are never retried.
-  #
-  # Configured via environment variables (NOT this YAML — env-only so
-  # an ops change can flip it without a redeploy):
-  #
+  # Read at runtime from environment variables (NOT this YAML — kept
+  # as env-only so an ops change can flip it without a redeploy):
   #   RAG_CONFIDENCE_RETRY_ENABLED            true | 1 | yes | on
   #   RAG_CONFIDENCE_RETRY_THRESHOLD          0.0–1.0 (default 0.25)
   #   RAG_CONFIDENCE_RETRY_LATENCY_BUDGET_MS  1000–60000 (default 12000)
   #
-  # Gate logic (ALL must hold to trigger retry):
+  # Gate logic (all must hold to trigger retry):
   #   1. Env flag is on
   #   2. First-pass confidence < threshold
   #   3. First-pass dispatched fewer tools than the eligible catalog
   #   4. First-pass elapsed_ms <= latency budget
   #
-  # See docs/configuration.md § "Confidence-retry fallback" for tuning
-  # guidance and observability.
+  # See crates/docbrain-core/src/rag/retry.rs for the full decision
+  # matrix (19 unit tests cover ~384 input combinations).
   #
   # Agentic tool loop. Default OFF. Generalizes the confidence-retry
   # above into a bounded MULTI-round tool loop with per-surface round
   # and wall-clock budgets. When the master switch is on, the loop
   # SUBSUMES the confidence-retry (the loop runs instead of the single
-  # retry). Same env-only, no-redeploy contract; unset → silent default,
-  # set-but-invalid → warn + default:
+  # retry). Same env-only, no-redeploy contract; same validation style
+  # (unset → silent default; set-but-invalid → warn + default):
   #   RAG_AGENTIC_LOOP_ENABLED               true | 1 | yes | on (default false)
   #   RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK      1–10 (default 5)
   #   RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB        1–10 (default 4)
@@ -207,49 +305,36 @@ rag:
   #   RAG_AGENTIC_LOOP_BUDGET_MS_WEB         1000–120000 (default 30000)
   #   RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD  0.0–1.0 (default 0.7; unset →
   #                                          falls back to RAG_CONFIDENCE_RETRY_THRESHOLD)
+  #
+  # See crates/docbrain-core/src/rag/agentic_loop.rs for the per-surface
+  # budgets and the pure stop-or-continue decision table.
+  #
+  # There is deliberately NO key here for any of the settings above: they are read from
+  # the environment and nothing reads them from this file. A `confidence_retry.docs_only`
+  # sentinel used to sit at this spot purely to give the comment something to hang on, and
+  # a key that configures nothing is indistinguishable from one that is quietly broken —
+  # the same shape as the fourteen keys that named an environment variable and were read
+  # by nobody until 2026-09-15. If one of these becomes file-configurable, give it a real
+  # field in `RagConfig` and a test, as those fourteen now have.
 
   # ── Feedback → source-suppression learning loop ─────────────────────────
   #
-  # When a user marks a SPECIFIC source within an answer as not-relevant
-  # (per-source thumbs-down on web/CLI/Slack), this down-ranks that document in
-  # retrieval for SIMILAR future questions. "Similar" reuses the episodes
-  # already recalled on the hot path (no extra embedding). Threshold-gated so a
-  # single click can't unilaterally bury a document; a document is suppressed
-  # when it crosses EITHER gate. Set both min_* to 0 to disable entirely.
+  # When a human marks a SPECIFIC source within an answer as not-relevant
+  # (per-source thumbs-down on web/CLI/Slack, captured in
+  # episode_source_feedback), this down-ranks that document in retrieval for
+  # SIMILAR future questions. "Similar" = the episodes already recalled on the
+  # hot path. Threshold-gated so one click can't unilaterally bury a doc.
   #
   #   RAG_SUPPRESSION_MIN_FEEDBACK_COUNT   total not-relevant events (default 2)
   #   RAG_SUPPRESSION_MIN_UNIQUE_USERS     distinct users (default 2)
   #   RAG_SUPPRESSION_RAG_PENALTY_FACTOR   score multiplier (default 0.1)
+  #
+  # A doc is suppressed when it crosses EITHER gate. Set both min_* to 0 to
+  # disable suppression entirely.
   suppression:
     min_feedback_count: 2
     min_unique_users: 2
     rag_penalty_factor: 0.1
-
-  # Regenerate-with-feedback loop. Consumes the doc reviewer's flags and
-  # regenerates a draft until they clear. The UI is human-in-loop (each
-  # "Regenerate" click is one round, capped at max_revisions); the CLI/generate
-  # path auto-reviews (capped at max_rounds). Reviewer feedback shapes the
-  # writing prompt only — it can never clear a flagged claim (the reviewer
-  # re-derives flags from the evidence). The round cap is the hard termination
-  # backstop: the loop never runs forever and never silently ships flags.
-  regen_loop_enabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
-  regen_loop_max_rounds: 3                       # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; range 1..=20)
-  regen_loop_max_revisions: 10                  # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; range 1..=100)
-  regen_loop_min_budget_ms: 20000               # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to start a round; 0 disables the guard)
-
-  # Hollow-document guard for generation. Refuses (HTTP 422) a draft ONLY when it
-  # has no inline seed, no High-tier authoritative corpus grounding, AND no
-  # Low-tier live-tool grounding either, AND is mostly unanswered "NEEDS INPUT:"
-  # placeholders (>= this % of its `##` sections). A no-seed/no-High draft that
-  # DOES have live/Low grounding ships UNVERIFIED (barred from auto-publish) rather
-  # than refusing. The guard now applies to SHORT docs too — the only floor left is
-  # `section_count > 0`. Keys on the OUTPUT shape plus the grounding tier.
-  generate_hollow_ratio_pct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT; 50 = half the doc)
-  # Support Critic (grounding): flags claims NO supplied source supports (fabrication)
-  # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
-  # never blocks; fail-open. ON by default.
-  support_critic_enabled: true                  # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
-  support_critic_max_claims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
 
 # ── Reranker (stage 3 of the retrieval pipeline) ──────────────────────────
 #
@@ -263,8 +348,8 @@ rag:
 # wired via `provider: custom` with the custom_* fields below — no rebuild
 # required.
 #
-# See docs/rerank-providers.md for the full provider matrix and the
-# "how to add a new provider in 2 minutes" recipe.
+# See docs/configuration.md and docs/rerank-providers.md for the full list
+# of supported providers and their credentials.
 rerank:
   provider: "none"        # none | bedrock | cohere | voyage | jina | mixedbread | pinecone | ollama | custom
   # model_id: ~           # Provider-specific default applies when unset.
@@ -296,14 +381,66 @@ rerank:
   # custom_results_field:  "results"                        # RAG_RERANK_CUSTOM_RESULTS_FIELD
   # custom_score_field:    "relevance_score"                # RAG_RERANK_CUSTOM_SCORE_FIELD
 
-rbac:
-  # Default role for new SSO users.
-  # Role hierarchy: viewer (1) < editor (2) < analyst (3) < admin (4)
-  defaultRole: "viewer"
-  # Email domain that always gets admin role (e.g. "acme.com")
-  # adminEmails: ~
-  # Comma-separated IdP group names → analyst role (reserved for future use).
-  # analystGroups: ~
+autopilot:
+  enabled: true           # Enabled by default. Set AUTOPILOT_ENABLED=false to opt out.
+  cluster_threshold: 0.82
+  min_cluster_size: 3
+  min_unique_users: 2
+  min_negative_ratio: 0.15
+  lookback_days: 30
+  max_clusters_per_run: 50
+  max_episodes_per_run: 500
+  gap_analysis_interval_hours: 6
+  # Auto-draft: automatically generate drafts for qualifying gaps after each analysis run.
+  # Manual by default — enable to let DocBrain draft docs without human trigger.
+  auto_draft_enabled: false
+  # Minimum severity to auto-draft: critical | high | medium | low
+  auto_draft_severity: "critical"
+  # Severity scoring thresholds — tune for your org's signal volume.
+  # critical_users / critical_signals define the scale at which breadth/volume scores hit 1.0.
+  # threshold_* define the composite score cutoffs for each severity band.
+  critical_users: 5         # Unique users needed for full breadth score
+  critical_signals: 15      # Negative signals needed for full volume score
+  threshold_critical: 0.75  # Composite score >= this → "critical"
+  threshold_high: 0.55      # Composite score >= this → "high"
+  threshold_medium: 0.35    # Composite score >= this → "medium"
+  # Corpus-probe relevance floor: min OpenSearch hybrid (BM25+kNN, unbounded)
+  # probe score a candidate target doc must reach before autopilot auto-picks it
+  # to AUGMENT for a poor_coverage gap. Below this → "needs human pick".
+  target_min_score: 45.0
+  # Retention window (days) for persisted ad-hoc `generate` runs in the web
+  # History view (generated_documents, migration 149). Rows older than this are
+  # purged daily, and the History list/detail also filter to this window. Bounds
+  # the data-at-rest exposure of the persisted document body (owner-scoped).
+  # Env: GENERATED_DOCS_RETENTION_DAYS. Set 0 to keep indefinitely.
+  generated_docs_retention_days: 90
+  # Staleness warn window (days) for a generation's GROUNDING sources. A grounding
+  # source whose DocBrain-controlled ingest date is older than this is flagged
+  # STALE in the trust headline ("grounded in a 2023 page"); within it, FRESH; an
+  # unknown/unparseable date renders UNKNOWN (distinct from fresh, never assumed).
+  # Env: DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS.
+  source_staleness_warn_days: 365
+  # ── Verification engine (generate) — defaults below preserve the built
+  #    behavior. Cross-check disabled (or budget 0) and section-query LLM
+  #    disabled both FAIL TOWARD HONESTY (no claim is ever flagged stale).
+  # Enable the per-section retrieval-query LLM rewrite (T-QGEN). false → a
+  # deterministic doc-meta-stripped fallback query is used instead.
+  # Env: DOCBRAIN_GENERATE_VERIFY_SECTION_QUERY_LLM.
+  verify_section_query_llm_enabled: true
+  # Enable the per-claim LIVE cross-check. false (or budget 0) → claims are not
+  # live-verified (NotFound, never Contradicted/stale).
+  # Env: DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK.
+  verify_cross_check_enabled: true
+  # Per-document wall-clock budget (seconds) for the cross-check. 0 disables it
+  # (same honest path as verify_cross_check_enabled: false).
+  # Env: DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS.
+  verify_cross_check_budget_secs: 120
+  # top_k for the two corpus probes that confirm a false gap before NEEDS INPUT.
+  # Floored at 1. Env: DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K.
+  verify_broad_probe_top_k: 12
+  # Max review send-back rounds. HARD-clamped to 2 (the documented max).
+  # Env: DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS.
+  verify_review_max_rounds: 2
 
 # Where to publish AI-generated drafts (optional).
 # When configured, the "Publish" button in the UI and auto-draft loop will push
@@ -340,47 +477,6 @@ gitlab_publish:
   mr_labels: "docbrain,auto-generated"  # GITLAB_PUBLISH_MR_LABELS — comma-separated MR labels
   create_mr: true          # GITLAB_PUBLISH_CREATE_MR — create MR (true) or direct commit (false)
 
-autopilot:
-  enabled: false          # Opt-in. Set AUTOPILOT_ENABLED=true to enable.
-  cluster_threshold: 0.82
-  min_cluster_size: 3
-  min_unique_users: 2
-  min_negative_ratio: 0.15
-  lookback_days: 30
-  max_clusters_per_run: 50
-  max_episodes_per_run: 500
-  gap_analysis_interval_hours: 6
-  # Auto-draft: automatically generate drafts for qualifying gaps after each analysis run.
-  # Manual by default — enable to let DocBrain draft docs without human trigger.
-  auto_draft_enabled: false
-  # Minimum severity to auto-draft: critical | high | medium | low
-  auto_draft_severity: "critical"
-  # Severity scoring thresholds — tune for your org's signal volume.
-  # critical_users / critical_signals define the scale at which breadth/volume scores hit 1.0.
-  # threshold_* define the composite score cutoffs for each severity band.
-  critical_users: 5         # Unique users needed for full breadth score
-  critical_signals: 15      # Negative signals needed for full volume score
-  threshold_critical: 0.75  # Composite score >= this → "critical"
-  threshold_high: 0.55      # Composite score >= this → "high"
-  threshold_medium: 0.35    # Composite score >= this → "medium"
-  # Corpus-probe relevance floor: min OpenSearch hybrid (BM25+kNN, unbounded)
-  # probe score a candidate target doc must reach before autopilot auto-picks it
-  # to AUGMENT for a poor_coverage gap. Below this → "needs human pick".
-  target_min_score: 45.0
-  # Retention window (days) for persisted ad-hoc `generate` runs shown in the web
-  # /generate History view (the generated_documents table). Rows older than this
-  # are purged by a daily job, and the History list/detail also filter to this
-  # window. Bounds the data-at-rest exposure of the persisted document body, which
-  # is owner-scoped (you see your own runs; admins see all). Set 0 to keep
-  # indefinitely (the purge and the read-window filter both no-op).
-  generated_docs_retention_days: 90            # GENERATED_DOCS_RETENTION_DAYS (0 = keep indefinitely)
-  # Staleness warn window (days) for a generation's GROUNDING sources. A grounding
-  # source whose DocBrain-controlled ingest date is older than this is flagged
-  # STALE in the trust headline ("grounded in a 2023 page"); within it, FRESH; an
-  # unknown / unparseable date renders UNKNOWN (distinct from fresh, never assumed).
-  # Env: DOCBRAIN_GENERATE_SOURCE_STALENESS_WARN_DAYS.
-  source_staleness_warn_days: 365
-
 freshness:
   scheduler_interval_hours: 24
   contradiction_checks_per_pass: 10   # Max docs checked for contradictions per freshness run (LLM cost)
@@ -389,9 +485,12 @@ freshness:
 
   # ── Event-based source types ───────────────────────────────────────────
   # Sources whose docs are permanent historical records (incident threads,
-  # merged PRs, support tickets). For these, time_decay is always 100 and
-  # LLM/link/contradiction passes are skipped. Capture sources are NOT here
-  # — design discussions DO go stale as systems evolve.
+  # merged PRs, support tickets). For these:
+  #   - time_decay is always 100 (don't penalise age)
+  #   - LLM/link/contradiction passes are skipped
+  # Capture sources (slack_capture, github_capture, gitlab_capture) are
+  # intentionally NOT here — design discussions DO go stale as systems evolve.
+  # Override to add your own permanent-record source types.
   event_based_spaces:
     - slack_thread
     - github_pr
@@ -406,20 +505,25 @@ freshness:
     - fireflies
 
   # ── Lifecycle exclusion rules ──────────────────────────────────────────
-  # Docs matching any rule are auto-marked 'archived' at ingest and skipped
-  # by the freshness scorer. Manual overrides via API are sticky.
+  # Docs matching any of these rules are auto-marked 'archived' at ingest
+  # and excluded from freshness scoring. Mirrors how the existing
+  # EVENT_BASED_SPACES const handles Slack/Jira/PR sources, but driven by
+  # source-system metadata (Confluence page labels, page status, title).
+  #
+  # Admins can override per-doc via PATCH /api/v1/documents/:id/lifecycle —
+  # manual overrides are sticky and survive future syncs.
   exclusion_rules:
-    archived_labels:
+    archived_labels:           # case-insensitive match against source labels
       - archived
       - historical
       - obsolete
       - deprecated
       - frozen
       - reference
-    archived_page_statuses:    # Confluence Cloud page status
+    archived_page_statuses:    # Confluence Cloud page status field
       - archived
       - trashed
-    archived_title_patterns:   # regex; catches un-labeled legacy docs
+    archived_title_patterns:   # regex; safety net for un-labeled legacy docs
       - '^Archived '
       - '^\[ARCHIVED\]'
       - '\(archived\)$'
@@ -436,9 +540,15 @@ semantic_quality:
 memory:
   consolidation_interval_hours: 6
 
-# Answer-time external tool dispatch. When enabled, the orchestrator runs after
-# retrieval and fans out across the full live-tool catalog, injecting live-tool
-# blocks into the synthesis prompt. The knobs below bound that always-on fan-out.
+auth:
+  session_ttl_hours: 720   # 30 days. Set to 0 for non-expiring sessions.
+
+# ── MCP Tool Platform ─────────────────────────────────────────────
+# Master switch for the live-tool orchestrator. When `enabled = false` (the
+# default), the synthesis path is byte-identical to a build without the tool platform — no
+# orchestrator round-trip, no fast-LLM dispatch call. Flip to `true` (or set
+# MCP_TOOLS_ENABLED=true) once mcp_oauth is configured to enable live tool
+# fan-out at answer time.
 mcp_tools:
   enabled: false   # MCP_TOOLS_ENABLED
   # Max concurrent gateway dispatches in one fan-out pass (clamped 1..=64).
@@ -459,8 +569,9 @@ mcp_tools:
   # succeeds (a recovered connector is never suppressed).
   fanout_cooldown_secs: 30   # MCP_TOOLS_FANOUT_COOLDOWN_SECS
 
-auth:
-  session_ttl_hours: 720   # 30 days. Set to 0 for non-expiring sessions.
+tier2:
+  fetch_allowed_hosts: []     # empty = URL-based install disabled; paste-only
+  max_manifest_bytes: 65536   # 64 KB hard cap for URL-fetched manifests
 
 confluence:
   # base_url: ~         # set CONFLUENCE_BASE_URL env var
@@ -476,6 +587,24 @@ slack:
   # signing_secret: ~              # set SLACK_SIGNING_SECRET env var
   notification_interval_hours: 24
   # notification_space_filter: ~   # optional space filter for notifications
+
+# ── GitHub Real-Time Capture ───────────────────────────────────────────────
+# Enables `@docbrain capture` on GitHub PRs/issues.
+# Both fields are required; if either is missing, the route is not registered.
+github_capture:
+  # webhook_secret: ~   # set GITHUB_WEBHOOK_SECRET env var
+  # bot_token: ~        # set GITHUB_BOT_TOKEN env var (or GITHUB_PR_TOKEN as fallback)
+
+# ── GitLab MR Real-Time Capture ───────────────────────────────────────────
+# Enables `@docbrain capture` on GitLab MRs via POST /api/v1/gitlab/events.
+# At least one of webhook_secret or token must be set; if neither is present,
+# the route is not registered.
+gitlab_capture:
+  # webhook_secret: ~        # set GITLAB_CAPTURE_WEBHOOK_SECRET env var (X-Gitlab-Token validation)
+  # token: ~                 # set GITLAB_CAPTURE_TOKEN env var (PAT with api scope — fetch notes + post replies)
+  base_url: "https://gitlab.com"  # override for self-hosted: GITLAB_CAPTURE_BASE_URL
+  # allowed_users: ~         # set GITLAB_CAPTURE_ALLOWED_USERS (comma-separated; empty = all)
+  # allowed_projects: ~      # set GITLAB_CAPTURE_ALLOWED_PROJECTS (comma-separated group/project; empty = all)
 
 ingest:
   self_ingest: true
@@ -493,29 +622,38 @@ ingest:
 # everything the token can see." See docs/configuration.md for the full
 # selector grammar (exact / wildcard / branch-pinning rules).
 #
+# To enable a source:
+#   1. Uncomment its block (remove the leading `#` on the parent key).
+#   2. Set its token / credentials via env var (recommended) or in
+#      config/local.yaml (gitignored).
+#   3. Populate the resource list with at least one entry.
+#
 # Ingest runs via the docbrain-ingest CLI — trigger on a cron or on demand:
 #   docker compose exec server docbrain-ingest
 sources:
+  # ── Local filesystem ──────────────────────────────────────────────────────
   local:
-    # path: /data/docs
+    # path: /path/to/docs       # set LOCAL_DOCS_PATH env var
 
+  # ── GitHub umbrella (code + pull requests) ────────────────────────────────
   # github:
   #   token: ${GITHUB_TOKEN}
-  #   api_url: https://api.github.com
+  #   api_url: https://api.github.com      # override for GitHub Enterprise
   #   code:
   #     repos:
-  #       - acme/platform
-  #       - acme/docs:develop
+  #       - acme/platform                  # exact, default branch
+  #       - acme/docs:develop              # exact, pinned branch
   #   pull_requests:
   #     repos:
   #       - acme/platform
   #     lookback_days: 365
   #     min_comments: 1
-  #     labels: []
+  #     labels: []                         # empty = all PRs; else filter
 
+  # ── GitLab umbrella (merge requests) ──────────────────────────────────────
   # gitlab:
   #   token: ${GITLAB_TOKEN}
-  #   base_url: https://gitlab.com
+  #   base_url: https://gitlab.com         # override for self-hosted
   #   tls_verify: true
   #   merge_requests:
   #     projects:
@@ -525,8 +663,10 @@ sources:
   #     min_notes: 1
   #     labels: []
 
+  # ── Slack umbrella (thread ingestion) ─────────────────────────────────────
   # slack:
-  #   token: ${SLACK_INGEST_TOKEN}
+  #   token: ${SLACK_INGEST_TOKEN}         # bot token with channels:history,
+  #                                        # channels:read, users:read scopes
   #   threads:
   #     channels:
   #       - "#incident-response"
@@ -537,6 +677,7 @@ sources:
   #       - bookmark
   #     lookback_days: 90
 
+  # ── Jira (issues) ─────────────────────────────────────────────────────────
   # jira:
   #   base_url: https://acme.atlassian.net
   #   user_email: ${JIRA_USER_EMAIL}
@@ -544,6 +685,7 @@ sources:
   #   projects:
   #     - ENG
   #     - PLAT
+  #   # jql_filter: "resolution = Fixed"
   #   lookback_days: 365
   #   issue_types:
   #     - Bug
@@ -551,6 +693,7 @@ sources:
   #     - Task
   #     - Epic
 
+  # ── Linear (issues) ───────────────────────────────────────────────────────
   # linear:
   #   api_key: ${LINEAR_API_KEY}
   #   teams:
@@ -562,13 +705,15 @@ sources:
   #     - Cancelled
   #     - Duplicate
 
+  # ── PagerDuty (incidents) ─────────────────────────────────────────────────
   # pagerduty:
   #   api_token: ${PAGERDUTY_API_TOKEN}
   #   services:
-  #     - PXXXXXX
+  #     - PXXXXXX                          # required, at least one service ID
   #   lookback_days: 180
   #   min_duration_minutes: 5
 
+  # ── OpsGenie (alerts) ─────────────────────────────────────────────────────
   # opsgenie:
   #   api_key: ${OPSGENIE_API_KEY}
   #   teams:
@@ -576,26 +721,35 @@ sources:
   #   lookback_days: 180
   #   min_duration_minutes: 5
 
+  # ── Zendesk (support tickets) ─────────────────────────────────────────────
   # zendesk:
-  #   subdomain: acme
+  #   subdomain: acme                      # acme.zendesk.com
   #   email: ${ZENDESK_EMAIL}
   #   api_token: ${ZENDESK_API_TOKEN}
   #   lookback_days: 180
+  #   # min_rating: good                   # "good" | "bad" | omit (all)
 
+  # ── Intercom (conversations) ──────────────────────────────────────────────
   # intercom:
   #   access_token: ${INTERCOM_ACCESS_TOKEN}
   #   lookback_days: 180
   #   min_messages: 2
-  #   tags: []
+  #   tags: []                             # empty = all; else filter
 
+  # ── Microsoft Teams ───────────────────────────────────────────────────────
+  # Requires an Azure Entra app registration with the following application
+  # permissions (admin consent required):
+  #   Team.ReadBasic.All, Channel.ReadBasic.All, ChannelMessage.Read.All,
+  #   Chat.Read.All (optional), Files.Read.All,
+  #   OnlineMeetingTranscript.Read.All (optional).
   # ms_teams:
   #   tenant_id: ${MS_TEAMS_TENANT_ID}
   #   client_id: ${MS_TEAMS_CLIENT_ID}
   #   client_secret: ${MS_TEAMS_CLIENT_SECRET}
   #   teams:
-  #     - platform-eng
+  #     - platform-eng                     # required, at least one team
   #   lookback_days: 90
-  #   include_chats: false
+  #   include_chats: false                 # 1:1/group chats are high-volume
   #   include_files: true
   #   include_transcripts: true
   #   min_replies: 2
@@ -607,34 +761,12 @@ sources:
   # https://api.rootly.com), not from this file. See docs/configuration.md
   # → "Rootly on-call shim".
 
-# ── GitHub Real-Time Capture ───────────────────────────────────────────────
-# Enables `@docbrain capture` on GitHub PRs/issues. Separate from ingestion.
-github_capture:
-  # webhook_secret: ~   # set GITHUB_WEBHOOK_SECRET env var
-  # bot_token: ~        # set GITHUB_BOT_TOKEN env var
-
-# ── GitLab MR Real-Time Capture ───────────────────────────────────────────
-# Enables `@docbrain capture` on GitLab MRs. Separate from ingestion.
-gitlab_capture:
-  # webhook_secret: ~        # set GITLAB_CAPTURE_WEBHOOK_SECRET env var
-  # token: ~                 # set GITLAB_CAPTURE_TOKEN env var
-  base_url: "https://gitlab.com"
-  # allowed_users: ~         # set GITLAB_CAPTURE_ALLOWED_USERS
-  # allowed_projects: ~      # set GITLAB_CAPTURE_ALLOWED_PROJECTS
-
-# ── Intercom Conversation Ingest ───────────────────────────────────────────────
-intercom:
-  # access_token: ~      # secret — set in config/local.yaml or INTERCOM_ACCESS_TOKEN env var
-  lookback_days: 180
-  min_messages: 2
-  # tags: ~              # comma-separated tag names to filter — empty = all
-
-# ── Documentation Analytics ──────────────────────────────────────────────────
+# ── Learning Velocity ────────────────────────────────────────────────────────
 # Tracks organizational documentation health — gap resolution rate, knowledge
 # half-life, tribal knowledge %, and ROI of documentation investment.
 # Snapshots are taken daily during memory consolidation.
 velocity:
-  minutes_saved_per_query: 15   # VELOCITY_MINUTES_SAVED_PER_QUERY — estimated eng time saved per answered query
+  minutes_saved_per_query: 15   # VELOCITY_MINUTES_SAVED — estimated eng time saved per answered query
   hourly_rate: 75               # VELOCITY_HOURLY_RATE — hourly engineer cost (USD) for ROI calculation
 
 # ── Knowledge Stream (proactive push intelligence) ────────────────────────────
@@ -658,16 +790,16 @@ event_bus:
 # ── Knowledge Fragments ─────────────────────────────────────────────────────
 # First-class knowledge units with provenance. Captured from PRs, commits,
 # IDE annotations, conversations, CI/CD, and manual entry.
-# Confidence-based routing: auto-index (≥ threshold), review queue, or discard.
+# Every capture is served at once, labelled with who wrote it.
 fragments:
-  auto_index_threshold: 0.7         # FRAGMENT_AUTO_INDEX_THRESHOLD — min confidence to auto-index into search
-  review_threshold: 0.4             # FRAGMENT_REVIEW_THRESHOLD — min confidence for review queue (below = discard)
+  review_threshold: 0.4             # FRAGMENT_REVIEW_THRESHOLD — summary floor: a DocBrain summary below this model confidence is not stored
   max_content_length: 10000         # FRAGMENT_MAX_CONTENT_LENGTH — max fragment content in characters
+  max_per_author_per_hour: 60       # FRAGMENT_MAX_PER_AUTHOR_PER_HOUR — captures one author may write per rolling hour (429 above)
   distillation:
     enabled: ${DISTILLATION_ENABLED:-true}                  # DISTILLATION_ENABLED — enable/disable conversation auto-distillation
     max_concurrent: ${DISTILLATION_MAX_CONCURRENT:-3}       # DISTILLATION_MAX_CONCURRENT — max concurrent LLM distillation calls
     max_content_chars: ${DISTILLATION_MAX_CONTENT_CHARS:-8000}  # DISTILLATION_MAX_CONTENT_CHARS — max conversation chars sent to LLM
-    max_fragments: ${DISTILLATION_MAX_FRAGMENTS:-5}         # DISTILLATION_MAX_FRAGMENTS — max fragments per conversation
+    max_fragments: ${DISTILLATION_MAX_FRAGMENTS:-5}         # DISTILLATION_MAX_FRAGMENTS — max summaries kept per conversation (at most 5)
   clustering:
     enabled: ${FRAGMENT_CLUSTERING_ENABLED:-true}                          # FRAGMENT_CLUSTERING_ENABLED — enable/disable semantic clustering
     cluster_threshold: ${FRAGMENT_CLUSTER_THRESHOLD:-0.80}                 # FRAGMENT_CLUSTER_THRESHOLD — cosine similarity threshold for clustering
@@ -677,45 +809,11 @@ fragments:
 
 # ── Governance ───────────────────────────────────────────────────────────
 # SLA thresholds live in the database (per-space overridable).
-# These settings control the periodic SLA breach checker.
+# These settings control the periodic SLA checker, which announces each lateness once.
 governance:
   sla_checker_interval_hours: ${SLA_CHECKER_INTERVAL_HOURS:-1}              # How often the checker runs (hours)
-  sla_checker_query_timeout_secs: ${SLA_CHECKER_QUERY_TIMEOUT_SECS:-30}     # Per-entity-type query timeout (seconds)
-  sla_checker_max_candidates: ${SLA_CHECKER_MAX_CANDIDATES:-5000}           # Max candidate entities per type
-  sla_checker_max_events_per_run: ${SLA_CHECKER_MAX_EVENTS_PER_RUN:-50}     # Max SlaBreached events per run
-
-# ── Expertise Ownership Gate ─────────────────────────────────────────────
-# Thresholds the scorer applies before publishing a (subject, team) ownership
-# attribution; all must hold or it abstains. Defaults are an abstain-heavy
-# posture (high precision); tune post-launch from the governance dashboard.
-# An absent section reproduces the conservative defaults exactly.
-expertise_gate:
-  v_min: ${EXPERTISE_GATE_V_MIN:-1.0}                 # Min decayed team_score (volume gate)
-  n_min: ${EXPERTISE_GATE_N_MIN:-5}                   # Min raw signal_count (volume gate)
-  m_askers: ${EXPERTISE_GATE_M_ASKERS:-2}             # Min distinct askers
-  margin_frac: ${EXPERTISE_GATE_MARGIN_FRAC:-0.25}    # Min fraction leader must beat 2nd place
-  diversity_min: ${EXPERTISE_GATE_DIVERSITY_MIN:-2}   # Min distinct signal_type count
-  # UI accuracy gate — confident ownership is shown to users only when measured
-  # accuracy clears the configured bar AND the gate is enabled AND there is
-  # enough audited evidence; disabled by default so a new deployment abstains
-  # until accuracy is proven from the /governance/accuracy risk-coverage curve.
-  ui_gate_enabled: ${EXPERTISE_GATE_UI_ENABLED:-false}                       # Master switch; false = always abstain
-  ui_confidently_wrong_bar: ${EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR:-0.0}  # Max audited confidently-wrong rate to show confident attributions
-  ui_min_audit_samples: ${EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES:-30}           # Min audited labels before the gate can open
-
-# ── Doc-improvement evidence loop ─────────────────────────────────────────────
-# The autopilot improvement evidence chain reports how far each published fix got
-# along the proven path (published -> content-changed -> re-ingest-confirmed ->
-# human-approved -> measured-delta), each link at its true strength.
-#
-# reingest_confirm_timeout_hours is load-bearing: a published fix whose re-ingest
-# has NOT been confirmed within this window is reported as "stale — published but
-# never confirmed live" (something went wrong downstream) instead of the hopeful
-# "published, not yet confirmed live" (the normal batch sync just hasn't run yet).
-# Default 72h is long enough that a normal sync always lands first, so "stale"
-# reliably signals a real failure, not a slow pipeline.
-improvement:
-  reingest_confirm_timeout_hours: ${IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS:-72}  # Hours before an unconfirmed published fix is flagged stale
+  sla_checker_query_timeout_secs: ${SLA_CHECKER_QUERY_TIMEOUT_SECS:-30}     # Statement timeout in the checker's one transaction (seconds)
+  sla_checker_max_events_per_run: ${SLA_CHECKER_MAX_EVENTS_PER_RUN:-50}     # Max SlaBreached announcements per run; the rest go next run
 
 # ── CI/CD Pipeline Capture ──────────────────────────────────────────────
 # Automated knowledge extraction from merged PRs and deployments.
@@ -738,34 +836,30 @@ connectors:
   circuit_breaker_threshold: ${CONNECTOR_CIRCUIT_BREAKER_THRESHOLD:-5} # Consecutive failures before auto-disable
   allow_internal: ${CONNECTOR_ALLOW_INTERNAL:-false}                   # Allow connector URLs on private/internal IPs
 
-# ── Webhooks ──────────────────────────────────────────────────────────────
-# Outbound webhook subscriptions for integrating DocBrain events with
-# external systems (Slack bots, CI/CD, PagerDuty, custom dashboards, etc.).
-# All settings are env-var driven — uncomment the block below for reference.
-# webhooks:
-#   delivery_timeout_seconds: ${WEBHOOK_DELIVERY_TIMEOUT_SECONDS:-10}
-#   max_retries: ${WEBHOOK_MAX_RETRIES:-4}
-#   circuit_breaker_threshold: ${WEBHOOK_CIRCUIT_BREAKER_THRESHOLD:-10}
-#   allow_internal: ${ALLOW_INTERNAL_WEBHOOKS:-false}
+# ── Webhooks (outbound) ──────────────────────────────────────────────────
+# Webhook delivery uses env vars directly (not the config struct).
+# WEBHOOK_DELIVERY_TIMEOUT_SECONDS=10  — HTTP timeout per delivery (1-60)
+# WEBHOOK_MAX_RETRIES=4                — Max delivery attempts (1-10)
+# WEBHOOK_CIRCUIT_BREAKER_THRESHOLD=10 — Consecutive failures to auto-disable (3-100)
+# ALLOW_INTERNAL_WEBHOOKS=false        — Allow private/internal IP targets
 
-# ── Source-System ACL Mirroring (RFC-001) ────────────────────────────────
+# ── Source-System ACL Mirroring ────────────────────────────────
 # Query-time enforcement of per-document ACLs derived from source systems
 # (Confluence restrictions, Slack channel membership, GitHub repo access,
 # Jira issue security levels, etc.).
 #
-# Default mode is `off` → preserves pre-RFC-001 behaviour exactly.
+# Default mode is `off` → preserves behaviour from before ACL mirroring existed, exactly.
 # Operators flip to `warn` first to validate ACL coverage on a real corpus
 # (logs would-have-denied chunk_ids without changing user-visible results),
 # then to `enforce` once per-connector AclProvider impls have populated
 # the chunk index with `acl_principals` data.
 #
-# See docs/rfcs/RFC-001-source-system-acl-mirroring.md for the design.
 acl:
   mode: "${ACL_MODE:-off}"                                            # off | warn | enforce
   unknown_policy: "${ACL_UNKNOWN_POLICY:-deny}"                       # deny | allow — for chunks lacking acl_principals data
   recall_overfetch: ${ACL_RECALL_OVERFETCH:-1.0}                      # OpenSearch top_k multiplier when filter is active (1.0 = no overfetch)
   user_principal_max_age_secs: ${ACL_USER_PRINCIPAL_MAX_AGE_SECS:-3600} # Drop user principals older than this. 0 = no fence.
-  # Denial UX (RFC-002) — controls how denials are communicated to users.
+  # Denial messages — control how denials are communicated to users.
   denial:
     mode: "${ACL_DENIAL_MODE:-disclosed_no_count}"                    # silent | disclosed_no_count | disclosed
     referral: "${ACL_DENIAL_REFERRAL:-your administrator}"            # operator-provided referral string surfaced in denial messages
@@ -776,7 +870,7 @@ acl:
   # broader access for cron jobs should register a service-account user
   # rather than extend this list.
   #
-  # Per-source policy (M1.4+ AclProvider impls consult this at ingest time):
+  # Per-source policy (per-connector ACL providers consult this at ingest time):
   # sources:
   #   confluence:
   #     mode: mirror              # off | mirror | public | admin_only
@@ -799,3 +893,53 @@ acl:
   #     mode: mirror
   #     project_overrides: {}
   # Defaults to all sources at mode=off (opted-out of ACL system entirely).
+
+# ── Expertise Publishable Gate ─────────────────────────────
+# Thresholds the expertise scorer applies before publishing a (subject, team)
+# ownership attribution. ALL must hold or the scorer ABSTAINS. Defaults are the
+# abstain-heavy launch posture (~100% precision); tune post-launch from the
+# dashboard. An absent section reproduces the conservative defaults exactly.
+expertise_gate:
+  v_min: ${EXPERTISE_GATE_V_MIN:-1.0}                 # Min decayed team_score (gate 1, volume)
+  n_min: ${EXPERTISE_GATE_N_MIN:-5}                   # Min raw signal_count (gate 1, volume)
+  m_askers: ${EXPERTISE_GATE_M_ASKERS:-2}             # Min distinct askers (gate 3)
+  margin_frac: ${EXPERTISE_GATE_MARGIN_FRAC:-0.25}    # Min fraction leader must beat 2nd place (gate 4)
+  diversity_min: ${EXPERTISE_GATE_DIVERSITY_MIN:-2}   # Min distinct signal_type count (gate 2)
+  # ── UI accuracy gate (accuracy audit) ──────────────────────────────────
+  # Confident ownership attributions are shown to users ONLY when the audited
+  # confidently-wrong rate is within the bar AND the gate is enabled AND there
+  # is enough audited evidence. Default DISABLED = honest cold-start (abstain
+  # everywhere) until an operator proves accuracy and sets the bar from the
+  # /governance/accuracy risk-coverage curve.
+  ui_gate_enabled: ${EXPERTISE_GATE_UI_ENABLED:-false}                       # Master switch; false = always abstain
+  ui_confidently_wrong_bar: ${EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR:-0.0}  # Max audited confidently-wrong rate to show confident attributions
+  ui_min_audit_samples: ${EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES:-30}           # Min audited labels before the gate can open
+
+# ── Doc-improvement evidence loop ─────────────────────────────────────────────
+# The autopilot improvement evidence chain reports how far each published fix got
+# along the proven path (published -> content-changed -> re-ingest-confirmed ->
+# human-approved -> measured-delta), each link at its TRUE strength.
+#
+# reingest_confirm_timeout_hours is load-bearing: a published fix whose re-ingest
+# has NOT been confirmed within this window is reported as "stale — published but
+# never confirmed live" (something went wrong downstream) instead of the hopeful
+# "published, not yet confirmed live" (the normal batch sync just hasn't run yet).
+# Default 72h is long enough that a normal sync always lands first, so "stale"
+# reliably signals a real failure, not a slow pipeline.
+improvement:
+  reingest_confirm_timeout_hours: ${IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS:-72}  # Hours before an unconfirmed published fix is flagged stale
+
+# ── Evidence Bundle (signed, hash-chained provenance journal) ────────────
+# Server-side, append-only, DSSE-signed evidence journal: every record links
+# to the one before it (SHA-256 hash chain) and is signed by the instance's
+# own evidence signing key (separate from the license attestation key).
+evidence:
+  enabled: ${EVIDENCE_ENABLED:-true}                              # EVIDENCE_ENABLED — master switch
+  classes:                                                        # domain-event classes that get journaled (YAML-only, no env override)
+    - fragments
+    - reviews
+    - decisions
+    - premises
+  checkpoint_every_n: ${EVIDENCE_CHECKPOINT_EVERY_N:-256}         # EVIDENCE_CHECKPOINT_EVERY_N — records between signed checkpoints (clamped 16-65536)
+  checkpoint_every_secs: ${EVIDENCE_CHECKPOINT_EVERY_SECS:-3600}  # EVIDENCE_CHECKPOINT_EVERY_SECS — max seconds between signed checkpoints
+  # recovery_pubkey: ~                                            # EVIDENCE_RECOVERY_PUBKEY — hex-encoded Ed25519 public key for cold compromise recovery (optional; only read at first boot)

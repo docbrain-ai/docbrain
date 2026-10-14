@@ -105,7 +105,7 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
-    latency_budget_ms: 7000
+    latency_budget_ms: 10000
     # read-only fetch of a single Confluence page by id.
     read_only: true
 
@@ -134,9 +134,15 @@ tools:
       additionalProperties: false
     output_size_cap_bytes: 16384
     # Tune this value to change the upstream-call timeout. Shim honours it per call via the X-DocBrain-Tool-Budget-Ms header (see crates/docbrain-server/src/routes/shim_budget.rs).
-    latency_budget_ms: 7000
+    latency_budget_ms: 10000
     # CQL search returns matching pages; never mutates.
     read_only: true
+    # Free-text search: takes a CQL query and returns many pages. The
+    # source-agnostic search fan-out (a later task) reads this declared flag to
+    # decide which tools to force in parallel on a thin-RAG ops question.
+    # Inert until that fan-out lands; declared here because the flag mirrors
+    # read_only (declared per-tool, not name-guessed).
+    free_text_search: true
 
 egress:
   # localhost / 127.0.0.1: the shim itself (orchestrator → docbrain-server).

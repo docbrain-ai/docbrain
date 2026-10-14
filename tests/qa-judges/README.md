@@ -13,9 +13,9 @@ LLM-based answer graders for non-deterministic DocBrain answers.
 
 ## Files
 
-- `judge-system-prompt.md` — the verbatim system prompt sent to the judge.
+- `crates/docbrain-core/src/judge/system-prompt.md` — the verbatim system prompt sent to the judge. Lives **inside the crate** (not in this dir) because `cargo build --release` needs it under `crates/`; Docker builds don't copy `tests/`.
 - `calibration.yaml` — 5 fixed tuples; must pass before any production batch.
-- `golden/` — authored seed batches. One YAML file per batch.
+- `golden/` — seed batches authored for the management-question gate. One YAML file per batch.
 
 ## Running
 

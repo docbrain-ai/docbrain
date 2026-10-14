@@ -177,7 +177,7 @@ Every export carries the full key chain and checkpoint chain from genesis —
 even a narrow date-range export roots all the way back, so nothing in a
 range export has to be taken on faith.
 
-## Regulation-agnostic engine, pluggable compliance profiles
+## Regulation-agnostic engine, pluggable compliance frameworks
 
 A fair question: is any of this hardcoded to the EU AI Act? If the Act is
 amended, or you need SOC 2, ISO 42001, or FDA/SEC evidence instead — is that a
@@ -190,22 +190,24 @@ provenance, full stop, which is what every evidentiary regime (SOC 2, ISO
 42001, FDA Part 11, SEC 17a-4, the EU AI Act) ultimately asks for underneath
 its specific vocabulary.
 
-What's regulation-specific lives entirely in a **compliance profile**: a
+What's regulation-specific lives entirely in a **compliance framework**: a
 named set of retention windows (each citing the statutory basis it mirrors)
-plus a report-template selector — data, not engine logic. Today's registry
-ships exactly one profile:
+plus a report-template selector — data, not engine logic. You choose one with
+`docbrain evidence export --framework <id>`; the export API and the status
+response call it `profile` / `profiles`. Today's registry ships exactly one
+framework:
 
-| Profile | Presets |
+| Framework | Presets |
 |---|---|
 | `eu-ai-act` (default) | `logs-6m` — 183 days, modeled on Art 19 / Art 26(6) operational log retention; `docs-10y` — 3650 days, modeled on Art 18(1) technical-documentation retention |
 
 A regulation change, or an amendment to the AI Act itself, is an edit to
-this profile's data — never a change to the engine, the chain, or what
+this framework's data — never a change to the engine, the chain, or what
 counts as `VALID`/`TAMPERED`/`CANNOT_VERIFY`. Adding a second regime (SOC 2,
-ISO 42001, FDA, SEC) is adding a new profile entry alongside it, with its own
+ISO 42001, FDA, SEC) is adding a new framework entry alongside it, with its own
 presets and report template, on the same engine.
 
-**The hard limit that no profile changes:** a profile only changes which
+**The hard limit that no framework changes:** a framework only changes which
 range gets exported and how it's labeled. It can never make a bundle
 evidence something that never actually flowed through DocBrain.
 

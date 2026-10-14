@@ -26,7 +26,7 @@ All other events (space events, blog posts, etc.) are acknowledged and ignored.
 
 ## Prerequisites
 
-The webhook uses the same Confluence API credentials as the ingest job. If you are already running scheduled Confluence ingest, `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` are already set — only `CONFLUENCE_WEBHOOK_SECRET` is new.
+The webhook uses the same Confluence API credentials as the ingest job. If you already have a `sources.confluence` block configured for ingest, `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN` are already set — only `CONFLUENCE_WEBHOOK_SECRET` is new.
 
 If you are running webhooks **without** scheduled ingest, all three credentials are required.
 
