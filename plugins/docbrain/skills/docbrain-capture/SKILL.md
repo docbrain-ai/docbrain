@@ -33,6 +33,11 @@ interrupt a task to offer. Never offer twice for the same thing. If the person s
    `deploy/ingress.yaml:42`. When no file is involved, call `docbrain_ask` with the question a future
    engineer would type instead; never call `docbrain_context` without paths.
 2. If DocBrain already has it: say so, cite it, and offer the delta as an update instead of a duplicate.
+   When the capture is marked as recorded by you and the work just proved it wrong or out of date, do
+   not write a second one: draft the corrected text (and premises) and, after the yes, call
+   `docbrain_revise` with its `id`. If it should simply stop being served, ask for a one-line reason
+   and call `docbrain_revise` with `withdraw_reason`. Someone else's capture is credited to its author
+   on its page: say so and suggest they ask that author; never revise it.
 3. If the tools are not available in this session: say "DocBrain's tools are not connected in this
    session" and stop. Do not search the repository instead. Captured knowledge does not live in the
    repository, so an absent connector looks exactly like an empty knowledge base and is not one.
@@ -62,14 +67,17 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
 - When no file holds the knowledge — a process, a fact about how two systems are wired — anchor to the
   document a reader would open first (a README, a runbook, a manifest, a config) and say so in the
   capture. If no repository holds anything for it, use `docbrain_commit_capture` with the intent alone;
-  it waits in the review queue, which is the right place for a claim nothing can check.
+  it is served at once and labelled *Not checked against code*, so readers know nothing checks it.
 - Declare the premises it rests on: paths that must exist for the capture to hold
   (`premise_type: "path"`). Both capture tools take them; on a commit capture they are what the
   reasoning rests on beyond the files it changed. Every premise path must exist in the repository right
   now — check it before you show the draft; a path that does not exist is not a premise, and a wrong one
   goes silent forever. DocBrain re-checks the paths and flags the capture the day one disappears. A
-  capture with premises is checkable and indexed at once; a capture with only a file is indexed; a
-  capture anchored to nothing waits for a human review.
+  capture is served the moment it is written, labelled with who wrote it and what checks it: with
+  premises that hold it reads *Checked against code*; with none it reads *Not checked against code*.
+  Declaring the premises is what earns the first label.
+- When the capture answers an open question DocBrain suggested (`docbrain_suggest_capture`), pass that
+  question's id as `gap_id`: the question closes for whoever asks next.
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a
   gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
   explains why), `context` (background a reader needs first).
@@ -104,10 +112,13 @@ that was shown and answered with a yes, unchanged, with `docbrain_annotate` (or
 
 If the write fails — permission, validation, the server unreachable — say exactly what the tool
 reported and stop: no silent retry, no writing anywhere else. Leave the draft in the conversation so it
-can be sent once the cause is fixed. A refusal for a secret goes by Secrets above.
+can be sent once the cause is fixed. A refusal names its reason — a capture limit, a duplicate (with
+the existing id), an instruction in the text, a key with no user — repeat it and do not retry; for a
+duplicate, offer `docbrain_revise` on the id it gave. A refusal for a secret goes by Secrets above.
 
 ## Step 4 — report in one line, then stop
 
-Repeat what the tool reported: the capture's id and whether it is indexed (Ask can answer from it
-now) or queued for review (it appears in the console's review queue for captures).
+Repeat what the tool reported: the capture's id, its status in the tool's word (`indexed`: it is
+served now and Ask can answer from it), and any warning it returned (for example a premise path that does not exist). Its page in the console says
+who recorded it, what checks it and where it helped.
 Do not summarise the capture again. Do not offer another one.

@@ -1,8 +1,7 @@
 {
   "tools": [
     {
-      "name": "docbrain_context",
-      "description": "Before changing files, ask what this organization already knows about them. Returns decisions, caveats and constraints captured against those exact paths, with a warning first if any of that knowledge has since gone stale. Use it when you are about to edit, refactor or delete code \u2014 not as a search tool. Paths must be bare, with no line suffix: \"src/auth/session.rs\" is correct, \"src/auth/session.rs:42\" is wrong and will be rejected.",
+      "description": "Before changing files, ask what this organization already knows about them. Returns decisions, caveats and constraints captured against those exact paths, with a warning first if any of that knowledge has since gone stale. Use it when you are about to edit, refactor or delete code — not as a search tool. Paths must be bare, with no line suffix: \"src/auth/session.rs\" is correct, \"src/auth/session.rs:42\" is wrong and will be rejected.",
       "inputSchema": {
         "properties": {
           "file_paths": {
@@ -17,15 +16,15 @@
           "file_paths"
         ],
         "type": "object"
-      }
+      },
+      "name": "docbrain_context"
     },
     {
-      "name": "docbrain_ask",
-      "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume engineers have admin EKS access, it will correct you). Returns a direct, human-like answer \u2014 never says 'according to the documentation'. Cites up to 5 real source documents with URLs. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
+      "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume every engineer can deploy to production, it will correct you). Returns a direct, human-like answer — never says 'according to the documentation'. Cites up to 5 real source documents with URLs. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
       "inputSchema": {
         "properties": {
           "question": {
-            "description": "The question to ask. Use specific service/team/tool names for best results (e.g. 'Canal V2 logs', 'EKS access for engineers', 'Airflow DAG deployment via ArgoCD').",
+            "description": "The question to ask. Use specific service/team/tool names for best results (e.g. 'payments service logs', 'production database access for engineers', 'nightly batch job deployment').",
             "type": "string"
           },
           "session_id": {
@@ -37,10 +36,10 @@
           "question"
         ],
         "type": "object"
-      }
+      },
+      "name": "docbrain_ask"
     },
     {
-      "name": "docbrain_suggest_capture",
       "description": "Check if there are unanswered questions or documentation gaps related to a file or function. Returns suggestions for what knowledge is missing and should be captured. Use this proactively when working in complex or undocumented code areas.",
       "inputSchema": {
         "properties": {
@@ -49,7 +48,7 @@
             "type": "string"
           },
           "function_name": {
-            "description": "Specific function or method name to check. Optional \u2014 omit to check the entire file.",
+            "description": "Specific function or method name to check. Optional — omit to check the entire file.",
             "type": "string"
           }
         },
@@ -57,19 +56,19 @@
           "file_path"
         ],
         "type": "object"
-      }
+      },
+      "name": "docbrain_suggest_capture"
     },
     {
-      "name": "docbrain_annotate",
-      "description": "Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge.",
+      "description": "Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
       "inputSchema": {
         "properties": {
           "annotation": {
-            "description": "The knowledge to capture \u2014 a decision, fact, caveat, procedure, or context (max 10000 chars).",
+            "description": "The knowledge to capture — a decision, fact, caveat, procedure, or context (max 10000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "code_snippet": {
-            "description": "The actual code at the annotated location. Used to compute a hash for drift detection \u2014 if the code changes later, the annotation is flagged as potentially stale.",
+            "description": "The actual code at the annotated location. Used to compute a hash for drift detection — if the code changes later, the annotation is flagged as potentially stale.",
             "type": "string"
           },
           "file_path": {
@@ -87,8 +86,12 @@
             ],
             "type": "string"
           },
+          "gap_id": {
+            "description": "Optional: the id of an open question (a gap) this capture answers; it closes that question",
+            "type": "string"
+          },
           "line_range": {
-            "description": "Line range in the file, e.g. '42-58'. Optional \u2014 omit for file-level annotations.",
+            "description": "Line range in the file, e.g. '42-58'. Optional — omit for file-level annotations.",
             "type": "string"
           },
           "premises": {
@@ -120,30 +123,34 @@
           "annotation"
         ],
         "type": "object"
-      }
+      },
+      "name": "docbrain_annotate"
     },
     {
-      "name": "docbrain_commit_capture",
-      "description": "Capture knowledge from a commit \u2014 why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten.",
+      "description": "Capture knowledge from a commit — why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
       "inputSchema": {
         "properties": {
           "commit_message": {
-            "description": "The commit message (max 1000 chars).",
+            "description": "The commit message (max 1000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "diff_summary": {
-            "description": "Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed.",
+            "description": "Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "file_paths": {
-            "description": "List of files changed in the commit. Each one becomes a premise this capture is checked against, so the capture is flagged if that file is later moved or deleted. Send them \u2014 a commit capture with no files can never be checked against the code again.",
+            "description": "List of files changed in the commit. Each one becomes a premise this capture is checked against, so the capture is flagged if that file is later moved or deleted. Send them — a commit capture with no files can never be checked against the code again.",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
+          "gap_id": {
+            "description": "Optional: the id of an open question (a gap) this capture answers; it closes that question",
+            "type": "string"
+          },
           "intent": {
-            "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars).",
+            "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "premises": {
@@ -174,7 +181,51 @@
           "intent"
         ],
         "type": "object"
-      }
+      },
+      "name": "docbrain_commit_capture"
+    },
+    {
+      "description": "Edit or withdraw a capture you recorded. Use the id from docbrain_context or from the capture's report. Edit replaces its text and/or its premise set (the same premises as docbrain_annotate) and re-indexes it; withdraw takes it out of answers at once and needs a reason, which is shown with it. Only its author can edit; DocBrain-written summaries can only be withdrawn. A capture already used in an answer cannot be deleted, only withdrawn. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "description": "The capture's id",
+            "type": "string"
+          },
+          "premises": {
+            "description": "The full replacement premise set",
+            "items": {
+              "properties": {
+                "expression": {
+                  "type": "string"
+                },
+                "premise_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "premise_type",
+                "expression"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "text": {
+            "description": "The full replacement text (max 10000 characters). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "type": "string"
+          },
+          "withdraw_reason": {
+            "description": "Withdraw instead of editing; why (max 1000 characters, shown with it). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "docbrain_revise"
     }
   ]
 }
