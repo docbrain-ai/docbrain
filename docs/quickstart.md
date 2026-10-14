@@ -336,7 +336,7 @@ Open **http://localhost:3001** and log in with your API key. Here's what you'll 
 | **Home** | Dashboard with gap forecast, capture trends, and knowledge health metrics |
 | **Ask** | Chat interface — ask questions with streaming answers, source citations, and feedback |
 | **Autopilot** | See detected documentation gaps, AI-generated drafts, and review pipeline |
-| **Captures** | CI captures, conversation distillation, fragment review queue, and clustering |
+| **Captures** | Your captures and the people they helped (Mine), knowledge at work across the organisation, and each capture's own page |
 | **Governance** | Space ownership, SLA compliance, quality trends, and review workflows |
 | **Quality** | Document scores, style rule management, and on-demand linting tool |
 | **Events** | Real-time event stream and webhook management |

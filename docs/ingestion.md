@@ -616,6 +616,27 @@ SLACK_CAPTURE_ALLOWED_USERS=alice,U01234567                 # usernames or user 
 
 ## Capture Lifecycle and Freshness
 
+### Who stands behind a capture
+
+A capture is served the moment it is written; nothing waits for an admin. Every capture says who wrote
+its words and what checks it, and the console's **Captures** page shows it:
+
+- **Two writers.** A person (from the IDE through the skill, the CLI, the API or a `/capture` command):
+  *Recorded by <name>*. DocBrain itself, summarising a thread, a pull request or a CI run:
+  *Summarised by DocBrain from <source>*, with the person who asked for it credited as its capturer.
+- **Three labels**, computed when it is read: *Checked against code* (a premise it declares holds),
+  *Code it rests on changed* (a premise is broken: answers that cite it carry a warning and its author
+  is told once), *Not checked against code* (nothing checks it, and every reader can see that).
+- **Its author manages it.** Edit (a person-written capture, while it is served), Withdraw (at any
+  time, with a reason shown with it; it leaves answers at once), Delete (only until an answer has used
+  it). An admin can Purge it everywhere, or withdraw every capture of one author with a reason.
+- **Limits.** One author may write `fragments.max_per_author_per_hour` captures an hour (default 60).
+  The same text from the same author within 24 hours is refused with the existing capture's id, so the
+  agent revises it (`docbrain_revise`) instead of writing it twice.
+- **Where it helped** — the people it helped this month, the open questions it closed, and what the
+  questions were about — is shown to its author only, on the capture's page. Counts are of people,
+  never of answers, and never name who asked.
+
 ### Space Assignment
 
 Captured content is stored under a meaningful space name derived from the source:

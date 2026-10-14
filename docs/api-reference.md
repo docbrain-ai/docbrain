@@ -1103,7 +1103,7 @@ POST /api/v1/admin/keys
 
 - `viewer` — ask questions, browse answers, give feedback, and access all intelligence dashboards (Documentation Analytics, Predictive Gaps, Autonomous Document Maintenance, Knowledge Stream)
 - `editor` — everything viewer can + manage spaces and captures
-- `analyst` — everything editor can + review actions (approve or discard queued captures, and other endpoints marked **Requires analyst role**); editors cannot use these
+- `analyst` — everything editor can + withdraw any capture, and the other endpoints marked **Requires analyst role**; editors cannot use these
 - `admin` — full access including user management, RBAC config, and ingest triggers
 
 `allowed_spaces`: hard-filters all queries and ingestion to the listed spaces. Empty array = no restriction.
@@ -1853,15 +1853,22 @@ Each SSE message includes:
 
 Create a new knowledge fragment. **Requires editor role.**
 
-Fragments are routed by a confidence the server derives from how the capture is anchored to code. A `confidence` sent in the request is ignored.
+A capture is served the moment it is written. Its label is computed when it is read: *Checked against code* (a premise holds and none is broken), *Code it rests on changed* (a premise is broken), *Not checked against code* (otherwise). A `confidence` sent in the request is ignored.
 
-| Capture carries | Derived confidence | Routing (default thresholds) |
-|-----------------|--------------------|------------------------------|
-| `code_location` and at least one premise (declared in `premises`, or derived from the file list of a `commit` capture) | 0.9 | Auto-indexed |
-| `code_location` only | 0.75 | Auto-indexed |
-| No `code_location` | 0.5 | Queued for review |
+The server refuses, saving nothing:
 
-The derived value is compared against `auto_index_threshold` (default 0.7) and `review_threshold` (default 0.4): at or above the first it is auto-indexed into search, at or above the second it is queued for review, below it is discarded. With the default thresholds nothing is discarded; unanchored captures wait for an analyst or admin to approve them (see [review queue](#get-apiv1fragmentsreview-queue)).
+| Status | `kind` | When |
+|--------|--------|------|
+| `403` | — | the key is not bound to a user: every capture needs a person behind it |
+| `400` | `source_type_refused` | `source_type` is `conversation_distill`, `ci_analyze` or `deploy`: DocBrain writes those itself |
+| `422` | `secret_in_capture` (and other `secret_*` kinds) | the text holds what looks like a secret; the reply names the kind and the field, never the value |
+| `422` | — | the text holds an instruction to the model |
+| `429` | `capture_limit` | more than `fragments.max_per_author_per_hour` captures (default 60) from one author in an hour; `Retry-After` says when |
+| `429` | `capture_paused` | three secret refusals in ten minutes pause capturing for ten minutes |
+| `409` | `already_captured` | the same author sent the same text within 24 hours; `id` names the existing capture |
+| `503` | — | indexing failed; nothing was saved |
+
+Errors share one shape: `{"error": "...", "kind": "...", "id"?: "..."}`. A declared path premise that a connected repository says does not exist is returned as a `warnings` entry; the capture is still saved.
 
 **Request body:**
 ```json
@@ -1897,9 +1904,12 @@ The derived value is compared against `auto_index_threshold` (default 0.7) and `
 {
   "id": "uuid",
   "status": "indexed",
-  "routed_action": "auto_index"
+  "routed_action": "auto_index",
+  "warnings": []
 }
 ```
+
+`routed_action` is deprecated: read `status`. It is kept for released clients and says only whether the capture is served (`auto_index`) or not (`discard`).
 
 ### GET /api/v1/fragments
 
@@ -1907,9 +1917,13 @@ List fragments with optional filters.
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `status` | string | — | Filter by status: `pending`, `indexed`, `promoted`, `discarded`, `review_queued` |
+| `status` | string | — | Filter by status: `indexed`, `promoted`, `withdrawn` (your own; analysts see every status), and for analysts the legacy `pending`, `discarded`, `review_queued` |
 | `space` | string | — | Filter by space |
-| `source_type` | string | — | Filter by source type |
+| `source_type` | string | — | Filter by one source type |
+| `source` | string | — | Filter by source group: `ide` (IDE, commit, API, incident, PR merge), `ci` (CI and deploy summaries), `conversations` |
+| `mine` | boolean | `false` | Only the caller's own captures (needs a key bound to a user) |
+| `closed` | boolean | `false` | Only captures that closed an open question |
+| `sort` | string | `newest` | `newest`, or `most_used` (with `mine=true` only: ordering other people's captures by use would rank their authors) |
 | `limit` | integer | `50` | Max results (1–1000) |
 | `offset` | integer | `0` | Pagination offset |
 
@@ -1919,30 +1933,35 @@ Get a single fragment by ID.
 
 ### PATCH /api/v1/fragments/:id
 
-Update a fragment. **Requires editor role.** Only provided fields are updated. Sending `confidence` returns `400`: it is derived from the capture's anchors and cannot be set.
+Edit a capture. **Only its author**, on a capture DocBrain is serving; a summary DocBrain wrote cannot be edited, only withdrawn. Send `summary`, `content` and/or `premises` (the premise set is replaced whole). The new text is screened like a new capture (`422`, `429`); `409` `capture_changed` when it changed while you edited.
 
 ### DELETE /api/v1/fragments/:id
 
-Delete a fragment. **Requires admin role.** Also removes from search index.
+Delete a capture. **Only its author**, and only while no answer has used it: afterwards `409 {"error": "already used: withdraw it instead", "kind": "already_used"}`.
 
-### GET /api/v1/fragments/review-queue
+### POST /api/v1/fragments/:id/withdraw
 
-List fragments with `review_queued` status. **Requires analyst role.** Supports same filters as list.
+Stop serving a capture at once. **Its author, or an analyst or admin.** Body `{"reason": "..."}` (required, at most 1000 characters, shown with the capture). The response says `carried_by_draft` when a composed draft still carries the text, and `reason_redacted` (the kind) when the reason held a secret and was stored without it. `409` when it is already withdrawn.
 
-### POST /api/v1/fragments/:id/approve
+### POST /api/v1/fragments/:id/purge
 
-Approve a fragment — sets status to `indexed` and embeds/indexes into OpenSearch. **Requires analyst role.**
+Erase a capture everywhere it is kept: its text, its premises and the answers that quoted it. **Requires admin role.** `204`. Cannot be undone.
 
-### POST /api/v1/fragments/:id/discard
+### POST /api/v1/fragments/withdraw-by-author
 
-Discard a fragment with optional reason. **Requires analyst role.**
+Withdraw every live capture one author recorded, in one act. **Requires admin role.** Body `{"author_id": "uuid", "reason": "..."}`; the reason is required and shown with each capture. Returns `{"withdrawn": ["uuid", ...]}`. Content moderation, never a score.
 
-**Request body:**
-```json
-{
-  "reason": "Duplicate of existing documentation"
-}
-```
+### GET /api/v1/fragments/:id/page
+
+A capture's own page: the capture and its label, its premises with state and when last checked, its history, and the actions this caller may take. `helped` (people helped this month, open questions closed, answers marked wrong, and topic rows counting people) is returned to the capture's author only; who asked is never returned. `404` for a capture the caller cannot see.
+
+### GET /api/v1/captures/mine/impact
+
+The caller's own numbers over the last 30 days: people their captures helped (distinct askers other than the author, with the 30 days before and 8 weekly points), open questions their captures closed, and their captures whose code changed (each with `people_before_change`). Optional `source` as above. Needs a key bound to a user.
+
+### GET /api/v1/captures/organisation
+
+Knowledge at work across the organisation, never a person: the share of answers grounded in a capture (`null` for a key limited to some spaces, a `null` share when a period has no answers), questions closed by a capture, captures whose code changed, areas, the five most-used captures, unanswered questions with no capture (only those at least two people other than the reader asked), and captures whose code changed. No author appears anywhere in it.
 
 ### GET /api/v1/fragments/stats
 
@@ -3095,8 +3114,8 @@ All event types from the internal event bus are available for webhook subscripti
 | `document.deleted` | Document removed |
 | `freshness.changed` | Document freshness status changed |
 | `fragment.captured` | Knowledge fragment captured |
-| `fragment.indexed` | Fragment auto-indexed into search |
-| `fragment.promoted` | Fragment promoted from review queue |
+| `fragment.indexed` | A capture is served (indexed into search) |
+| `fragment.promoted` | A capture was composed into a draft |
 | `gap.detected` | New gap cluster detected |
 | `gap.assigned` | Gap assigned to a user |
 | `gap.resolved` | Gap marked as resolved |

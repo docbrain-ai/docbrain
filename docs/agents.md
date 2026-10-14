@@ -12,7 +12,7 @@ no source anyone can check. Your coding agent is, however, the best instrument
 for both halves of the actual fix — it is present at the second the knowledge is
 created, and it is the thing asking for it at the moment of the next change.
 
-Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor eleven tools. These five are the ones this page's workflow uses; the [full table](#all-eleven-tools) is at the end:
+Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor twelve tools. These five are the ones this page's workflow uses; the [full table](#all-twelve-tools) is at the end:
 
 | Tool | Direction | What it does |
 |------|-----------|--------------|
@@ -92,7 +92,7 @@ procedure (how we deploy, rotate, roll back, get access), how a system is actual
    (paths that must exist), so DocBrain can flag it the day one of them disappears;
 3. shows the draft exactly as it will be sent and waits for your yes;
 4. writes it with `docbrain_annotate` (or `docbrain_commit_capture` for the *why* of a commit) and
-   reports where it landed: indexed, or queued for review.
+   reports what DocBrain answered: the capture's id and any warning — it is served at once.
 
 It offers itself once, at a natural breakpoint, never mid-task, and a "no" ends it. Nothing leaves the
 session unapproved. It never captures secrets, tokens, hostnames from `.env` files, customer or
@@ -175,7 +175,7 @@ root, not at an org that has recorded nothing.
 2. You and your agent fix something real.
 3. The agent asks DocBrain whether that knowledge already exists (`docbrain_context` for the files involved — a lookup in the record, not a guess).
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
-5. Approved captures land as fragments, anchored to the file and line range they came from. A capture that declares a premise becomes checkable: DocBrain re-verifies it against your codebase and flags it the moment it stops being true, without anyone reviewing anything. A capture anchored to nothing checkable is queued for a human instead of served.
+5. A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One that declares a premise reads *Checked against code*: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One anchored to nothing checkable is served too, labelled *Not checked against code*, so every reader knows.
 
 ## What a capture never holds
 
@@ -268,10 +268,10 @@ declined finding. See [the fingerprint key](configuration.md#the-fingerprint-key
 - What contains these limits: a capture is visible only to its space, says who wrote it, and can be withdrawn at once
   or erased by an admin. If a secret was ever served, treat it as exposed and rotate it.
 
-## All eleven tools
+## All twelve tools
 
 The five above are the ones this page's workflow uses. The MCP server declares
-eleven; the rest are the same capabilities the API and CLI expose, reachable
+twelve; the rest are the same capabilities the API and CLI expose, reachable
 from the editor. Direction is read unless marked write — write tools require
 `editor` role or above, and the server refuses them below that.
 
@@ -287,6 +287,7 @@ from the editor. Direction is read unless marked write — write tools require
 | `docbrain_feedback` | read | Submit feedback on an answer. Read-direction because it changes no documentation — it feeds answer quality |
 | `docbrain_annotate` | **write** | File a knowledge fragment — a decision, fix or caveat — tied to a file and line range |
 | `docbrain_commit_capture` | **write** | Capture the *why* behind a change at commit time, grounded in the diff and the commit message |
+| `docbrain_revise` | **write** | Edit or withdraw a capture you recorded (its id comes from `docbrain_context`); a summary DocBrain wrote can only be withdrawn |
 | `docbrain_autopilot_generate` | **write** | Generate a documentation draft for a specific gap cluster. Routes to human review; nothing publishes unattended |
 
 Nothing here can change your source systems. There is no tool that edits a
@@ -295,10 +296,10 @@ knowledge fragments into DocBrain's own corpus and nowhere else.
 
 ## Privacy properties
 
-- **Nothing is automatic.** The agent proposes; a human approves every capture, visibly, in the session.
+- **Nothing is automatic.** The agent proposes; the person who did the work approves every capture, visibly, in the session. No admin queue stands between that yes and the answer.
 - **The session never uploads.** Only the approved capture crosses the wire — not your transcript, not your code, not your prompts.
 - **The client is auditable.** Every line of code that touches your session is MIT-licensed in [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp).
-- **Captures are attributed and falsifiable.** Every fragment records who filed it, and a capture is only served unreviewed when it is anchored to real code — the trust level is derived by the server from those anchors, never from anything the client claims about itself.
+- **Captures are attributed and falsifiable.** Every capture says who wrote its words — *Recorded by <name>*, or *Summarised by DocBrain from <source>* for a summary DocBrain wrote — and what checks it, derived by the server, never from anything the client claims. Its author can edit or withdraw it at any time (delete only until it has been used), an admin can erase it, and a key with no user cannot write one.
 
 ## Honest limitations
 

@@ -107,7 +107,7 @@ Full setup guide: [docs/quickstart.md](docs/quickstart.md). Prefer to call it di
 
 Your agent is there when a problem gets solved, and it's there again when someone is about to change the same code. DocBrain gives it a way to save what was learned the first time and look it up the second time.
 
-**While you work: capture.** When a conversation has worked something out (a decision and the reason for it, a fix that took some digging, a caveat, a procedure, how two systems actually connect), say "capture this" or run `/docbrain:docbrain-capture`. The skill will also offer when it notices something worth keeping. It checks what DocBrain already has, writes a draft in your team's words, links it to the file it's about and the facts it depends on, and shows it to you. Nothing is saved until you say yes. You get one line back: indexed, or queued for review.
+**While you work: capture.** When a conversation has worked something out (a decision and the reason for it, a fix that took some digging, a caveat, a procedure, how two systems actually connect), say "capture this" or run `/docbrain:docbrain-capture`. The skill will also offer when it notices something worth keeping. It checks what DocBrain already has, writes a draft in your team's words, links it to the file it's about and the facts it depends on, and shows it to you. Nothing is saved until you say yes. You get one line back: the capture is served at once, labelled with who wrote it and what checks it.
 
 **Before someone else changes it: read.** `docbrain_context` takes the files the agent is about to edit and returns what's already been decided about them: the decision, the constraint, the thing someone learned the hard way. If any of it is out of date, that warning comes first, with a date. Add this line to your `CLAUDE.md` so the agent checks every time:
 
@@ -146,7 +146,7 @@ with their repo-relative paths and read what comes back first.
 
 A `viewer` key (`docbrain token create --name "MCP" --role viewer`) can read and ask. Captures need an `editor` key. Ready-made configs for each editor, plus the one setup mistake that fails without an error, are in [`examples/mcp-configs/`](examples/mcp-configs/).
 
-The server has [eleven tools](crates/docbrain-mcp#tools) in total. Full guide, including the privacy model: [docs/agents.md](docs/agents.md)
+The server has [twelve tools](crates/docbrain-mcp#tools) in total. Full guide, including the privacy model: [docs/agents.md](docs/agents.md)
 
 ## Living Claims
 

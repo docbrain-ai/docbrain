@@ -47,7 +47,7 @@ check" — never "broken".
    capture is checked against the files it describes and is flagged when one of them moves
    or disappears. Without it a commit capture could never be checked against the code again.
    Repeats collapse to one premise, and the same 100-item cap applies. A commit capture sent
-   with no files declares nothing and waits in the review queue instead.
+   with no files declares nothing; it is served at once, labelled *Not checked against code*.
 4. **Backfill.** `POST /api/v1/premises/backfill` (admin) extracts premises for every
    already-indexed fragment that has none. Safe to re-run; it never duplicates.
 
