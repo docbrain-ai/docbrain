@@ -177,6 +177,11 @@ root, not at an org that has recorded nothing.
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
 5. A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One that declares a premise reads *Checked against code*: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One anchored to nothing checkable is served too, labelled *Not checked against code*, so every reader knows.
 
+A capture is refused when a premise it declares names a file a connected repository was recorded
+holding and none holds now: the reply is `422 premise_removed` naming the path, and the agent corrects
+or drops that premise and shows you the draft again. A file you are adding has no such record and is
+never refused.
+
 ## What a capture never holds
 
 A capture is shared with everyone who can read its space, so DocBrain checks every capture for secrets before it is

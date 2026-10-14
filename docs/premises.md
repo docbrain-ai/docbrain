@@ -71,6 +71,15 @@ Two rules keep this honest:
   It keeps its last verdict and basis, so you can see what was known and when. When the
   source returns, the next sweep re-verdicts it; only a genuine death alerts.
 
+**A capture that is false about its code at birth is refused.** A person's capture whose declared
+`path` premise names a file that a connected repository was recorded holding (a premise's
+`source_ref`) and that no connected repository holds now is not saved: the write answers `422`
+`premise_removed`, naming every such path and never the repository. A file the author is adding has
+no such record, so it is never refused; it is served, and when two folders of it are held by a
+connected repository the reply carries the warning "the file this capture rests on does not exist".
+A commit's own file list, the premises an edit keeps, and DocBrain-written summaries are never
+refused; with no connected listing loaded, nothing is.
+
 ## The monitor
 
 With `PREMISE_MONITOR_ENABLED=true` (the default), the server runs a standing monitor:

@@ -1951,6 +1951,9 @@ fn describe_revise_failure(f: &CaptureFailure) -> String {
 /// What an agent does when the server could not check the text.
 const NOT_CHECKED_GUIDANCE: &str =
     "Not saved: DocBrain could not check this text; try once more, and if it is refused again, report it and stop";
+/// What an agent does when a declared premise names a file no connected repository has any more
+/// (#457 spec point 18): one action, never a blind resend.
+const PREMISE_REMOVED_GUIDANCE: &str = "Read the repository's file tree, correct that premise or leave it out, and show the corrected draft for a new yes; do not resend it unchanged.";
 /// What an agent does when the capture changed under its edit.
 const CAPTURE_CHANGED_GUIDANCE: &str = "Not saved: the capture changed while you edited; read it again and send your edit";
 
@@ -1976,6 +1979,7 @@ fn describe_refusal(f: &CaptureFailure, verb: &str) -> String {
         // One retry, then stop, so an agent never loops into the cooldown.
         "not_checked" => format!("{NOT_CHECKED_GUIDANCE} ({}: {})", f.status, f.message),
         "capture_changed" => format!("{CAPTURE_CHANGED_GUIDANCE} ({}: {})", f.status, f.message),
+        "premise_removed" => format!("{verb} ({}): {}\n{PREMISE_REMOVED_GUIDANCE}", f.status, f.message),
         _ => format!("{verb} ({}): {}", f.status, f.message),
     }
 }
@@ -2438,6 +2442,16 @@ mod tests {
         assert!(text.contains("retry in 17s"), "{text}");
         let dup = CaptureFailure { status: 409, kind: "already_captured".into(), message: "already captured: abc".into(), id: Some("abc".into()), retry_after_secs: None };
         assert!(describe_failure(&dup).contains("abc"));
+    }
+
+    #[test]
+    fn a_removed_premise_is_reported_with_one_action() {
+        let body = r#"{"error":"not saved: no connected repository has src/gone.rs any more (one had it before); check the path, or leave it out of the premises, and send again","kind":"premise_removed","paths":["src/gone.rs"]}"#;
+        let f = parse_failure(422, body);
+        let text = describe_failure(&f);
+        assert!(text.contains("(422): not saved: no connected repository has src/gone.rs any more"), "{text}");
+        assert!(text.ends_with(PREMISE_REMOVED_GUIDANCE), "{text}");
+        assert!(PREMISE_REMOVED_GUIDANCE.contains("do not resend it unchanged"));
     }
 
     #[test]

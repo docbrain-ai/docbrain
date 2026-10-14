@@ -114,7 +114,9 @@ If the write fails — permission, validation, the server unreachable — say ex
 reported and stop: no silent retry, no writing anywhere else. Leave the draft in the conversation so it
 can be sent once the cause is fixed. A refusal names its reason — a capture limit, a duplicate (with
 the existing id), an instruction in the text, a key with no user — repeat it and do not retry; for a
-duplicate, offer `docbrain_revise` on the id it gave. A refusal for a secret goes by Secrets above.
+duplicate, offer `docbrain_revise` on the id it gave. A premise path no connected repository has any
+more (`premise_removed`): check the path in the file tree, correct that premise or drop it, and show
+the corrected draft for a new yes; never resend it unchanged. A refusal for a secret goes by Secrets above.
 
 ## Step 4 — report in one line, then stop
 

@@ -1863,6 +1863,7 @@ The server refuses, saving nothing:
 | `400` | `source_type_refused` | `source_type` is `conversation_distill`, `ci_analyze` or `deploy`: DocBrain writes those itself |
 | `422` | `secret_in_capture` (and other `secret_*` kinds) | the text holds what looks like a secret; the reply names the kind and the field, never the value |
 | `422` | — | the text holds an instruction to the model |
+| `422` | `premise_removed` | a declared `path` premise names a file a connected repository was recorded holding and none holds now; `paths` lists every such path, no repository is named (a commit's own file list is never judged) |
 | `429` | `capture_limit` | more than `fragments.max_per_author_per_hour` captures (default 60) from one author in an hour; `Retry-After` says when |
 | `429` | `capture_paused` | three secret refusals in ten minutes pause capturing for ten minutes |
 | `409` | `already_captured` | the same author sent the same text within 24 hours; `id` names the existing capture |
@@ -1933,7 +1934,7 @@ Get a single fragment by ID.
 
 ### PATCH /api/v1/fragments/:id
 
-Edit a capture. **Only its author**, on a capture DocBrain is serving; a summary DocBrain wrote cannot be edited, only withdrawn. Send `summary`, `content` and/or `premises` (the premise set is replaced whole). The new text is screened like a new capture (`422`, `429`); `409` `capture_changed` when it changed while you edited.
+Edit a capture. **Only its author**, on a capture DocBrain is serving; a summary DocBrain wrote cannot be edited, only withdrawn. Send `summary`, `content` and/or `premises` (the premise set is replaced whole). The new text is screened like a new capture (`422`, `429`); a premise the edit adds is judged like a new one (`422` `premise_removed`), the ones it keeps never are; `409` `capture_changed` when it changed while you edited.
 
 ### DELETE /api/v1/fragments/:id
 
