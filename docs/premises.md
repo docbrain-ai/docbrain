@@ -60,6 +60,67 @@ check" — never "broken".
 | `uncheckable` | No connected source can currently speak to it | never |
 | `dormant` | Never verified true | never |
 
+### How a reader sees a premise
+
+The state is the monitor's; what it means to a reader also depends on the last verdict and on
+whether anything has checked the premise yet. The server derives one reading and sends it beside the
+raw `state` as `reading` (`state`, `label`, `checked_at`) on the capture page
+(`GET /api/v1/fragments/{id}/page`) and the premise lists (`GET /api/v1/premises/broken`). Every
+surface shows `label` as it comes and never labels a premise from `state` alone.
+
+| `reading.state` | `label` | When |
+|---|---|---|
+| `holds` | Holds | `holds` |
+| `broken` | Broken | `broken` |
+| `not_found` | Not found in any connected repository | a `dormant` path premise whose last check found it in no listing (`missing` or `moved`) |
+| `not_checked_yet` | Not checked yet | a `dormant` premise nothing has checked yet |
+| `does_not_match` | Does not match the connected repository | a `dormant` version or config-key premise whose value, at the last check, differs from the repository's |
+| `cannot_be_checked` | Cannot be checked now · last verified <date> | `uncheckable`, last verdict `verified` |
+| `cannot_be_checked` | Cannot be checked now · last found missing <date> | `uncheckable`, last verdict `missing` (or `moved`, for a path) |
+| `cannot_be_checked` | Cannot be checked | `uncheckable` with nothing kept to say, or a `dormant` premise whose last check found no connected source that owns it |
+
+The `<date>` (UTC, `YYYY-MM-DD`) is the day the premise stopped being checkable: its last verdict was
+current up to then.
+
+`checked_at` is when a check last ran, and `null` while nothing has checked the premise: a new row's
+`last_checked_at` is its creation time, not a check. A `not_found` premise is still dormant: it never
+alerts and never appears on an answer.
+
+The sweep reads every path a capture declares, including one whose top folder no connected
+repository holds: such a path reads *Not found in any connected repository* with its check time, and
+turns to *Holds* when a repository gains it.
+
+**A reader is told only what the repositories they can read say.** A repository's listing is
+readable when the reader can read every page DocBrain holds from it, by the rule Ask applies (spaces
+and access rules; a listing with no page yet is readable unless an enforcing access rule applies).
+For a reader who cannot read every listing, a claim whose path (or, for a version or config-key
+claim, whose file) no readable listing holds, and whose recorded holder they cannot read, reads *Not
+found in any repository you can read* where it would otherwise say it holds, broke, was last
+verified, or that its value differs; its raw `state` reads `dormant` and its `state_changed_at` the
+time the claim was written. The capture's chip, the Captures tiles, the "code changed" lists and a
+capture's own list of broken claims follow the same readings: every capture response row with
+premise data is built from the reader's scope. Which listings a reader can read is worked out once
+per kind of reader and kept until the listings next refresh, at most one refresh interval.
+
+**The capture chip** comes from the readings too: *Checked against code* only when every claim
+holds; *Code it rests on changed* when a claim broke; *A claim does not hold* when any other claim
+does not hold (one not checked yet beside ones that were included); *Not checked against code* when
+nothing has been checked.
+
+Summaries count readings, not states. The Captures tiles say "all still match the code" only when
+every claim of every live capture in view reads *Holds*; when nothing has broken but some claims do
+not hold, the tile reads "<n> rest on a claim that does not hold" and links to those captures. The
+Mine impact (`GET /api/v1/captures/mine/impact`) and Organisation (`GET /api/v1/captures/organisation`)
+responses carry `not_holding` (live captures with any claim that does not read *Holds*) and
+`not_holding_captures` (them, by summary; at most 10 on Organisation) beside `code_changed`
+(captures with a broken claim). A claim found missing at its first check never breaks, so
+`code_changed` alone cannot tell.
+
+Home's *Wrong now* line reads its claims the same way: "N were checked and not found" for document
+claims checked and found missing, "N point at files that moved" for those found at another path, and
+"have not been checked" only for the claims nothing has checked. Its coverage records `not_found` and
+`moved` inside `unchecked` (the complement of the base, which the review wall still states).
+
 Two rules keep this honest:
 
 - **Only a claim proven true can die.** A premise that fails verification at capture is
@@ -75,8 +136,26 @@ Two rules keep this honest:
 `path` premise names a file that a connected repository was recorded holding (a premise's
 `source_ref`) and that no connected repository holds now is not saved: the write answers `422`
 `premise_removed`, naming every such path and never the repository. A file the author is adding has
-no such record, so it is never refused; it is served, and when two folders of it are held by a
-connected repository the reply carries the warning "the file this capture rests on does not exist".
+no such record, so it is never refused; it is served with a warning.
+
+**Every declared path that no listing the writer can read holds is warned about at save time**, on
+a create and on an edit that sends premises (`warnings` in the response; `docbrain_annotate`,
+`docbrain_commit_capture`, `docbrain_revise` and the console show them). Only listings the writer can
+read are consulted: a repository they cannot read gives no branch, and no silence either. The warning
+names the branch DocBrain read, never the repository:
+
+- "the file this capture rests on does not exist on branch <branch>: <path>" when a connected
+  listing owns the path's folders (the first two, three under a `.`-led top folder; with several, the
+  smallest source key). The branch is the git source's tracked branch, or the branch checked out in
+  a local source's working copy at its last refresh; a branch DocBrain could not read, or a detached
+  HEAD, is never guessed.
+- "the file this capture rests on does not exist: <path>" when that listing's branch is not known (a
+  detached HEAD, or a listing stored before branches were recorded).
+- "the file this capture rests on is not in any repository you can read: <path>" when no listing
+  the writer can read owns its folders.
+
+It is a warning, not a refusal: the capture is saved. With no connected listing loaded, nothing
+warns.
 A commit's own file list, the premises an edit keeps, and DocBrain-written summaries are never
 refused; with no connected listing loaded, nothing is.
 

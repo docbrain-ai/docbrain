@@ -175,7 +175,7 @@ root, not at an org that has recorded nothing.
 2. You and your agent fix something real.
 3. The agent asks DocBrain whether that knowledge already exists (`docbrain_context` for the files involved — a lookup in the record, not a guess).
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
-5. A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One that declares a premise reads *Checked against code*: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One anchored to nothing checkable is served too, labelled *Not checked against code*, so every reader knows.
+5. A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One whose declared premises all hold reads *Checked against code*: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One with a claim that does not hold (a path no repository you can read has, say) reads *A claim does not hold*, and the save-time reply says which. One anchored to nothing checkable is served too, labelled *Not checked against code*, so every reader knows.
 
 A capture is refused when a premise it declares names a file a connected repository was recorded
 holding and none holds now: the reply is `422 premise_removed` naming the path, and the agent corrects
@@ -217,6 +217,28 @@ and rotate it.
 - **A summary DocBrain writes** (a chat-thread capture, a CI run analysis) is **redacted**: the secret is replaced by
   a marker such as `[removed: password]`, the rest is kept, and the person who asked is told the kind that was
   removed. These never pause anyone.
+
+### What you are told
+
+A notice reaches the console's notifications page only when there is something for you to do, and it says what and
+where: every notice has one action, which opens the place to do it.
+
+- **Your capture lost a value** (it was withdrawn because it held what looks like a secret, or the value was removed
+  from a summary DocBrain wrote for you): rotate the value if it was real. The notice opens the capture; a chat
+  thread captured as a document has no capture to open, so its notice only says what to do.
+- **While DocBrain or an admin is still checking a capture you wrote, you are not notified.** My captures shows it
+  withdrawn, with "waiting for an admin" (pinned at the top) or "until it can be checked again". You are told as soon
+  as a value is removed, even if something else in the capture still waits, because that is when there is something
+  to rotate; if the admin restores it, it is simply served again.
+- **Admins** have one standing notice while captures wait for their decision: "N captures wait for your decision",
+  opening the waiting list. It counts every capture waiting for a decision, the same list the console shows any admin
+  who can sign in. It is updated in place, comes back unread only when another capture starts
+  waiting, and goes away when nothing waits; it does not expire after 30 days like other notices. Marking it read
+  keeps it quiet; dismissing it while captures still wait brings it back, since the decision is still open.
+- Admins are also asked to rotate a value removed from a capture that had already been served (one notice per
+  capture, opening it, whichever check or decision removed it, including a purge while it waited; a value found
+  only in a withdraw reason, which readers never see, asks only its author), to rotate a value found in a signed evidence record, and to fix the model's provider while
+  the secret check's model is unavailable (the notice goes once it has caught up).
 
 ### The model check
 

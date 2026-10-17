@@ -583,7 +583,7 @@ impl McpServer {
                 },
                 {
                     "name": "docbrain_revise",
-                    "description": with_secret_guardrail("Edit or withdraw a capture you recorded. Use the id from docbrain_context or from the capture's report. Edit replaces its text and/or its premise set (the same premises as docbrain_annotate) and re-indexes it; withdraw takes it out of answers at once and needs a reason, which is shown with it. Only its author can edit; DocBrain-written summaries can only be withdrawn. A capture already used in an answer cannot be deleted, only withdrawn."),
+                    "description": with_secret_guardrail("Edit or withdraw a capture you recorded. Use the id from docbrain_context or from the capture's report. Edit replaces its text and/or its premise set (the same premises as docbrain_annotate) and re-indexes it; withdraw takes it out of answers at once and needs a reason, which is shown with it. Only its author can edit; DocBrain-written summaries can only be withdrawn. A capture that has reached someone other than you (an answer to their question, their context lookup, a draft, or their opening an answer page that shows it) cannot be deleted, only withdrawn; until then, Delete removes it for good."),
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -1736,7 +1736,7 @@ impl McpServer {
                         format!("\nA composed draft ({d}) still carries its text; withdraw does not change the draft.")
                     })
                     .unwrap_or_default();
-                format!("{done}. id {id}{draft}")
+                format!("{done}. id {id}{draft}{}", warning_lines(&v))
             }
             Err(f) => describe_revise_failure(&f),
         };
@@ -1864,12 +1864,18 @@ fn gap_cluster_id(args: &Value) -> Result<Option<String>, JsonRpcError> {
 fn capture_report(result: &Value) -> String {
     let id = result["id"].as_str().unwrap_or("unknown");
     let status = result["status"].as_str().unwrap_or("unknown");
-    let mut out = format!("Fragment ID: {id} | Status: {status}");
-    for w in result["warnings"].as_array().into_iter().flatten().filter_map(Value::as_str) {
-        out.push_str("\nWarning: ");
-        out.push_str(w);
-    }
-    out
+    format!("Fragment ID: {id} | Status: {status}{}", warning_lines(result))
+}
+
+/// One `\nWarning: ` line per server warning, in the server's words (a create's and an edit's).
+fn warning_lines(result: &Value) -> String {
+    result["warnings"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(|w| format!("\nWarning: {w}"))
+        .collect()
 }
 
 #[derive(Debug)]
@@ -2474,6 +2480,13 @@ mod tests {
             assert_eq!(e.message, "gap_id must be an id");
         }
         assert!(gap_cluster_id(&serde_json::json!({"gap_id": 5})).is_err(), "not a string");
+    }
+
+    #[test]
+    fn an_edit_reports_the_servers_warnings_verbatim() {
+        let v = serde_json::json!({"id": "i1", "status": "indexed", "warnings": ["the file this capture rests on does not exist: a/b.md"]});
+        assert_eq!(warning_lines(&v), "\nWarning: the file this capture rests on does not exist: a/b.md");
+        assert_eq!(warning_lines(&serde_json::json!({"id": "i1"})), "");
     }
 
     #[test]
