@@ -86,6 +86,13 @@ current up to then.
 `last_checked_at` is its creation time, not a check. A `not_found` premise is still dormant: it never
 alerts and never appears on an answer.
 
+A claim that never held keeps no verdict once no connected source owns it: when a check finds no
+owner for a `dormant` premise (its repository was disconnected, or no listing or symbol value is
+loaded), the verdict it kept is dropped, so it reads *Cannot be checked* instead of describing a
+repository that is no longer connected (*Does not match …* or *Not found …* with a fresh check time).
+The next check that finds an owner writes a verdict again. A claim that ever held keeps its last
+verdict through such a gap, as above.
+
 The sweep reads every path a capture declares, including one whose top folder no connected
 repository holds: such a path reads *Not found in any connected repository* with its check time, and
 turns to *Holds* when a repository gains it.
@@ -102,19 +109,29 @@ capture's own list of broken claims follow the same readings: every capture resp
 premise data is built from the reader's scope. Which listings a reader can read is worked out once
 per kind of reader and kept until the listings next refresh, at most one refresh interval.
 
-**The capture chip** comes from the readings too: *Checked against code* only when every claim
-holds; *Code it rests on changed* when a claim broke; *A claim does not hold* when any other claim
-does not hold (one not checked yet beside ones that were included); *Not checked against code* when
-nothing has been checked.
+**The capture chip** comes from the readings too, first rule that applies: *Code it rests on changed*
+when a claim broke; when a claim was checked and does not hold, its reason in that claim's own words,
+amber: *Not found in any connected repository* (or *Not found in any repository you can read*),
+*Does not match the connected repository*, or *Broken* for a claim that broke with no basis — with
+claims of several kinds, *Not found* wins (nothing to compare against), then *Does not match*;
+*Checked against code* only when every claim holds; *Not checked against code* when nothing has been
+checked; otherwise (no claim fails and some cannot be checked now) *Cannot be checked now*, also when
+other claims hold: the capture as a whole cannot be confirmed now. A claim that
+holds beside one not checked yet, with none uncheckable, reads *Not checked against code*. The wire
+value is `label.check`: `checked_against_code`, `code_changed`, `not_found`,
+`not_found_where_you_can_read`, `does_not_match`, `broken`, `cannot_be_checked_now`,
+`not_checked_against_code`.
 
-Summaries count readings, not states. The Captures tiles say "all still match the code" only when
-every claim of every live capture in view reads *Holds*; when nothing has broken but some claims do
-not hold, the tile reads "<n> rest on a claim that does not hold" and links to those captures. The
-Mine impact (`GET /api/v1/captures/mine/impact`) and Organisation (`GET /api/v1/captures/organisation`)
-responses carry `not_holding` (live captures with any claim that does not read *Holds*) and
-`not_holding_captures` (them, by summary; at most 10 on Organisation) beside `code_changed`
-(captures with a broken claim). A claim found missing at its first check never breaks, so
-`code_changed` alone cannot tell.
+Every surface computes the chip in its reader's scope: the capture pages, Captures, an Ask source,
+the answer page and `docbrain_context` alike, so a cached answer's chip is recomputed for whoever
+reads it. For a reader who cannot read every listing, a claim in a listing they cannot read that
+cannot be checked now reads *Not found in any repository you can read* (amber), as its row does: true
+of the repositories they can read, and silent about the rest.
+
+Summaries count readings, not states. The Captures tile *Captures whose code changed* counts captures
+with a claim that broke (`code_changed` on `GET /api/v1/captures/mine/impact` and
+`GET /api/v1/captures/organisation`), and says nothing else: a claim found missing at its first check
+never breaks, and why a capture's claim does not hold is on that capture's chip.
 
 Home's *Wrong now* line reads its claims the same way: "N were checked and not found" for document
 claims checked and found missing, "N point at files that moved" for those found at another path, and
