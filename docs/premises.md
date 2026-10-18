@@ -107,7 +107,10 @@ verified, or that its value differs; its raw `state` reads `dormant` and its `st
 time the claim was written. The capture's chip, the Captures tiles, the "code changed" lists and a
 capture's own list of broken claims follow the same readings: every capture response row with
 premise data is built from the reader's scope. Which listings a reader can read is worked out once
-per kind of reader and kept until the listings next refresh, at most one refresh interval.
+per kind of reader and kept until the listings next refresh, at most one refresh interval. A save
+(a capture written or its claims edited) reads the listings as stored at that moment: when one was
+stored or removed since the last load, they are loaded again first, so a file in a listing stored a
+moment ago is never warned about as missing.
 
 **The capture chip** comes from the readings too, first rule that applies: *Code it rests on changed*
 when a claim broke; when a claim was checked and does not hold, its reason in that claim's own words,
