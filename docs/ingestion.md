@@ -636,6 +636,10 @@ its words and what checks it, and the console's **Captures** page shows it:
 - **Where it helped** — the people it helped this month, the open questions it closed, and what the
   questions were about — is shown to its author only, on the capture's page. Counts are of people,
   never of answers, and never name who asked.
+- **No drafts composed from clusters.** Composing a draft from a cluster of captures is removed
+  (`POST /api/v1/fragments/clusters/compose` answers `410 Gone`): a composed draft copied captures'
+  text outside the checks that keep them true. The cluster listing (`GET /api/v1/fragments/clusters`)
+  is deprecated, with `Deprecation` and `Sunset: 1 Jan 2027` headers, and is removed in a later release.
 
 ### Space Assignment
 

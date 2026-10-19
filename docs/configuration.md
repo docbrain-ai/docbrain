@@ -784,6 +784,8 @@ The Autopilot module automatically identifies documentation gaps from user query
 | `AUTOPILOT_MIN_NEGATIVE_RATIO` | `0.15` | Minimum fraction of queries on a topic that must have negative feedback |
 | `AUTOPILOT_MAX_CLUSTERS` | `50` | Maximum gap clusters to persist per analysis run |
 | `AUTOPILOT_MAX_EPISODES` | `500` | Maximum negative episodes to load per analysis run |
+| `AUTOPILOT_ANSWER_TOPIC_MAX_EMBED_FAILURES` | `3` | How many hourly topic runs may fail to embed one question before that question is no longer read, so one question the embedder always rejects cannot hold the step back. Used only when answer topics are on. |
+| `AUTOPILOT_ANSWER_TOPICS_ENABLED` | `false` | Group answered questions into topics and show a capture's author which topics its answers covered. Off by default until topics pass their quality check: off, the hourly topic step does not run and no topic is shown anywhere. |
 | `AUTOPILOT_GAP_ANALYSIS_INTERVAL_HOURS` | `6` | How often the background gap analysis scheduler runs |
 | `AUTOPILOT_AUTO_DRAFT` | `false` | Automatically generate drafts for qualifying gaps (no human trigger). Set to `true` to enable. |
 | `AUTOPILOT_AUTO_DRAFT_SEVERITY` | `critical` | Minimum gap severity for auto-drafting: `critical`, `high`, `medium`, or `low` |

@@ -7,6 +7,8 @@ use dotenvy::dotenv;
 use std::io::Write;
 use std::path::PathBuf;
 
+#[macro_use]
+mod redact;
 mod instance_check;
 mod repository;
 
@@ -631,7 +633,7 @@ enum CiAction {
 // Config file — ~/.docbrain/config.json
 // ═══════════════════════════════════════════════════════════════════════════
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 struct Config {
     /// The default sign-in. Kept at the top level, not under `profiles`, because existing
     /// tools and older CLI versions read exactly these two fields.
@@ -651,14 +653,16 @@ struct Config {
     #[serde(flatten)]
     extra: serde_json::Map<String, serde_json::Value>,
 }
+redacted_debug!(Config { corpus_drop_alert_fraction, profiles } secret { api_key } url { server_url } map { extra });
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Clone, Serialize, Deserialize)]
 struct ProfileEntry {
     server_url: Option<String>,
     api_key: Option<String>,
     #[serde(flatten)]
     extra: serde_json::Map<String, serde_json::Value>,
 }
+redacted_debug!(ProfileEntry {  } secret { api_key } url { server_url } map { extra });
 
 fn null_as_empty<'de, D>(d: D) -> std::result::Result<std::collections::BTreeMap<String, ProfileEntry>, D::Error>
 where
@@ -861,24 +865,26 @@ fn named_entry<'a>(cfg: &'a Config, name: &ProfileName) -> Result<&'a ProfileEnt
 
 /// Where requests go and which key they carry. One pair, always from one source: a key
 /// saved for one server must never be sent to another.
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 struct Target {
     server_url: String,
     api_key: Option<String>,
     /// Said on stderr (so `--json` stdout stays parseable). Names variables, never values.
     notes: Vec<String>,
 }
+redacted_debug!(Target { notes } secret { api_key } url { server_url });
 
 /// DOCBRAIN_SERVER_URL, DOCBRAIN_API_KEY and DOCBRAIN_PROFILE as the shell (or CI) set them,
 /// captured before `.env` is loaded. These decide who the CLI speaks as and where a key or a
 /// password goes, so a `.env` file — in this directory or any parent, e.g. a cloned
 /// repository — never sets them. Every read of these three goes through here.
-#[derive(Debug, Default)]
+#[derive(Default)]
 struct ShellIdentityEnv {
     server_url: Option<String>,
     api_key: Option<String>,
     profile: Option<String>,
 }
+redacted_debug!(ShellIdentityEnv { profile } secret { api_key } url { server_url });
 
 static SHELL_ENV: std::sync::OnceLock<ShellIdentityEnv> = std::sync::OnceLock::new();
 
