@@ -267,7 +267,10 @@ data:
   {{- /* Retired (#467): rendered only when a values file still sets it, so the server's
          startup warning tells that deployment to use cacheTtlHours: 0 instead. */}}
   {{- if hasKey .Values.rag "cacheThreshold" }}
+  {{- if .Values.rag.cacheThreshold }}
+  # Retired: set only when given, so the server's retired-setting warning is true.
   RAG_CACHE_THRESHOLD: {{ .Values.rag.cacheThreshold | quote }}
+  {{- end }}
   {{- end }}
   {{- if .Values.rag.mcpOutputCeilingBytes }}
   DOCBRAIN_MCP_OUTPUT_CEILING_BYTES: {{ .Values.rag.mcpOutputCeilingBytes | quote }}
