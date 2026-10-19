@@ -188,13 +188,17 @@ With `PREMISE_MONITOR_ENABLED=true` (the default), the server runs a standing mo
   immediately, rather than waiting for the sweep.
 - **At startup, and after any missed events,** it backfills premises for indexed fragments
   that have none, so nothing is silently unmonitored.
-- **A discarded capture's premises are not swept.** Discarding a capture rejects it, so its
+- **A discarded or withdrawn capture's premises are not swept.** Discarding a capture rejects
+  it and withdrawing takes it out of answers, so its
   claims stop being checked and stop being reported: they do not change state again, and
   `POST /api/v1/premises/check` never names a discarded capture. The rows are kept, frozen
   with the state and verdict they held at the moment of the discard — the same choice the
   discard itself makes, where the search entry goes and the capture stays with its reason —
   so the record of what was claimed survives the rejection. A capture that is merely waiting
-  for review is not affected; only a rejected one stops being checked.
+  for review is not affected; only a rejected or withdrawn one stops being checked. Such a
+  capture is never served, so its claims keep their last reading even after the listing that
+  owned them is gone; every claim that is still checked reads "Cannot be checked" once its
+  owning listing is gone.
 
 Writes happen only when something changed; a sweep over an unchanged world writes nothing
 and emits nothing. If the monitor cannot check (database hiccup, missing listing), premises
@@ -230,10 +234,18 @@ dated to the commit it was observed at.
   content. The page, `/premises/health` and the pull-request check leave it out. The sweep
   still reads such rows, so beside its figure the page says how many of the rows it reads
   belong to deleted documents.
-- **Events:** `premise.broken` and `premise.restored` are emitted on state transitions,
-  persisted to the event log, and deliverable by [webhooks](configuration.md) — subscribe an
-  endpoint to those event types and a premise death is POSTed to it (signed) the moment the
-  sweep detects it. Restoration (`broken → holds`) emits `premise.restored`.
+- **Events:** `premise.broken` and `premise.restored` are emitted on state transitions and
+  persisted to the event log. They stay inside DocBrain: a premise event names a single page
+  or capture, so it is not delivered to webhooks. Restoration (`broken → holds`) emits
+  `premise.restored`.
+  A premise can leave its page or capture while that page or capture stays, in three ways: a
+  re-read page no longer states it, the author's edit drops it, or removing a secret makes it
+  repeat another premise of the capture and the repeat is dropped. Each is a retirement: the
+  evidence journal records it as `kind="retired"` with the premise id, its page or capture and
+  its last state, and the first two also emit `premise.retired` with the same fields (the
+  secret passes run without the event bus, so a dropped repeat is journaled only). Both are
+  written just after the retirement commits, so a crash in that instant leaves the retirement
+  without a journal record or event.
 - **Answers:** the monitor watches *stored* claims; the answer-time claim verifier
   (`RAG_CLAIM_VERIFICATION`) independently checks any path an *answer* cites against the
   same listings. An answer that cites a dead path carries its own correction note, whether

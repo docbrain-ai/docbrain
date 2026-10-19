@@ -7286,19 +7286,66 @@ fn render_why(primary: &RecordHeader, all: &[RecordHeader]) {
             println!("  approved by: {}", appr.actor);
         }
         // premise states referencing this record as their fragment.
-        let transitions: Vec<&RecordHeader> = all
-            .iter()
-            .filter(|r| r.kind == "transition" && body_str(&r.body, "fragment_id").as_deref() == Some(&id))
-            .collect();
-        if !transitions.is_empty() {
-            println!("  premise transitions ({}):", transitions.len());
-            for t in transitions {
-                let expr = body_str(&t.body, "expression").unwrap_or_default();
-                let old = body_str(&t.body, "old_state").unwrap_or_else(|| "?".to_string());
-                let new = body_str(&t.body, "new_state").unwrap_or_else(|| "?".to_string());
-                println!("    - {expr}: {old} -> {new}");
+        let history = premise_history_lines(&id, all);
+        if !history.is_empty() {
+            println!("  premise transitions ({}):", history.len());
+            for line in history {
+                println!("    - {line}");
             }
         }
+    }
+}
+
+/// The premise history of the capture `id`, one line per record in journal order: each
+/// `transition` (`old -> new`), and each `retired` record (#323) as its last line (`last ->
+/// retired`). Newer records carry no expression (#457), so a line names the premise by id then.
+fn premise_history_lines(id: &str, all: &[RecordHeader]) -> Vec<String> {
+    all.iter()
+        .filter(|r| (r.kind == "transition" || r.kind == "retired") && body_str(&r.body, "fragment_id").as_deref() == Some(id))
+        .map(|t| {
+            let premise = body_str(&t.body, "expression")
+                .or_else(|| body_str(&t.body, "premise_id"))
+                .unwrap_or_default();
+            let (old, new) = if t.kind == "retired" {
+                (body_str(&t.body, "last_state").unwrap_or_else(|| "?".to_string()), "retired".to_string())
+            } else {
+                (
+                    body_str(&t.body, "old_state").unwrap_or_else(|| "?".to_string()),
+                    body_str(&t.body, "new_state").unwrap_or_else(|| "?".to_string()),
+                )
+            };
+            format!("{premise}: {old} -> {new}")
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod premise_history_tests {
+    use super::{premise_history_lines, RecordHeader};
+
+    fn record(kind: &str, body: serde_json::Value) -> RecordHeader {
+        RecordHeader {
+            position: 0,
+            prev_head: [0; 32],
+            class: "premises".into(),
+            kind: kind.into(),
+            at: String::new(),
+            actor: serde_json::Value::Null,
+            content_hash: None,
+            body,
+            backfilled: false,
+        }
+    }
+
+    /// Review m5: a capture's premise history ends with the claim leaving it, not at "broken".
+    #[test]
+    fn a_retired_record_is_the_last_line_of_a_premise_history() {
+        let all = vec![
+            record("transition", serde_json::json!({"premise_id": "p1", "fragment_id": "c1", "old_state": "holds", "new_state": "broken"})),
+            record("transition", serde_json::json!({"premise_id": "p9", "fragment_id": "other", "old_state": "holds", "new_state": "broken"})),
+            record("retired", serde_json::json!({"premise_id": "p1", "fragment_id": "c1", "last_state": "broken"})),
+        ];
+        assert_eq!(premise_history_lines("c1", &all), vec!["p1: holds -> broken".to_string(), "p1: broken -> retired".to_string()]);
     }
 }
 
