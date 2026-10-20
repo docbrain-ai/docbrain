@@ -151,12 +151,13 @@ fn role_rank(role: &str) -> u8 {
 /// silence is never the only signal — absence of any line would otherwise read
 /// as "this feature is switched off".
 ///
-/// `nothing_checkable` and an absent `verification` produce NEITHER. The first
-/// is the outcome for every answer on a deployment whose sources record no file
-/// listings, where a line on each one is indistinguishable from a broken
-/// feature. The second means the pass never ran, and reporting a verdict that
-/// was never computed is the exact failure `Answer::verification` being an
-/// `Option` exists to prevent.
+/// `nothing_checkable`, `unavailable` and an absent `verification` produce
+/// NEITHER. `nothing_checkable`: the pass ran and the answer cites nothing a
+/// listing could settle. `unavailable`: the server could not read its file
+/// listings, so nothing was checked. Absent: this deployment does not verify
+/// (no source has a listing, or the pass is off). None of them is a verdict, and
+/// reporting a verdict that was never computed is the exact failure
+/// `Answer::verification` being an `Option` exists to prevent.
 fn verification_lines(response: &Value) -> (String, String) {
     let Some(v) = response.get("verification") else {
         return (String::new(), String::new());

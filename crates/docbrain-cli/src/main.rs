@@ -1327,8 +1327,9 @@ struct AskResponse {
     /// `docbrain ask --json` reported "verification absent" on every answer,
     /// on or off, indistinguishable from the verifier being broken. Absent
     /// stays absent (no default substituted): that is how the server marks
-    /// "the pass did not run", distinct from having run and found nothing
-    /// checkable, which arrives with `checked: 0`.
+    /// "this deployment does not verify" (no source has a file listing, or the
+    /// pass is off), distinct from `nothing_checkable` (ran, nothing to check)
+    /// and `unavailable` (the listings could not be read), both `checked: 0`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     verification: Option<Verification>,
     /// Premises of fragments this answer drew on that no longer hold. Absent
@@ -2165,11 +2166,12 @@ fn render_blocks(result: &AskResponse) -> Option<String> {
 
 /// The verifier's own sentences, if it ran and had something to say.
 ///
-/// `None` covers both silent cases on purpose: `result.verification` absent
-/// (the pass did not run) and present with empty `notes` (ran, nothing
-/// checkable, or every checkable claim held) print exactly the same way —
-/// nothing. Verification is not part of `blocks` (the server keeps it a
-/// separate field; see `docbrain_core::rag::blocks::warning_blocks`'s doc
+/// `None` covers every silent case on purpose: `result.verification` absent
+/// (this deployment does not verify) and present with empty `notes` (ran and
+/// nothing checkable, every checkable claim held, or `unavailable`: the
+/// listings could not be read) print exactly the same way — nothing.
+/// Verification is not part of `blocks` (the server keeps it a separate
+/// field; see `docbrain_core::rag::blocks::warning_blocks`'s doc
 /// comment), so this runs unconditionally rather than only in the legacy
 /// branch the way `stale_claims` does.
 fn verification_notes(result: &AskResponse) -> Option<&[String]> {
