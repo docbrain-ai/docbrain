@@ -1473,9 +1473,18 @@ struct Verification {
     notes: Vec<String>,
 }
 
+/// One entry of `sources`. Beyond the fields the terminal rendering reads, it
+/// mirrors the server's source entry, in its order and with its
+/// omit-when-absent rule, because `--json` re-serialises this struct rather
+/// than forwarding the server's bytes: a field missing here is dropped from
+/// machine-readable output. That is how a capture's label went missing from
+/// `sources` while `evidence` kept it.
 #[derive(Deserialize, Serialize)]
 #[allow(dead_code)]
 struct SourceResponse {
+    /// The text of the passage the answer drew on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    content: Option<String>,
     heading: Option<String>,
     score: f32,
     source_url: String,
@@ -1484,6 +1493,20 @@ struct SourceResponse {
     /// can send it as source_ref.key.
     #[serde(default)]
     document_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    space: Option<String>,
+    /// Present only when the server found this document contradicting others.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    contradiction_score: Option<f32>,
+    /// When the page was edited after this copy was indexed. Kept as the
+    /// server's string: the CLI does not read the time, and a string
+    /// round-trips it unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    source_edited_since_index: Option<String>,
+    /// A capture's label (who wrote it, what checks it), as the server sends
+    /// it; absent for a document. The same shape `evidence` carries.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    capture: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]
@@ -7825,6 +7848,56 @@ mod tests {
         }))
         .unwrap();
         assert_eq!(source_line(0, &s), "  [1] A page (score: 0.50)");
+    }
+
+    /// `--json` re-serialises each source rather than forwarding the server's
+    /// bytes, so a field `SourceResponse` does not hold is dropped from the
+    /// document a script parses. The capture label is the load-bearing one: it
+    /// is how a reader tells a note (and how checked it is) from a document,
+    /// and `evidence` already keeps it. Every key here is one the server's
+    /// source entry sends; a document source carries none of the optional ones,
+    /// and an absent key (even `content`, from a payload that omits it) must
+    /// stay absent rather than arrive as `null`.
+    #[test]
+    fn every_field_a_source_arrives_with_reaches_json() {
+        let wire = serde_json::json!({
+            "answer": "a",
+            "sources": [
+                {
+                    "content": "the note's words",
+                    "heading": null,
+                    "score": 0.5,
+                    "source_url": "",
+                    "title": "A note",
+                    "document_id": "fragment:00000000-0000-0000-0000-0000000000a1",
+                    "space": "ENG",
+                    "contradiction_score": 40.0,
+                    "source_edited_since_index": "2026-10-01T12:00:00Z",
+                    "capture": {
+                        "fragment_id": "00000000-0000-0000-0000-0000000000a1",
+                        "attribution": { "writer": "summary", "from": "#ops", "link": null, "capturer": null },
+                        "check": "not_checked_against_code",
+                        "attribution_line": "Summarised by DocBrain from #ops",
+                        "check_label": "Not checked against code"
+                    }
+                },
+                {
+                    "content": "a page's words",
+                    "heading": "Setup",
+                    "score": 0.25,
+                    "source_url": "https://docs.example/p",
+                    "title": "A page",
+                    "document_id": "docs/p.md"
+                },
+                { "heading": null, "score": 0.1, "source_url": "https://docs.example/q", "title": "Sent without its text", "document_id": "" }
+            ]
+        });
+        let resp: AskResponse = serde_json::from_value(wire.clone()).expect("parse");
+        // The bytes `--json` prints, read back.
+        let printed = serde_json::to_string_pretty(&resp).expect("serialise");
+        let out: serde_json::Value = serde_json::from_str(&printed).expect("--json output parses");
+        assert_eq!(out["sources"][0]["capture"]["check_label"], "Not checked against code", "--json keeps a capture's label");
+        assert_eq!(out["sources"], wire["sources"], "a source reaching --json differs from the one the server sent");
     }
 
     /// --json wins over an interactive terminal: the caller asked for data.

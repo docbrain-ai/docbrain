@@ -190,6 +190,51 @@ fn verification_lines(response: &Value) -> (String, String) {
     }
 }
 
+/// One markdown line per source an answer cites. A document is a link, and a
+/// document with no URL is left out, as it always was. A captured note carries
+/// the label the server rendered for it (who wrote it, what checks it), in the server's
+/// words with no words of ours, escaped as markdown text, and is listed even with no URL: captures often have
+/// none, and leaving them out hid the note the answer rests on.
+fn source_lines(response: &Value) -> Vec<String> {
+    let Some(arr) = response["sources"].as_array() else {
+        return Vec::new();
+    };
+    arr.iter()
+        .filter_map(|s| {
+            let title = s["title"].as_str().unwrap_or("Source");
+            let url = s["source_url"].as_str().unwrap_or("");
+            let label = match (
+                s["capture"]["attribution_line"].as_str(),
+                s["capture"]["check_label"].as_str(),
+            ) {
+                (Some(who), Some(check)) => Some(format!("{} · {}", markdown_text(who), markdown_text(check))),
+                _ => None,
+            };
+            match (url.is_empty(), label) {
+                (true, None) => None,
+                (false, None) => Some(format!("- [{title}]({url})")),
+                (true, Some(label)) => Some(format!("- {title} — {label}")),
+                (false, Some(label)) => Some(format!("- [{title}]({url}) — {label}")),
+            }
+        })
+        .collect()
+}
+
+/// The server's words as markdown text: every ASCII punctuation character is backslash-escaped,
+/// which CommonMark renders as the character itself. A crafted name then shows literally and can
+/// never become a link, an image, emphasis, code, HTML, or an autolink (the `:`, `/`, `.` and `@`
+/// of a URL or an address are escaped too).
+fn markdown_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        if c.is_ascii_punctuation() {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// The answer's own page, when the server offered one as an absolute link: one visible line the
 /// reader can open later. A relative path alone is not shown; an editor has nothing to resolve it against.
 fn answer_page_line(response: &Value) -> Option<String> {
@@ -373,7 +418,7 @@ impl McpServer {
             "tools": [
                 {
                     "name": "docbrain_ask",
-                    "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume every engineer can deploy to production, it will correct you). Returns a direct, human-like answer — never says 'according to the documentation'. Cites up to 5 real source documents with URLs. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
+                    "description": "Ask a question about your organization's internal documentation. Uses hybrid semantic + keyword search across Confluence, runbooks, and captured Slack/GitHub threads. Preserves specific service names, team names, and tool names for precise retrieval. Corrects false premises (e.g. if you assume every engineer can deploy to production, it will correct you). Returns a direct, human-like answer — never says 'according to the documentation'. Cites up to 5 sources: documents with their URLs, and captures with who recorded them and how checked they are. For questions outside the knowledge base (HR policies, general engineering topics not documented internally), clearly says so rather than guessing. Uses session memory to resolve follow-up questions in context.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -713,22 +758,7 @@ impl McpServer {
         };
 
         let answer = response["answer"].as_str().unwrap_or("No answer available");
-        let sources: Vec<String> = response["sources"]
-            .as_array()
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|s| {
-                        let title = s["title"].as_str().unwrap_or("Source");
-                        let url = s["source_url"].as_str().unwrap_or("");
-                        if url.is_empty() {
-                            None
-                        } else {
-                            Some(format!("- [{}]({})", title, url))
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+        let sources = source_lines(&response);
 
         let (verdict_before, verdict_after) = verification_lines(&response);
         let leading = leading_lines(&response);
@@ -773,22 +803,7 @@ impl McpServer {
         let answer = response["answer"]
             .as_str()
             .unwrap_or("No incident response available");
-        let sources: Vec<String> = response["sources"]
-            .as_array()
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|s| {
-                        let title = s["title"].as_str().unwrap_or("Source");
-                        let url = s["source_url"].as_str().unwrap_or("");
-                        if url.is_empty() {
-                            None
-                        } else {
-                            Some(format!("- [{}]({})", title, url))
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
+        let sources = source_lines(&response);
 
         let (verdict_before, verdict_after) = verification_lines(&response);
         let leading = leading_lines(&response);
