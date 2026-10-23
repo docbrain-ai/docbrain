@@ -2,12 +2,12 @@ Business Source License 1.1
 
 Parameters
 
-Licensor:             Abhishek Sharma (licensing@docbrainapi.com)
+Licensor:             Ojas Enterprises, Inc. (licensing@docbrainapi.com)
 Licensed Work:        DocBrain Server — the DocBrain server binaries and
                       container images distributed by the Licensor.
                       The Licensed Work does NOT include the source in
                       crates/, which is MIT licensed; see LICENSE.
-                      The Licensed Work is (c) 2026 Abhishek Sharma.
+                      The Licensed Work is (c) 2026 Ojas Enterprises, Inc.
 Additional Use Grant: You may make production use of the Licensed Work,
                       provided your use does not include offering the
                       Licensed Work to third parties as a hosted or
