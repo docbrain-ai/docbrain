@@ -242,8 +242,7 @@ dated to the commit it was observed at.
   re-read page no longer states it, the author's edit drops it, or removing a secret makes it
   repeat another premise of the capture and the repeat is dropped. Each is a retirement: the
   evidence journal records it as `kind="retired"` with the premise id, its page or capture and
-  its last state, and the first two also emit `premise.retired` with the same fields (the
-  secret passes run without the event bus, so a dropped repeat is journaled only). Both are
+  its last state, and each also emits `premise.retired` with the same fields. Both are
   written just after the retirement commits, so a crash in that instant leaves the retirement
   without a journal record or event.
 - **Answers:** the monitor watches *stored* claims; the answer-time claim verifier
