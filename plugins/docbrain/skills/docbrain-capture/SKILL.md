@@ -76,6 +76,14 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
   capture is served the moment it is written, labelled with who wrote it and what checks it: with
   premises that hold it reads *Checked against code*; with none it reads *Not checked against code*.
   Declaring the premises is what earns the first label.
+- When the capture relies on something another team's or a library's code provides — a module, a
+  file, an entry point you import or call — and that thing is a file, the premise names the exact
+  file that provides it, never its directory: a directory goes on existing after the one file in it
+  that mattered is gone, and the premise would go on holding.
+- A path premise checks that a file exists, nothing more. When what the capture relies on is a value
+  or a behaviour in that file — a default, a version, a key's value, an ordering, an error shape, how
+  input is parsed — say in the capture that this is not checked; never write a path premise as a
+  stand-in for it, because the file survives while what is in it changes.
 - When the capture answers an open question DocBrain suggested (`docbrain_suggest_capture`), pass that
   question's id as `gap_id`: the question closes for whoever asks next.
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a

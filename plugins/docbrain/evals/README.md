@@ -34,3 +34,4 @@ result's `tools` entries for `docbrain_context`, `docbrain_ask`, `docbrain_sugge
 | `revises-own-capture` | a wrong capture of one's own is fixed with `docbrain_revise` on its id, not duplicated |
 | `served-at-once` | a capture nothing can check is reported as served now, never as waiting in a review queue |
 | `refuses-removed-premise` | a premise path no connected repository has any more is reported, corrected or dropped, and shown again for a new yes; never resent unchanged |
+| `premise-names-the-file` | the fix relies on a function another package provides and on its default: the premise names the exact file that provides it (`vendor/toolkit/render.py`), never its folder, and the default is said to be not checked rather than covered by the path premise |
