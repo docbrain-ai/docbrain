@@ -75,7 +75,8 @@ fn an_unknown_profile_is_refused_naming_the_known_ones() {
     let home = home_with(Some(CONFIG));
     let r = run(home.path(), &["--profile", "editor", "ask", "hi"], &[]);
     assert_ne!(r.code, 0);
-    assert!(r.stderr.contains("unknown profile \"editor\"") && r.stderr.contains("reader"), "{}", r.stderr);
+    // The typed name is not repeated (it could be a key typed in the wrong place, #603).
+    assert!(r.stderr.contains("unknown profile") && r.stderr.contains("reader") && !r.stderr.contains("\"editor\""), "{}", r.stderr);
     assert_no_key_printed(&r);
 }
 
@@ -84,7 +85,7 @@ fn docbrain_profile_env_selects_the_same_way() {
     let home = home_with(Some(CONFIG));
     let r = run(home.path(), &["ask", "hi"], &[("DOCBRAIN_PROFILE", "editor")]);
     assert_ne!(r.code, 0);
-    assert!(r.stderr.contains("unknown profile \"editor\""), "{}", r.stderr);
+    assert!(r.stderr.contains("unknown profile") && !r.stderr.contains("\"editor\""), "{}", r.stderr);
 }
 
 #[test]

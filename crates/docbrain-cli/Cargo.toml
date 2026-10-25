@@ -46,3 +46,5 @@ path = "src/bin/docbrain_verify.rs"
 [dev-dependencies]
 # Scratch HOME and checkouts for the check-claims binary tests.
 tempfile = "3"
+# The TLS stub of the CA-file sentinel (#603); already in the build through reqwest.
+native-tls = "0.2"

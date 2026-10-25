@@ -401,6 +401,17 @@ fn why_reports_a_missing_record_without_a_false_verdict() {
     assert!(r.stderr.contains("No record"), "{}", r.stderr);
 }
 
+/// The record asked for is not repeated when it is not found: it is a value typed on the command
+/// line, and could be a key typed in the wrong place (#603).
+#[test]
+fn why_does_not_repeat_a_record_it_could_not_find() {
+    let dir = scratch();
+    let b = write_bundle(&dir, "ok.dbev", &valid_bundle());
+    let r = run_offline(bin_cli(), &["evidence", "why", "SYNTH_PASTED_KEY_ARG", b.to_str().unwrap()], &dir);
+    assert!(r.stderr.contains("No record"), "{}", r.stderr);
+    assert!(!r.stderr.contains("SYNTH_PASTED_KEY_ARG") && !r.stdout.contains("SYNTH_PASTED_KEY_ARG"), "{}", r.stderr);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // tables: populations CSV with a bundle-digest header; refuses non-VALID
 // ═══════════════════════════════════════════════════════════════════════════

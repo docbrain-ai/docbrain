@@ -24,3 +24,7 @@ hex = "0.4"
 
 [dev-dependencies]
 axum = "0.8"
+# Scratch working directories for the --docbrain-env tests (#603).
+tempfile = "3"
+# The TLS stub of the CA-file sentinel (#603); already in the build through reqwest.
+native-tls = "0.2"

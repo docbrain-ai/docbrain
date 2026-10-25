@@ -59,6 +59,17 @@ server-side: a read-only key can `ask` but cannot capture.
 | `DOCBRAIN_SERVER_URL` | Your instance. Defaults to `http://localhost:3000`, the server's own port; with Docker Compose use `http://localhost:3001`. **Not** `DOCBRAIN_API_URL`, which is the HTTP/CI variable — setting the wrong one leaves the server on its default port and the error names a port you never configured. |
 | `DOCBRAIN_API_KEY` | From `docbrain token create --name "MCP" --role viewer`. Required. |
 
+The connector reads these from the environment your editor starts it with, normally the
+config's `env` block, and never from a `.env` file on its own. To keep them in a file of your
+own, add `"args": ["--docbrain-env", "/full/path/mcp.env"]` to your user-level MCP config: only
+that file is read, a relative path is refused, a non-empty value in the `env` block wins over the
+file, and the file may set only DocBrain's own variables the connector reads, the two above (any
+other variable, or any `$`, refuses it). Do not point an editor's own `envFile` setting at a file
+inside the project: that sets every variable in it for the connector.
+
+Install it once (`npm install -g docbrain-mcp`, or the release binary) and start
+`docbrain-mcp`. Starting it with `npx` from a project makes npm read that project's `.npmrc`.
+
 Ready-made configs for Claude Code, Cursor and VS Code are in
 [`examples/mcp-configs/`](../../examples/mcp-configs/), including which file
 each editor reads and why the top-level key differs between them.

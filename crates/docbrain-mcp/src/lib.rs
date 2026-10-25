@@ -36,24 +36,175 @@ pub enum CliAction {
     Help,
     /// Run the JSON-RPC stdin/stdout loop (the default, and what an MCP host
     /// invokes).
-    Serve,
-    /// An argument we do not understand. Reported on stderr, then Serve still
-    /// runs — the npm wrapper forwards `process.argv.slice(2)` to this binary
-    /// (`npm-mcp/run.js`), so exiting on an unrecognised argument would hard-
-    /// break any MCP host that passes one, where the previous code ignored
-    /// arguments entirely. A human driving it by hand sees the warning and the
-    /// usage text; a host keeps working.
-    Unknown(String),
+    Serve {
+        /// The file `--docbrain-env` names, loaded before anything reads the
+        /// environment. No other env file is ever read (#603).
+        docbrain_env: Option<std::path::PathBuf>,
+        /// How many arguments we do not understand. Reported on stderr as a
+        /// count, never shown (one may be a key typed in the wrong place), then
+        /// Serve still runs — the npm wrapper forwards `process.argv.slice(2)` to
+        /// this binary (`npm-mcp/run.js`), so exiting on an unrecognised argument
+        /// would hard-break any MCP host that passes one, where the previous code
+        /// ignored arguments entirely.
+        ignored: usize,
+    },
+    /// Refused: `--docbrain-env` without a path or given twice (a file was asked
+    /// for, and serving without it would run on settings nobody chose), or an
+    /// option Node acts on. A fixed message, so nothing typed can be echoed.
+    Invalid(&'static str),
 }
 
+const NEEDS_PATH: &str = "--docbrain-env needs a path";
+const MORE_THAN_ONCE: &str = "--docbrain-env was given more than once; name one file";
+const JOINED_NOT_UTF8: &str = "--docbrain-env=PATH needs a path in UTF-8; give the path as the next argument instead";
+const NODE_READS_IT: &str =
+    "--env-file and Node's config-file options are read by Node itself, not by docbrain-mcp; name the file with --docbrain-env";
+const DOLLAR: &str = "the --docbrain-env file holds a $, which would read another variable into it; a --docbrain-env file may not (the line is not shown)";
+const RELATIVE: &str = "--docbrain-env needs an absolute path: the path given is relative, and a relative path would be read from whatever directory this starts in";
+
+/// Options Node acts on itself wherever they appear in its own argv, even after the
+/// script path: it reads the named file (and runs `NODE_OPTIONS` from it) or a
+/// config file before any of the npm wrapper runs. Some Node lines match them by
+/// prefix, so any argument that starts with one is refused, by the wrapper and by
+/// the binary alike (#603).
+const NODE_READS: [&str; 4] =
+    ["--env-file", "--env-file-if-exists", "--experimental-config-file", "--experimental-default-config-file"];
+
 /// Decide what to do from the argument list (excluding argv[0]).
-pub fn parse_cli(args: &[String]) -> CliAction {
-    match args.first().map(String::as_str) {
-        None => CliAction::Serve,
-        Some("--version") | Some("-V") => CliAction::Version,
-        Some("--help") | Some("-h") => CliAction::Help,
-        Some(other) => CliAction::Unknown(other.to_string()),
+pub fn parse_cli(args: &[std::ffi::OsString]) -> CliAction {
+    let mut docbrain_env = None;
+    let mut ignored = 0;
+    let mut it = args.iter();
+    while let Some(arg) = it.next() {
+        let bytes = arg.as_encoded_bytes();
+        if NODE_READS.iter().any(|f| bytes.starts_with(f.as_bytes())) {
+            return CliAction::Invalid(NODE_READS_IT);
+        }
+        let value = match arg.to_str() {
+            Some("--version" | "-V") => return CliAction::Version,
+            Some("--help" | "-h") => return CliAction::Help,
+            Some("--docbrain-env") => it.next().cloned().unwrap_or_default(),
+            Some(other) => match other.strip_prefix("--docbrain-env=") {
+                Some(v) => v.into(),
+                None => {
+                    ignored += 1;
+                    continue;
+                }
+            },
+            None if bytes.starts_with(b"--docbrain-env=") => return CliAction::Invalid(JOINED_NOT_UTF8),
+            None => {
+                ignored += 1;
+                continue;
+            }
+        };
+        if value.is_empty() {
+            return CliAction::Invalid(NEEDS_PATH);
+        }
+        if docbrain_env.is_some() {
+            return CliAction::Invalid(MORE_THAN_ONCE);
+        }
+        docbrain_env = Some(std::path::PathBuf::from(value));
     }
+    CliAction::Serve { docbrain_env, ignored }
+}
+
+// docbrain-env:begin
+/// Who may set each of DocBrain's own variables from a `--docbrain-env` file (#603, owner
+/// ruling 2026-10-24: an allow-list). A named file may set a variable only where this table
+/// says so; any other variable in the file, DocBrain's or not, refuses the whole file. The
+/// server, the key and the profile choose who the CLI is, so the CLI takes them only from the
+/// shell, its flags and its saved sign-ins; the callback host decides where the one-time login
+/// code goes, so the CLI takes it only from the shell too. The connector's file exists to hold
+/// its key and server. A test in each crate fails when the binary reads a `DOCBRAIN_` variable that this
+/// table does not list, or when the table lets a binary's file set one it never reads.
+const DOCBRAIN_VARIABLES: &[(&str, &[Binary])] = &[
+    ("DOCBRAIN_API_KEY", &[Binary::Connector]),
+    ("DOCBRAIN_SERVER_URL", &[Binary::Connector]),
+    ("DOCBRAIN_PROFILE", &[]),
+    ("DOCBRAIN_CORPUS_DROP_ALERT", &[Binary::Cli]),
+    ("DOCBRAIN_GENERATE_TIMEOUT_SECS", &[Binary::Cli]),
+    ("DOCBRAIN_CLI_CALLBACK_HOST", &[]),
+];
+
+/// The two binaries that read a `--docbrain-env` file.
+#[derive(Clone, Copy, PartialEq)]
+enum Binary {
+    Cli,
+    Connector,
+}
+
+/// Whether `this` binary's `--docbrain-env` file may set `name`, spelled exactly.
+fn file_may_set(name: &str, this: Binary) -> bool {
+    DOCBRAIN_VARIABLES.iter().any(|(n, who)| *n == name && who.contains(&this))
+}
+
+/// The variables `this` binary's file may set, as the refusal names them.
+fn file_may_set_list(this: Binary) -> String {
+    DOCBRAIN_VARIABLES.iter().filter(|(_, who)| who.contains(&this)).map(|(n, _)| *n).collect::<Vec<_>>().join(", ")
+}
+// docbrain-env:end
+
+/// Load the variables in the file `--docbrain-env` names, and nothing else (#603).
+///
+/// No `.env` is read on its own: one in the directory the connector starts in, or in any
+/// parent, could set a proxy or CA variable and read the API key off the wire. Only an absolute
+/// path is accepted, because a host starts the connector in whatever project is open and a
+/// relative path would be read from that project. The whole file is read and every name
+/// checked before any variable is set: the file may set only DocBrain's own variables the
+/// connector reads (`DOCBRAIN_VARIABLES`), and anything else refuses it whole. Variables the
+/// host already set to a non-empty value win over the file. No message shows the path, a value
+/// or a line.
+///
+/// # Safety
+///
+/// Writes the process environment: call it only while the process has one thread (before the
+/// async runtime starts), so that no other thread reads or writes the environment meanwhile.
+pub unsafe fn load_docbrain_env(path: &std::path::Path) -> Result<(), String> {
+    if !path.is_absolute() {
+        return Err(RELATIVE.to_string());
+    }
+    let read_error = |e| {
+        let why = match e {
+            dotenvy::Error::Io(io) => io.to_string(),
+            dotenvy::Error::LineParse(..) => "a line is not NAME=value (the line is not shown: it may hold a secret)".to_string(),
+            _ => "it could not be loaded".to_string(),
+        };
+        format!("cannot read the --docbrain-env file: {why}")
+    };
+    let bytes = std::fs::read(path).map_err(|e| format!("cannot read the --docbrain-env file: {e}"))?;
+    // A byte-order mark (Windows editors, PowerShell) is not part of the first name.
+    let text = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    // The parser replaces `$NAME` and `${NAME}` with another variable from the environment, so
+    // an allowed name could carry a value the file may not set: no `$` at all.
+    if text.contains(&b'$') {
+        return Err(DOLLAR.to_string());
+    }
+    let mut vars = Vec::new();
+    for item in dotenvy::from_read_iter(text) {
+        vars.push(item.map_err(read_error)?);
+    }
+    let mut refused: Vec<&str> = vars.iter().map(|(name, _)| name.as_str()).filter(|n| !file_may_set(n, Binary::Connector)).collect();
+    refused.sort_unstable();
+    refused.dedup();
+    if !refused.is_empty() {
+        return Err(format!(
+            "the --docbrain-env file sets {}; a --docbrain-env file may set only DocBrain's own variables that docbrain-mcp reads: {}",
+            refused.join(", "),
+            file_may_set_list(Binary::Connector)
+        ));
+    }
+    if vars.iter().any(|(_, value)| value.contains('\0')) {
+        return Err("cannot read the --docbrain-env file: a value holds a NUL byte (the value is not shown)".to_string());
+    }
+    for (name, value) in vars {
+        // An empty value counts as unset: an editor's empty placeholder, or an image that
+        // declares the variable empty, must not silently cancel the file the user named.
+        if std::env::var_os(&name).is_none_or(|v| v.is_empty()) {
+            // SAFETY: the caller guarantees this process has one thread (see `# Safety`).
+            unsafe { std::env::set_var(name, value) };
+        }
+    }
+    Ok(())
 }
 
 /// Usage text for `--help`. Kept next to `parse_cli` so the accepted flags and
@@ -66,14 +217,19 @@ pub fn usage() -> String {
          normally launched by an MCP host (Claude Code, Cursor, ...), not by hand.\n\
          \n\
          USAGE:\n\
-         \x20   docbrain-mcp              run the JSON-RPC loop\n\
-         \x20   docbrain-mcp --version    print version\n\
-         \x20   docbrain-mcp --help       print this help\n\
+         \x20   docbrain-mcp                       run the JSON-RPC loop\n\
+         \x20   docbrain-mcp --docbrain-env PATH   load DOCBRAIN_API_KEY and DOCBRAIN_SERVER_URL\n\
+         \x20                                      from PATH first (an absolute path)\n\
+         \x20   docbrain-mcp --version             print version\n\
+         \x20   docbrain-mcp --help                print this help\n\
          \n\
          ENVIRONMENT:\n\
          \x20   DOCBRAIN_API_KEY      required to serve; create with\n\
          \x20                         `docbrain token create --name \"MCP Key\" --role viewer`\n\
-         \x20   DOCBRAIN_SERVER_URL   defaults to http://localhost:3000\n",
+         \x20   DOCBRAIN_SERVER_URL   defaults to http://localhost:3000\n\
+         \x20   Set them in the MCP host's env block. No .env file is read unless\n\
+         \x20   --docbrain-env names it. That file may set only DocBrain's own variables\n\
+         \x20   (the two above); a non-empty value the host sets wins over it.\n",
         env!("CARGO_PKG_VERSION")
     )
 }
@@ -2015,45 +2171,106 @@ mod cli_tests {
     // "DOCBRAIN_API_KEY is not set" instead of printing its version. Asking a
     // binary what it is must not require credentials.
 
+    fn args(a: &[&str]) -> Vec<std::ffi::OsString> {
+        a.iter().map(|s| s.into()).collect()
+    }
+
+    fn serve(docbrain_env: Option<&str>, ignored: usize) -> CliAction {
+        CliAction::Serve { docbrain_env: docbrain_env.map(std::path::PathBuf::from), ignored }
+    }
+
     #[test]
     fn version_flag_is_recognised() {
-        assert_eq!(parse_cli(&["--version".to_string()]), CliAction::Version);
-        assert_eq!(parse_cli(&["-V".to_string()]), CliAction::Version);
+        assert_eq!(parse_cli(&args(&["--version"])), CliAction::Version);
+        assert_eq!(parse_cli(&args(&["-V"])), CliAction::Version);
     }
 
     #[test]
     fn help_flag_is_recognised() {
-        assert_eq!(parse_cli(&["--help".to_string()]), CliAction::Help);
-        assert_eq!(parse_cli(&["-h".to_string()]), CliAction::Help);
+        assert_eq!(parse_cli(&args(&["--help"])), CliAction::Help);
+        assert_eq!(parse_cli(&args(&["-h"])), CliAction::Help);
     }
 
     #[test]
     fn no_arguments_serves_the_protocol() {
-        assert_eq!(parse_cli(&[]), CliAction::Serve);
+        assert_eq!(parse_cli(&[]), serve(None, 0));
     }
 
-    /// An unrecognised flag is surfaced as `Unknown` so the binary can warn
-    /// about it. BLINDSPOT (pre-push): it must NOT cause an exit —
-    /// `npm-mcp/run.js` forwards `process.argv.slice(2)`, so exiting would
-    /// break any MCP host that passes an argument, which worked before
-    /// argument handling existed. See the dispatch in `main.rs`.
+    /// An unrecognised argument is counted so the binary can warn about it,
+    /// and never kept (one may be a key). BLINDSPOT (pre-push): it must NOT
+    /// cause an exit — `npm-mcp/run.js` forwards `process.argv.slice(2)`, so
+    /// exiting would break any MCP host that passes an argument, which worked
+    /// before argument handling existed. See the dispatch in `main.rs`.
     #[test]
-    fn unknown_flag_is_reported() {
-        assert_eq!(
-            parse_cli(&["--frobnicate".to_string()]),
-            CliAction::Unknown("--frobnicate".to_string())
-        );
+    fn unknown_arguments_are_counted() {
+        assert_eq!(parse_cli(&args(&["--frobnicate"])), serve(None, 1));
+        assert_eq!(parse_cli(&args(&["serve"])), serve(None, 1));
+        assert_eq!(parse_cli(&args(&["--api-key", "SYNTH_PASTED_KEY"])), serve(None, 2));
     }
 
-    /// A JSON-RPC host launches the binary with no flags; extra non-flag
-    /// arguments are not a thing it does, but they must not be mistaken for
-    /// flags either.
+    // #603: `--docbrain-env` is the only way an env file is read.
+
     #[test]
-    fn bare_argument_is_reported_as_unknown() {
-        assert_eq!(
-            parse_cli(&["serve".to_string()]),
-            CliAction::Unknown("serve".to_string())
-        );
+    fn docbrain_env_takes_the_next_argument_or_the_joined_value() {
+        assert_eq!(parse_cli(&args(&["--docbrain-env", "/etc/db.env"])), serve(Some("/etc/db.env"), 0));
+        assert_eq!(parse_cli(&args(&["--docbrain-env=/etc/db.env"])), serve(Some("/etc/db.env"), 0));
+        assert_eq!(parse_cli(&args(&["--frobnicate", "--docbrain-env", "/etc/db.env", "serve"])), serve(Some("/etc/db.env"), 2));
+    }
+
+    #[test]
+    fn docbrain_env_without_a_path_is_refused() {
+        for a in [&["--docbrain-env"][..], &["--docbrain-env="][..], &["--docbrain-env", ""][..]] {
+            assert_eq!(parse_cli(&args(a)), CliAction::Invalid(NEEDS_PATH), "{a:?}");
+        }
+    }
+
+    #[test]
+    fn docbrain_env_twice_is_refused_even_with_the_same_path() {
+        for a in [&["--docbrain-env", "/a.env", "--docbrain-env", "/b.env"][..], &["--docbrain-env=/a.env", "--docbrain-env=/a.env"][..]] {
+            assert_eq!(parse_cli(&args(a)), CliAction::Invalid(MORE_THAN_ONCE), "{a:?}");
+        }
+    }
+
+    /// Node acts on these itself; the binary refuses them wherever they are,
+    /// joined or not, even where Node would have taken them as a value.
+    #[test]
+    fn options_node_acts_on_are_refused() {
+        for f in NODE_READS {
+            for a in [vec![f.to_string(), "/x.env".into()], vec![format!("{f}=/x.env")], vec!["--frobnicate".into(), format!("{f}=/x")]] {
+                let a: Vec<&str> = a.iter().map(String::as_str).collect();
+                assert_eq!(parse_cli(&args(&a)), CliAction::Invalid(NODE_READS_IT), "{a:?}");
+            }
+        }
+        // Some Node lines match these by prefix, so a longer name is refused too.
+        for odd in ["--env-files=/x", "--env-filex", "--experimental-default-config-filex", "--experimental-config-file-x"] {
+            assert_eq!(parse_cli(&args(&[odd])), CliAction::Invalid(NODE_READS_IT), "{odd}");
+        }
+    }
+
+    /// Asking what the binary is never needs the file, wherever the flag sits.
+    #[test]
+    fn version_and_help_need_no_docbrain_env_file() {
+        assert_eq!(parse_cli(&args(&["--docbrain-env", "/missing.env", "--version"])), CliAction::Version);
+        assert_eq!(parse_cli(&args(&["--frobnicate", "-h"])), CliAction::Help);
+    }
+
+    #[test]
+    fn a_relative_docbrain_env_file_is_refused_before_it_is_opened() {
+        for p in ["db.env", "./db.env", "~/db.env", ""] {
+            // SAFETY: a relative path is refused before the environment is touched.
+            let err = unsafe { load_docbrain_env(std::path::Path::new(p)) }.unwrap_err();
+            assert_eq!(err, RELATIVE, "{p:?}");
+        }
+    }
+
+    #[test]
+    fn the_connector_s_file_may_set_only_its_key_and_server() {
+        assert!(file_may_set("DOCBRAIN_API_KEY", Binary::Connector));
+        assert!(file_may_set("DOCBRAIN_SERVER_URL", Binary::Connector));
+        for no in ["docbrain_api_key", "DOCBRAIN_PROFILE", "DOCBRAIN_CORPUS_DROP_ALERT", "XDG_CONFIG_HOME", "HTTPS_PROXY", "RUST_LOG", ""] {
+            assert!(!file_may_set(no, Binary::Connector), "{no}");
+        }
+        assert_eq!(file_may_set_list(Binary::Connector), "DOCBRAIN_API_KEY, DOCBRAIN_SERVER_URL");
     }
 }
 

@@ -3,7 +3,6 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use dotenvy::dotenv;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -16,10 +15,10 @@ mod repository;
 // CLI structure
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Parse the command line, refusing two different `--profile` values. Clap keeps a global
-/// flag's last value across the command and its subcommands, so
-/// `--profile reader ask --profile editor` would otherwise run as `editor` without a word.
-/// The raw arguments are checked up to `--`, after which nothing is a flag.
+/// Parse the command line, refusing two different `--profile` values, or two different
+/// `--docbrain-env` paths. Clap keeps a global flag's last value across the command and its
+/// subcommands, so `--profile reader ask --profile editor` would otherwise run as `editor`
+/// without a word. The raw arguments are checked up to `--`, after which nothing is a flag.
 fn parse_cli<I, T>(argv: I) -> std::result::Result<Cli, clap::Error>
 where
     I: IntoIterator<Item = T>,
@@ -28,23 +27,33 @@ where
     use clap::{CommandFactory, Parser};
     let args: Vec<std::ffi::OsString> = argv.into_iter().map(Into::into).collect();
     let mut seen = std::collections::BTreeSet::new();
+    let mut docbrain_envs = std::collections::BTreeSet::new();
     let mut it = args.iter().skip(1).map(|a| a.to_string_lossy());
     while let Some(a) = it.next() {
         if a == "--" {
             break;
         }
-        if a == "--profile" {
+        if a == "--profile" || a == "--docbrain-env" {
+            let set = if a == "--profile" { &mut seen } else { &mut docbrain_envs };
             if let Some(v) = it.next() {
-                seen.insert(v.into_owned());
+                set.insert(v.into_owned());
             }
         } else if let Some(v) = a.strip_prefix("--profile=") {
             seen.insert(v.to_string());
+        } else if let Some(v) = a.strip_prefix("--docbrain-env=") {
+            docbrain_envs.insert(v.to_string());
         }
     }
     if seen.len() > 1 {
         return Err(Cli::command().error(
             clap::error::ErrorKind::ArgumentConflict,
             "--profile was given more than once with different names; give one sign-in per command",
+        ));
+    }
+    if docbrain_envs.len() > 1 {
+        return Err(Cli::command().error(
+            clap::error::ErrorKind::ArgumentConflict,
+            "--docbrain-env was given more than once with different paths; name one file per command",
         ));
     }
     Cli::try_parse_from(args)
@@ -65,6 +74,14 @@ struct Cli {
     /// framework of `evidence export` is `--framework`.
     #[arg(long, value_name = "NAME", global = true, conflicts_with = "api_key")]
     profile: Option<String>,
+
+    /// Load DocBrain's settings from this file first (an absolute path). Without it the CLI reads
+    /// no `.env` file. The file may set only DocBrain's own variables that the CLI reads
+    /// (DOCBRAIN_CORPUS_DROP_ALERT, DOCBRAIN_GENERATE_TIMEOUT_SECS);
+    /// any other variable refuses the file. A non-empty value set in your shell wins. Accepted
+    /// anywhere on the command line.
+    #[arg(long, value_name = "PATH", global = true)]
+    docbrain_env: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Commands,
@@ -803,7 +820,7 @@ impl ProfileName {
             && raw.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'_');
         if !ok {
             anyhow::bail!(
-                "invalid profile name {raw:?}: use 1-32 characters from a-z, 0-9, '-' and '_', starting with a letter or digit"
+                "invalid profile name (not shown, in case it is a key typed in the wrong place): use 1-32 characters from a-z, 0-9, '-' and '_', starting with a letter or digit"
             );
         }
         Ok(Some(Self(raw.to_string())))
@@ -856,9 +873,10 @@ fn known_profiles(cfg: &Config) -> String {
 
 fn named_entry<'a>(cfg: &'a Config, name: &ProfileName) -> Result<&'a ProfileEntry> {
     cfg.profiles.get(name.as_str()).ok_or_else(|| {
+        // The name asked for is not repeated: it could be a key typed in the wrong place (#603).
         anyhow::anyhow!(
-            "unknown profile \"{}\" (known: {}). Create it with `docbrain --profile {} login --server <url>`.",
-            name.as_str(), known_profiles(cfg), name.as_str()
+            "unknown profile (known: {}). Create it with `docbrain --profile <name> login --server <url>`.",
+            known_profiles(cfg)
         )
     })
 }
@@ -875,9 +893,9 @@ struct Target {
 redacted_debug!(Target { notes } secret { api_key } url { server_url });
 
 /// DOCBRAIN_SERVER_URL, DOCBRAIN_API_KEY and DOCBRAIN_PROFILE as the shell (or CI) set them,
-/// captured before `.env` is loaded. These decide who the CLI speaks as and where a key or a
-/// password goes, so a `.env` file — in this directory or any parent, e.g. a cloned
-/// repository — never sets them. Every read of these three goes through here.
+/// captured before the file `--docbrain-env` names is loaded. These decide who the CLI speaks as
+/// and where a key or a password goes, so no file ever sets them, even a named one. Every
+/// read of these three goes through here.
 #[derive(Default)]
 struct ShellIdentityEnv {
     server_url: Option<String>,
@@ -1060,7 +1078,8 @@ mod profile_tests {
     fn an_unknown_profile_fails_naming_the_known_ones_and_never_falls_back() {
         let e = resolve_target(Some(&name("editor")), None, &cfg(TWO), s("https://a.example"), s("ENV")).unwrap_err();
         let m = format!("{e:#}");
-        assert!(m.contains("unknown profile \"editor\"") && m.contains("reader"), "{m}");
+        // The typed name is not repeated (it could be a key typed in the wrong place, #603).
+        assert!(m.contains("unknown profile") && m.contains("reader") && !m.contains("editor"), "{m}");
         assert!(!m.contains("KEY_"), "{m}");
     }
 
@@ -1240,6 +1259,38 @@ mod profile_tests {
         assert!(parse_cli(["docbrain", "--profile=reader", "ask", "--profile", "editor", "hi"]).is_err());
         // After `--` nothing is a flag: a question may mention --profile.
         assert_eq!(parse_cli(["docbrain", "--profile", "reader", "ask", "--", "--profile"]).unwrap().profile.as_deref(), Some("reader"));
+    }
+
+    /// #603: `--docbrain-env` goes anywhere, like `--profile`, and two different files on one
+    /// command line are a mistake, never "the last one wins".
+    #[test]
+    fn docbrain_env_is_global_and_names_one_file() {
+        let p = |argv: &[&str]| parse_cli(argv).map(|c| c.docbrain_env.map(|f| f.display().to_string()));
+        for argv in [
+            &["docbrain", "--docbrain-env", "/a.env", "ask", "hi"][..],
+            &["docbrain", "ask", "hi", "--docbrain-env", "/a.env"][..],
+            &["docbrain", "--docbrain-env=/a.env", "version"][..],
+            &["docbrain", "--docbrain-env", "/a.env", "ask", "--docbrain-env", "/a.env", "hi"][..],
+        ] {
+            assert_eq!(p(argv).unwrap().as_deref(), Some("/a.env"), "{argv:?}");
+        }
+        assert_eq!(p(&["docbrain", "ask", "hi"]).unwrap(), None);
+        for argv in [
+            &["docbrain", "--docbrain-env", "/a.env", "ask", "--docbrain-env", "/b.env", "hi"][..],
+            &["docbrain", "--docbrain-env=/a.env", "version", "--docbrain-env=/b.env"][..],
+        ] {
+            assert!(p(argv).is_err(), "{argv:?}");
+        }
+        assert_eq!(p(&["docbrain", "--docbrain-env", "/a.env", "ask", "--", "--docbrain-env"]).unwrap().as_deref(), Some("/a.env"));
+    }
+
+    #[test]
+    fn a_relative_docbrain_env_is_refused_before_it_is_opened() {
+        for path in ["a.env", "./a.env", "~/a.env", ""] {
+            // SAFETY: a relative path is refused before the environment is touched.
+            let err = unsafe { load_docbrain_env(std::path::Path::new(path)) }.unwrap_err().to_string();
+            assert!(err.contains("absolute path"), "{path:?}: {err}");
+        }
     }
 
     #[test]
@@ -3185,20 +3236,299 @@ async fn show_version(server_url: &str, api_key: Option<&str>) -> Result<()> {
 // main
 // ═══════════════════════════════════════════════════════════════════════════
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Read before `.env` is loaded: a `.env` in whatever directory the command runs from (a
-    // cloned repository, say) must not pick the identity or the server a password goes to.
+// docbrain-env:begin
+/// Who may set each of DocBrain's own variables from a `--docbrain-env` file (#603, owner
+/// ruling 2026-10-24: an allow-list). A named file may set a variable only where this table
+/// says so; any other variable in the file, DocBrain's or not, refuses the whole file. The
+/// server, the key and the profile choose who the CLI is, so the CLI takes them only from the
+/// shell, its flags and its saved sign-ins; the callback host decides where the one-time login
+/// code goes, so the CLI takes it only from the shell too. The connector's file exists to hold
+/// its key and server. A test in each crate fails when the binary reads a `DOCBRAIN_` variable that this
+/// table does not list, or when the table lets a binary's file set one it never reads.
+const DOCBRAIN_VARIABLES: &[(&str, &[Binary])] = &[
+    ("DOCBRAIN_API_KEY", &[Binary::Connector]),
+    ("DOCBRAIN_SERVER_URL", &[Binary::Connector]),
+    ("DOCBRAIN_PROFILE", &[]),
+    ("DOCBRAIN_CORPUS_DROP_ALERT", &[Binary::Cli]),
+    ("DOCBRAIN_GENERATE_TIMEOUT_SECS", &[Binary::Cli]),
+    ("DOCBRAIN_CLI_CALLBACK_HOST", &[]),
+];
+
+/// The two binaries that read a `--docbrain-env` file.
+#[derive(Clone, Copy, PartialEq)]
+enum Binary {
+    Cli,
+    Connector,
+}
+
+/// Whether `this` binary's `--docbrain-env` file may set `name`, spelled exactly.
+fn file_may_set(name: &str, this: Binary) -> bool {
+    DOCBRAIN_VARIABLES.iter().any(|(n, who)| *n == name && who.contains(&this))
+}
+
+/// The variables `this` binary's file may set, as the refusal names them.
+fn file_may_set_list(this: Binary) -> String {
+    DOCBRAIN_VARIABLES.iter().filter(|(_, who)| who.contains(&this)).map(|(n, _)| *n).collect::<Vec<_>>().join(", ")
+}
+// docbrain-env:end
+
+/// Load the variables in the file `--docbrain-env` names, and nothing else (#603).
+///
+/// No `.env` is read on its own: one in the directory a command runs in, or in any parent (a
+/// cloned repository), could set a proxy or CA variable and read the key or a `login`
+/// password off the wire. Only an absolute path is accepted, so a literal relative path in a
+/// script or an alias cannot pick up whatever file the current directory holds. The whole file
+/// is read and every name checked before any variable is set: the file may set only DocBrain's
+/// own variables the CLI reads, never the server, the key or the profile (`DOCBRAIN_VARIABLES`),
+/// and anything else refuses it whole. Variables already set to a non-empty value win over the
+/// file. No message shows the path, a value or a line.
+///
+/// # Safety
+///
+/// Writes the process environment: call it only while the process has one thread (before the
+/// async runtime starts), so that no other thread reads or writes the environment meanwhile.
+unsafe fn load_docbrain_env(path: &std::path::Path) -> Result<()> {
+    if !path.is_absolute() {
+        anyhow::bail!(
+            "--docbrain-env needs an absolute path: the path given is relative, and a relative path would be read from whatever directory the command runs in"
+        );
+    }
+    let read_error = |e| {
+        let why = match e {
+            dotenvy::Error::Io(io) => io.to_string(),
+            dotenvy::Error::LineParse(..) => "a line is not NAME=value (the line is not shown: it may hold a secret)".to_string(),
+            _ => "it could not be loaded".to_string(),
+        };
+        anyhow::anyhow!("cannot read the --docbrain-env file: {why}")
+    };
+    let bytes = std::fs::read(path).map_err(|e| anyhow::anyhow!("cannot read the --docbrain-env file: {e}"))?;
+    // A byte-order mark (Windows editors, PowerShell) is not part of the first name.
+    let text = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes);
+    // The parser replaces `$NAME` and `${NAME}` with another variable from the environment (the
+    // shell's key, say), so an allowed name could carry it: no `$` at all.
+    if text.contains(&b'$') {
+        anyhow::bail!("the --docbrain-env file holds a $, which would read another variable into it; a --docbrain-env file may not (the line is not shown)");
+    }
+    let mut vars = Vec::new();
+    for item in dotenvy::from_read_iter(text) {
+        vars.push(item.map_err(read_error)?);
+    }
+    let mut refused: Vec<&str> = vars.iter().map(|(name, _)| name.as_str()).filter(|n| !file_may_set(n, Binary::Cli)).collect();
+    refused.sort_unstable();
+    refused.dedup();
+    if !refused.is_empty() {
+        anyhow::bail!(
+            "the --docbrain-env file sets {}; a --docbrain-env file may set only DocBrain's own variables that the CLI reads: {} (the server, the key and the profile come from the shell, --api-key, --profile or docbrain login)",
+            refused.join(", "),
+            file_may_set_list(Binary::Cli)
+        );
+    }
+    if vars.iter().any(|(_, value)| value.contains('\0')) {
+        anyhow::bail!("cannot read the --docbrain-env file: a value holds a NUL byte (the value is not shown)");
+    }
+    for (name, value) in vars {
+        // An empty value counts as unset, as it does for the identity variables.
+        if std::env::var_os(&name).is_none_or(|v| v.is_empty()) {
+            // SAFETY: the caller guarantees this process has one thread (see `# Safety`).
+            unsafe { std::env::set_var(name, value) };
+        }
+    }
+    Ok(())
+}
+
+/// Options Node acts on itself (in the npm wrapper, before this binary runs). Not CLI options;
+/// named in the refusal so the reader is pointed at `--docbrain-env`.
+const NODE_READS: [&str; 4] =
+    ["--env-file", "--env-file-if-exists", "--experimental-config-file", "--experimental-default-config-file"];
+
+/// Print a command-line error without any value that was typed, then exit as clap would (#603):
+/// a key typed in the wrong place (a stray argument, a flag's value, a mistyped command, a value
+/// glued onto a flag's name) must not reach a terminal or CI log. Help and version print as usual.
+fn exit_without_values(e: clap::Error, argv: &[std::ffi::OsString]) -> ! {
+    use clap::error::ErrorKind;
+    if matches!(e.kind(), ErrorKind::DisplayHelp | ErrorKind::DisplayVersion | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand) {
+        e.exit();
+    }
+    let mut text = without_typed_values(&e.render().to_string(), argv);
+    let node_reads = argv.iter().skip(1).any(|a| {
+        let a = a.to_string_lossy();
+        NODE_READS.iter().any(|f| a == *f || a.starts_with(&format!("{f}=")))
+    });
+    if node_reads {
+        text.push_str("\nNode reads --env-file itself; the CLI's file option is --docbrain-env.\n");
+    }
+    eprint!("{text}");
+    std::process::exit(e.exit_code());
+}
+
+/// Every word of a command line that is not a value: the flags (long and short, with clap's own
+/// help and version flags) and the command names.
+fn command_line_names() -> std::collections::HashSet<String> {
+    fn walk(cmd: &clap::Command, out: &mut std::collections::HashSet<String>) {
+        for arg in cmd.get_arguments() {
+            out.extend(arg.get_long_and_visible_aliases().into_iter().flatten().map(|l| format!("--{l}")));
+            out.extend(arg.get_short_and_visible_aliases().into_iter().flatten().map(|c| format!("-{c}")));
+        }
+        for sub in cmd.get_subcommands() {
+            out.insert(sub.get_name().to_string());
+            out.extend(sub.get_all_aliases().map(str::to_string));
+            walk(sub, out);
+        }
+    }
+    let mut out: std::collections::HashSet<String> =
+        ["--help", "-h", "--version", "-V", "--", "help"].into_iter().map(str::to_string).collect();
+    walk(&<Cli as clap::CommandFactory>::command(), &mut out);
+    out
+}
+
+/// clap's rendered error with nothing typed left in it but flag and command names (#603, R4-F1).
+///
+/// Every argument that is not exactly a flag or command name counts as a value, and so does the
+/// part after `=`. clap quotes most of what it echoes, but its tips print whole arguments
+/// unquoted ("to pass '<arg>' as a value, use '-- <arg>'"), so a tip survives only when it names
+/// nothing but real flags and commands ("a similar argument exists: '--api-key'"). Each value is
+/// then replaced wherever it still appears: quoted always, and anywhere at all from four
+/// characters up, which no key is shorter than; a shorter word would also hit clap's own text.
+fn without_typed_values(rendered: &str, argv: &[std::ffi::OsString]) -> String {
+    let names = command_line_names();
+    let mut values: Vec<String> = Vec::new();
+    for a in argv.iter().skip(1) {
+        let a = a.to_string_lossy().into_owned();
+        if names.contains(&a) {
+            continue;
+        }
+        if a.starts_with('-')
+            && let Some((_, value)) = a.split_once('=')
+        {
+            values.push(value.to_string());
+        }
+        values.push(a);
+    }
+    values.retain(|v| !v.is_empty());
+    values.sort_by_key(|v| std::cmp::Reverse(v.len()));
+    values.dedup();
+
+    let names_only = |line: &str| {
+        line.contains("similar") && line.split('\'').skip(1).step_by(2).all(|quoted| names.contains(quoted))
+    };
+    let mut text: String = rendered
+        .split_inclusive('\n')
+        .filter(|line| !line.trim_start().starts_with("tip:") || names_only(line))
+        .collect();
+    for value in values.iter().filter(|v| v.chars().count() >= 4) {
+        text = text.replace(value.as_str(), "<not shown>");
+    }
+    for value in &values {
+        text = text.replace(&format!("'{value}'"), "'<not shown>'");
+    }
+    text
+}
+
+#[cfg(test)]
+mod command_line_error_tests {
+    use super::without_typed_values;
+
+    fn argv(args: &[&str]) -> Vec<std::ffi::OsString> {
+        std::iter::once("docbrain").chain(args.iter().copied()).map(Into::into).collect()
+    }
+
+    /// A tip that echoes an argument goes, even when the argument is too short for the
+    /// anywhere-replacement: "-- qz" is not quoted.
+    #[test]
+    fn a_tip_that_echoes_an_argument_is_dropped() {
+        let rendered = "error: unexpected argument 'qz' found\n\n  tip: to pass 'qz' as a value, use '-- qz'\n\nUsage: docbrain ask <QUESTION>\n";
+        let text = without_typed_values(rendered, &argv(&["ask", "hi", "qz"]));
+        assert!(!text.contains("qz"), "{text}");
+        assert!(!text.contains("tip:"), "{text}");
+        assert!(text.contains("Usage: docbrain ask <QUESTION>"), "a command name is not a value: {text}");
+    }
+
+    /// A value clap prints without quotes, in a message no tip rule knows, is still replaced.
+    #[test]
+    fn a_value_printed_without_quotes_is_still_replaced() {
+        let rendered = "error: invalid value for '--max-regen-rounds <N>': SYNTHVALUE is not a number\n";
+        let text = without_typed_values(rendered, &argv(&["generate", "x", "--max-regen-rounds", "SYNTHVALUE"]));
+        assert!(!text.contains("SYNTHVALUE"), "{text}");
+        assert!(text.contains("'--max-regen-rounds <N>'"), "{text}");
+    }
+
+    /// The tip that names the real flag a typo was close to stays: it names nothing typed.
+    #[test]
+    fn a_tip_naming_only_real_flags_stays() {
+        let rendered = "error: unexpected argument '--api-kye' found\n\n  tip: a similar argument exists: '--api-key'\n";
+        let text = without_typed_values(rendered, &argv(&["ask", "hi", "--api-kye"]));
+        assert!(text.contains("tip: a similar argument exists: '--api-key'"), "{text}");
+        assert!(!text.contains("--api-kye"), "{text}");
+    }
+
+    /// Flag names typed are not values: the reader needs them to fix the command.
+    #[test]
+    fn the_flags_typed_stay_named() {
+        let rendered = "error: the argument '--api-key <KEY>' cannot be used with '--profile <NAME>'\n";
+        let text = without_typed_values(rendered, &argv(&["--api-key", "SYNTHVALUE", "--profile", "reader", "ask", "hi"]));
+        assert_eq!(text, rendered);
+    }
+
+    /// The value after `=` is a value even when the flag is real.
+    #[test]
+    fn the_value_after_an_equals_sign_is_a_value() {
+        let rendered = "error: unexpected value 'k1' for '--json' found; no more were expected\n";
+        let text = without_typed_values(rendered, &argv(&["ask", "hi", "--json=k1"]));
+        assert!(!text.contains("k1") && text.contains("'--json'"), "{text}");
+    }
+}
+
+/// The address an SSO login listens on and gives the server as its callback (#603, owner ruling
+/// 2026-10-24): `DOCBRAIN_CLI_CALLBACK_HOST` from the shell (a `--docbrain-env` file may not set
+/// it), and only as a bare loopback IP literal such as `127.0.0.1` or `::1`; otherwise
+/// `127.0.0.1`. Anything else is refused, unshown, before the login starts: a host name, a port, a
+/// path or a query would send the browser, and the code it carries, somewhere this CLI does not
+/// listen.
+fn login_callback_ip() -> Result<std::net::IpAddr> {
+    let default = std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
+    match std::env::var("DOCBRAIN_CLI_CALLBACK_HOST") {
+        Err(_) => Ok(default),
+        Ok(v) if v.is_empty() => Ok(default),
+        Ok(v) => match v.parse::<std::net::IpAddr>() {
+            Ok(ip) if ip.is_loopback() => Ok(ip),
+            _ => anyhow::bail!(
+                "DOCBRAIN_CLI_CALLBACK_HOST must be a loopback IP address such as 127.0.0.1 or ::1, with nothing else (the value set is not shown)"
+            ),
+        },
+    }
+}
+
+/// The capture, the command line and the `--docbrain-env` file are handled here, before the async
+/// runtime starts: loading the file writes the process environment, which is only sound while
+/// the process has one thread.
+fn main() -> Result<()> {
+    // Read before the `--docbrain-env` file is loaded: no file picks the identity or the server a
+    // password goes to.
     let shell = SHELL_ENV.get_or_init(|| ShellIdentityEnv {
         server_url: std::env::var("DOCBRAIN_SERVER_URL").ok(),
         api_key: std::env::var("DOCBRAIN_API_KEY").ok(),
         profile: std::env::var("DOCBRAIN_PROFILE").ok(),
     });
-    // After the capture above: `.env` may still set other variables, never these three.
-    dotenv().ok();
 
-    let cli = parse_cli(std::env::args_os()).unwrap_or_else(|e| e.exit());
+    let argv: Vec<std::ffi::OsString> = std::env::args_os().collect();
+    let cli = parse_cli(argv.clone()).unwrap_or_else(|e| exit_without_values(e, &argv));
 
+    // After the capture above (and the file may not set those three anyway), and before anything
+    // else reads the environment: the HTTP clients read the proxy variables when they are built.
+    // No `.env` is read unless named here (#603).
+    if let Some(path) = cli.docbrain_env.as_deref() {
+        // SAFETY: the async runtime has not started; this process has one thread.
+        unsafe { load_docbrain_env(path) }?;
+    }
+
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .context("start the async runtime")?
+        .block_on(run(cli, shell))
+}
+
+async fn run(cli: Cli, shell: &'static ShellIdentityEnv) -> Result<()> {
     let profile = select_profile(cli.profile.as_deref(), shell.profile.clone())?;
 
     // Resolve the server and key once, as one pair. A failure (unknown profile, a saved key
@@ -3311,12 +3641,12 @@ async fn main() -> Result<()> {
             }
             HealthAction::Validate { file, schema } => {
                 let text = std::fs::read_to_string(&file)
-                    .map_err(|e| anyhow::anyhow!("cannot read {}: {e}", file.display()))?;
+                    .map_err(|e| anyhow::anyhow!("cannot read the file to validate: {e}"))?;
                 // A schema on disk needs no server and no key — that is the CI case. Only
                 // the absence of one sends us to the network.
                 let schema_json = match &schema {
                     Some(path) => std::fs::read_to_string(path)
-                        .map_err(|e| anyhow::anyhow!("cannot read the schema {}: {e}", path.display()))?,
+                        .map_err(|e| anyhow::anyhow!("cannot read the --schema file: {e}"))?,
                     None => {
                         let key = api_key.clone().ok_or_else(|| anyhow::anyhow!(
                             "No --schema given and no API key to fetch one with.\n\
@@ -3494,9 +3824,9 @@ fn login_server(
     let url = match (server_override, saved.and_then(|e| e.server_url.clone())) {
         (Some(u), _) => u.to_string(),
         (None, Some(u)) => u,
+        // The name is not repeated: it could be a key typed in the wrong place (#603).
         (None, None) => anyhow::bail!(
-            "profile \"{0}\" is new; say which server it signs in to: `docbrain --profile {0} login --server <url>`",
-            name.as_str()
+            "this profile is new; say which server it signs in to: `docbrain --profile <name> login --server <url>`"
         ),
     };
     if let Some(e) = saved
@@ -3599,17 +3929,17 @@ async fn handle_oauth_login(server_url: &str, provider: &str, profile: Option<&P
 
     let server_url = server_url.to_string();
 
-    // Bind on a random OS-assigned port
-    let listener = TcpListener::bind("127.0.0.1:0").await
+    // Listen on exactly the address the server is told to send the browser back to, on a random
+    // OS-assigned port: the one-time code the browser carries is a credential, so it must reach
+    // this listener and nothing else (#603).
+    let callback_ip = login_callback_ip()?;
+    let listener = TcpListener::bind((callback_ip, 0)).await
         .map_err(|e| anyhow::anyhow!("Failed to bind local callback listener: {}", e))?;
     let port = listener.local_addr()?.port();
-
-    // The CLI callback URL. Defaults to 127.0.0.1 but can be overridden via
-    // DOCBRAIN_CLI_CALLBACK_HOST for environments where the server runs in Docker
-    // and needs to redirect back to the host machine (e.g. host.docker.internal).
-    let callback_host = std::env::var("DOCBRAIN_CLI_CALLBACK_HOST")
-        .unwrap_or_else(|_| "127.0.0.1".to_string());
-    let cli_callback = format!("http://{}:{}", callback_host, port);
+    let cli_callback = match callback_ip {
+        std::net::IpAddr::V4(ip) => format!("http://{ip}:{port}"),
+        std::net::IpAddr::V6(ip) => format!("http://[{ip}]:{port}"),
+    };
 
     // Build the start URL for the chosen provider, passing the full callback URL
     // so the server knows exactly where to redirect after authentication.
@@ -4663,7 +4993,7 @@ async fn handle_generate(
 
     for path in sources {
         let raw = std::fs::read_to_string(path)
-            .with_context(|| format!("reading source file {}", path.display()))?;
+            .context("reading a --source file")?;
         // Label = the file name (fallback to the full path if there is none).
         let label = path
             .file_name()
@@ -4719,7 +5049,7 @@ async fn handle_generate(
     let template_raw = match template {
         Some(path) => Some(
             std::fs::read_to_string(path)
-                .with_context(|| format!("reading template file {}", path.display()))?,
+                .context("reading the template file")?,
         ),
         None => None,
     };
@@ -4744,7 +5074,7 @@ async fn handle_generate(
         let tp = std::path::Path::new(t);
         if tp.is_file() {
             let content = std::fs::read_to_string(tp)
-                .with_context(|| format!("read --target local file '{t}'"))?;
+                .context("read the --target file")?;
             base_body["target_content"] = serde_json::Value::String(content);
         }
     }
@@ -4927,7 +5257,7 @@ async fn handle_generate(
     match out {
         Some(path) => {
             std::fs::write(path, emit_doc)
-                .with_context(|| format!("writing markdown to {}", path.display()))?;
+                .context("writing the --out file")?;
             eprintln!("Wrote {} bytes of markdown to {}", emit_doc.len(), path.display());
         }
         None => {
@@ -6552,7 +6882,7 @@ async fn attest_export(server_url: &str, api_key: &str, path: &std::path::Path) 
         .context("failed to parse attestation export response from server")?;
 
     std::fs::write(path, &export.export)
-        .with_context(|| format!("writing attestation export to {}", path.display()))?;
+        .context("writing the attestation export file")?;
 
     println!(
         "Wrote {} bytes of signed attestation export to {} (computed at {}).",
@@ -6817,7 +7147,7 @@ async fn check_claims(
             .map(|_| buf)
     } else {
         std::fs::read_to_string(diff_arg)
-            .with_context(|| format!("read diff from {diff_arg}"))
+            .context("read the --diff file")
     };
     let diff = match read {
         Ok(d) => d,
@@ -7031,7 +7361,7 @@ fn read_bundle_or_exit(path: &std::path::Path) -> Vec<u8> {
     match std::fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) => {
-            eprintln!("error: cannot read bundle {}: {e}", path.display());
+            eprintln!("error: cannot read the bundle: {e}");
             std::process::exit(EXIT_CLI_ERROR);
         }
     }
@@ -7242,7 +7572,7 @@ fn evidence_why(record: &str, bundle: &std::path::Path) -> ! {
     };
 
     let Some(primary) = find_record(&records, record) else {
-        eprintln!("No record in this bundle matches {record:?} (tried journal position and record-body id).");
+        eprintln!("No record in this bundle matches the record given (tried journal position and record-body id).");
         exit_with(0);
     };
 
@@ -7428,7 +7758,7 @@ fn evidence_tables(bundle: &std::path::Path, out: &std::path::Path) -> ! {
     }
 
     if let Err(e) = std::fs::write(out, csv.as_bytes()) {
-        eprintln!("error: cannot write CSV {}: {e}", out.display());
+        eprintln!("error: cannot write the CSV file: {e}");
         exit_with(EXIT_CLI_ERROR);
     }
     eprintln!("Wrote {} population row(s) to {}", populations.len(), out.display());
@@ -7500,7 +7830,7 @@ async fn evidence_export(
 
     let bytes = response.bytes().await.context("reading the exported .dbev bundle body from the server")?;
     std::fs::write(out, &bytes)
-        .map_err(|e| anyhow::anyhow!("cannot write bundle {}: {e}", out.display()))?;
+        .map_err(|e| anyhow::anyhow!("cannot write the bundle: {e}"))?;
     eprintln!("Wrote {} bytes to {}. Verify it offline: docbrain-verify {}", bytes.len(), out.display(), out.display());
     Ok(())
 }

@@ -453,6 +453,7 @@ dependencies = [
  "futures-util",
  "hex",
  "jsonschema",
+ "native-tls",
  "open",
  "reqwest",
  "rpassword",
@@ -487,10 +488,12 @@ dependencies = [
  "axum",
  "dotenvy",
  "hex",
+ "native-tls",
  "reqwest",
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "tokio",
 ]
 
