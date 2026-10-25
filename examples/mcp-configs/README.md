@@ -4,6 +4,10 @@ Drop-in configuration for each editor. Replace `YOUR_API_KEY_HERE` with a key
 from `docbrain token create --name "MCP" --role viewer`, and point
 `DOCBRAIN_SERVER_URL` at your instance.
 
+Install the connector once with `npm install -g docbrain-mcp` (or use the release binary). Start the
+installed `docbrain-mcp`, not `npx`: an editor starts it in the open project, and `npx` reads that
+project's `.npmrc`.
+
 | File | Editor | Where it goes |
 |---|---|---|
 | `claude-code.json` | Claude Code (CLI and VS Code extension) | `.mcp.json` at the **project root** |
@@ -44,7 +48,7 @@ URL before wiring anything up:
 
 ```bash
 DOCBRAIN_SERVER_URL=http://localhost:3001 DOCBRAIN_API_KEY=... \
-  npx -y docbrain-mcp@latest <<'EOF'
+  docbrain-mcp <<'EOF'
 {"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
 EOF
 ```

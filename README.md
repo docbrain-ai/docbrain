@@ -124,7 +124,7 @@ with their repo-relative paths and read what comes back first.
 
 **Claude Code.** The plugin install in the [Quickstart](#quickstart) adds the capture skill and connects the MCP server. Both commands write to `.claude/settings.json`, so commit that file and your whole team gets it. To skip the prompts, add `--config server_url=… --config api_key=…`. If you'd rather not use a plugin, copy [`plugins/docbrain/skills/docbrain-capture`](plugins/docbrain/skills/docbrain-capture) into your repo's `.claude/skills/` and run it as `/docbrain-capture`.
 
-**Cursor, VS Code and other editors.** Point your editor at the [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) with one file at your project root:
+**Cursor, VS Code and other editors.** Install the [`docbrain-mcp`](crates/docbrain-mcp) server (MIT, in `crates/`) once with `npm install -g docbrain-mcp`, then point your editor at it with one file at your project root. Start the installed `docbrain-mcp`, not `npx`: an editor starts it in the open project, and `npx` reads that project's `.npmrc`.
 
 ```jsonc
 // .mcp.json — Claude Code. Cursor: .cursor/mcp.json (same shape).
@@ -133,8 +133,7 @@ with their repo-relative paths and read what comes back first.
 {
   "mcpServers": {
     "docbrain": {
-      "command": "npx",
-      "args": ["-y", "docbrain-mcp@latest"],
+      "command": "docbrain-mcp",
       "env": {
         "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
         "DOCBRAIN_SERVER_URL": "http://localhost:3001"

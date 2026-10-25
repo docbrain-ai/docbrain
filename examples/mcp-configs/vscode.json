@@ -2,8 +2,7 @@
   "servers": {
     "docbrain": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "docbrain-mcp@latest"],
+      "command": "docbrain-mcp",
       "env": {
         "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
         "DOCBRAIN_SERVER_URL": "http://localhost:3001"
