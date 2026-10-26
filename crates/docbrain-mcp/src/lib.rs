@@ -1978,8 +1978,10 @@ fn with_secret_guardrail(description: &str) -> String {
 }
 
 /// What the model is told when the server refuses a capture for a secret. It names no value:
-/// the tool never repeats the text it sent.
-const SECRET_REFUSAL_GUIDANCE: &str = "Remove the value and send again; describe where the secret lives instead. Do not encode, split, space out or reword the value to get past the check.";
+/// the tool never repeats the text it sent. #599 ruling 6 (owner 2026-10-24): the person decides,
+/// never the agent: report the refusal exactly as given, ask whether that line holds a secret, and
+/// never edit or resend on its own.
+const SECRET_REFUSAL_GUIDANCE: &str = "Report this refusal to the person exactly as given, and ask them whether that line holds a secret. Never edit, reword, split, encode or resend the text on your own: the person decides what to change.";
 
 /// A failed API call, with what the caller may need to classify it.
 struct ApiFailure {
@@ -2827,8 +2829,10 @@ mod tests {
             let f = parse_failure(422, body);
             for t in [describe_failure(&f), describe_revise_failure(&f)] {
                 assert!(t.contains(SECRET_REFUSAL_GUIDANCE), "{t}");
-                assert!(t.contains("describe where the secret lives instead"), "{t}");
-                assert!(t.contains("Do not encode, split, space out or reword the value to get past the check"), "{t}");
+                // #599 ruling 6: report and ask; never edit or resend on its own.
+                assert!(t.contains("ask them whether that line holds a secret"), "{t}");
+                assert!(t.contains("Never edit, reword, split, encode or resend the text on your own"), "{t}");
+                assert!(!t.contains("Remove the value"), "the old guidance is gone: {t}");
                 assert!(t.contains(&f.message), "the server's words are kept: {t}");
                 assert!(!t.contains(value), "never the value: {t}");
             }

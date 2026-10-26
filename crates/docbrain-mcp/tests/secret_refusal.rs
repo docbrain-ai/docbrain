@@ -69,12 +69,12 @@ async fn every_capture_tool_relays_the_guidance_and_never_the_value() {
     ] {
         let text = call(&mcp, tool, args).await;
         assert!(text.contains("holds what looks like a password"), "the server's words, {tool}: {text}");
-        assert!(text.contains("Remove the value and send again"), "{tool}: {text}");
-        assert!(text.contains("describe where the secret lives instead"), "{tool}: {text}");
-        assert!(
-            text.contains("Do not encode, split, space out or reword the value to get past the check"),
-            "{tool}: {text}"
-        );
+        // #599 ruling 6: the agent reports and asks; it never edits or resends on its own.
+        assert!(text.contains("Report this refusal to the person exactly as given"), "{tool}: {text}");
+        assert!(text.contains("ask them whether that line holds a secret"), "{tool}: {text}");
+        assert!(text.contains("Never edit, reword, split, encode or resend the text on your own"), "{tool}: {text}");
+        assert!(!text.contains("send again;"), "{tool}: no instruction to rewrite and resend: {text}");
+        assert!(!text.contains("Remove the value"), "{tool}: the old guidance is gone: {text}");
         assert!(!text.contains(VALUE), "{tool} repeated the value: {text}");
     }
 }

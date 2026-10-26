@@ -212,8 +212,10 @@ and rotate it.
 
 - **A capture a person writes** (the console, the CLI, `docbrain_annotate`, `docbrain_commit_capture`,
   `docbrain_revise`) is **refused** when it holds a secret: nothing is saved, and the reply names the kind of secret
-  and the field it was in, never the value. Remove the value and send again, saying where the secret lives instead.
-  Do not encode, split, space out or reword the value to get past the check. Repeated refusals count toward the pause.
+  and the field it was in, the line, and which family of rules matched (for DocBrain's own rules, also the masked
+  shape of the match, such as `aaaa/9999…`), never the value. An agent reports the refusal to the person exactly as
+  given and asks whether that line holds a secret; it never edits or resends the text on its own. Repeated refusals
+  count toward the pause, and the same text sent again is refused again.
 - **A summary DocBrain writes** (a chat-thread capture, a CI run analysis) is **redacted**: the secret is replaced by
   a marker such as `[removed: password]`, the rest is kept, and the person who asked is told the kind that was
   removed. These never pause anyone.
