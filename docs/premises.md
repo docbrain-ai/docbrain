@@ -370,19 +370,26 @@ trade-offs in favor of precision:
 
 ## What the monitor costs to run
 
-Almost nothing, and document count is the wrong variable to worry about:
+Little. Its work grows with the number of claims; its memory with the number of files in
+your connected repositories:
 
-- **Documents are not monitored — captured claims are.** A thousand ingested documents
-  create zero premises; only knowledge fragments carry them, and only their path-shaped
-  claims. Large corpora typically produce hundreds of premises, not thousands.
-- **Each check is an in-memory set lookup** — microseconds. A sweep is one small database
-  read, one lookup per premise, and writes only for rows whose state or verdict actually
-  changed. A sweep over an unchanged world writes nothing and emits nothing. A thousand
-  premises is roughly a millisecond of comparison every five minutes; even a hundred
-  thousand stays well under a second.
-- **The file inventory lives in memory** and refreshes only when your repositories sync.
-  The Kubernetes repository's ~31,000 paths measure a few megabytes. The monitor never
-  clones anything, never reads document bodies, and never calls a model.
+- **What carries premises.** Every capture: its declared premises and the path-shaped
+  tokens in its inline code. Ingested documents too, but only when
+  `PREMISE_DOCUMENT_EXTRACTION` is on (it is off by default): the monitor then reads each
+  document's text once per new version and records the path-shaped tokens in its inline
+  code. Measured over 635 real documentation files, that is about 6.5 claims per document,
+  so turning it on for a corpus of 39,000 documents writes on the order of a quarter of a
+  million premise rows in its first pass.
+- **Each check is an in-memory set lookup.** A sweep reads the premises that a connected
+  source could settle, in pages of 1,000, and checks each one against the file inventory.
+  A premise whose state or verdict changed is written on its own; the unchanged ones on a
+  page share one batched update of their check time. Events are emitted only when a
+  premise breaks or is restored, so a sweep over an unchanged world emits nothing.
+- **The file inventory lives in memory.** The server reloads it from the stored listings
+  every five minutes; it changes only when a repository sync stores a new listing. The
+  monitor never clones anything and never calls a model.
+- **The document pass, when it is on,** costs one index-only probe per sweep when no
+  document has changed, and otherwise reads changed documents 200 at a time.
 
 The heavy work — cloning repositories, embedding documents — happens at ingest time, where
 it always did. The monitor adds a five-minute heartbeat of list-against-list comparison.
@@ -393,6 +400,7 @@ it always did. The monitor adds a five-minute heartbeat of list-against-list com
 |---|---|---|
 | `PREMISE_MONITOR_ENABLED` | `true` | The standing monitor. Turning it off stops sweeps and events; premise rows and the answer-time verifier are unaffected. Helm: `premises.monitorEnabled`. |
 | `PREMISE_SWEEP_INTERVAL_SECS` | `300` | Seconds between sweeps. The only dial on sweep cost — each sweep reads and settles every premise row. Values below `5` are raised to `5`. Helm: `premises.sweepIntervalSeconds`. |
+| `PREMISE_DOCUMENT_EXTRACTION` | `false` | Also extract premises from ingested documents, not only captures. Off by default: turning it on starts a one-time pass over the whole corpus (see the cost above). |
 
 Premises need a git source with a recorded file listing — see the GitHub source in
 [Configuration](configuration.md). A deployment with no listings runs the monitor inertly:
