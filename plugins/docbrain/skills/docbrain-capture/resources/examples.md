@@ -82,8 +82,8 @@ Sent as `docbrain_commit_capture` with `intent`, `file_paths: ["services/payment
 
 ## A fix that involves a credential
 
-The token was pasted into the conversation while debugging. The capture says where it lives and
-which variable carries it; the value appears nowhere.
+The token was pasted into the conversation while debugging. The capture says where it lives; the
+value appears nowhere.
 
 ```
 Type:   procedure
@@ -92,12 +92,11 @@ File:   ci/publish.sh   Lines: 9-14
 Publishing a package fails with HTTP 401 after the registry token is rotated, until the CI secret is
 updated too.
 
-The publish script reads the token from $REGISTRY_TOKEN, which the CI system fills from its own secret
-store; the token itself is kept in the team vault. A rotation changes the vault entry, not the CI
-secret, so the old token is still sent.
+The publish job uses a copy of the registry token kept as a CI secret; the token itself lives in the
+team vault entry "package registry". A rotation changes the vault entry, not the CI copy, so the job
+keeps the old one.
 
-1. After a rotation, copy the new token from the team vault entry "package registry" into the CI
-   secret REGISTRY_TOKEN.
+1. After a rotation, update the CI secret from the team vault entry "package registry".
 2. Re-run the publish job; ci/publish.sh does not change.
 
 Premises:
