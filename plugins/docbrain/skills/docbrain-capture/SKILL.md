@@ -101,7 +101,7 @@ Other people retrieve what you capture, so a secret in a capture is shared with 
 
 - Never put a secret value in a draft: no password, token, API key, private key, or connection string
   or URL with credentials. Say where it lives instead: "the database password is in the team vault",
-  or the variable that carries it, `${DB_PASSWORD}`.
+  or the variable that carries it, `DB_PASSWORD`.
 - Never paste a `.env` file, a credential file or a connection string with a password, not even part
   of one.
 - Before you show the draft, read it for anything that looks like a credential — a value after

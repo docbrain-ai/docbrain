@@ -12,7 +12,7 @@ Space:       <team or project space, if the organization uses them>
 <Why: the reason, the constraint, or the symptom that led here. For a decision, what was rejected and why.>
 
 <How: the exact command, path, flag, value or steps. Numbered when order matters. A secret appears
- only as where it lives — "the token is in the team vault", ${API_TOKEN} — never as its value.>
+ only as where it lives — "the token is in the team vault", API_TOKEN — never as its value.>
 
 Premises (paths that must exist for this to hold — each one checked in the repository before the draft is shown):
   - <path>
