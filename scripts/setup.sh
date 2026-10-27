@@ -288,6 +288,9 @@ PROXY_PORT="${PROXY_PORT:-$(env_value PROXY_PORT)}"
 DOCBRAIN_URL="${PROXY_ORIGIN:-$(env_value PROXY_ORIGIN)}"
 DOCBRAIN_URL="${DOCBRAIN_URL:-http://localhost:${PROXY_PORT:-3001}}"
 DOCBRAIN_URL="${DOCBRAIN_URL%/}"
+if [[ -z "${PROXY_ORIGIN:-$(env_value PROXY_ORIGIN)}" && "${PROXY_PORT:-3001}" != 3001 ]]; then
+    echo -e "  ${YELLOW}Set PROXY_ORIGIN=${DOCBRAIN_URL} in .env and run docker compose up -d: sign-in and the MCP address follow PROXY_ORIGIN.${NC}"
+fi
 
 echo -n "Waiting for server"
 for i in $(seq 1 45); do
@@ -321,7 +324,7 @@ if docker compose exec -T server test -f /app/admin-bootstrap-key.txt 2>/dev/nul
 fi
 
 # ── Your account ─────────────────────────────────────────────────────────
-# The admin key is for setup and expires after two hours. People sign in, and approve their coding
+# The admin key is for setup and does not expire, so keep it safe. People sign in, and approve their coding
 # agent, with an account: on a fresh install, create the first one here.
 
 json_string() {  # $1 as a JSON string literal
@@ -384,7 +387,7 @@ elif [[ "$ACCOUNT_STATE" == "exists" ]]; then
 elif [[ -n "$BOOTSTRAP_KEY" ]]; then
     echo -e "  ${BOLD}Admin API key:${NC} ${GREEN}${BOOTSTRAP_KEY}${NC}"
     echo ""
-    echo "  This key expires in 120 minutes. Create a permanent admin account:"
+    echo "  This key does not expire; keep it safe. Create your own admin account:"
     echo ""
     echo "    curl -X POST ${DOCBRAIN_URL}/api/v1/admin/users \\"
     echo "      -H 'X-API-Key: ${BOOTSTRAP_KEY}' \\"
@@ -403,7 +406,10 @@ if [[ "$ACCOUNT_STATE" == "none" ]]; then
     echo "    $step. Create an admin account (use the key above)"; step=$((step + 1))
 fi
 echo "    $step. Open ${DOCBRAIN_URL} and sign in"; step=$((step + 1))
-echo "    $step. Connect Claude Code: install the DocBrain plugin, enter ${DOCBRAIN_URL}/api/v1/mcp, run /mcp and sign in"; step=$((step + 1))
+echo "    $step. Connect Claude Code (2.1.186 or later), from the repository you work in:"; step=$((step + 1))
+echo "         claude plugin marketplace add docbrain-ai/docbrain --scope project"
+echo "         claude plugin install docbrain@docbrain --scope project --config mcp_url=${DOCBRAIN_URL}/api/v1/mcp"
+echo "       then run /mcp in Claude Code, choose plugin:docbrain:docbrain and sign in"
 echo "    $step. Ask a question to verify everything works"
 echo ""
 echo "  To connect a document source, edit config/local.yaml (gitignored):"

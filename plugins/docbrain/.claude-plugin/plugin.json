@@ -26,7 +26,7 @@
     "mcp_url": {
       "type": "string",
       "title": "DocBrain MCP address",
-      "description": "Copy it from DocBrain: your account › Connected apps. With Docker Compose it is http://localhost:3001/api/v1/mcp.",
+      "description": "Your DocBrain address followed by /api/v1/mcp, exactly; DocBrain shows it under your account menu › Connected apps. With Docker Compose it is http://localhost:3001/api/v1/mcp.",
       "required": true
     }
   }

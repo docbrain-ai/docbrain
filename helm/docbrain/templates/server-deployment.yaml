@@ -34,7 +34,7 @@ spec:
         app.kubernetes.io/component: server
     spec:
       # A capture an MCP client started finishes even if the client leaves; shutdown waits up to
-      # 130 s for those writes (mcp_http::SHUTDOWN_WAIT), so the pod is given longer than that.
+      # 130 s for those writes, so the pod is given longer than that.
       terminationGracePeriodSeconds: 180
       containers:
         - name: server

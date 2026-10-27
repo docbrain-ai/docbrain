@@ -50,7 +50,7 @@ EMBED_MODEL_ID=nomic-embed-text
 docker compose up -d
 ```
 
-> **RAM requirements:** `command-r:35b` needs ~24GB RAM. If your machine has <24GB, use a smaller model such as `llama3.1:8b` for testing, or switch to a cloud provider (Option 3) for production-quality answers. **Do not use 7B-8B models for answer generation in production** — they may fabricate answers. Only models with strong instruction-following should be used for RAG. See [Provider Setup](./providers.md#model-selection--critical-for-answer-quality) for details.
+> **RAM requirements:** `command-r:35b` needs ~24GB RAM. If your machine has <24GB, use a smaller model such as `llama3.1:8b` for testing, or switch to a cloud provider (Option 3) for production-quality answers. **Do not use 7B-8B models for answer generation in production** — they may fabricate answers. Only models with strong instruction-following should be used for RAG. See [Provider Setup](./providers.md#model-selection-critical-for-answer-quality) for details.
 
 ## Option 2: Interactive Setup (Recommended for first-timers)
 
@@ -93,11 +93,11 @@ docker compose ps
 docker compose exec server cat /app/admin-bootstrap-key.txt
 ```
 
-Then create your own account with that key (`setup.sh` does this for you at the end). The key is for setup and expires after two hours; you sign in to DocBrain, and approve your coding agent, as a person:
+Then create your own account with that key (`setup.sh` does this for you at the end). The key is an admin key for setup and does not expire, so keep it safe; you sign in to DocBrain, and approve your coding agent, as a person:
 
 ```bash
 curl -X POST http://localhost:3001/api/v1/admin/users \
-  -H "X-API-Key: <the admin API key>" -H 'Content-Type: application/json' \
+  -H "X-API-Key: <the db_sk_… value on the file's Key: line>" -H 'Content-Type: application/json' \
   -d '{"email":"you@example.com","password":"<10+ characters: upper and lower case and a digit>","display_name":"Your Name","role":"admin"}'
 ```
 
@@ -112,7 +112,7 @@ claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
 ```
 
-When it asks for your DocBrain MCP address, enter `http://localhost:3001/api/v1/mcp`. Then run `/mcp` in Claude Code, choose `docbrain` and sign in: DocBrain opens in your browser, you sign in and click **Allow**. No API key. Say "capture this" the next time you and your agent work something out.
+Needs Claude Code 2.1.186 or later. When it asks for your DocBrain MCP address, enter `http://localhost:3001/api/v1/mcp`. Then run `/mcp` in Claude Code, choose `plugin:docbrain:docbrain` and sign in: DocBrain opens in your browser, you sign in and click **Allow**. No API key. Say "capture this" the next time you and your agent work something out.
 
 Cursor, VS Code, CI and everything else: [Coding Agents](./agents.md#setup).
 
@@ -350,7 +350,7 @@ docker compose exec server docbrain-ingest   # re-ingest
 
 ## Explore the Web UI
 
-Open **http://localhost:3001** and log in with your API key. Here's what you'll find:
+Open **http://localhost:3001** and sign in with your account. Here's what you'll find:
 
 | Page | What It Does |
 |---|---|

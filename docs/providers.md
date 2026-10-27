@@ -56,7 +56,7 @@ ollama serve
   OLLAMA_TIMEOUT_SECS=300
   ```
 
-#### Model Selection — Critical for Answer Quality
+#### Model selection: critical for answer quality
 
 DocBrain's RAG pipeline relies on the LLM to stay strictly grounded in retrieved documents and follow structured formatting rules. **Only use models with strong instruction-following capabilities.** Models that ignore system prompts or default to training data instead of provided context will produce fabricated answers — even when the correct documents are retrieved.
 

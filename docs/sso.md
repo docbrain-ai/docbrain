@@ -240,6 +240,7 @@ GET /api/v1/auth/providers
 - **OTP exchange:** After any SSO callback, the server redirects to `OIDC_WEB_UI_URL?code=otp_<uuid>` instead of embedding the session key in the URL. The frontend exchanges this OTP via `POST /api/v1/auth/exchange` to receive the actual token in the response body — keeping raw API keys out of browser history, server access logs, and referrer headers. The OTP is single-use and expires after 60 seconds.
 - **CLI OAuth** uses the same OTP pattern: the CLI starts a local HTTP server on a random port and the browser redirects to `http://127.0.0.1:{port}?code=otp_...`. The CLI exchanges the OTP to obtain and save the session key.
 - **Session keys** created via SSO have the same TTL as email/password sessions (`LOGIN_SESSION_TTL_HOURS`).
+- **Allowing an app** (Sign-in for apps) needs a console sign-in from the last 10 minutes. A sign-in started from the consent page asks OIDC and GitLab providers to sign the person in again (`prompt=login`, `max_age=0`); GitHub has no such option. DocBrain asks; it does not check that the provider did.
 - All SSO routes are public (no API key required) but all other routes remain authenticated.
 
 ---

@@ -14,9 +14,9 @@ to your instance; keep the path exactly, with no trailing slash.
 acts with their role. Claude Code users usually want the [plugin](../../plugins/docbrain) instead,
 which connects the same server and adds the capture skill.
 
-For Cursor and VS Code, create a key with `docbrain token create --name "MCP" --role viewer` (read and
-ask) or `--role editor` (captures too). The files read it from your environment or a prompt, so no key
-is written in them.
+For Cursor and VS Code, create a key in DocBrain under your account menu › **My API keys**, or with
+`docbrain token create --name "MCP" --role editor` (`viewer` reads and asks; `editor` captures too). The
+files read it from your environment or a prompt, so no key is written in them.
 
 An editor that signs in with an MCP *client ID metadata document* can drop the header and sign in
 through the browser, as Claude Code does. If DocBrain's page then says the app is not allowed yet, an
@@ -73,11 +73,11 @@ the open project, and `npx` reads that project's `.npmrc`.
 Check the address and a key before wiring anything up:
 
 ```bash
-curl -s http://localhost:3001/api/v1/mcp \
+curl -s -w '\nHTTP %{http_code}\n' http://localhost:3001/api/v1/mcp \
   -H "Authorization: Bearer $DOCBRAIN_API_KEY" \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -H 'MCP-Protocol-Version: 2025-06-18' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-It prints the tool list. A 401 here is a bad key and a 404 a wrong address, not a bad editor config.
+It prints the tool list and `HTTP 200`. `HTTP 401` is a bad key and `HTTP 404` a wrong address, not a bad editor config.

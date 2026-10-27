@@ -173,7 +173,7 @@ The access gate applies uniformly:
 | GitHub/GitLab webhook captures | These use a **bot API key** (admin-scoped), not user OAuth — the gate does not apply to webhook-initiated ingestion |
 | MCP endpoint (`/api/v1/mcp`) | An app such as Claude Code signs in as a person, who allows it in the browser; it acts with that person's role and never more. Or an API key created by an authorised user via `docbrain token create` (the stdio connector's `DOCBRAIN_API_KEY`) |
 
-`docbrain token create --name <name> --role <viewer|admin>` mints a long-lived
+`docbrain token create --name <name> --role <viewer|editor|analyst|admin>` mints a long-lived
 token. Add `--rate-limit-rpm <n>` to raise its request budget; omitted, the
 server applies its default of 60 requests per minute. Session keys issued by
 `docbrain login` are governed separately by `SESSION_RATE_LIMIT_RPM` (see

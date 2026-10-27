@@ -44,7 +44,10 @@ Exchange email + password for a session token. The token is a `db_sk_...` API ke
 **Response:**
 ```json
 {
-  "token": "db_sk_...",
+  "api_key": "db_sk_...",
+  "key_id": "9b2f6c1e-…",
+  "role": "editor",
+  "user_id": "4c0d…",
   "expires_at": "2026-03-28T12:00:00Z"
 }
 ```
@@ -95,9 +98,10 @@ POST /api/v1/mcp
 ```
 
 Authenticate with `Authorization: Bearer` and either an access token an app received by signing in, or
-a `db_sk_...` API key. A missing or invalid credential gets `401` with a `WWW-Authenticate` challenge
-that names the protected resource metadata, so an MCP client can start the sign-in by itself. `GET`
-and `DELETE` answer `405`.
+a `db_sk_...` API key. A missing or invalid credential gets `401` with a `WWW-Authenticate` challenge.
+While Sign-in for apps is on, it names the protected resource metadata, so an MCP client can start the
+sign-in by itself; while it is off, it says app sign-in is off and an API key works. `GET` and `DELETE`
+answer `405`.
 
 **Sign-in for apps** (`DOCBRAIN_OAUTH_SERVER=on`) makes DocBrain an OAuth 2.1 authorization server for
 that endpoint, as the MCP authorization specification describes: authorization code with PKCE (S256),
@@ -124,6 +128,7 @@ The console uses these, with a signed-in person's key:
 | `DELETE /api/v1/me/connected-apps/{id}` | Revokes one of them |
 | `GET /api/v1/admin/oauth` | Admin: the state of Sign-in for apps and why, allowed web apps, registered documents, sign-in problems |
 | `GET /api/v1/admin/oauth/grants` · `DELETE /api/v1/admin/oauth/grants/{id}` · `POST /api/v1/admin/oauth/revoke-all` | Admin: every connection, revoke one, revoke all |
+| `PUT /api/v1/admin/oauth/allow-new-sign-ins` · `POST`/`DELETE /api/v1/admin/oauth/web-apps` · `PUT`/`DELETE /api/v1/admin/oauth/documents` · `POST /api/v1/admin/oauth/check` | Admin: pause new sign-ins, allow or remove a web app, register or remove an app document, check discovery |
 
 ---
 

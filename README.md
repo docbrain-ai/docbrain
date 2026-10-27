@@ -88,24 +88,24 @@ docker compose up -d
 docker compose exec server cat /app/admin-bootstrap-key.txt   # your admin API key
 ```
 
-Then create your own account with that key (`setup.sh` does this for you at the end). The key is for setup and expires after two hours; you sign in to DocBrain, and approve your coding agent, as a person:
+Then create your own account with that key (`setup.sh` does this for you at the end). The key is an admin key for setup and does not expire, so keep it safe; you sign in to DocBrain, and approve your coding agent, as a person:
 
 ```bash
 curl -X POST http://localhost:3001/api/v1/admin/users \
-  -H "X-API-Key: <the admin API key>" -H 'Content-Type: application/json' \
+  -H "X-API-Key: <the db_sk_… value on the file's Key: line>" -H 'Content-Type: application/json' \
   -d '{"email":"you@example.com","password":"<10+ characters: upper and lower case and a digit>","display_name":"Your Name","role":"admin"}'
 ```
 
 Docker Compose serves the web app and the API together at http://localhost:3001, and that is the URL your agent and CLI use too. The API server itself listens on port 3000, but Compose keeps that port inside its own network. On Kubernetes or a standalone server, use whatever address your server is reachable at.
 
-**2. Connect your coding agent.** In Claude Code, from the repo you work in:
+**2. Connect your coding agent.** In Claude Code (2.1.186 or later), from the repo you work in:
 
 ```bash
 claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
 ```
 
-It asks for your DocBrain MCP address: `http://localhost:3001/api/v1/mcp` with Docker Compose. Then run `/mcp` in Claude Code, choose `docbrain` and sign in: DocBrain opens in your browser, you sign in with your DocBrain account and click **Allow**. No API key. (Approving needs your account from step 1, not the admin API key.) Using Cursor or VS Code? See [Using DocBrain with your coding agent](#using-docbrain-with-your-coding-agent).
+It asks for your DocBrain MCP address: `http://localhost:3001/api/v1/mcp` with Docker Compose. Then run `/mcp` in Claude Code, choose `docbrain` (`plugin:docbrain:docbrain` when it came with the plugin) and sign in: DocBrain opens in your browser, you sign in with your DocBrain account and click **Allow**. No API key. (Approving needs your account from step 1, not the admin API key.) Using Cursor or VS Code? See [Using DocBrain with your coding agent](#using-docbrain-with-your-coding-agent).
 
 **3. Capture something, then ask for it.** Next time you and your agent work something out, say "capture this". You'll see a draft, and it's saved once you say yes. Then open a new session, or have a teammate open one, and ask about that file or topic. The answer comes back with your capture cited.
 
@@ -130,7 +130,7 @@ with their repo-relative paths and read what comes back first.
 
 ### Setup
 
-DocBrain serves MCP at your DocBrain address followed by `/api/v1/mcp` (`http://localhost:3001/api/v1/mcp` with Docker Compose). Your account menu › **Connected apps** shows it with a Copy button.
+DocBrain serves MCP at your DocBrain address followed by `/api/v1/mcp` (`http://localhost:3001/api/v1/mcp` with Docker Compose). While Sign-in for apps is on, your account menu › **Connected apps** shows it with a Copy button.
 
 **Claude Code.** The plugin install in the [Quickstart](#quickstart) adds the capture skill and connects the server; you sign in once with `/mcp`. Both commands write to `.claude/settings.json`, so commit that file and your whole team gets it, each person signing in as themselves. To skip the prompt, add `--config mcp_url=…`. Without the plugin: `claude mcp add --transport http docbrain http://localhost:3001/api/v1/mcp`, then `/mcp`.
 
@@ -148,7 +148,7 @@ DocBrain serves MCP at your DocBrain address followed by `/api/v1/mcp` (`http://
 }
 ```
 
-A `viewer` key (`docbrain token create --name "MCP" --role viewer`) can read and ask. Captures need an `editor` key. Ready-made configs for each editor, plus the one setup mistake that fails without an error, are in [`examples/mcp-configs/`](examples/mcp-configs/). Editors that only start local programs can use the [`docbrain-mcp`](crates/docbrain-mcp) stdio connector (MIT, `npm install -g docbrain-mcp`).
+Create the key in DocBrain under your account menu › **My API keys**, or with `docbrain token create --name "MCP" --role editor`. A `viewer` key can read and ask; captures need an `editor` key. Ready-made configs for each editor, plus the one setup mistake that fails without an error, are in [`examples/mcp-configs/`](examples/mcp-configs/). Editors that only start local programs can use the [`docbrain-mcp`](crates/docbrain-mcp) stdio connector (MIT, `npm install -g docbrain-mcp`).
 
 The server has [twelve tools](crates/docbrain-mcp#tools) in total. Full guide, including the privacy model: [docs/agents.md](docs/agents.md)
 

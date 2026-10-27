@@ -1220,6 +1220,7 @@ provider's signature or shared secret instead.
 | Variable | Default | Description |
 |---|---|---|
 | `LOGIN_SESSION_TTL_HOURS` | `720` | Session key lifetime after login (hours). `0` = no expiry. |
+| `MAX_PAT_DAYS` | `90` | Longest life, in days, of an API key a person creates for themselves and of an app connection made with Sign-in for apps. The 30-day unused limit on app connections is fixed. |
 | `SESSION_RATE_LIMIT_RPM` | `240` | Requests per minute for a login session key. Named tokens keep the `60` default; a browser session needs more, because one page load issues several calls and the auth guard retries. Too low shows up as a UI that looks like an outage. |
 | `ADMIN_KEY_FILE` | `/app/admin-bootstrap-key.txt` | Where to write the admin bootstrap key on first boot |
 
@@ -1332,7 +1333,7 @@ See **[docs/sso.md](sso.md)** for full setup instructions and a provider compari
 | `OIDC_WEB_UI_URL` | `DOCBRAIN_WEB_BASE_URL`, else `http://localhost:3001` | Where to redirect the browser after a successful login; most deployments leave it unset |
 | `DOCBRAIN_OAUTH_SERVER` | `off` (Docker Compose: `on`) | `on` lets apps such as Claude Code connect to the MCP endpoint by signing in and being allowed, instead of a pasted API key. Needs `DOCBRAIN_WEB_BASE_URL` as the one address of console and API (https, or `http://localhost` for development); otherwise it stays off and the log and **Settings › Sign-in for apps** say why. |
 | `DOCBRAIN_OAUTH_DOCUMENT_PROXY` | — | Fetch apps' metadata documents through this proxy, which then decides which addresses may be reached. Unset, DocBrain fetches them directly and only from public addresses. |
-| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin — **not** the API host if they differ. Also builds the **Open this answer** link on Slack answers and the **Answer page:** line in IDE answers. Unset → no link is offered (never guessed or hardcoded; the console's own Copy link still works). Trailing slash trimmed. |
+| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin. With Sign-in for apps on (`DOCBRAIN_OAUTH_SERVER`), the console and the API must both be served at this one origin. Also builds the **Open this answer** link on Slack answers and the **Answer page:** line in IDE answers. Unset → no link is offered (never guessed or hardcoded; the console's own Copy link still works). Trailing slash trimmed. |
 | `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` to skip TLS verification for OIDC discovery. Use for corporate/self-signed CAs. |
 
 ### GitHub OAuth 2.0

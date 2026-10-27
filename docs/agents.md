@@ -29,8 +29,8 @@ The missing piece is not a feature. It's standing instructions — and a skill t
 ## Setup
 
 DocBrain serves MCP at one address: your DocBrain address followed by `/api/v1/mcp`, exactly, with no
-trailing slash. With Docker Compose that is `http://localhost:3001/api/v1/mcp`. In DocBrain, your
-account menu › **Connected apps** shows it with a Copy button.
+trailing slash. With Docker Compose that is `http://localhost:3001/api/v1/mcp`. While Sign-in for apps
+is on, your account menu › **Connected apps** in DocBrain shows it with a Copy button.
 
 **Claude Code** (2.1.186 or later). Install the [plugin](#install-it): it connects the server and adds the
 capture skill. Or connect the server alone:
@@ -39,18 +39,20 @@ capture skill. Or connect the server alone:
 claude mcp add --transport http --scope project docbrain https://docbrain.your-org.internal/api/v1/mcp
 ```
 
-Then sign in once: run `/mcp`, choose `docbrain` and sign in. Your browser opens DocBrain; sign in
+Then sign in once: run `/mcp`, choose `docbrain` (`plugin:docbrain:docbrain` when it came with the
+plugin) and sign in. Your browser opens DocBrain; sign in
 (approving an app needs a sign-in from the last 10 minutes) and click **Allow**. There is no API key
 and nothing secret in any file, so the `.mcp.json` that `--scope project` writes can be committed for
 the whole team. Over SSH or without a browser, run `claude mcp login docbrain --no-browser`
 (`claude mcp login plugin:docbrain:docbrain --no-browser` if you installed the plugin).
 
 The agent acts as you, with your role and never more: a `viewer` can read and ask, captures need
-`editor`. The connection ends after 30 days unused or 90 days after you allowed it (`MAX_PAT_DAYS`),
-and you can revoke it any time under **Connected apps**.
+`editor`. The connection ends after 30 days unused or 90 days after you allowed it (an admin can
+change the 90 with `MAX_PAT_DAYS`), and you can revoke it any time under **Connected apps**.
 
-**Cursor, VS Code and other editors.** Point them at the same address with an API key (`docbrain token
-create --name "MCP" --role editor`) read from your environment, so no key is written in the file.
+**Cursor, VS Code and other editors.** Point them at the same address with an API key read from your
+environment, so no key is written in the file. Create the key in DocBrain under your account menu ›
+**My API keys** (Editor, so captures work), or with `docbrain token create --name "MCP" --role editor`.
 Ready-made files are in [`examples/mcp-configs/`](https://github.com/docbrain-ai/docbrain/tree/main/examples/mcp-configs):
 
 ```jsonc
@@ -70,8 +72,15 @@ instead, as Claude Code does. If DocBrain's page then says the app is not allowe
 to a website rather than to your computer, and an admin allows it once under **Settings › Sign-in for
 apps**.
 
-**Scripts and CI.** A machine with no browser connects with a key: in `.mcp.json`, give the server
-`"headers": { "Authorization": "Bearer ${DOCBRAIN_API_KEY}" }` and set the variable on the machine.
+**Scripts and CI.** A machine with no browser connects with a key. Keep the key out of the committed
+`.mcp.json`: Claude Code does not fall back to browser sign-in for a server that has an `Authorization`
+header, so everyone using that file would need the key. On the CI machine, add the server at local
+scope instead:
+
+```bash
+claude mcp add --transport http docbrain https://docbrain.your-org.internal/api/v1/mcp --header "Authorization: Bearer $DOCBRAIN_API_KEY"
+```
+
 `claude -p` on a machine where you signed in once uses that sign-in.
 
 **Editors that only start local programs.** The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp)
@@ -395,7 +404,7 @@ knowledge fragments into DocBrain's own corpus and nowhere else.
 - **Nothing is automatic.** The agent proposes; the person who did the work approves every capture, visibly, in the session. No admin queue stands between that yes and the answer.
 - **The session never uploads.** Only what a tool sends crosses the wire: a question to answer, the paths to look up, a capture you approved. Never your transcript or your files.
 - **Nothing goes to DocBrain's makers.** The plugin and the connector talk only to the DocBrain server your organization runs, at the address you gave them; neither has telemetry.
-- **The tool code is auditable.** The MCP server your editor talks to, over HTTP or stdio, is the MIT-licensed [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp).
+- **The tool code is auditable.** The tools your editor calls, and their MCP HTTP binding, are the MIT-licensed [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp); the DocBrain server runs that same code at `/api/v1/mcp`, and the stdio connector is built from it.
 - **Captures are attributed and falsifiable.** Every capture says who wrote its words — *Recorded by <name>*, or *Summarised by DocBrain from <source>* for a summary DocBrain wrote — and what checks it, derived by the server, never from anything the client claims. Its author can edit or withdraw it at any time (delete only until it has been used), an admin can erase it, and a key with no user cannot write one.
 
 ## Honest limitations

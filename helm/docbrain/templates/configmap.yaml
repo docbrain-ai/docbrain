@@ -137,9 +137,10 @@ data:
   {{- end }}
   # Sign-in for apps: on only when enabled; the server refuses to start it without one
   # https origin (webBaseUrl) and says why in its log and in Settings.
-  DOCBRAIN_OAUTH_SERVER: {{ ternary "on" "off" (.Values.oauthServer.enabled | default false) | quote }}
-  {{- if .Values.oauthServer.documentProxy }}
-  DOCBRAIN_OAUTH_DOCUMENT_PROXY: {{ .Values.oauthServer.documentProxy | quote }}
+  {{- $oauthServer := .Values.oauthServer | default dict }}
+  DOCBRAIN_OAUTH_SERVER: {{ ternary "on" "off" (dig "enabled" false $oauthServer) | quote }}
+  {{- with (dig "documentProxy" "" $oauthServer) }}
+  DOCBRAIN_OAUTH_DOCUMENT_PROXY: {{ . | quote }}
   {{- end }}
 
   # Source-System ACL Mirroring (RFC-001)
