@@ -454,6 +454,10 @@ admins also see whether it is on and why, pause new sign-ins and revoke connecti
 The server pod gets `terminationGracePeriodSeconds: 180`: on shutdown it waits up to 130 s for captures
 an MCP client started.
 
+So that the sign-in limits count each person rather than the ingress, give the server the number of
+proxies of yours in front of it, `1` for an ingress controller alone:
+`--set-string server.env.TRUSTED_PROXY_HOPS=1` ([Configuration](configuration.md)).
+
 ### Autopilot (AI gap analysis)
 
 Autopilot is **enabled by default**. To adjust the gap analysis interval (default: 6 hours):

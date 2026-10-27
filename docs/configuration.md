@@ -1209,7 +1209,7 @@ attempts per client IP:
 |---|---|---|
 | `IP_LOGIN_MAX_FAILURES` | `100` | Failed login attempts allowed per IP per window before the IP is answered `429` |
 | `IP_LOGIN_LOCKOUT_WINDOW_SECS` | `600` | Length of that window in seconds; also the `Retry-After` value on the `429` |
-| `TRUSTED_PROXY_HOPS` | unset | Unset: the client IP is the socket address and `X-Forwarded-For` is ignored. `N` ≥ 1: the IP is the Nth entry from the right of `X-Forwarded-For`, i.e. the address your Nth trusted proxy saw. Set this only behind proxies you control — with the wrong value a caller chooses its own IP for the limiter. |
+| `TRUSTED_PROXY_HOPS` | unset (Docker Compose: `1`) | Unset: the client IP is the socket address and `X-Forwarded-For` is ignored. `N` ≥ 1: the number of proxies of yours in front of the server; the IP is the Nth entry from the right of `X-Forwarded-For` (every header field, in order), i.e. the address the farthest of them saw. Docker Compose sets `1` for its proxy; one nginx or one ingress controller is also `1`. Set this only behind proxies you control: too high a value lets a caller choose its own IP for the limiter, too low counts every caller as your proxy. |
 
 The webhook endpoints (`/github/events`, `/gitlab/events`, `/confluence/events`,
 `/slack/*`, `/ms-teams/events`) are not rate limited; each verifies its

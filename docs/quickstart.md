@@ -282,6 +282,18 @@ stdout carries only the markdown (pipe-clean, redirect-safe). All diagnostics â€
 
 See the **[Generate guide](generate.md)** for source links, templates, and CI playbooks.
 
+## Upgrade
+
+From the folder you cloned:
+
+```bash
+git pull && docker compose pull && docker compose up -d && docker compose restart proxy
+```
+
+`git pull` brings the new Compose and proxy files and `docker compose pull` the new images. The last step
+loads a changed proxy file, which `up -d` alone does not do: it leaves a running proxy as it is. Your
+data stays in the Docker volumes. On Kubernetes, see [Upgrade](kubernetes.md#upgrade).
+
 ## Troubleshooting
 
 ### Services won't start

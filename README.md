@@ -232,7 +232,7 @@ helm install docbrain ./helm/docbrain \
 # fingerprintKeySecret.existingSecret)
 ```
 
-[Kubernetes guide →](docs/kubernetes.md) · [Configuration →](docs/configuration.md)
+[Kubernetes guide →](docs/kubernetes.md) · [Configuration →](docs/configuration.md) · [Upgrade →](docs/quickstart.md#upgrade)
 
 ## Documentation
 
