@@ -146,7 +146,8 @@ services:
       DOCBRAIN_OAUTH_SERVER: ${DOCBRAIN_OAUTH_SERVER:-on}
       DOCBRAIN_OAUTH_DOCUMENT_PROXY: ${DOCBRAIN_OAUTH_DOCUMENT_PROXY:-}
       # The proxy is the server's only way in and sends one X-Forwarded-For entry, the address it saw:
-      # the per-address sign-in limits count each client, not the proxy. Add 1 per proxy you run in front.
+      # the per-address sign-in limits count each client, not the proxy. A load balancer in front of the
+      # proxy: trust it in config/Caddyfile (servers { trusted_proxies static <its range> }), then set 2.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       # Auth session lifetime (30 days default)
       LOGIN_SESSION_TTL_HOURS: ${LOGIN_SESSION_TTL_HOURS:-720}

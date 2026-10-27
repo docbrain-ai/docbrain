@@ -291,7 +291,7 @@ git pull && docker compose pull && docker compose up -d && docker compose restar
 ```
 
 `git pull` brings the new Compose and proxy files and `docker compose pull` the new images. The last step
-loads a changed proxy file, which `up -d` alone does not do: it leaves a running proxy as it is. Your
+loads a changed proxy file: `up -d` keeps a running proxy whenever its image has not changed. Your
 data stays in the Docker volumes. On Kubernetes, see [Upgrade](kubernetes.md#upgrade).
 
 ## Troubleshooting

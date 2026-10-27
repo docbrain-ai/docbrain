@@ -455,7 +455,8 @@ The server pod gets `terminationGracePeriodSeconds: 180`: on shutdown it waits u
 an MCP client started.
 
 So that the sign-in limits count each person rather than the ingress, give the server the number of
-proxies of yours in front of it, `1` for an ingress controller alone:
+proxies of yours in front of it: `1` for an ingress controller such as ingress-nginx, `2` behind Google
+Cloud's HTTP(S) load balancer, which adds the client and its own address:
 `--set-string server.env.TRUSTED_PROXY_HOPS=1` ([Configuration](configuration.md)).
 
 ### Autopilot (AI gap analysis)
