@@ -281,9 +281,17 @@ for i in $(seq 1 45); do
     sleep 2
 done
 
+# The address the proxy publishes: PROXY_ORIGIN, else localhost on PROXY_PORT, from the environment
+# or .env, so the checks and links below follow a changed port.
+env_value() { if [[ -f .env ]]; then grep -E "^$1=" .env | tail -1 | cut -d= -f2- | tr -d '"' || true; fi; }
+PROXY_PORT="${PROXY_PORT:-$(env_value PROXY_PORT)}"
+DOCBRAIN_URL="${PROXY_ORIGIN:-$(env_value PROXY_ORIGIN)}"
+DOCBRAIN_URL="${DOCBRAIN_URL:-http://localhost:${PROXY_PORT:-3001}}"
+DOCBRAIN_URL="${DOCBRAIN_URL%/}"
+
 echo -n "Waiting for server"
 for i in $(seq 1 45); do
-    if curl -sf http://localhost:3001/api/v1/health > /dev/null 2>&1; then
+    if curl -sf "${DOCBRAIN_URL}/api/v1/health" > /dev/null 2>&1; then
         echo -e " ${GREEN}ready${NC}"
         break
     fi
@@ -312,25 +320,76 @@ if docker compose exec -T server test -f /app/admin-bootstrap-key.txt 2>/dev/nul
     BOOTSTRAP_KEY=$(docker compose exec -T server cat /app/admin-bootstrap-key.txt 2>/dev/null | grep "^Key:" | cut -d' ' -f2 || true)
 fi
 
+# ── Your account ─────────────────────────────────────────────────────────
+# The admin key is for setup and expires after two hours. People sign in, and approve their coding
+# agent, with an account: on a fresh install, create the first one here.
+
+json_string() {  # $1 as a JSON string literal
+    local s=${1//\\/\\\\}
+    s=${s//\"/\\\"}
+    printf '"%s"' "$s"
+}
+
+ACCOUNT_STATE="none"   # none | exists | created
+ACCOUNT_EMAIL=""
+if [[ -n "$BOOTSTRAP_KEY" ]]; then
+    reply=$(curl -s "${DOCBRAIN_URL}/api/v1/admin/users" \
+        -H @<(printf 'X-API-Key: %s\n' "$BOOTSTRAP_KEY") -w '\n%{http_code}' || true)
+    if [[ "${reply##*$'\n'}" == "200" && "$(printf '%s' "${reply%$'\n'*}" | tr -d '[:space:]')" != "[]" ]]; then
+        ACCOUNT_STATE="exists"
+    elif [[ "${reply##*$'\n'}" == "200" && -t 0 ]]; then
+        echo ""
+        echo -e "${BOLD}Create your DocBrain account${NC} — you sign in with it, and approve your coding agent with it."
+        for attempt in 1 2 3; do
+            read -rp "  Email: " acct_email
+            read -rp "  Your name: " acct_name
+            read -rsp "  Password (10+ characters, upper and lower case and a digit): " acct_pw; echo ""
+            read -rsp "  Password again: " acct_pw2; echo ""
+            if [[ "$acct_pw" != "$acct_pw2" ]]; then
+                echo -e "  ${YELLOW}The two passwords differ.${NC}"
+                continue
+            fi
+            body="{\"email\":$(json_string "$acct_email"),\"password\":$(json_string "$acct_pw"),\"display_name\":$(json_string "${acct_name:-${acct_email%@*}}"),\"role\":\"admin\"}"
+            reply=$(curl -s -X POST "${DOCBRAIN_URL}/api/v1/admin/users" \
+                -H @<(printf 'X-API-Key: %s\nContent-Type: application/json\n' "$BOOTSTRAP_KEY") \
+                --data-binary @<(printf '%s' "$body") -w '\n%{http_code}' || true)
+            if [[ "${reply##*$'\n'}" == 2* ]]; then
+                ACCOUNT_STATE="created"
+                ACCOUNT_EMAIL="$acct_email"
+                echo -e "  ${GREEN}Account created.${NC}"
+                break
+            fi
+            echo -e "  ${YELLOW}Not created:${NC} ${reply%$'\n'*}"
+        done
+        unset acct_pw acct_pw2 body
+    fi
+fi
+
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║          DocBrain is running!                ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "  Web UI       ${BLUE}http://localhost:3001${NC}"
-echo -e "  API          ${BLUE}http://localhost:3001/api/v1${NC}"
-echo -e "  Health       ${BLUE}http://localhost:3001/api/v1/health${NC}"
+echo -e "  Web UI       ${BLUE}${DOCBRAIN_URL}${NC}"
+echo -e "  API          ${BLUE}${DOCBRAIN_URL}/api/v1${NC}"
+echo -e "  MCP          ${BLUE}${DOCBRAIN_URL}/api/v1/mcp${NC}"
 echo ""
 
-if [[ -n "$BOOTSTRAP_KEY" ]]; then
+if [[ "$ACCOUNT_STATE" == "created" ]]; then
+    echo -e "  Sign in as ${BOLD}${ACCOUNT_EMAIL}${NC} with the password you chose."
+    echo ""
+elif [[ "$ACCOUNT_STATE" == "exists" ]]; then
+    echo "  Sign in with your DocBrain account."
+    echo ""
+elif [[ -n "$BOOTSTRAP_KEY" ]]; then
     echo -e "  ${BOLD}Admin API key:${NC} ${GREEN}${BOOTSTRAP_KEY}${NC}"
     echo ""
     echo "  This key expires in 120 minutes. Create a permanent admin account:"
     echo ""
-    echo "    curl -X POST http://localhost:3001/api/v1/admin/users \\"
+    echo "    curl -X POST ${DOCBRAIN_URL}/api/v1/admin/users \\"
     echo "      -H 'X-API-Key: ${BOOTSTRAP_KEY}' \\"
     echo "      -H 'Content-Type: application/json' \\"
-    echo "      -d '{\"email\":\"admin@example.com\",\"password\":\"yourpassword\",\"display_name\":\"Admin\",\"role\":\"admin\"}'"
+    echo "      -d '{\"email\":\"you@example.com\",\"password\":\"<10+ characters: upper and lower case and a digit>\",\"display_name\":\"Your Name\",\"role\":\"admin\"}'"
     echo ""
 else
     echo "  Retrieve your admin API key:"
@@ -339,9 +398,13 @@ else
 fi
 
 echo -e "  ${BOLD}Next steps:${NC}"
-echo "    1. Create an admin account (use the key above)"
-echo "    2. Open http://localhost:3001 and sign in"
-echo "    3. Ask a question to verify everything works"
+step=1
+if [[ "$ACCOUNT_STATE" == "none" ]]; then
+    echo "    $step. Create an admin account (use the key above)"; step=$((step + 1))
+fi
+echo "    $step. Open ${DOCBRAIN_URL} and sign in"; step=$((step + 1))
+echo "    $step. Connect Claude Code: install the DocBrain plugin, enter ${DOCBRAIN_URL}/api/v1/mcp, run /mcp and sign in"; step=$((step + 1))
+echo "    $step. Ask a question to verify everything works"
 echo ""
 echo "  To connect a document source, edit config/local.yaml (gitignored):"
 echo "    — put source credentials (Confluence token, GitHub token, etc.) there"

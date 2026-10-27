@@ -4,8 +4,9 @@
 # The web image ships a strict CSP (`connect-src 'self'`) that assumes the API
 # is same-origin (as it is behind the production Helm ingress). This proxy
 # reproduces that single-origin shape for `docker compose`:
-#   /api/*  → server   (the Rust backend)
-#   /*      → web      (the Next.js UI)
+#   /api/*                  → server   (the Rust backend)
+#   /.well-known/oauth-*    → server   (sign-in for apps: OAuth discovery)
+#   /*                      → web      (the Next.js UI)
 # so the browser only ever talks to ONE origin and the CSP is satisfied.
 #
 # Everything is env-driven (Caddy {$VAR:default} syntax) — override in .env:
@@ -27,6 +28,11 @@
 	# API first — most specific match wins. No prefix stripping: the backend
 	# already serves /api/v1/*, so the path is forwarded verbatim.
 	handle /api/* {
+		reverse_proxy {$PROXY_SERVER_UPSTREAM:server:3000}
+	}
+
+	# Sign-in for apps: the OAuth discovery documents are the server's too (404 while it is off).
+	handle /.well-known/oauth-* {
 		reverse_proxy {$PROXY_SERVER_UPSTREAM:server:3000}
 	}
 

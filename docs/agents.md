@@ -12,7 +12,7 @@ no source anyone can check. Your coding agent is, however, the best instrument
 for both halves of the actual fix — it is present at the second the knowledge is
 created, and it is the thing asking for it at the moment of the next change.
 
-Your coding agent already has DocBrain's tools. The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp) server (MIT, in `crates/`) gives Claude Code, Cursor, and any MCP-compatible editor twelve tools. These five are the ones this page's workflow uses; the [full table](#all-twelve-tools) is at the end:
+Your coding agent already has DocBrain's tools. DocBrain serves twelve of them over MCP to Claude Code, Cursor and any MCP-compatible editor, from one address on your server; the tool code is MIT-licensed in [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp). These five are the ones this page's workflow uses; the [full table](#all-twelve-tools) is at the end:
 
 | Tool | Direction | What it does |
 |------|-----------|--------------|
@@ -28,19 +28,87 @@ The missing piece is not a feature. It's standing instructions — and a skill t
 
 ## Setup
 
-Register the MCP server in your editor (Claude Code shown; Cursor and others use their equivalent MCP config):
+DocBrain serves MCP at one address: your DocBrain address followed by `/api/v1/mcp`, exactly, with no
+trailing slash. With Docker Compose that is `http://localhost:3001/api/v1/mcp`. In DocBrain, your
+account menu › **Connected apps** shows it with a Copy button.
+
+**Claude Code** (2.1.186 or later). Install the [plugin](#install-it): it connects the server and adds the
+capture skill. Or connect the server alone:
 
 ```bash
-claude mcp add docbrain \
-  --env DOCBRAIN_API_KEY=db_sk_... \
-  --env DOCBRAIN_SERVER_URL=https://docbrain.your-org.internal \
-  -- docbrain-mcp
+claude mcp add --transport http --scope project docbrain https://docbrain.your-org.internal/api/v1/mcp
 ```
 
+Then sign in once: run `/mcp`, choose `docbrain` and sign in. Your browser opens DocBrain; sign in
+(approving an app needs a sign-in from the last 10 minutes) and click **Allow**. There is no API key
+and nothing secret in any file, so the `.mcp.json` that `--scope project` writes can be committed for
+the whole team. Over SSH or without a browser, run `claude mcp login docbrain --no-browser`
+(`claude mcp login plugin:docbrain:docbrain --no-browser` if you installed the plugin).
+
+The agent acts as you, with your role and never more: a `viewer` can read and ask, captures need
+`editor`. The connection ends after 30 days unused or 90 days after you allowed it (`MAX_PAT_DAYS`),
+and you can revoke it any time under **Connected apps**.
+
+**Cursor, VS Code and other editors.** Point them at the same address with an API key (`docbrain token
+create --name "MCP" --role editor`) read from your environment, so no key is written in the file.
+Ready-made files are in [`examples/mcp-configs/`](https://github.com/docbrain-ai/docbrain/tree/main/examples/mcp-configs):
+
+```jsonc
+// .cursor/mcp.json
+{
+  "mcpServers": {
+    "docbrain": {
+      "url": "http://localhost:3001/api/v1/mcp",
+      "headers": { "Authorization": "Bearer ${env:DOCBRAIN_API_KEY}" }
+    }
+  }
+}
+```
+
+An editor that signs in with an MCP *client ID metadata document* can sign in through the browser
+instead, as Claude Code does. If DocBrain's page then says the app is not allowed yet, that app returns
+to a website rather than to your computer, and an admin allows it once under **Settings › Sign-in for
+apps**.
+
+**Scripts and CI.** A machine with no browser connects with a key: in `.mcp.json`, give the server
+`"headers": { "Authorization": "Bearer ${DOCBRAIN_API_KEY}" }` and set the variable on the machine.
+`claude -p` on a machine where you signed in once uses that sign-in.
+
+**Editors that only start local programs.** The [`docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp)
+connector speaks MCP over stdio for them: `npm install -g docbrain-mcp`, with `DOCBRAIN_SERVER_URL` and
+`DOCBRAIN_API_KEY` in its environment.
+
 !!! note "Use a scoped key"
-    Give the agent a key with capture permission but nothing more. Write tools
-    are permission-gated server-side — a read-only key can `ask` but cannot
-    file captures.
+    When you connect with a key, give the agent one with capture permission but nothing more. Write
+    tools are permission-gated server-side: a read-only key can `ask` but cannot file captures.
+
+### Sign-in for apps
+
+Signing in from the editor is DocBrain acting as an OAuth 2.1 authorization server for its own MCP
+endpoint, as the MCP specification describes. It is **on by default with Docker Compose** and off on
+Kubernetes until an admin turns it on:
+
+- Docker Compose: on; `DOCBRAIN_OAUTH_SERVER=off` in `.env` turns it off.
+- Kubernetes: `oauthServer.enabled: true` in the Helm values.
+
+It needs `DOCBRAIN_WEB_BASE_URL` (Helm: `webBaseUrl`) to be the one address of the console and the API:
+https, or `http://localhost` for development. Every SSO provider must land people on that same address.
+If something is missing it stays off, and the server log and **Settings › Sign-in for apps** say why.
+
+**Settings › Sign-in for apps** shows whether it is on, lets an admin pause new sign-ins (**Allow new
+sign-ins**), checks discovery as this server sees it (**Check now**), and lists sign-in problems from the
+last 7 days. It also holds:
+
+- **Web apps you allow**: an app that returns to your own computer, like Claude Code, may ask by default;
+  an app that returns to a website needs an entry here, by its client ID.
+- **App documents registered here**: DocBrain reads each app's metadata document from the internet
+  (public addresses only, 5 seconds, 5 KB). Without outbound access, register the document here, or set
+  `DOCBRAIN_OAUTH_DOCUMENT_PROXY` to fetch through your proxy.
+- **Connected apps in this DocBrain**: each person and app, with **Revoke** and **Revoke all**. After a
+  restore from backup, use **Revoke all**.
+
+A connection ends when its person or an admin revokes it, when the person is disabled, after
+30 days unused, or 90 days after it was allowed. Signing out of the console does not end it.
 
 ## Capturing Knowledge with Premises
 
@@ -107,12 +175,11 @@ claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
 ```
 
-The install asks for your DocBrain server URL and an API key with capture permission (`docbrain token
-create --name "Claude Code" --role editor`) and connects the MCP server for you — no `.mcp.json` to write;
-pass `--config server_url=… --config api_key=…` to answer without a prompt. Both commands write to
+The install asks for your DocBrain MCP address (see [Setup](#setup)); then run `/mcp`, choose
+`docbrain` and sign in. Pass `--config mcp_url=…` to answer without a prompt. Both commands write to
 `.claude/settings.json` — the marketplace under `extraKnownMarketplaces`, the plugin under
-`enabledPlugins`; commit that file and everyone who trusts the project has the skill; the key stays in
-each person's own keychain. Invoke it as `/docbrain:docbrain-capture`, or say
+`enabledPlugins`; commit that file and everyone who trusts the project has the skill, and each person
+signs in as themselves. Invoke it as `/docbrain:docbrain-capture`, or say
 "capture this", "write this down", "document how we did that".
 
 Prefer a plain directory? Copy
@@ -326,8 +393,9 @@ knowledge fragments into DocBrain's own corpus and nowhere else.
 ## Privacy properties
 
 - **Nothing is automatic.** The agent proposes; the person who did the work approves every capture, visibly, in the session. No admin queue stands between that yes and the answer.
-- **The session never uploads.** Only the approved capture crosses the wire — not your transcript, not your code, not your prompts.
-- **The client is auditable.** Every line of code that touches your session is MIT-licensed in [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp).
+- **The session never uploads.** Only what a tool sends crosses the wire: a question to answer, the paths to look up, a capture you approved. Never your transcript or your files.
+- **Nothing goes to DocBrain's makers.** The plugin and the connector talk only to the DocBrain server your organization runs, at the address you gave them; neither has telemetry.
+- **The tool code is auditable.** The MCP server your editor talks to, over HTTP or stdio, is the MIT-licensed [`crates/docbrain-mcp`](https://github.com/docbrain-ai/docbrain/tree/main/crates/docbrain-mcp).
 - **Captures are attributed and falsifiable.** Every capture says who wrote its words — *Recorded by <name>*, or *Summarised by DocBrain from <source>* for a summary DocBrain wrote — and what checks it, derived by the server, never from anything the client claims. Its author can edit or withdraw it at any time (delete only until it has been used), an admin can erase it, and a key with no user cannot write one.
 
 ## Honest limitations

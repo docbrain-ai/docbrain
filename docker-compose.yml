@@ -100,6 +100,8 @@ services:
     image: ghcr.io/docbrain-ai/docbrain:latest
     pull_policy: always
     platform: linux/amd64
+    # Captures an MCP client started finish before the server stops (it waits up to 130 s).
+    stop_grace_period: 180s
     # No host port: the proxy is the single front door (same-origin /api/* + /*).
     # Publishing the API on its own host origin re-introduces the cross-origin
     # fetch that the web image's CSP `connect-src 'self'` blocks (login fails).
@@ -139,6 +141,10 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-${PROXY_ORIGIN:-http://localhost:3001}}
       # Absolute base for links the server emits (e.g. generated-doc view_url).
       DOCBRAIN_WEB_BASE_URL: ${DOCBRAIN_WEB_BASE_URL:-${PROXY_ORIGIN:-http://localhost:3001}}
+      # Sign-in for apps: Claude Code and other MCP apps connect to http://localhost:3001/api/v1/mcp
+      # by signing in and being allowed, with no API key. Set DOCBRAIN_OAUTH_SERVER=off to turn it off.
+      DOCBRAIN_OAUTH_SERVER: ${DOCBRAIN_OAUTH_SERVER:-on}
+      DOCBRAIN_OAUTH_DOCUMENT_PROXY: ${DOCBRAIN_OAUTH_DOCUMENT_PROXY:-}
       # Auth session lifetime (30 days default)
       LOGIN_SESSION_TTL_HOURS: ${LOGIN_SESSION_TTL_HOURS:-720}
       # Scheduler intervals (can be overridden in .env)

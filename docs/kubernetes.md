@@ -433,6 +433,27 @@ helm install docbrain ./helm/docbrain \
   --set oidc.webUiUrl=https://docbrain.yourcompany.com
 ```
 
+### Sign-in for apps
+
+Lets Claude Code and other MCP apps connect to `https://docbrain.yourcompany.com/api/v1/mcp` by
+signing in and being allowed, with no API key ([Coding Agents](agents.md#setup)). Off until you turn it on:
+
+```bash
+helm upgrade docbrain ./helm/docbrain --reuse-values \
+  --set webBaseUrl=https://docbrain.yourcompany.com \
+  --set oauthServer.enabled=true
+```
+
+`webBaseUrl` must be the one https address of the console and the API, and every SSO provider must
+land people on it (leave the `webUiUrl` values unset, or equal to it). The Ingress routes the two discovery
+documents, `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`, to
+the server. DocBrain reads each app's metadata document from the internet; without outbound access,
+set `oauthServer.documentProxy` or register the document under **Settings › Sign-in for apps**, where
+admins also see whether it is on and why, pause new sign-ins and revoke connections.
+
+The server pod gets `terminationGracePeriodSeconds: 180`: on shutdown it waits up to 130 s for captures
+an MCP client started.
+
 ### Autopilot (AI gap analysis)
 
 Autopilot is **enabled by default**. To adjust the gap analysis interval (default: 6 hours):

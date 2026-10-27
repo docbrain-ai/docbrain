@@ -2,9 +2,12 @@
 
 MCP server that connects Claude Code, Cursor, and any MCP-compatible editor to your organization's [DocBrain](https://github.com/docbrain-ai/docbrain) instance.
 
+**Most editors do not need this package.** A DocBrain server (1.6.4 or later) serves these same tools over HTTP at your DocBrain address followed by `/api/v1/mcp`, and Claude Code connects there by signing in through the browser, with no key: see [Coding Agents](https://github.com/docbrain-ai/docbrain/blob/main/docs/agents.md#setup). This package is the stdio connector, for an editor that only starts local programs.
+
 **This is the connector, not the product.** It's a thin stdio adapter that translates MCP tool calls into REST calls against a DocBrain server — all data and logic live server-side. Without a running DocBrain server it does nothing (and will tell you so at startup).
 
 ```
+Your editor (agent) ──HTTP──────────────────────> your DocBrain server  /api/v1/mcp
 Your editor (agent) ──stdio──> docbrain-mcp ──HTTPS──> your DocBrain server
 ```
 
@@ -13,6 +16,14 @@ Your editor (agent) ──stdio──> docbrain-mcp ──HTTPS──> your DocB
 A self-hosted DocBrain server — deploy one in ~5 minutes: [Quickstart](https://github.com/docbrain-ai/docbrain#quickstart)
 
 ## Setup
+
+Over HTTP, with no package (Claude Code shown; then run `/mcp`, choose `docbrain` and sign in):
+
+```bash
+claude mcp add --transport http docbrain https://docbrain.your-org.internal/api/v1/mcp
+```
+
+Over stdio, with this package:
 
 ```bash
 claude mcp add docbrain \

@@ -1,5 +1,5 @@
 ---
 type: tool_used
-tool: mcp__docbrain__docbrain_context
+tool: mcp__plugin_docbrain_docbrain__docbrain_context
 min: 1
 ---

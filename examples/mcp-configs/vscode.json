@@ -1,11 +1,18 @@
 {
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "docbrain-api-key",
+      "description": "DocBrain API key",
+      "password": true
+    }
+  ],
   "servers": {
     "docbrain": {
-      "type": "stdio",
-      "command": "docbrain-mcp",
-      "env": {
-        "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
-        "DOCBRAIN_SERVER_URL": "http://localhost:3001"
+      "type": "http",
+      "url": "http://localhost:3001/api/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:docbrain-api-key}"
       }
     }
   }

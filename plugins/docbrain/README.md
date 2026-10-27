@@ -1,6 +1,6 @@
 # DocBrain plugin for Claude Code
 
-Skills that make an agent use DocBrain the way the product intends. Today: one.
+Skills that make an agent use DocBrain the way the product intends, and DocBrain's MCP server, connected with a browser sign-in. Today: one skill.
 
 | Skill | What it does |
 |---|---|
@@ -8,22 +8,36 @@ Skills that make an agent use DocBrain the way the product intends. Today: one.
 
 ## Install
 
-The plugin connects DocBrain's MCP server itself. The install asks for your server URL and an API key with capture permission — create one with `docbrain token create --name "Claude Code" --role editor` — or pass them non-interactively with `--config server_url=https://docbrain.your-org.internal --config api_key=…`. If you already connected the server by hand, either works; two connectors only duplicate the tools.
-
-For the whole team, from the repository you work in:
+From the repository you work in:
 
 ```bash
 claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
 ```
 
-Both commands write to `.claude/settings.json` — the marketplace under `extraKnownMarketplaces`, the plugin under `enabledPlugins`; commit that file and everyone who trusts the project gets the skill. Invoke it as `/docbrain:docbrain-capture`, or just say "capture this" — the skill also triggers itself when a conversation has produced knowledge written nowhere.
+The install asks for one thing, your **DocBrain MCP address**: your DocBrain address followed by `/api/v1/mcp`, exactly. With Docker Compose that is `http://localhost:3001/api/v1/mcp`. In DocBrain, your account menu › **Connected apps** shows it with a Copy button. To skip the prompt, add `--config mcp_url=https://docbrain.your-org.internal/api/v1/mcp`.
 
-Prefer a plain directory with no plugin? Copy `skills/docbrain-capture` into your repository's `.claude/skills/` and invoke it as `/docbrain-capture`.
+Then sign in once: run `/mcp` in Claude Code, choose `docbrain` and sign in. Your browser opens DocBrain, you sign in if you have not in the last 10 minutes, and click **Allow**. No API key. Over SSH or on a machine without a browser, run `claude mcp login plugin:docbrain:docbrain --no-browser` (the plugin's server has that full name) and paste back the address it asks for. The connection lasts while you use it: it ends after 30 days unused or 90 days after you allowed it (your admin can change that), and you allow it again the same way.
+
+Both install commands write to `.claude/settings.json` (the marketplace under `extraKnownMarketplaces`, the plugin under `enabledPlugins`). Commit that file and everyone who trusts the project gets the skill; each person enters the address and signs in as themselves, and DocBrain acts with their own role, never more.
+
+Needs Claude Code 2.1.186 or later and DocBrain 1.6.4 or later, with **Sign-in for apps** on. It is on by default with Docker Compose. On Kubernetes an admin turns it on (`oauthServer.enabled: true` in the Helm values); while it is off, DocBrain answers the sign-in with "app sign-in is off on this DocBrain". [Turning it on →](https://github.com/docbrain-ai/docbrain/blob/main/docs/agents.md#sign-in-for-apps)
+
+To disconnect, revoke Claude Code under your account › **Connected apps**; an admin can revoke any app under **Settings › Sign-in for apps**.
+
+**Upgrading from 1.0.0.** The plugin no longer asks for a server URL and an API key; it asks for the MCP address and you sign in. If you created a key only for the plugin, revoke it under your account › **My API keys**.
+
+Invoke the skill as `/docbrain:docbrain-capture`, or just say "capture this": it also triggers itself when a conversation has produced knowledge written nowhere.
+
+Prefer a plain directory with no plugin? Copy `skills/docbrain-capture` into your repository's `.claude/skills/`, connect the server with `claude mcp add --transport http docbrain <your MCP address>`, and invoke the skill as `/docbrain-capture`.
+
+## Privacy
+
+The plugin has no code and sends nothing to DocBrain's makers. Claude Code connects only to the DocBrain server at the address you enter, which your organization runs. Only what a tool sends reaches it (a question, the paths being checked, a capture you said yes to), never the session's transcript. What that server keeps and who can see it: [Privacy properties](https://github.com/docbrain-ai/docbrain/blob/main/docs/agents.md#privacy-properties).
 
 ## Test it
 
-The plugin ships an eval suite under `evals/` with the connector mocked, so it runs anywhere with no server and no key: `claude plugin eval plugins/docbrain --scaffold --trust-plugin --ablation none`. Eight cases check what the skill makes Claude do — checks first, drafts with the anchor and a premise, writes once after a yes, offers an update when the capture exists, refuses lines that do not hold the fix, leaves secrets and names out, files where a pasted credential lives instead of its value, reports a refused write once. Add `--json results.json --threshold 1.0` in CI.
+The plugin ships an eval suite under `evals/` with the connector mocked, so it runs anywhere with no server and no key: `claude plugin eval plugins/docbrain --scaffold --trust-plugin --ablation none`. The cases check what the skill makes Claude do: checks first, drafts with the anchor and a premise, writes once after a yes, offers an update when the capture exists, refuses lines that do not hold the fix, leaves secrets and names out, files where a pasted credential lives instead of its value, reports a refused write once. Add `--json results.json --threshold 1.0` in CI.
 
 ## Prove it before you trust it
 

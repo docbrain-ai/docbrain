@@ -107,7 +107,8 @@ data:
 
   # OAuth / SSO providers
   # OIDC_WEB_UI_URL tells the backend where to redirect the browser after any OAuth
-  # callback completes (GitHub, GitLab, or generic OIDC). Must be set in prod.
+  # callback completes (GitHub, GitLab, or generic OIDC). Unset, sign-ins land on
+  # DOCBRAIN_WEB_BASE_URL (webBaseUrl), so most deployments set only that.
   {{- $webUiUrl := .Values.sso.webUiUrl | default "" }}
   {{- if .Values.oidc.webUiUrl }}{{- $webUiUrl = .Values.oidc.webUiUrl }}{{- end }}
   {{- if .Values.githubOAuth.webUiUrl }}{{- $webUiUrl = .Values.githubOAuth.webUiUrl }}{{- end }}
@@ -133,6 +134,12 @@ data:
   # API host if they differ). Emitted only when set, so the code default holds.
   {{- if .Values.webBaseUrl }}
   DOCBRAIN_WEB_BASE_URL: {{ .Values.webBaseUrl | quote }}
+  {{- end }}
+  # Sign-in for apps: on only when enabled; the server refuses to start it without one
+  # https origin (webBaseUrl) and says why in its log and in Settings.
+  DOCBRAIN_OAUTH_SERVER: {{ ternary "on" "off" (.Values.oauthServer.enabled | default false) | quote }}
+  {{- if .Values.oauthServer.documentProxy }}
+  DOCBRAIN_OAUTH_DOCUMENT_PROXY: {{ .Values.oauthServer.documentProxy | quote }}
   {{- end }}
 
   # Source-System ACL Mirroring (RFC-001)

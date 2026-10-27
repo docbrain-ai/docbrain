@@ -1,27 +1,34 @@
 # MCP client configs
 
-Drop-in configuration for each editor. Replace `YOUR_API_KEY_HERE` with a key
-from `docbrain token create --name "MCP" --role viewer`, and point
-`DOCBRAIN_SERVER_URL` at your instance.
+Drop-in configuration for each editor. Every one points at the same address: your DocBrain address
+followed by `/api/v1/mcp` (`http://localhost:3001/api/v1/mcp` with Docker Compose). Change the host
+to your instance; keep the path exactly, with no trailing slash.
 
-Install the connector once with `npm install -g docbrain-mcp` (or use the release binary). Start the
-installed `docbrain-mcp`, not `npx`: an editor starts it in the open project, and `npx` reads that
-project's `.npmrc`.
+| File | Editor | Where it goes | How it signs in |
+|---|---|---|---|
+| `claude-code.json` | Claude Code (CLI and VS Code extension) | `.mcp.json` at the **project root** | `/mcp` → `docbrain` → sign in in the browser; no key |
+| `cursor.json` | Cursor | `.cursor/mcp.json` | an API key from the `DOCBRAIN_API_KEY` environment variable |
+| `vscode.json` | VS Code (Copilot agent mode) | `.vscode/mcp.json` | an API key VS Code asks for once and stores |
 
-| File | Editor | Where it goes |
-|---|---|---|
-| `claude-code.json` | Claude Code (CLI and VS Code extension) | `.mcp.json` at the **project root** |
-| `cursor.json` | Cursor | `.cursor/mcp.json` |
-| `vscode.json` | VS Code (Copilot agent mode) | `.vscode/mcp.json` |
+`claude-code.json` holds nothing secret, so commit it: each person signs in as themselves and DocBrain
+acts with their role. Claude Code users usually want the [plugin](../../plugins/docbrain) instead,
+which connects the same server and adds the capture skill.
+
+For Cursor and VS Code, create a key with `docbrain token create --name "MCP" --role viewer` (read and
+ask) or `--role editor` (captures too). The files read it from your environment or a prompt, so no key
+is written in them.
+
+An editor that signs in with an MCP *client ID metadata document* can drop the header and sign in
+through the browser, as Claude Code does. If DocBrain's page then says the app is not allowed yet, an
+admin allows it once under **Settings › Sign-in for apps**.
 
 ## Two things that differ per editor
 
 **The top-level key is not the same.** VS Code's native MCP support uses
-`servers` and wants an explicit `"type": "stdio"`. Claude Code and Cursor use
-`mcpServers` and infer the transport. Copying one file's *contents* into
-another's location silently produces a config that loads nothing, because the
-key it looks for is absent — so use the file that matches your editor rather
-than editing one into another.
+`servers` and wants an explicit `"type": "http"`. Claude Code and Cursor use
+`mcpServers`. Copying one file's *contents* into another's location silently
+produces a config that loads nothing, because the key it looks for is absent —
+so use the file that matches your editor rather than editing one into another.
 
 **All three are workspace-root scoped.** Every editor resolves these paths
 relative to the folder you opened, not to the file you are editing. In a
@@ -38,20 +45,39 @@ tells the two apart.
 
 So: **check the connector is loaded before you trust an answer that says there
 is nothing to know.** Your editor's MCP panel should list `docbrain` and its
-eleven tools. The `CLAUDE.md` snippet in [Coding Agents](../../docs/agents.md)
+tools. The `CLAUDE.md` snippet in [Coding Agents](../../docs/agents.md)
 also instructs the agent to say so rather than guess.
+
+## Editors that only start local programs
+
+The [`docbrain-mcp`](../../crates/docbrain-mcp) connector speaks MCP over stdio. Install it once with
+`npm install -g docbrain-mcp` and start the installed `docbrain-mcp`, not `npx`: an editor starts it in
+the open project, and `npx` reads that project's `.npmrc`.
+
+```json
+{
+  "mcpServers": {
+    "docbrain": {
+      "command": "docbrain-mcp",
+      "env": {
+        "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
+        "DOCBRAIN_SERVER_URL": "http://localhost:3001"
+      }
+    }
+  }
+}
+```
 
 ## Verifying without an editor
 
-`docbrain-mcp` speaks JSON-RPC on stdin/stdout, so you can check the key and
-URL before wiring anything up:
+Check the address and a key before wiring anything up:
 
 ```bash
-DOCBRAIN_SERVER_URL=http://localhost:3001 DOCBRAIN_API_KEY=... \
-  docbrain-mcp <<'EOF'
-{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}
-EOF
+curl -s http://localhost:3001/api/v1/mcp \
+  -H "Authorization: Bearer $DOCBRAIN_API_KEY" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -H 'MCP-Protocol-Version: 2025-06-18' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-It prints `Connected to <url> as <you>` on stderr and the tool list on stdout.
-A 401 here is a bad key, not a bad editor config.
+It prints the tool list. A 401 here is a bad key and a 404 a wrong address, not a bad editor config.

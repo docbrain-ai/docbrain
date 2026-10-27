@@ -93,7 +93,28 @@ docker compose ps
 docker compose exec server cat /app/admin-bootstrap-key.txt
 ```
 
-Open http://localhost:3001, go to **Settings**, paste your API key, and start asking questions.
+Then create your own account with that key (`setup.sh` does this for you at the end). The key is for setup and expires after two hours; you sign in to DocBrain, and approve your coding agent, as a person:
+
+```bash
+curl -X POST http://localhost:3001/api/v1/admin/users \
+  -H "X-API-Key: <the admin API key>" -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"<10+ characters: upper and lower case and a digit>","display_name":"Your Name","role":"admin"}'
+```
+
+Sign in at http://localhost:3001 with that email and password.
+
+## Connect Claude Code
+
+From the repository you work in:
+
+```bash
+claude plugin marketplace add docbrain-ai/docbrain --scope project
+claude plugin install docbrain@docbrain --scope project
+```
+
+When it asks for your DocBrain MCP address, enter `http://localhost:3001/api/v1/mcp`. Then run `/mcp` in Claude Code, choose `docbrain` and sign in: DocBrain opens in your browser, you sign in and click **Allow**. No API key. Say "capture this" the next time you and your agent work something out.
+
+Cursor, VS Code, CI and everything else: [Coding Agents](./agents.md#setup).
 
 ## Ingest Your Documents
 
@@ -351,6 +372,7 @@ Open **http://localhost:3001** and log in with your API key. Here's what you'll 
 
 ## Next Steps
 
+- [Coding Agents](./agents.md) — capture and ask from Claude Code, Cursor or VS Code
 - [Ingestion Guide](./ingestion.md) — connect Confluence, GitHub, Slack, Jira, and more
 - [Governance](./governance.md) — set up space ownership, SLAs, and breach detection
 - [Review Workflows](./reviews.md) — configure multi-stage approval pipelines

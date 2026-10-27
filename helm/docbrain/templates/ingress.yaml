@@ -46,6 +46,22 @@ spec:
                 name: {{ include "docbrain.fullname" . }}-server
                 port:
                   number: {{ .Values.server.port }}
+          # Sign-in for apps (OAuth discovery, RFC 8414 and RFC 9728): Prefix matches whole path
+          # segments, so each document is its own path. The server answers 404 while it is off.
+          - path: /.well-known/oauth-authorization-server
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "docbrain.fullname" . }}-server
+                port:
+                  number: {{ .Values.server.port }}
+          - path: /.well-known/oauth-protected-resource
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "docbrain.fullname" . }}-server
+                port:
+                  number: {{ .Values.server.port }}
           {{- if .Values.web.enabled }}
           - path: /
             pathType: Prefix

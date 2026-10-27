@@ -39,8 +39,9 @@ interrupt a task to offer. Never offer twice for the same thing. If the person s
    and call `docbrain_revise` with `withdraw_reason`. Someone else's capture is credited to its author
    on its page: say so and suggest they ask that author; never revise it.
 3. If the tools are not available in this session: say "DocBrain's tools are not connected in this
-   session" and stop. Do not search the repository instead. Captured knowledge does not live in the
-   repository, so an absent connector looks exactly like an empty knowledge base and is not one.
+   session: run `/mcp`, choose docbrain and sign in" and stop. Do not search the repository instead.
+   Captured knowledge does not live in the repository, so an absent connector looks exactly like an
+   empty knowledge base and is not one.
 
 ## Step 2 — draft, in the team's words
 

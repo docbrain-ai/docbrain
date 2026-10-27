@@ -84,6 +84,49 @@ Returns the identity of the current token (API key or session key). Useful for v
 
 ---
 
+## MCP and app sign-in
+
+DocBrain serves its MCP tools over Streamable HTTP at one address, `/api/v1/mcp` under your DocBrain
+address, exactly: no trailing slash. It speaks MCP 2026-07-28, and 2025-11-25 and 2025-06-18 for older
+clients. Setup for each editor: [Coding Agents](agents.md#setup).
+
+```
+POST /api/v1/mcp
+```
+
+Authenticate with `Authorization: Bearer` and either an access token an app received by signing in, or
+a `db_sk_...` API key. A missing or invalid credential gets `401` with a `WWW-Authenticate` challenge
+that names the protected resource metadata, so an MCP client can start the sign-in by itself. `GET`
+and `DELETE` answer `405`.
+
+**Sign-in for apps** (`DOCBRAIN_OAUTH_SERVER=on`) makes DocBrain an OAuth 2.1 authorization server for
+that endpoint, as the MCP authorization specification describes: authorization code with PKCE (S256),
+public clients identified by their client ID metadata document, resource indicators, and one scope,
+`docbrain`. There is no dynamic client registration. While it is off, the discovery documents answer
+`404` and the endpoint takes API keys only.
+
+| Endpoint | What it does |
+|---|---|
+| `GET /.well-known/oauth-protected-resource/api/v1/mcp` | Protected resource metadata (RFC 9728) |
+| `GET /.well-known/oauth-authorization-server` | Authorization server metadata (RFC 8414) |
+| `GET /api/v1/auth/oauth/authorize` | Starts a sign-in and sends the browser to the console's consent page |
+| `POST /api/v1/auth/oauth/token` | `authorization_code` and `refresh_token` grants (form-encoded, no client secret) |
+| `POST /api/v1/auth/oauth/revoke` | Revokes a token (RFC 7009); a refresh token ends its whole connection |
+
+Access tokens last one hour. A connection ends after 30 days unused or `MAX_PAT_DAYS` (90) days after it
+was allowed, and when its person or an admin revokes it.
+
+The console uses these, with a signed-in person's key:
+
+| Endpoint | What it does |
+|---|---|
+| `GET /api/v1/me/connected-apps` | The apps you allowed, with when each was last used |
+| `DELETE /api/v1/me/connected-apps/{id}` | Revokes one of them |
+| `GET /api/v1/admin/oauth` | Admin: the state of Sign-in for apps and why, allowed web apps, registered documents, sign-in problems |
+| `GET /api/v1/admin/oauth/grants` · `DELETE /api/v1/admin/oauth/grants/{id}` · `POST /api/v1/admin/oauth/revoke-all` | Admin: every connection, revoke one, revoke all |
+
+---
+
 ## Core Endpoints
 
 ### Health Check

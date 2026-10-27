@@ -26,7 +26,7 @@ OIDC_ISSUER_URL=https://accounts.google.com   # or your IdP's issuer URL
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
 OIDC_REDIRECT_URI=https://your-docbrain-host/api/v1/auth/oidc/callback
-OIDC_WEB_UI_URL=https://your-web-ui-host       # where to redirect after login (default: http://localhost:3001)
+OIDC_WEB_UI_URL=https://your-web-ui-host       # where to redirect after login (default: DOCBRAIN_WEB_BASE_URL, else http://localhost:3001)
 ```
 
 DocBrain discovers the provider's endpoints automatically via the standard OIDC discovery URL. No manual endpoint configuration needed.

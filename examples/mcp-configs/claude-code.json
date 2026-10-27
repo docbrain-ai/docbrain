@@ -1,11 +1,8 @@
 {
   "mcpServers": {
     "docbrain": {
-      "command": "docbrain-mcp",
-      "env": {
-        "DOCBRAIN_API_KEY": "YOUR_API_KEY_HERE",
-        "DOCBRAIN_SERVER_URL": "http://localhost:3001"
-      }
+      "type": "http",
+      "url": "http://localhost:3001/api/v1/mcp"
     }
   }
 }

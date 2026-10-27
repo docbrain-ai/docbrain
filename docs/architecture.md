@@ -49,7 +49,7 @@ The autonomous documentation improvement engine. Runs on a daily schedule:
 Fetches documents from configured sources (Confluence, GitHub, local files), converts to Markdown, chunks with heading-aware splitting, generates embeddings, and indexes in OpenSearch. During ingestion, cross-document references (URLs to GitHub PRs, GitLab MRs, Jira tickets, Confluence pages, etc.) are automatically extracted from content and stored as a reference graph in PostgreSQL. Referenced document IDs are attached to each chunk in OpenSearch for enrichment at query time.
 
 ### MCP Server (`docbrain-mcp`)
-Model Context Protocol server for integration with AI coding tools (Claude Code, Cursor). Includes IDE capture tools for annotating code, capturing commit intent, and surfacing documentation gaps directly in the editor.
+Model Context Protocol server for integration with AI coding tools (Claude Code, Cursor). Includes IDE capture tools for annotating code, capturing commit intent, and surfacing documentation gaps directly in the editor. The DocBrain server serves it over Streamable HTTP at `/api/v1/mcp`, where apps such as Claude Code sign in through the browser (DocBrain is the OAuth 2.1 authorization server for that endpoint) or present an API key; the same tools also ship as a stdio connector for editors that only start local programs. Each tool call becomes a REST request inside the server, with the caller's own role and audit trail.
 
 ### CLI (`docbrain-cli`)
 Command-line client for interactive Q&A sessions.

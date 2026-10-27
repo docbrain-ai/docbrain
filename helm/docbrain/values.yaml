@@ -594,8 +594,7 @@ githubOAuth:
   # clientId: ""        # set via --set githubOAuth.clientId=... or existingSecret
   # clientSecret: ""    # stored in the Helm Secret
   # redirectUri: ""     # must match the callback URL registered in GitHub
-  # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
-  #                     # The backend redirects here after OAuth completes.
+  # webUiUrl: ""        # Where sign-ins land after OAuth completes; unset → webBaseUrl below.
 
 # -- GitLab OIDC login (docbrain login --gitlab)
 # Enable OIDC in your GitLab application:
@@ -607,8 +606,7 @@ gitlabOAuth:
   # clientId: ""
   # clientSecret: ""    # stored in the Helm Secret
   # redirectUri: ""
-  # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
-  #                     # The backend redirects here after OAuth completes.
+  # webUiUrl: ""        # Where sign-ins land after OAuth completes; unset → webBaseUrl below.
 
 # -- Generic OIDC login (docbrain login --oidc)
 # Works with Azure AD, Okta, Google Workspace, Keycloak, etc.
@@ -619,8 +617,7 @@ oidc:
   # clientId: ""
   # clientSecret: ""    # stored in the Helm Secret
   # redirectUri: ""
-  # webUiUrl: ""        # REQUIRED in prod: your DocBrain web UI URL (e.g. https://docbrain.mycompany.com)
-  #                     # The backend redirects here after OAuth completes.
+  # webUiUrl: ""        # Where sign-ins land after OAuth completes; unset → webBaseUrl below.
 
 # -- Public base URL of the DocBrain WEB UI (DOCBRAIN_WEB_BASE_URL).
 # Drives the MCP-OAuth landing redirect AND the "view in browser" deep link the CLI
@@ -628,6 +625,14 @@ oidc:
 # web origin — NOT the API host if they differ. Unset → no link is offered (never
 # guessed/hardcoded). Trailing slash is trimmed server-side.
 # webBaseUrl: "https://docbrain.mycompany.com"
+
+# -- Sign-in for apps (DOCBRAIN_OAUTH_SERVER): apps such as Claude Code connect to DocBrain's MCP
+# endpoint by signing in and being allowed, instead of a pasted API key. Needs webBaseUrl (https,
+# the one address of console and API). Admins then manage it under Settings › Sign-in for apps.
+oauthServer:
+  enabled: false
+  # -- Fetch app documents through this proxy (it then owns the address guard). Empty = direct.
+  documentProxy: ""
 
 # -- Source-System ACL Mirroring (RFC-001)
 # Controls query-time enforcement of per-document ACLs derived from source

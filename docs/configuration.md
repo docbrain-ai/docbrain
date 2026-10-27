@@ -1329,7 +1329,9 @@ See **[docs/sso.md](sso.md)** for full setup instructions and a provider compari
 | `OIDC_CLIENT_ID` | — | OAuth2 client ID |
 | `OIDC_CLIENT_SECRET` | — | OAuth2 client secret |
 | `OIDC_REDIRECT_URI` | — | Redirect URI registered with the provider. e.g. `https://docbrain.co/api/v1/auth/oidc/callback` |
-| `OIDC_WEB_UI_URL` | `http://localhost:3001` | Where to redirect the browser after a successful login |
+| `OIDC_WEB_UI_URL` | `DOCBRAIN_WEB_BASE_URL`, else `http://localhost:3001` | Where to redirect the browser after a successful login; most deployments leave it unset |
+| `DOCBRAIN_OAUTH_SERVER` | `off` (Docker Compose: `on`) | `on` lets apps such as Claude Code connect to the MCP endpoint by signing in and being allowed, instead of a pasted API key. Needs `DOCBRAIN_WEB_BASE_URL` as the one address of console and API (https, or `http://localhost` for development); otherwise it stays off and the log and **Settings › Sign-in for apps** say why. |
+| `DOCBRAIN_OAUTH_DOCUMENT_PROXY` | — | Fetch apps' metadata documents through this proxy, which then decides which addresses may be reached. Unset, DocBrain fetches them directly and only from public addresses. |
 | `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin — **not** the API host if they differ. Also builds the **Open this answer** link on Slack answers and the **Answer page:** line in IDE answers. Unset → no link is offered (never guessed or hardcoded; the console's own Copy link still works). Trailing slash trimmed. |
 | `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` to skip TLS verification for OIDC discovery. Use for corporate/self-signed CAs. |
 

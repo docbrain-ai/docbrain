@@ -1,7 +1,7 @@
 # DocBrain Threat Model
 
 **Status:** Active
-**Last updated:** 2026-03-03
+**Last updated:** 2026-10-27
 **Scope:** DocBrain server, web UI, ingest pipeline, integrations
 
 ---
@@ -15,6 +15,7 @@
 | **User query data** | High | Episodes table contains user questions (potentially sensitive: incident context, internal tooling names) |
 | **Confluence credentials** | High | API token / PAT for Confluence integration |
 | **Per-user OAuth tokens** | High | Tokens for live MCP tools (Jira, Confluence, Slack). Scoped per user, encrypted at rest with AES-256-GCM (see T11) |
+| **App connections** | Critical | Access and refresh tokens an app such as Claude Code holds after a person allowed it to use the MCP endpoint (see T12). Stored only as SHA-256 |
 | **LLM API keys** | High | Anthropic/OpenAI/AWS credentials |
 | **Embeddings index** | Medium | OpenSearch semantic index, contains chunked documentation content |
 | **Documentation content** | Medium | The ingested documentation itself (may contain internal procedures, configs) |
@@ -179,6 +180,21 @@ Two distinct attack vectors:
 - ✅ **Tool descriptions are treated as data, not instructions.** A connected tool's description cannot redirect the router's behavior (see T5).
 - ⚠️ **Residual risk:** The read-only guarantee depends on upstream servers honestly setting `readOnlyHint`; the name-based fallback is conservative but not exhaustive. Treat the set of connected MCP servers as part of your trust boundary, and prefer servers you operate or vet. Connect only the tools you actually need.
 
+### T12: Sign-in for Apps (OAuth for the MCP Endpoint)
+
+**Threat:** With Sign-in for apps on, DocBrain is an OAuth 2.1 authorization server for `/api/v1/mcp`. A malicious app could get a person to allow it, a sign-in could be replayed or approved from another browser, a stolen token could be reused, and fetching an app's metadata document could be turned into SSRF.
+**Impact:** An app acting as a person (with that person's role), access to the organization's knowledge, requests to internal addresses.
+**Likelihood:** Low to medium; off by default on Kubernetes, on by default with Docker Compose.
+
+**Mitigations:**
+- ✅ **A person approves, freshly, in the browser that started it.** Approving needs a console sign-in from the last 10 minutes; an API key can never approve, and nothing is approved automatically. The consent link is signed for that browser's cookie, so a link sent to someone else does not work.
+- ✅ **Who may ask.** Only apps that return to the person's own computer may ask by default; an app that returns to a website needs an admin's entry for its exact client ID. The consent card names the app, its host and where it returns, and warns before approving an app that returns to this computer.
+- ✅ **Codes and tokens.** PKCE (S256) is required; a code lives 60 seconds and works once, and a replay revokes the connection. Refresh tokens rotate, and reusing an old one revokes the connection. Access tokens last one hour. Tokens and codes are stored only as SHA-256, and the secret filter knows their shape, so one pasted into a capture or an answer is caught.
+- ✅ **Bounded document fetch.** An app's metadata document is fetched over https from public addresses only (the IANA special-purpose ranges are refused), with no redirects, in 5 seconds and 5 KB at most, or through the operator's proxy; an admin can register it instead so nothing is fetched.
+- ✅ **Never more than the person.** An app acts with its person's role and is audited as that app. Connections end after 30 days unused or 90 days, on the person's or an admin's revoke, and when the person is disabled; an admin can revoke all at once.
+- ✅ **No framing, no caching.** Every sign-in response carries `X-Frame-Options: DENY`, `frame-ancestors 'none'` and `Cache-Control: no-store`.
+- ⚠️ **Residual risk:** A person can still be talked into allowing an app that runs on their own computer. Only allow an app you started yourself, just now. After restoring a database backup, revoke all connections.
+
 ---
 
 ## 4. Out of Scope (Intentional)
@@ -204,6 +220,7 @@ Before deploying to production:
 - [ ] Run `cargo audit` regularly to check for dependency vulnerabilities
 - [ ] Monitor for unusual query patterns that may indicate abuse
 - [ ] Connect only the live MCP tools you need, and prefer servers you operate or vet (they sit on the answer path for every query)
+- [ ] If you turn on Sign-in for apps, serve DocBrain on one https address, review **Settings › Sign-in for apps** (web apps you allow, connected apps) from time to time, and use **Revoke all** after restoring a backup
 
 ---
 
