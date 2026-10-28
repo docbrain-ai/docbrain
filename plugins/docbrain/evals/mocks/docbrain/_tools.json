@@ -60,11 +60,11 @@
       "name": "docbrain_suggest_capture"
     },
     {
-      "description": "Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+      "description": "Capture knowledge linked to a specific code location. Creates a knowledge fragment tied to a file and line range. Use this when you encounter important decisions, caveats, or context in code that should be preserved as organizational knowledge. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
       "inputSchema": {
         "properties": {
           "annotation": {
-            "description": "The knowledge to capture — a decision, fact, caveat, procedure, or context (max 10000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "description": "The knowledge to capture — a decision, fact, caveat, procedure, or context (max 10000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "code_snippet": {
@@ -127,15 +127,15 @@
       "name": "docbrain_annotate"
     },
     {
-      "description": "Capture knowledge from a commit — why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+      "description": "Capture knowledge from a commit — why was this change made? Creates a knowledge fragment from the commit intent, grounding it in the diff and commit message. Use this at commit time to preserve the reasoning behind changes before it's forgotten. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
       "inputSchema": {
         "properties": {
           "commit_message": {
-            "description": "The commit message (max 1000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "description": "The commit message (max 1000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "diff_summary": {
-            "description": "Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "description": "Summary of what changed in the diff (max 5000 chars). Can be a condensed diff or a human-readable summary of files/functions changed. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "file_paths": {
@@ -150,7 +150,7 @@
             "type": "string"
           },
           "intent": {
-            "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "description": "Why was this change made? The reasoning, trade-offs, alternatives considered, or decisions that led to this commit (max 10000 chars). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "premises": {
@@ -185,7 +185,7 @@
       "name": "docbrain_commit_capture"
     },
     {
-      "description": "Edit or withdraw a capture you recorded. Use the id from docbrain_context or from the capture's report. Edit replaces its text and/or its premise set (the same premises as docbrain_annotate) and re-indexes it; withdraw takes it out of answers at once and needs a reason, which is shown with it. Only its author can edit; DocBrain-written summaries can only be withdrawn. A capture that has reached someone other than you (an answer to their question, their context lookup, a draft, or their opening an answer page that shows it) cannot be deleted, only withdrawn; until then, Delete removes it for good. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+      "description": "Edit or withdraw a capture you recorded. Use the id from docbrain_context or from the capture's report. Edit replaces its text and/or its premise set (the same premises as docbrain_annotate) and re-indexes it; withdraw takes it out of answers at once and needs a reason, which is shown with it. Only its author can edit; DocBrain-written summaries can only be withdrawn. A capture that has reached someone other than you (an answer to their question, their context lookup, a draft, or their opening an answer page that shows it) cannot be deleted, only withdrawn; until then, Delete removes it for good. Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
       "inputSchema": {
         "properties": {
           "id": {
@@ -212,11 +212,11 @@
             "type": "array"
           },
           "text": {
-            "description": "The full replacement text (max 10000 characters). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "description": "The full replacement text (max 10000 characters). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           },
           "withdraw_reason": {
-            "description": "Withdraw instead of editing; why (max 1000 characters, shown with it). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.",
+            "description": "Withdraw instead of editing; why (max 1000 characters, shown with it). Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.",
             "type": "string"
           }
         },
