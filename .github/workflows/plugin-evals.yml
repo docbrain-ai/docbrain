@@ -1,12 +1,10 @@
 name: plugin-evals
 
 # The docbrain plugin's eval suite (plugins/docbrain/evals) in real Claude Code, with the DocBrain
-# connector mocked: every case must pass. Runs when the plugin or this file changes, or by hand.
+# connector mocked: every case must pass. Started by hand (Actions > plugin-evals > Run workflow) until
+# the ANTHROPIC_API_KEY secret's account has credit again; then add back
+#   push: { paths: ["plugins/**", ".github/workflows/plugin-evals.yml"] }
 on:
-  push:
-    paths:
-      - "plugins/**"
-      - ".github/workflows/plugin-evals.yml"
   workflow_dispatch:
 
 permissions:
