@@ -128,7 +128,7 @@ The console uses these, with a signed-in person's key:
 | `DELETE /api/v1/me/connected-apps/{id}` | Revokes one of them |
 | `GET /api/v1/admin/oauth` | Admin: the state of Sign-in for apps and why, allowed web apps, registered documents, sign-in problems |
 | `GET /api/v1/admin/oauth/grants` · `DELETE /api/v1/admin/oauth/grants/{id}` · `POST /api/v1/admin/oauth/revoke-all` | Admin: every connection, revoke one, revoke all |
-| `PUT /api/v1/admin/oauth/allow-new-sign-ins` · `POST`/`DELETE /api/v1/admin/oauth/web-apps` · `PUT`/`DELETE /api/v1/admin/oauth/documents` · `POST /api/v1/admin/oauth/check` | Admin: pause new sign-ins, allow or remove a web app, register or remove an app document, check discovery |
+| `PUT /api/v1/admin/oauth/allow-new-sign-ins` · `POST`/`DELETE /api/v1/admin/oauth/web-apps` · `PUT`/`DELETE /api/v1/admin/oauth/documents` | Admin: pause new sign-ins, allow or remove a web app, register or remove an app document |
 
 ---
 
