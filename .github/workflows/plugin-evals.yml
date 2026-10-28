@@ -1,0 +1,51 @@
+name: plugin-evals
+
+# The docbrain plugin's eval suite (plugins/docbrain/evals) in real Claude Code, with the DocBrain
+# connector mocked: every case must pass. Runs when the plugin or this file changes, or by hand.
+on:
+  push:
+    paths:
+      - "plugins/**"
+      - ".github/workflows/plugin-evals.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    name: plugin evals (Claude Code)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2.1.312 --registry=https://registry.npmjs.org/
+      - name: Validate
+        run: claude plugin validate plugins/docbrain --profile directory --strict
+      - name: Evals
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: >-
+          claude plugin eval plugins/docbrain --scaffold --trust-plugin --ablation none
+          --threshold 1.0 --concurrency 4 --no-publish --keep-temp
+          --json plugins/docbrain/evals/results/ci.json
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-eval-results
+          path: plugins/docbrain/evals/results/
+      # Each run's conversation, to read why a case failed (eval prompts and mocked answers only).
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-eval-traces
+          path: /tmp/claude-eval-*/out/trace.jsonl
+          retention-days: 3
