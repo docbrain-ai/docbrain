@@ -77,7 +77,7 @@ async fn serve() -> Result<()> {
     let server = McpServer::new();
 
     // --- Startup validation ---
-    if server.api_key.is_none() {
+    if !server.has_api_key() {
         eprintln!("[docbrain-mcp] ERROR: DOCBRAIN_API_KEY is not set.");
         eprintln!(
             "[docbrain-mcp] This binary is the editor connector, not the product — it needs a"
@@ -102,7 +102,7 @@ async fn serve() -> Result<()> {
         Ok(identity) => {
             eprintln!(
                 "[docbrain-mcp] Connected to {} as {}",
-                server.server_url, identity
+                server.server_url(), identity
             );
             // MCP diagnostics: eprintln is intentional (stdout reserved for JSON-RPC)
         }
@@ -110,7 +110,7 @@ async fn serve() -> Result<()> {
             eprintln!("[docbrain-mcp] ERROR: {}", msg);
             eprintln!(
                 "[docbrain-mcp] Is a DocBrain server running at {}? This connector requires one:",
-                server.server_url
+                server.server_url()
             );
             eprintln!("[docbrain-mcp]   https://github.com/docbrain-ai/docbrain#quickstart");
             std::process::exit(1);

@@ -21,6 +21,10 @@ dotenvy = "0.15"
 reqwest = { version = "0.12", features = ["json"] }
 sha2 = "0.10"
 hex = "0.4"
+# Mcp-Name header values may be Base64-encoded (MCP Streamable HTTP, #601).
+base64 = "0.22"
+# One query encoding for both doors (#601): ApiRequest::path_and_query.
+serde_urlencoded = "0.7"
 
 [dev-dependencies]
 axum = "0.8"

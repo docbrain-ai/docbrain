@@ -43,6 +43,8 @@ async fn call(mcp: &McpServer, tool: &str, args: Value) -> String {
     let r = mcp.handle_request(req).await;
     assert!(r.error.is_none(), "{tool}: {:?}", r.error);
     let result = r.result.unwrap_or_default();
+    // rev 8 §4: the refusal is a tool error, not a result a host could read as saved.
+    assert_eq!(result["isError"], json!(true), "{tool}: {result}");
     result["content"][0]["text"].as_str().unwrap_or_default().to_string()
 }
 

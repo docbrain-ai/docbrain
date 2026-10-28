@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+pub mod backend;
+pub mod http;
+use backend::{ApiPath, ApiRequest, Backend, HttpBackend, Method, is_uuid_shaped};
+
 /// DocBrain MCP Server — exposes documentation intelligence as MCP tools.
 ///
 /// Communicates via JSON-RPC over stdio (stdin/stdout), following the
@@ -263,30 +267,22 @@ pub struct JsonRpcError {
     pub message: String,
 }
 
-pub struct McpServer {
-    pub server_url: String,
-    pub api_key: Option<String>,
-    pub client: reqwest::Client,
-    /// For `/api/v1/ask` only: no client timeout, as the CLI's ask client. An ask
-    /// that calls live tools can outlast `client`'s 120 s, and the server's own turn
-    /// clock is what bounds it (#443).
-    ask_client: reqwest::Client,
-    /// Caller role string ("viewer"/"editor"/"analyst"/"admin"), resolved once
-    /// from `/api/v1/auth/me` in `validate_connection`. `None` until validated.
-    /// Used to fail-fast write-tool calls from a viewer-scoped key with a clear
-    /// message; the server API endpoints remain the authoritative gate.
-    role: std::sync::OnceLock<String>,
+/// The DocBrain MCP tools, over whichever [`Backend`] reaches the server. The routes the tools
+/// call are the only authority on what a caller may do: no tool refuses on a role of its own.
+pub struct McpServer<B: Backend = HttpBackend> {
+    backend: B,
 }
 
-/// Numeric rank of a DocBrain role string for write-gating. Unknown → lowest.
-/// Local to this crate so we don't pull in docbrain-core just for the enum.
-fn role_rank(role: &str) -> u8 {
-    match role {
-        "admin" => 3,
-        "analyst" => 2,
-        "editor" => 1,
-        _ => 0, // viewer / unknown
-    }
+/// The protocol versions the stdio connector negotiates in `initialize`. It speaks the legacy,
+/// handshake-based protocol only; a version not listed here gets the first, which is what it
+/// always answered (#601 rev 8 §4.1). 2025-03-26 is not listed: it requires JSON-RPC batches, which
+/// this connector does not read (slice A review R8).
+const STDIO_VERSIONS: [&str; 3] = ["2024-11-05", "2025-06-18", "2025-11-25"];
+
+/// A tool that could not do its job: the text the person reads, marked as an error so the host
+/// shows it as one (a tool execution error, not a protocol error).
+fn tool_error(text: &str) -> Value {
+    json!({ "content": [{ "type": "text", "text": text }], "isError": true })
 }
 
 /// The claim-verification verdict, as the lines a host reads around an answer.
@@ -428,7 +424,7 @@ fn leading_lines(response: &Value) -> String {
     format!("{}\n\n", notes.join("\n"))
 }
 
-impl McpServer {
+impl McpServer<HttpBackend> {
     // `Default` would silently read process env (`DOCBRAIN_SERVER_URL`/
     // `DOCBRAIN_API_KEY`), which is surprising for a Default impl. Callers
     // should pick `new()` (env-driven) or `from_parts()` (explicit).
@@ -437,16 +433,7 @@ impl McpServer {
         let server_url = std::env::var("DOCBRAIN_SERVER_URL")
             .unwrap_or_else(|_| "http://localhost:3000".to_string());
         let api_key = std::env::var("DOCBRAIN_API_KEY").ok();
-        Self {
-            server_url,
-            api_key,
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .build()
-                .expect("Failed to build HTTP client"),
-            ask_client: reqwest::Client::new(),
-            role: std::sync::OnceLock::new(),
-        }
+        Self::from_parts(server_url, api_key)
     }
 
     /// Test-friendly constructor that avoids touching process env vars.
@@ -456,38 +443,25 @@ impl McpServer {
     /// Integration tests must not mutate process env in parallel runs, so
     /// they construct the server with explicit values instead.
     pub fn from_parts(server_url: String, api_key: Option<String>) -> Self {
-        Self {
-            server_url,
-            api_key,
-            client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
-                .build()
-                .expect("Failed to build HTTP client"),
-            ask_client: reqwest::Client::new(),
-            role: std::sync::OnceLock::new(),
-        }
+        Self::with_backend(HttpBackend::new(server_url, api_key))
+    }
+
+    /// The server this connector talks to, for its startup messages.
+    pub fn server_url(&self) -> &str {
+        &self.backend.server_url
+    }
+
+    pub fn has_api_key(&self) -> bool {
+        self.backend.api_key.is_some()
     }
 
     /// Validate API key and server connectivity at startup.
     /// Returns the display name of the authenticated identity on success.
     pub async fn validate_connection(&self) -> Result<String, String> {
-        let url = format!("{}/api/v1/auth/me", self.server_url);
-        // Caller header is set BEFORE the auth header so anonymous calls
-        // (no DOCBRAIN_API_KEY) still identify their surface even when the
-        // downstream returns 401. See DOCBRAIN_CALLER_HEADER docstring.
-        let mut request = self
-            .client
-            .get(&url)
-            .header(DOCBRAIN_CALLER_HEADER, DOCBRAIN_CALLER_VALUE);
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        match request.send().await {
-            Ok(resp) if resp.status().is_success() => {
-                let identity: Value = resp
-                    .json()
-                    .await
+        let request = ApiRequest::get(ApiPath::fixed("/api/v1/auth/me"));
+        match self.backend.send(request).await {
+            Ok(resp) if (200..300).contains(&resp.status) => {
+                let identity: Value = serde_json::from_str(&resp.body)
                     .map_err(|e| format!("Invalid /auth/me response: {}", e))?;
                 let name = identity["name"]
                     .as_str()
@@ -495,34 +469,45 @@ impl McpServer {
                     .unwrap_or("(unknown)")
                     .to_string();
                 let role = identity["role"].as_str().unwrap_or("unknown");
-                // Cache the role for write-tool gating. set() is
-                // idempotent for our single-validate flow; ignore already-set.
-                let _ = self.role.set(role.to_string());
                 Ok(format!("{} ({})", name, role))
             }
-            Ok(resp) if resp.status() == 401 => {
+            Ok(resp) if resp.status == 401 => {
                 Err("Invalid or expired DOCBRAIN_API_KEY (401 Unauthorized). \
                      Run: docbrain token create --name \"MCP Key\" --role viewer"
                     .to_string())
             }
-            Ok(resp) => Err(format!(
-                "Server returned unexpected status: {}",
-                resp.status()
-            )),
-            Err(e) if e.is_connect() => Err(format!(
+            Ok(resp) => Err(format!("Server returned unexpected status: {}", resp.status)),
+            Err(e) if e.starts_with(backend::CANNOT_CONNECT) => Err(format!(
                 "Cannot connect to DocBrain server at {}. \
                      Check DOCBRAIN_SERVER_URL.",
-                self.server_url
+                self.backend.server_url
             )),
             Err(e) => Err(format!("Connection error: {}", e)),
         }
+    }
+}
+
+impl<B: Backend> McpServer<B> {
+    pub fn with_backend(backend: B) -> Self {
+        Self { backend }
+    }
+
+    /// The tools, as `tools/list` answers them (deterministic order).
+    pub fn tools_list(&self) -> Value {
+        self.handle_tools_list()
+    }
+
+    /// Run one tool. `Err` only for an unknown tool name (a protocol error); any other failure is
+    /// the tool's own result, marked `isError`.
+    pub async fn call_tool(&self, name: &str, arguments: &Value) -> Result<Value, JsonRpcError> {
+        self.handle_tools_call(&json!({ "name": name, "arguments": arguments })).await
     }
 
     pub async fn handle_request(&self, req: JsonRpcRequest) -> JsonRpcResponse {
         let id = req.id.clone().unwrap_or(Value::Null);
 
         let result = match req.method.as_str() {
-            "initialize" => Ok(self.handle_initialize()),
+            "initialize" => Ok(self.handle_initialize(&req.params)),
             "initialized" | "notifications/initialized" => {
                 return JsonRpcResponse {
                     jsonrpc: "2.0".into(),
@@ -556,9 +541,13 @@ impl McpServer {
         }
     }
 
-    fn handle_initialize(&self) -> Value {
+    /// The legacy handshake: the requested version when this connector speaks it, else the
+    /// version it has always answered.
+    fn handle_initialize(&self, params: &Value) -> Value {
+        let requested = params["protocolVersion"].as_str().unwrap_or_default();
+        let version = STDIO_VERSIONS.iter().find(|v| **v == requested).copied().unwrap_or(STDIO_VERSIONS[0]);
         json!({
-            "protocolVersion": "2024-11-05",
+            "protocolVersion": version,
             "capabilities": {
                 "tools": {}
             },
@@ -845,33 +834,11 @@ impl McpServer {
         })?;
         let arguments = &params["arguments"];
 
-        // Write-capable IDE tools require at least Editor. A viewer-scoped MCP
-        // key must not commit captures/annotations or trigger autopilot
-        // generation. The server-side API endpoints are the authoritative gate;
-        // this returns a fast, actionable error before the round-trip. An
-        // unvalidated/unknown role is denied (fail-closed).
-        const WRITE_TOOLS: &[&str] = &[
-            "docbrain_commit_capture",
-            "docbrain_annotate",
-            "docbrain_autopilot_generate",
-            "docbrain_revise",
-        ];
-        if WRITE_TOOLS.contains(&tool_name) {
-            let role = self.role.get().map(String::as_str);
-            if role.map(role_rank).unwrap_or(0) < role_rank("editor") {
-                return Err(JsonRpcError {
-                    code: -32004,
-                    message: format!(
-                        "Tool '{}' requires an editor-or-higher API key; this key is {}. \
-                         Create one with: docbrain token create --name \"MCP Key\" --role editor",
-                        tool_name,
-                        role.unwrap_or("unverified")
-                    ),
-                });
-            }
-        }
-
-        match tool_name {
+        // No role check here: the route each tool calls decides, for every door alike, and its
+        // refusal comes back as this tool's error. A failed tool is a tool execution error
+        // (`isError`), which the host shows to the model; only an unknown tool name is a
+        // protocol error.
+        let outcome = match tool_name {
             "docbrain_ask" => self.tool_ask(arguments).await,
             "docbrain_incident" => self.tool_incident(arguments).await,
             "docbrain_freshness" => self.tool_freshness(arguments).await,
@@ -884,33 +851,52 @@ impl McpServer {
             "docbrain_commit_capture" => self.tool_commit_capture(arguments).await,
             "docbrain_feedback" => self.tool_feedback(arguments).await,
             "docbrain_revise" => self.tool_revise(arguments).await,
-            _ => Err(JsonRpcError {
-                code: -32602,
-                message: format!("Unknown tool: {}", tool_name),
-            }),
-        }
+            _ => {
+                return Err(JsonRpcError {
+                    code: -32602,
+                    message: format!("Unknown tool: {}", tool_name),
+                });
+            }
+        };
+        Ok(outcome.unwrap_or_else(|text| tool_error(&text)))
     }
 
-    async fn tool_ask(&self, args: &Value) -> Result<Value, JsonRpcError> {
-        let question = args["question"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'question' parameter".into(),
+    /// One request, answered as JSON; any failure is the text a tool reports.
+    async fn json(&self, request: ApiRequest) -> Result<Value, ApiFailure> {
+        let response = self.backend.send(request).await.map_err(|message| ApiFailure {
+            status: None,
+            body: String::new(),
+            message,
         })?;
+        if !(200..300).contains(&response.status) {
+            return Err(ApiFailure {
+                status: Some(response.status),
+                message: format!("API error ({}): {}", response.status, response.body),
+                body: response.body,
+            });
+        }
+        serde_json::from_str(&response.body).map_err(|e| ApiFailure {
+            status: None,
+            body: String::new(),
+            message: format!("Invalid response: {}", e),
+        })
+    }
+
+    async fn tool_ask(&self, args: &Value) -> Result<Value, String> {
+        let question = args["question"].as_str().ok_or_else(|| String::from("Missing 'question' parameter"))?;
         let session_id = args["session_id"].as_str();
 
         let mut body = json!({ "question": question });
         if let Some(sid) = session_id {
             body["session_id"] = json!(sid);
         }
-        let response = match self.post(&self.ask_client, "/api/v1/ask", &body).await {
+        let request = ApiRequest::post(ApiPath::fixed("/api/v1/ask"), body).long();
+        let response = match self.json(request).await {
             Ok(v) => v,
             Err(f) if session_id.is_some() && f.names_a_dead_session() => {
-                return Err(JsonRpcError {
-                    code: -32000,
-                    message: START_NEW_CONVERSATION.into(),
-                });
+                return Err(START_NEW_CONVERSATION.to_string());
             }
-            Err(f) => return Err(f.into()),
+            Err(f) => return Err(f.message),
         };
 
         let answer = response["answer"].as_str().unwrap_or("No answer available");
@@ -947,14 +933,12 @@ impl McpServer {
         }))
     }
 
-    async fn tool_incident(&self, args: &Value) -> Result<Value, JsonRpcError> {
-        let description = args["description"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'description' parameter".into(),
-        })?;
+    async fn tool_incident(&self, args: &Value) -> Result<Value, String> {
+        let description = args["description"].as_str().ok_or_else(|| String::from("Missing 'description' parameter"))?;
 
         let body = json!({ "description": description });
         let response = self.api_call("/api/v1/incident", &body).await?;
+
 
         let answer = response["answer"]
             .as_str()
@@ -989,38 +973,15 @@ impl McpServer {
         }))
     }
 
-    async fn tool_freshness(&self, args: &Value) -> Result<Value, JsonRpcError> {
+    async fn tool_freshness(&self, args: &Value) -> Result<Value, String> {
         let space = args["space"].as_str();
 
-        let mut url = format!("{}/api/v1/freshness", self.server_url);
+        // The space is a query value; the backend encodes it.
+        let mut request = ApiRequest::get(ApiPath::fixed("/api/v1/freshness"));
         if let Some(s) = space {
-            let encoded: String = s
-                .bytes()
-                .map(|b| {
-                    if b.is_ascii_alphanumeric() || b == b'-' || b == b'_' || b == b'.' {
-                        format!("{}", b as char)
-                    } else {
-                        format!("%{:02X}", b)
-                    }
-                })
-                .collect();
-            url = format!("{}?space={}", url, encoded);
+            request = request.query("space", s);
         }
-
-        let mut request = self.client.get(&url);
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-
-        let data: Value = response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
+        let data = self.json(request).await.map_err(|f| f.message)?;
 
         let summary = &data["summary"];
         let scope = data["space"].as_str().unwrap_or("All spaces");
@@ -1066,29 +1027,15 @@ impl McpServer {
         }))
     }
 
-    async fn tool_autopilot_gaps(&self, args: &Value) -> Result<Value, JsonRpcError> {
+    async fn tool_autopilot_gaps(&self, args: &Value) -> Result<Value, String> {
         // Clamp to 1..=200 (default 10): a negative/zero limit produces a
         // nonsensical query and an unbounded value would pull the whole gap
         // table in one call from a hallucinated arg.
         let limit = args["limit"].as_i64().unwrap_or(10).clamp(1, 200);
 
-        let mut request = self.client.get(format!(
-            "{}/api/v1/autopilot/gaps?limit={}",
-            self.server_url, limit
-        ));
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-
-        let gaps: Vec<Value> = response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
+        let request = ApiRequest::get(ApiPath::fixed("/api/v1/autopilot/gaps")).query("limit", limit.to_string());
+        let gaps: Vec<Value> = serde_json::from_value(self.json(request).await.map_err(|f| f.message)?)
+            .map_err(|e| format!("Invalid response: {}", e))?;
 
         if gaps.is_empty() {
             return Ok(json!({
@@ -1137,41 +1084,11 @@ impl McpServer {
         }))
     }
 
-    async fn tool_autopilot_generate(&self, args: &Value) -> Result<Value, JsonRpcError> {
-        let cluster_id = args["cluster_id"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'cluster_id' parameter. Get IDs from docbrain_autopilot_gaps.".into(),
-        })?;
+    async fn tool_autopilot_generate(&self, args: &Value) -> Result<Value, String> {
+        let cluster_id = args["cluster_id"].as_str().ok_or_else(|| String::from("Missing 'cluster_id' parameter. Get IDs from docbrain_autopilot_gaps."))?;
 
-        let body = json!({});
-        let url = format!(
-            "{}/api/v1/autopilot/generate/{}",
-            self.server_url, cluster_id
-        );
-
-        let mut request = self.client.post(&url).json(&body);
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(JsonRpcError {
-                code: -32000,
-                message: format!("API error ({}): {}", status, body),
-            });
-        }
-
-        let result: Value = response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
+        let path = ApiPath::with_id("/api/v1/autopilot/generate/", cluster_id, "", "cluster_id")?;
+        let result = self.json(ApiRequest::post(path, json!({}))).await.map_err(|f| f.message)?;
 
         // Now fetch the full draft to get the content
         let draft_id = result["draft_id"].as_str().unwrap_or("");
@@ -1184,20 +1101,14 @@ impl McpServer {
             title, content_type, quality, draft_id
         );
 
-        // Fetch the draft content
-        if !draft_id.is_empty() {
-            let draft_url = format!("{}/api/v1/autopilot/drafts/{}", self.server_url, draft_id);
-            let mut draft_request = self.client.get(&draft_url);
-            if let Some(ref key) = self.api_key {
-                draft_request = draft_request.header("Authorization", format!("Bearer {}", key));
-            }
-            if let Ok(draft_resp) = draft_request.send().await
-                && let Ok(draft) = draft_resp.json::<Value>().await
-                && let Some(content) = draft["content"].as_str()
-            {
-                text.push_str("--- Draft Content ---\n\n");
-                text.push_str(content);
-            }
+        // Fetch the draft content. The id came from the server, and still goes into a path only
+        // as a checked id.
+        if let Ok(path) = ApiPath::with_id("/api/v1/autopilot/drafts/", draft_id, "", "draft_id")
+            && let Ok(draft) = self.json(ApiRequest::get(path)).await
+            && let Some(content) = draft["content"].as_str()
+        {
+            text.push_str("--- Draft Content ---\n\n");
+            text.push_str(content);
         }
 
         Ok(json!({
@@ -1208,23 +1119,9 @@ impl McpServer {
         }))
     }
 
-    async fn tool_autopilot_summary(&self, _args: &Value) -> Result<Value, JsonRpcError> {
-        let mut request = self
-            .client
-            .get(format!("{}/api/v1/autopilot/summary", self.server_url));
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-
-        let data: Value = response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
+    async fn tool_autopilot_summary(&self, _args: &Value) -> Result<Value, String> {
+        let request = ApiRequest::get(ApiPath::fixed("/api/v1/autopilot/summary"));
+        let data = self.json(request).await.map_err(|f| f.message)?;
 
         let text = format!(
             "Autopilot Summary\n\
@@ -1256,41 +1153,23 @@ impl McpServer {
     /// - `source_type: ide_annotation`
     /// - `code_location: file_path:line_range` (or just file_path)
     /// - `code_hash: SHA-256(code_snippet)` for drift detection
-    async fn tool_annotate(&self, args: &Value) -> Result<Value, JsonRpcError> {
+    async fn tool_annotate(&self, args: &Value) -> Result<Value, String> {
         let gap_id = gap_cluster_id(args)?;
-        let file_path = args["file_path"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'file_path' parameter".into(),
-        })?;
-        let annotation = args["annotation"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'annotation' parameter".into(),
-        })?;
+        let file_path = args["file_path"].as_str().ok_or_else(|| String::from("Missing 'file_path' parameter"))?;
+        let annotation = args["annotation"].as_str().ok_or_else(|| String::from("Missing 'annotation' parameter"))?;
 
         // Input validation
         if file_path.trim().is_empty() {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "file_path must not be empty".into(),
-            });
+            return Err(String::from("file_path must not be empty"));
         }
         if annotation.trim().is_empty() {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "annotation must not be empty".into(),
-            });
+            return Err(String::from("annotation must not be empty"));
         }
         if annotation.chars().count() > 10_000 {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "annotation exceeds 10000 character limit".into(),
-            });
+            return Err(String::from("annotation exceeds 10000 character limit"));
         }
         if file_path.chars().count() > 500 {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "file_path exceeds 500 character limit".into(),
-            });
+            return Err(String::from("file_path exceeds 500 character limit"));
         }
 
         let line_range = args["line_range"].as_str();
@@ -1300,14 +1179,11 @@ impl McpServer {
         // Validate fragment_type
         let valid_types = ["decision", "fact", "caveat", "procedure", "context"];
         if !valid_types.contains(&fragment_type) {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: format!(
+            return Err(format!(
                     "Invalid fragment_type '{}'. Must be one of: {}",
                     fragment_type,
                     valid_types.join(", ")
-                ),
-            });
+                ));
         }
 
         // Build code_location: "path/to/file.rs:42-58" or "path/to/file.rs"
@@ -1381,52 +1257,22 @@ impl McpServer {
                     }]
                 }))
             }
-            Err(msg) => Ok(json!({
-                "content": [{
-                    "type": "text",
-                    "text": msg
-                }]
-            })),
+            // rev 8 §4: a route refusal (role, secret gate, duplicate) is a tool error.
+            Err(msg) => Ok(tool_error(&msg)),
         }
     }
 
     /// `docbrain_suggest_capture` — surface unanswered questions about a code area.
     ///
     /// Queries autopilot gaps and filters for relevance to the given file/function.
-    async fn tool_suggest_capture(&self, args: &Value) -> Result<Value, JsonRpcError> {
-        let file_path = args["file_path"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'file_path' parameter".into(),
-        })?;
+    async fn tool_suggest_capture(&self, args: &Value) -> Result<Value, String> {
+        let file_path = args["file_path"].as_str().ok_or_else(|| String::from("Missing 'file_path' parameter"))?;
         let function_name = args["function_name"].as_str();
 
         // Fetch gap clusters from autopilot — get more than needed, filter client-side
-        let mut request = self.client.get(format!(
-            "{}/api/v1/autopilot/gaps?limit=50",
-            self.server_url
-        ));
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(JsonRpcError {
-                code: -32000,
-                message: format!("API error ({}): {}", status, body),
-            });
-        }
-
-        let gaps: Vec<Value> = response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
+        let request = ApiRequest::get(ApiPath::fixed("/api/v1/autopilot/gaps")).query("limit", "50");
+        let gaps: Vec<Value> = serde_json::from_value(self.json(request).await.map_err(|f| f.message)?)
+            .map_err(|e| format!("Invalid response: {}", e))?;
 
         // Extract search terms from file path and function name
         // Support both Unix and Windows path separators
@@ -1559,7 +1405,7 @@ impl McpServer {
     /// When nothing is captured it says so, naming the paths it checked. An
     /// empty string would let the agent conclude there is no organisational
     /// opinion, which is indistinguishable from not having looked.
-    async fn tool_context(&self, args: &Value) -> Result<Value, JsonRpcError> {
+    async fn tool_context(&self, args: &Value) -> Result<Value, String> {
         let paths: Vec<String> = args["file_paths"]
             .as_array()
             .map(|a| {
@@ -1569,35 +1415,11 @@ impl McpServer {
             })
             .unwrap_or_default();
         if paths.is_empty() {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "Missing or empty 'file_paths' parameter".into(),
-            });
+            return Err(String::from("Missing or empty 'file_paths' parameter"));
         }
 
-        let mut request = self
-            .client
-            .post(format!("{}/api/v1/fragments/context", self.server_url))
-            .json(&json!({ "file_paths": paths }));
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-        let response = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(JsonRpcError {
-                code: -32000,
-                message: format!("API error ({}): {}", status, body),
-            });
-        }
-        let body: Value = response.json().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
+        let request = ApiRequest::post(ApiPath::fixed("/api/v1/fragments/context"), json!({ "file_paths": paths }));
+        let body = self.json(request).await.map_err(|f| f.message)?;
 
         let checked = body["checked_paths"]
             .as_array()
@@ -1638,39 +1460,24 @@ impl McpServer {
     ///   describes instead of ageing silently
     /// - `premises`: anything else the reasoning rests on, passed straight
     ///   through the way `docbrain_annotate` passes its own
-    async fn tool_commit_capture(&self, args: &Value) -> Result<Value, JsonRpcError> {
+    async fn tool_commit_capture(&self, args: &Value) -> Result<Value, String> {
         let gap_id = gap_cluster_id(args)?;
-        let intent = args["intent"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'intent' parameter — why was this change made?".into(),
-        })?;
+        let intent = args["intent"].as_str().ok_or_else(|| String::from("Missing 'intent' parameter — why was this change made?"))?;
 
         // Input validation
         if intent.trim().is_empty() {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "intent must not be empty".into(),
-            });
+            return Err(String::from("intent must not be empty"));
         }
         if intent.chars().count() > 10_000 {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "intent exceeds 10000 character limit".into(),
-            });
+            return Err(String::from("intent exceeds 10000 character limit"));
         }
         let diff_summary = args["diff_summary"].as_str().unwrap_or("");
         if diff_summary.chars().count() > 5_000 {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "diff_summary exceeds 5000 character limit".into(),
-            });
+            return Err(String::from("diff_summary exceeds 5000 character limit"));
         }
         let commit_message = args["commit_message"].as_str().unwrap_or("");
         if commit_message.chars().count() > 1_000 {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "commit_message exceeds 1000 character limit".into(),
-            });
+            return Err(String::from("commit_message exceeds 1000 character limit"));
         }
 
         let space = args["space"].as_str();
@@ -1760,24 +1567,14 @@ impl McpServer {
                     }]
                 }))
             }
-            Err(msg) => Ok(json!({
-                "content": [{
-                    "type": "text",
-                    "text": msg
-                }]
-            })),
+            // rev 8 §4: a route refusal (role, secret gate, duplicate) is a tool error.
+            Err(msg) => Ok(tool_error(&msg)),
         }
     }
 
-    async fn tool_feedback(&self, args: &Value) -> Result<Value, JsonRpcError> {
-        let episode_id = args["episode_id"].as_str().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'episode_id' parameter".into(),
-        })?;
-        let thumbs_up = args["thumbs_up"].as_bool().ok_or_else(|| JsonRpcError {
-            code: -32602,
-            message: "Missing 'thumbs_up' parameter (true or false)".into(),
-        })?;
+    async fn tool_feedback(&self, args: &Value) -> Result<Value, String> {
+        let episode_id = args["episode_id"].as_str().ok_or_else(|| String::from("Missing 'episode_id' parameter"))?;
+        let thumbs_up = args["thumbs_up"].as_bool().ok_or_else(|| String::from("Missing 'thumbs_up' parameter (true or false)"))?;
 
         let feedback_score: i8 = if thumbs_up { 1 } else { -1 };
 
@@ -1818,88 +1615,50 @@ impl McpServer {
     ///
     /// A 500 is never relabeled a duplicate: only the server's `kind` says what a
     /// refusal is.
-    async fn create_fragment(&self, body: &Value) -> Result<Result<Value, String>, JsonRpcError> {
-        Ok(self
-            .api_request(reqwest::Method::POST, "/api/v1/fragments", body)
-            .await?
-            .map_err(|f| describe_failure(&f)))
+    async fn create_fragment(&self, body: &Value) -> Result<Result<Value, String>, String> {
+        let request = ApiRequest::post(ApiPath::fixed("/api/v1/fragments"), body.clone());
+        Ok(self.api_request(request).await?.map_err(|f| describe_failure(&f)))
     }
 
-    /// One JSON request to the DocBrain API. The outer `Err` is transport (no key, server
-    /// unreachable); the inner `Err` is the server's refusal, parsed.
-    async fn api_request(
-        &self,
-        method: reqwest::Method,
-        path: &str,
-        body: &Value,
-    ) -> Result<Result<Value, CaptureFailure>, JsonRpcError> {
-        let mut request = self
-            .client
-            .request(method, format!("{}{}", self.server_url, path))
-            .header(DOCBRAIN_CALLER_HEADER, DOCBRAIN_CALLER_VALUE)
-            .json(body);
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-        let resp = request.send().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("API call failed: {}", e),
-        })?;
-        let status = resp.status().as_u16();
-        let text = resp.text().await.map_err(|e| JsonRpcError {
-            code: -32000,
-            message: format!("Invalid response: {}", e),
-        })?;
-        if (200..300).contains(&status) {
-            if text.trim().is_empty() {
+    /// One JSON request to the DocBrain API. The outer `Err` is transport (server unreachable,
+    /// unreadable answer); the inner `Err` is the server's refusal, parsed.
+    async fn api_request(&self, request: ApiRequest) -> Result<Result<Value, CaptureFailure>, String> {
+        let response = self.backend.send(request).await?;
+        if (200..300).contains(&response.status) {
+            if response.body.trim().is_empty() {
                 return Ok(Ok(Value::Null));
             }
-            let v = serde_json::from_str(&text).map_err(|e| JsonRpcError {
-                code: -32000,
-                message: format!("Invalid response: {}", e),
-            })?;
+            let v = serde_json::from_str(&response.body).map_err(|e| format!("Invalid response: {}", e))?;
             Ok(Ok(v))
         } else {
-            Ok(Err(parse_failure(status, &text)))
+            Ok(Err(parse_failure(response.status, &response.body)))
         }
     }
 
-    async fn tool_revise(&self, args: &Value) -> Result<Value, JsonRpcError> {
+    async fn tool_revise(&self, args: &Value) -> Result<Value, String> {
         let id = args
             .get("id")
             .and_then(Value::as_str)
             .map(str::trim)
             .filter(|s| !s.is_empty())
-            .ok_or_else(|| JsonRpcError {
-                code: -32602,
-                message: "id is required".into(),
-            })?;
+            .ok_or_else(|| String::from("id is required"))?;
+        let intent = revise_intent(args)?;
         // The id goes into a URL path: only a UUID-shaped id may.
-        if !is_uuid_shaped(id) {
-            return Err(JsonRpcError {
-                code: -32602,
-                message: "id must be a capture id".into(),
-            });
-        }
-        let intent = revise_intent(args).map_err(|message| JsonRpcError {
-            code: -32602,
-            message,
-        })?;
         let (method, path, body, done) = match &intent {
             ReviseIntent::Edit(b) => (
-                reqwest::Method::PATCH,
-                format!("/api/v1/fragments/{id}"),
+                Method::PATCH,
+                ApiPath::with_id("/api/v1/fragments/", id, "", "id").map_err(|_| "id must be a capture id")?,
                 b.clone(),
                 "Capture edited and re-indexed",
             ),
             ReviseIntent::Withdraw(r) => (
-                reqwest::Method::POST,
-                format!("/api/v1/fragments/{id}/withdraw"),
+                Method::POST,
+                ApiPath::with_id("/api/v1/fragments/", id, "/withdraw", "id").map_err(|_| "id must be a capture id")?,
                 json!({"reason": r}),
                 "Capture withdrawn: it is no longer used in answers",
             ),
         };
-        let text = match self.api_request(method, &path, &body).await? {
+        let text = match self.api_request(ApiRequest::send_json(method, path, body)).await? {
             Ok(v) => {
                 let draft = v
                     .get("carried_by_draft")
@@ -1910,54 +1669,14 @@ impl McpServer {
                     .unwrap_or_default();
                 format!("{done}. id {id}{draft}{}", warning_lines(&v))
             }
-            Err(f) => describe_revise_failure(&f),
+            Err(f) => return Ok(tool_error(&describe_revise_failure(&f))),
         };
         Ok(json!({"content": [{"type": "text", "text": text}]}))
     }
 
-    pub async fn api_call(&self, path: &str, body: &Value) -> Result<Value, JsonRpcError> {
-        self.post(&self.client, path, body).await.map_err(JsonRpcError::from)
-    }
-
-    async fn post(
-        &self,
-        client: &reqwest::Client,
-        path: &str,
-        body: &Value,
-    ) -> Result<Value, ApiFailure> {
-        let url = format!("{}{}", self.server_url, path);
-
-        // Caller header attached on the request builder before auth so the
-        // header is present regardless of whether DOCBRAIN_API_KEY is set.
-        let mut request = client
-            .post(&url)
-            .json(body)
-            .header(DOCBRAIN_CALLER_HEADER, DOCBRAIN_CALLER_VALUE);
-        if let Some(ref key) = self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", key));
-        }
-
-        let response = request.send().await.map_err(|e| ApiFailure {
-            status: None,
-            body: String::new(),
-            message: format!("API call failed: {}", e),
-        })?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            return Err(ApiFailure {
-                status: Some(status.as_u16()),
-                message: format!("API error ({}): {}", status, body),
-                body,
-            });
-        }
-
-        response.json().await.map_err(|e| ApiFailure {
-            status: None,
-            body: String::new(),
-            message: format!("Invalid response: {}", e),
-        })
+    /// POST `body` to a fixed API path and read the JSON answer.
+    pub async fn api_call(&self, path: &'static str, body: &Value) -> Result<Value, String> {
+        self.json(ApiRequest::post(ApiPath::fixed(path), body.clone())).await.map_err(|f| f.message)
     }
 }
 
@@ -1970,7 +1689,7 @@ const START_NEW_CONVERSATION: &str = "start a new conversation: omit session_id"
 /// Appended to every capture tool and to each argument whose text becomes the capture, so the
 /// model leaves secrets out before anything leaves the machine. The server's refusal is the
 /// backstop; this is where the model reads what to write.
-const CAPTURE_SECRET_GUARDRAIL: &str = "Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or '${DB_PASSWORD}'. DocBrain refuses a capture that holds a secret.";
+const CAPTURE_SECRET_GUARDRAIL: &str = "Never include a secret value: a password, token, API key, private key, or a connection string or URL with credentials. Write where it lives instead, e.g. 'the database password is in the team vault' or the variable that carries it, DB_PASSWORD. DocBrain refuses a capture that holds a secret.";
 
 /// A capture tool's description, or a text argument's, followed by the secret guardrail.
 fn with_secret_guardrail(description: &str) -> String {
@@ -2003,34 +1722,15 @@ impl ApiFailure {
     }
 }
 
-impl From<ApiFailure> for JsonRpcError {
-    fn from(f: ApiFailure) -> Self {
-        JsonRpcError {
-            code: -32000,
-            message: f.message,
-        }
-    }
-}
 
-fn is_uuid_shaped(candidate: &str) -> bool {
-    let bytes = candidate.as_bytes();
-    candidate.len() == 36
-        && bytes.iter().enumerate().all(|(i, b)| match i {
-            8 | 13 | 18 | 23 => *b == b'-',
-            _ => b.is_ascii_hexdigit(),
-        })
-}
 
 /// The optional `gap_id` argument, sent as `gap_cluster_id`. Absent is fine; present
 /// must be a UUID-shaped string.
-fn gap_cluster_id(args: &Value) -> Result<Option<String>, JsonRpcError> {
+fn gap_cluster_id(args: &Value) -> Result<Option<String>, String> {
     match args.get("gap_id") {
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(g)) if is_uuid_shaped(g) => Ok(Some(g.clone())),
-        Some(_) => Err(JsonRpcError {
-            code: -32602,
-            message: "gap_id must be an id".into(),
-        }),
+        Some(_) => Err("gap_id must be an id".to_string()),
     }
 }
 
@@ -2147,9 +1847,19 @@ fn describe_refusal(f: &CaptureFailure, verb: &str) -> String {
         return format!("{verb}: {}{wait} — do not retry now; report this and stop.", f.message);
     }
     match f.kind.as_str() {
+        // A resend of a write that finished after its client left is the common case (#601 rev 8
+        // §4.2, B6): the capture is there, so the line says so first.
         "already_captured" => format!(
-            "{verb}: DocBrain already has this capture ({}). Use docbrain_revise to change it.",
+            "Already saved: {}. DocBrain already has this capture; use docbrain_revise to change it.",
             f.id.as_deref().unwrap_or("id not given")
+        ),
+        // Another capture at the same anchor: its id, so the person can be offered a revise (rev 8
+        // §4.2, B6). Not "Already saved": the text sent may differ from the one already there.
+        "duplicate_source" if f.id.is_some() => format!(
+            "{verb} ({}): {} (id {}); use docbrain_revise on it to change that capture.",
+            f.status,
+            f.message,
+            f.id.as_deref().unwrap_or_default()
         ),
         // Any secret refusal kind: the server's words, then what to do. Only the server's
         // message is relayed, never the text that was sent.
@@ -2281,13 +1991,7 @@ mod tests {
     use super::*;
 
     fn make_server() -> McpServer {
-        McpServer {
-            server_url: "http://localhost:9999".to_string(),
-            api_key: Some("test_key".to_string()),
-            client: reqwest::Client::new(),
-            ask_client: reqwest::Client::new(),
-            role: std::sync::OnceLock::new(),
-        }
+        McpServer::from_parts("http://localhost:9999".to_string(), Some("test_key".to_string()))
     }
 
     #[test]
@@ -2393,9 +2097,9 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            err.message.contains("file_path"),
+            err.contains("file_path"),
             "error should mention file_path: {}",
-            err.message
+            err
         );
     }
 
@@ -2407,9 +2111,9 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            err.message.contains("annotation"),
+            err.contains("annotation"),
             "error should mention annotation: {}",
-            err.message
+            err
         );
     }
 
@@ -2422,9 +2126,9 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(
-            err.message.contains("10000"),
+            err.contains("10000"),
             "error should mention limit: {}",
-            err.message
+            err
         );
     }
 
@@ -2439,7 +2143,7 @@ mod tests {
         let result = server.tool_annotate(&args).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.message.contains("Invalid fragment_type"));
+        assert!(err.contains("Invalid fragment_type"));
     }
 
     #[test]
@@ -2519,7 +2223,7 @@ mod tests {
         let result = server.tool_commit_capture(&args).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.message.contains("intent"));
+        assert!(err.contains("intent"));
     }
 
     #[tokio::test]
@@ -2530,7 +2234,7 @@ mod tests {
         let result = server.tool_commit_capture(&args).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.message.contains("10000"));
+        assert!(err.contains("10000"));
     }
 
     #[tokio::test]
@@ -2541,7 +2245,7 @@ mod tests {
         let result = server.tool_commit_capture(&args).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.message.contains("5000"));
+        assert!(err.contains("5000"));
     }
 
     #[tokio::test]
@@ -2551,7 +2255,7 @@ mod tests {
         let result = server.tool_suggest_capture(&args).await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(err.message.contains("file_path"));
+        assert!(err.contains("file_path"));
     }
 
     /// Previously verified only by a throwaway probe (added, run, then
@@ -2565,8 +2269,8 @@ mod tests {
         // `is_err()` alone proves nothing here: make_server points at an
         // unreachable port, so a request that gets PAST the guard also returns
         // Err — from the network. The code and the message are what discriminate.
-        assert_eq!(err.code, -32602, "invalid params, not a transport failure");
-        assert!(err.message.contains("file_paths"));
+        assert!(!err.starts_with("API call failed") && !err.starts_with(backend::CANNOT_CONNECT), "invalid params, not a transport failure: {err}");
+        assert!(err.contains("file_paths"));
     }
 
     #[tokio::test]
@@ -2575,8 +2279,8 @@ mod tests {
         let args = json!({ "file_paths": [] });
         let result = server.tool_context(&args).await;
         let err = result.unwrap_err();
-        assert_eq!(err.code, -32602, "invalid params, not a transport failure");
-        assert!(err.message.contains("empty"));
+        assert!(!err.starts_with("API call failed") && !err.starts_with(backend::CANNOT_CONNECT), "invalid params, not a transport failure: {err}");
+        assert!(err.contains("empty"));
     }
 
     #[test]
@@ -2603,10 +2307,18 @@ mod tests {
     #[test]
     fn initialize_response_is_valid() {
         let server = make_server();
-        let init = server.handle_initialize();
-        assert_eq!(init["protocolVersion"], "2024-11-05");
+        let init = server.handle_initialize(&json!({}));
+        assert_eq!(init["protocolVersion"], "2024-11-05", "no version asked: what stdio always answered");
         assert!(init["capabilities"]["tools"].is_object());
         assert_eq!(init["serverInfo"]["name"], "docbrain");
+        // #601 rev 8 §4.1: a legacy version this connector speaks is echoed; any other gets 2024-11-05.
+        for v in ["2024-11-05", "2025-06-18", "2025-11-25"] {
+            assert_eq!(server.handle_initialize(&json!({"protocolVersion": v}))["protocolVersion"], v);
+        }
+        // 2025-03-26 requires batches, which stdio does not read.
+        for other in ["2025-03-26", "2026-07-28", "1900-01-01", ""] {
+            assert_eq!(server.handle_initialize(&json!({"protocolVersion": other}))["protocolVersion"], "2024-11-05", "{other}");
+        }
     }
 
     #[tokio::test]
@@ -2615,7 +2327,7 @@ mod tests {
         let args = json!({ "file_path": "  ", "annotation": "some knowledge" });
         let result = server.tool_annotate(&args).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().message.contains("must not be empty"));
+        assert!(result.unwrap_err().contains("must not be empty"));
     }
 
     #[tokio::test]
@@ -2624,7 +2336,7 @@ mod tests {
         let args = json!({ "file_path": "src/main.rs", "annotation": "" });
         let result = server.tool_annotate(&args).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().message.contains("must not be empty"));
+        assert!(result.unwrap_err().contains("must not be empty"));
     }
 
     #[tokio::test]
@@ -2633,7 +2345,7 @@ mod tests {
         let args = json!({ "intent": "   " });
         let result = server.tool_commit_capture(&args).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().message.contains("must not be empty"));
+        assert!(result.unwrap_err().contains("must not be empty"));
     }
 
     #[test]
@@ -2682,7 +2394,7 @@ mod tests {
         assert!(text.contains("do not retry"), "the skill stops, never loops");
         assert!(text.contains("retry in 17s"), "{text}");
         let dup = CaptureFailure { status: 409, kind: "already_captured".into(), message: "already captured: abc".into(), id: Some("abc".into()), retry_after_secs: None };
-        assert!(describe_failure(&dup).contains("abc"));
+        assert!(describe_failure(&dup).starts_with("Already saved: abc."), "{}", describe_failure(&dup));
     }
 
     #[test]
@@ -2711,8 +2423,7 @@ mod tests {
         assert_eq!(ok.expect("uuid").as_deref(), Some("7f3c0000-0000-0000-0000-000000000a91"));
         for bad in ["nope", "", "7f3c0000-0000-0000-0000-000000000a9", "7f3c0000-0000-0000-0000-000000000a9g"] {
             let e = gap_cluster_id(&serde_json::json!({"gap_id": bad})).expect_err(bad);
-            assert_eq!(e.code, -32602);
-            assert_eq!(e.message, "gap_id must be an id");
+            assert_eq!(e, "gap_id must be an id");
         }
         assert!(gap_cluster_id(&serde_json::json!({"gap_id": 5})).is_err(), "not a string");
     }

@@ -55,13 +55,11 @@ async fn call_ask(base: &str, args: Value) -> Result<String, String> {
             params: json!({ "name": "docbrain_ask", "arguments": args }),
         })
         .await;
-    match resp.error {
-        Some(e) => Err(e.message),
-        None => Ok(resp.result.expect("result")["content"][0]["text"]
-            .as_str()
-            .expect("text")
-            .to_string()),
-    }
+    // A failed tool is a tool execution error (`isError`, #601), never a protocol error.
+    assert!(resp.error.is_none(), "a tool failure is not a protocol error: {:?}", resp.error);
+    let result = resp.result.expect("result");
+    let text = result["content"][0]["text"].as_str().expect("text").to_string();
+    if result["isError"] == json!(true) { Err(text) } else { Ok(text) }
 }
 
 const SID: &str = "6f1c1f9e-6d0b-4d55-9c0a-2a8b9f7f3c11";
