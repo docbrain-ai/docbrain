@@ -91,7 +91,9 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a
   gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
   explains why), `context` (background a reader needs first).
-- Keep it to what was actually established. No guesses, no "probably", no restating the code.
+- Keep it to what was actually established. No guesses, no "probably", no restating the code. A date
+  given without its month or year stays as given, with that said ("the 9th; month not stated"):
+  never work out the missing part yourself.
 - Leave out: hostnames from `.env` files, customer or personal names, pasted logs, chat, opinions
   without a reason, and anything the person said to keep out; secrets have their own section below.
   When in doubt, leave it out. Say what kind of thing was left out ("a key, a hostname, a name") —
@@ -120,6 +122,12 @@ yes. If the person asks for changes, show the edited draft in full and ask again
 that was shown and answered with a yes, unchanged, with `docbrain_annotate` (or
 `docbrain_commit_capture`). On no, stop.
 
+A yes given in advance ("if your draft says exactly this, write it") covers a draft that says what the
+person said plus the notes these rules add that only qualify it: what DocBrain cannot check, or a date
+kept as given. Write that draft once, without asking again, and in the report show exactly what was
+sent and name the note you added. It never covers a fact, value, date, reason or step the person did
+not state — a month you worked out, a cause, "no restart needed": show that draft and wait for a yes.
+
 If the write fails — permission, validation, the server unreachable — say exactly what the tool
 reported and stop: no silent retry, no writing anywhere else. Leave the draft in the conversation so it
 can be sent once the cause is fixed. A refusal names its reason — a capture limit, a duplicate (with
@@ -133,4 +141,5 @@ the corrected draft for a new yes; never resend it unchanged. A refusal for a se
 Repeat what the tool reported: the capture's id, its status in the tool's word (`indexed`: it is
 served now and Ask can answer from it), and any warning it returned (for example a premise path that does not exist). Its page in the console says
 who recorded it, what checks it and where it helped.
-Do not summarise the capture again. Do not offer another one.
+Do not summarise the capture again; only after a yes given in advance, show once what was sent (Step
+3). Do not offer another one.
