@@ -92,9 +92,11 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
   gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
   explains why), `context` (background a reader needs first).
 - Keep it to what was actually established. No guesses, no "probably", no restating the code. A
-  relative date ("yesterday", "this morning") becomes the date it names, worked out from today's date.
-  A date given without its month or year stays as given, with that said ("the 9th; month not
-  stated"): never work out the missing part yourself.
+  relative date that names one day ("yesterday", "this morning") becomes that date, worked out from
+  the day the person said it. One that names no single day ("last week", a weekday without its week)
+  stays as given, with that said, and so does a date given without its month or year ("the 9th; month
+  not stated"): never work out the missing part yourself. A space goes in only when the person or
+  DocBrain named it; never guess one.
 - Leave out: hostnames from `.env` files, customer or personal names, pasted logs, chat, opinions
   without a reason, and anything the person said to keep out; secrets have their own section below.
   When in doubt, leave it out. Say what kind of thing was left out ("a key, a hostname, a name") —
@@ -125,8 +127,9 @@ that was shown and answered with a yes, or one a yes given in advance covers (be
 
 A yes given in advance ("if your draft says exactly this, write it") covers a draft that says what the
 person said (for a revise, also the stored capture's own text that it corrects), anchored by these
-rules (the file, lines, snippet, premises and type), plus the notes these rules add that only qualify
-it: what DocBrain cannot check, a relative date worked out from today, or a date kept as given. A note
+rules (the file, lines, snippet, premises and type; for a commit, the diff summary and the files),
+plus the notes these rules add that only qualify it: what DocBrain cannot check, a one-day relative
+date worked out as above, or a date kept as given. A note
 names what is not checked and never carries a value of its own: "the API's own limit is not checked",
 not "the API allows 50 MB (not checked)" unless the person said 50 MB. Write that draft once, without
 asking again, and in the report show exactly what was sent and name each note you added. It never
