@@ -1668,6 +1668,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#who-stands-behind-a-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who stands behind a capture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#space-assignment" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1818,6 +1829,34 @@
     
   
     MCP Tool Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
   
 
     
@@ -3021,6 +3060,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#who-stands-behind-a-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who stands behind a capture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#space-assignment" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3833,6 +3883,30 @@ non-empty — an empty list is a startup error.</p>
 </ul>
 <hr />
 <h2 id="capture-lifecycle-and-freshness">Capture Lifecycle and Freshness<a class="headerlink" href="#capture-lifecycle-and-freshness" title="Permanent link">&para;</a></h2>
+<h3 id="who-stands-behind-a-capture">Who stands behind a capture<a class="headerlink" href="#who-stands-behind-a-capture" title="Permanent link">&para;</a></h3>
+<p>A capture is served the moment it is written; nothing waits for an admin. Every capture says who wrote
+its words and what checks it, and the console's <strong>Captures</strong> page shows it:</p>
+<ul>
+<li><strong>Two writers.</strong> A person (from the IDE through the skill, the CLI, the API or a <code>/capture</code> command):
+  <em>Recorded by <name></em>. DocBrain itself, summarising a thread, a pull request or a CI run:
+  <em>Summarised by DocBrain from <source></em>, with the person who asked for it credited as its capturer.</li>
+<li><strong>Three labels</strong>, computed when it is read: <em>Checked against code</em> (a premise it declares holds),
+  <em>Code it rests on changed</em> (a premise is broken: answers that cite it carry a warning and its author
+  is told once), <em>Not checked against code</em> (nothing checks it, and every reader can see that).</li>
+<li><strong>Its author manages it.</strong> Edit (a person-written capture, while it is served), Withdraw (at any
+  time, with a reason shown with it; it leaves answers at once), Delete (only until an answer has used
+  it). An admin can Purge it everywhere, or withdraw every capture of one author with a reason.</li>
+<li><strong>Limits.</strong> One author may write <code>fragments.max_per_author_per_hour</code> captures an hour (default 60).
+  The same text from the same author within 24 hours is refused with the existing capture's id, so the
+  agent revises it (<code>docbrain_revise</code>) instead of writing it twice.</li>
+<li><strong>Where it helped</strong> — the people it helped this month, the open questions it closed, and what the
+  questions were about — is shown to its author only, on the capture's page. Counts are of people,
+  never of answers, and never name who asked.</li>
+<li><strong>No drafts composed from clusters.</strong> Composing a draft from a cluster of captures is removed
+  (<code>POST /api/v1/fragments/clusters/compose</code> answers <code>410 Gone</code>): a composed draft copied captures'
+  text outside the checks that keep them true. The cluster listing (<code>GET /api/v1/fragments/clusters</code>)
+  is deprecated, with <code>Deprecation</code> and <code>Sunset: 1 Jan 2027</code> headers, and is removed in a later release.</li>
+</ul>
 <h3 id="space-assignment">Space Assignment<a class="headerlink" href="#space-assignment" title="Permanent link">&para;</a></h3>
 <p>Captured content is stored under a meaningful space name derived from the source:</p>
 <table>
@@ -3862,10 +3936,13 @@ non-empty — an empty list is a startup error.</p>
 <p>Unlike incident records (Jira, PagerDuty, Zendesk), which are permanent historical events, <strong>captured content decays with age</strong>. A GitHub PR discussing an architecture from 5 years ago, or a Slack thread about a since-replaced system, should score low in freshness — not be treated as always-current.</p>
 <ul>
 <li>The freshness scorer uses the <strong>original content creation date</strong> (when the PR/MR was opened, when the Slack thread started) as the age baseline — not the time DocBrain captured it.</li>
-<li>Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one, which reduces its weight in RAG retrieval and Autopilot gap analysis.</li>
+<li>Captures age through the standard time-decay curve: a 2-year-old architectural discussion will score significantly lower freshness than a recent one. What that score does depends on whether a reranker is configured:</li>
+<li><strong>No reranker</strong> (<code>RAG_RERANK_PROVIDER=none</code>, the default): freshness also scales each result's retrieval score, so an older capture ranks below a newer one of similar relevance.</li>
+<li><strong>With a reranker</strong> (any other provider): retrieval ranks on relevance alone, so an old capture that answers the question is still picked. Its age is not hidden: a source whose freshness has fallen into the stale or needs-review band is labelled that way to the model writing the answer.</li>
+<li>Autopilot reads the same score: it looks at the stalest documents first when it searches for pages to fix, and breaks a tie between two candidate pages in favour of the fresher one.</li>
 <li><strong>Re-capturing the same thread</strong> (via message shortcut, <code>@DocBrain capture</code>, or <code>@docbrain capture</code> on a PR) updates the content but preserves the original creation date as the age baseline.</li>
 </ul>
-<p>This ensures that outdated design decisions, replaced architectures, or deprecated processes are progressively de-emphasized in answers as they age — without ever being deleted (the historical record is preserved for explicit search).</p>
+<p>Either way, outdated design decisions, replaced architectures and deprecated processes are never deleted — the historical record stays available to explicit search — and the model writing an answer from a stale one is told that it is stale.</p>
 <hr />
 <h2 id="re-ingestion-and-updates">Re-Ingestion and Updates<a class="headerlink" href="#re-ingestion-and-updates" title="Permanent link">&para;</a></h2>
 <h3 id="updating-documents">Updating Documents<a class="headerlink" href="#updating-documents" title="Permanent link">&para;</a></h3>

@@ -1334,6 +1334,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../slack/" class="md-nav__link">
         
   
@@ -2155,7 +2183,7 @@
 </span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                              │  Doc Drafter            │
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                              │  - pulls episodic notes │
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                              │  - queries KG for facts │
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                              │  - applies freshness    │
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                              │  - gathers live tools   │
 </span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                              └───────────┬────────────┘
 </span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>                                          │
 </span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>                              ┌───────────▼────────────┐
@@ -2493,7 +2521,7 @@
 </span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nv">GITHUB_PUBLISH_DOCS_PATH</span><span class="o">=</span>docs<span class="w">       </span><span class="c1"># directory in repo</span>
 </span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="nv">GITHUB_PUBLISH_CREATE_PR</span><span class="o">=</span><span class="nb">true</span><span class="w">       </span><span class="c1"># true = PR for review, false = direct commit</span>
 </span></code></pre></div>
-<p>When <code>CREATE_PR=true</code>, DocBrain creates a feature branch (<code>docbrain/&lt;slug&gt;</code>), commits the markdown file, and opens a PR with configurable labels. The PR body includes the gap cluster context and a link back to the draft in DocBrain.</p>
+<p>When <code>CREATE_PR=true</code>, DocBrain creates a feature branch (<code>docbrain/draft-&lt;draft id prefix&gt;</code>), commits the markdown file, and opens a PR with configurable labels. The PR body includes the gap cluster context and a link back to the draft in DocBrain.</p>
 <h3 id="gitlab-mr-based">GitLab (MR-based)<a class="headerlink" href="#gitlab-mr-based" title="Permanent link">&para;</a></h3>
 <p>Publishes drafts as markdown files in a GitLab project via Merge Requests. Same markdown format as GitHub.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nv">DRAFT_PUBLISH_TARGET</span><span class="o">=</span>gitlab
@@ -2527,7 +2555,7 @@
 </span></code></pre></div>
 <p><strong>Resolution order:</strong> Space-specific DB target (highest priority first) → default config target → disabled.</p>
 <p><strong>Security:</strong> The <code>config</code> JSONB field must use <code>token_env</code> (the name of an environment variable) instead of raw tokens. The API rejects any config containing <code>token</code>, <code>api_token</code>, or <code>secret</code> fields directly.</p>
-<p>See the <a href="../api-reference/#publish-targets">API Reference</a> for full CRUD endpoints and the <a href="../configuration/#draft-publishing">Configuration Reference</a> for all env vars.</p>
+<p>See the <a href="../api-reference/#publish-targets">API Reference</a> for full CRUD endpoints and the <a href="../configuration/#draft-publishing--closing-the-feedback-loop">Configuration Reference</a> for all env vars.</p>
 <hr />
 <h2 id="helm-chart-reference">Helm Chart Reference<a class="headerlink" href="#helm-chart-reference" title="Permanent link">&para;</a></h2>
 <p>All autopilot settings are in <code>values.yaml</code> under the <code>autopilot:</code> key:</p>

@@ -971,6 +971,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../slack/" class="md-nav__link">
         
   
@@ -1759,7 +1787,7 @@
 </table>
 <p>All other events (space events, blog posts, etc.) are acknowledged and ignored.</p>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p>The webhook uses the same Confluence API credentials as the ingest job. If you are already running scheduled Confluence ingest, <code>CONFLUENCE_BASE_URL</code> and <code>CONFLUENCE_API_TOKEN</code> are already set — only <code>CONFLUENCE_WEBHOOK_SECRET</code> is new.</p>
+<p>The webhook uses the same Confluence API credentials as the ingest job. If you already have a <code>sources.confluence</code> block configured for ingest, <code>CONFLUENCE_BASE_URL</code> and <code>CONFLUENCE_API_TOKEN</code> are already set — only <code>CONFLUENCE_WEBHOOK_SECRET</code> is new.</p>
 <p>If you are running webhooks <strong>without</strong> scheduled ingest, all three credentials are required.</p>
 <h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
 <table>

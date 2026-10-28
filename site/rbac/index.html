@@ -971,6 +971,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../slack/" class="md-nav__link">
         
   
@@ -1853,7 +1881,7 @@
 </tr>
 <tr>
 <td><code>analyst</code></td>
-<td>Everything editor can. Reserved for future role-based scoping; currently equivalent to <code>editor</code>.</td>
+<td>Everything editor can + withdraw any capture (authors manage their own captures), and the other endpoints marked <strong>Requires analyst role</strong> in the API reference. Editors cannot use these.</td>
 </tr>
 <tr>
 <td><code>admin</code></td>
@@ -2045,11 +2073,16 @@
 <td>These use a <strong>bot API key</strong> (admin-scoped), not user OAuth — the gate does not apply to webhook-initiated ingestion</td>
 </tr>
 <tr>
-<td>MCP server</td>
-<td>Uses a PAT (<code>DOCBRAIN_API_KEY</code>) created by an authorised user via <code>docbrain token create</code></td>
+<td>MCP endpoint (<code>/api/v1/mcp</code>)</td>
+<td>An app such as Claude Code signs in as a person, who allows it in the browser; it acts with that person's role and never more. Or an API key created by an authorised user via <code>docbrain token create</code> (the stdio connector's <code>DOCBRAIN_API_KEY</code>)</td>
 </tr>
 </tbody>
 </table>
+<p><code>docbrain token create --name &lt;name&gt; --role &lt;viewer|editor|analyst|admin&gt;</code> mints a long-lived
+token. Add <code>--rate-limit-rpm &lt;n&gt;</code> to raise its request budget; omitted, the
+server applies its default of 60 requests per minute. Session keys issued by
+<code>docbrain login</code> are governed separately by <code>SESSION_RATE_LIMIT_RPM</code> (see
+<a href="../configuration/">configuration.md</a>).</p>
 <hr />
 <h2 id="environment-variables-reference">Environment Variables Reference<a class="headerlink" href="#environment-variables-reference" title="Permanent link">&para;</a></h2>
 <p>All values can also be set directly as environment variables (useful for docker-compose or non-Helm deployments).</p>

@@ -1223,6 +1223,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../slack/" class="md-nav__link">
         
   
@@ -1956,7 +1984,7 @@
 <h3 id="ingestion-pipeline-docbrain-ingest">Ingestion Pipeline (<code>docbrain-ingest</code>)<a class="headerlink" href="#ingestion-pipeline-docbrain-ingest" title="Permanent link">&para;</a></h3>
 <p>Fetches documents from configured sources (Confluence, GitHub, local files), converts to Markdown, chunks with heading-aware splitting, generates embeddings, and indexes in OpenSearch. During ingestion, cross-document references (URLs to GitHub PRs, GitLab MRs, Jira tickets, Confluence pages, etc.) are automatically extracted from content and stored as a reference graph in PostgreSQL. Referenced document IDs are attached to each chunk in OpenSearch for enrichment at query time.</p>
 <h3 id="mcp-server-docbrain-mcp">MCP Server (<code>docbrain-mcp</code>)<a class="headerlink" href="#mcp-server-docbrain-mcp" title="Permanent link">&para;</a></h3>
-<p>Model Context Protocol server for integration with AI coding tools (Claude Code, Cursor). Includes IDE capture tools for annotating code, capturing commit intent, and surfacing documentation gaps directly in the editor.</p>
+<p>Model Context Protocol server for integration with AI coding tools (Claude Code, Cursor). Includes IDE capture tools for annotating code, capturing commit intent, and surfacing documentation gaps directly in the editor. The DocBrain server serves it over Streamable HTTP at <code>/api/v1/mcp</code>, where apps such as Claude Code sign in through the browser (DocBrain is the OAuth 2.1 authorization server for that endpoint) or present an API key; the same tools also ship as a stdio connector for editors that only start local programs. Each tool call becomes a REST request inside the server, with the caller's own role and audit trail.</p>
 <h3 id="cli-docbrain-cli">CLI (<code>docbrain-cli</code>)<a class="headerlink" href="#cli-docbrain-cli" title="Permanent link">&para;</a></h3>
 <p>Command-line client for interactive Q&amp;A sessions.</p>
 <h2 id="4-tier-memory-system">4-Tier Memory System<a class="headerlink" href="#4-tier-memory-system" title="Permanent link">&para;</a></h2>

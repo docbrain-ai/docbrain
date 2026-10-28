@@ -971,6 +971,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../slack/" class="md-nav__link">
         
   
@@ -2023,7 +2051,7 @@
 
 <h1 id="gitlab-mr-capture">GitLab MR Capture<a class="headerlink" href="#gitlab-mr-capture" title="Permanent link">&para;</a></h1>
 <p>GitLab MR Capture lets DocBrain learn directly from your engineering work in real time. When a team member comments <code>@docbrain capture</code> on a merge request, DocBrain ingests the MR title, description, and full discussion thread — turning institutional knowledge that lives in GitLab into searchable, citable documentation.</p>
-<p>Beyond capture, DocBrain can also <strong>answer questions</strong> inline: comment <code>@docbrain &lt;question&gt;</code> on any MR and DocBrain will reply with a RAG-generated answer sourced from your knowledge base.</p>
+<p>Beyond capture, <code>@docbrain &lt;question&gt;</code> on an MR replies with a link that opens the question in DocBrain, where it is answered under the reader's own access (set <code>DOCBRAIN_WEB_BASE_URL</code> so the link can be built).</p>
 <hr />
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1. Team member comments "@docbrain capture" on a GitLab MR
@@ -2074,7 +2102,9 @@
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nv">GITLAB_CAPTURE_TLS_INSECURE</span><span class="o">=</span><span class="nb">false</span><span class="w">                      </span><span class="c1"># set true for self-signed certs (self-hosted GitLab)</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">GITLAB_CAPTURE_ALLOWED_USERS</span><span class="o">=</span>alice,bob<span class="w">                 </span><span class="c1"># only process commands from these usernames</span>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nv">GITLAB_CAPTURE_ALLOWED_PROJECTS</span><span class="o">=</span>group/repo,org/app<span class="w">     </span><span class="c1"># only process these projects</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nv">GITLAB_BOT_USER_ID</span><span class="o">=</span><span class="m">1234</span><span class="w">                                </span><span class="c1"># numeric GitLab user id of the account behind GITLAB_CAPTURE_TOKEN</span>
 </span></code></pre></div>
+<p><strong><code>GITLAB_BOT_USER_ID</code></strong> is the numeric user id of the account that owns <code>GITLAB_CAPTURE_TOKEN</code> (GitLab: the user's profile, or <code>GET /api/v4/user</code>). DocBrain's own replies are notes on the MR; with this set, notes authored by that account never trigger an ask reply (loop guard). Unset, the guard is off and only the create-only filter (edited notes are ignored) applies, so set it whenever the token belongs to a dedicated bot account.</p>
 <p><strong><code>GITLAB_CAPTURE_TOKEN</code></strong> (PAT) is needed to fetch the full MR note thread via the GitLab API. Without it, DocBrain can only read the triggering note body, not the full discussion.</p>
 <p>Required PAT scopes: <strong><code>api</code></strong> (read MR notes and post replies).</p>
 <h3 id="step-2-configure-the-gitlab-webhook">Step 2 — Configure the GitLab Webhook<a class="headerlink" href="#step-2-configure-the-gitlab-webhook" title="Permanent link">&para;</a></h3>
@@ -2108,13 +2138,10 @@
 <h3 id="ask-a-question-on-an-mr">Ask a Question on an MR<a class="headerlink" href="#ask-a-question-on-an-mr" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>@docbrain How does the new auth middleware handle token refresh?
 </span></code></pre></div>
-<p>DocBrain replies with a sourced answer:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>DocBrain — answering: How does the new auth middleware handle token refresh?
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>The middleware checks the token expiry window (configurable via TOKEN_REFRESH_WINDOW_SECS)...
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>Sources: [Auth Architecture](https://...) · [Confluence: Auth Design] · Confidence: 87%
+<p>DocBrain replies:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Ask this in DocBrain: https://docbrain.example.com/ask
 </span></code></pre></div>
+<p>The MR carries no answer text, no source titles and no question: a merge request can be visible to people who cannot read the documents behind the answer, so the answer is produced only after the reader opens the link and signs in. Without <code>DOCBRAIN_WEB_BASE_URL</code> the reply is "Ask this in DocBrain." with no link, and the server logs a warning.</p>
 <h3 id="commands-summary">Commands Summary<a class="headerlink" href="#commands-summary" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -2130,7 +2157,7 @@
 </tr>
 <tr>
 <td><code>@docbrain &lt;question&gt;</code></td>
-<td>Run RAG on your knowledge base and post the answer</td>
+<td>Reply with a link to ask it in DocBrain</td>
 </tr>
 </tbody>
 </table>
@@ -2182,7 +2209,7 @@ GitLab merge-request ingest sub-source in <code>config/local.yaml</code>:</p>
 </span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">      </span><span class="nt">min_notes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
 </span></code></pre></div>
 <p>Every project must be listed explicitly — an empty list is a startup error.
-See <a href="../configuration/#gitlab-merge-requests">configuration.md</a> for the full
+See the GitLab MR section of <a href="../configuration/">configuration.md</a> for the full
 shape.</p>
 <p>Then trigger a manual ingest:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docbrain<span class="w"> </span>ingest<span class="w">                   </span><span class="c1"># CLI</span>

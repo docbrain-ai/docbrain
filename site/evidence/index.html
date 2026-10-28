@@ -829,15 +829,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#regulation-agnostic-engine-pluggable-compliance-profiles" class="md-nav__link">
+  <a href="#regulation-agnostic-engine-pluggable-compliance-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Regulation-agnostic engine, pluggable compliance profiles
+        Regulation-agnostic engine, pluggable compliance frameworks
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Regulation-agnostic engine, pluggable compliance profiles">
+    <nav class="md-nav" aria-label="Regulation-agnostic engine, pluggable compliance frameworks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1120,6 +1120,34 @@
     
   
     MCP Tool Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
   
 
     
@@ -1685,15 +1713,15 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#regulation-agnostic-engine-pluggable-compliance-profiles" class="md-nav__link">
+  <a href="#regulation-agnostic-engine-pluggable-compliance-frameworks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Regulation-agnostic engine, pluggable compliance profiles
+        Regulation-agnostic engine, pluggable compliance frameworks
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Regulation-agnostic engine, pluggable compliance profiles">
+    <nav class="md-nav" aria-label="Regulation-agnostic engine, pluggable compliance frameworks">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1899,7 +1927,7 @@ member paths:</p>
 <p>Every export carries the full key chain and checkpoint chain from genesis —
 even a narrow date-range export roots all the way back, so nothing in a
 range export has to be taken on faith.</p>
-<h2 id="regulation-agnostic-engine-pluggable-compliance-profiles">Regulation-agnostic engine, pluggable compliance profiles<a class="headerlink" href="#regulation-agnostic-engine-pluggable-compliance-profiles" title="Permanent link">&para;</a></h2>
+<h2 id="regulation-agnostic-engine-pluggable-compliance-frameworks">Regulation-agnostic engine, pluggable compliance frameworks<a class="headerlink" href="#regulation-agnostic-engine-pluggable-compliance-frameworks" title="Permanent link">&para;</a></h2>
 <p>A fair question: is any of this hardcoded to the EU AI Act? If the Act is
 amended, or you need SOC 2, ISO 42001, or FDA/SEC evidence instead — is that a
 different product?</p>
@@ -1909,14 +1937,16 @@ regulation by name</strong>. It proves integrity, continuity, and decision
 provenance, full stop, which is what every evidentiary regime (SOC 2, ISO
 42001, FDA Part 11, SEC 17a-4, the EU AI Act) ultimately asks for underneath
 its specific vocabulary.</p>
-<p>What's regulation-specific lives entirely in a <strong>compliance profile</strong>: a
+<p>What's regulation-specific lives entirely in a <strong>compliance framework</strong>: a
 named set of retention windows (each citing the statutory basis it mirrors)
-plus a report-template selector — data, not engine logic. Today's registry
-ships exactly one profile:</p>
+plus a report-template selector — data, not engine logic. You choose one with
+<code>docbrain evidence export --framework &lt;id&gt;</code>; the export API and the status
+response call it <code>profile</code> / <code>profiles</code>. Today's registry ships exactly one
+framework:</p>
 <table>
 <thead>
 <tr>
-<th>Profile</th>
+<th>Framework</th>
 <th>Presets</th>
 </tr>
 </thead>
@@ -1928,11 +1958,11 @@ ships exactly one profile:</p>
 </tbody>
 </table>
 <p>A regulation change, or an amendment to the AI Act itself, is an edit to
-this profile's data — never a change to the engine, the chain, or what
+this framework's data — never a change to the engine, the chain, or what
 counts as <code>VALID</code>/<code>TAMPERED</code>/<code>CANNOT_VERIFY</code>. Adding a second regime (SOC 2,
-ISO 42001, FDA, SEC) is adding a new profile entry alongside it, with its own
+ISO 42001, FDA, SEC) is adding a new framework entry alongside it, with its own
 presets and report template, on the same engine.</p>
-<p><strong>The hard limit that no profile changes:</strong> a profile only changes which
+<p><strong>The hard limit that no framework changes:</strong> a framework only changes which
 range gets exported and how it's labeled. It can never make a bundle
 evidence something that never actually flowed through DocBrain.</p>
 <h3 id="what-the-bundle-can-honestly-say-about-the-eu-ai-act">What the bundle can honestly say about the EU AI Act<a class="headerlink" href="#what-the-bundle-can-honestly-say-about-the-eu-ai-act" title="Permanent link">&para;</a></h3>

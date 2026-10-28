@@ -801,10 +801,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#governance-dashboard" class="md-nav__link">
+  <a href="#govern-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Governance Dashboard
+        Govern Overview
       
     </span>
   </a>
@@ -1181,6 +1181,34 @@
     
   
     MCP Tool Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
   
 
     
@@ -1774,10 +1802,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#governance-dashboard" class="md-nav__link">
+  <a href="#govern-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Governance Dashboard
+        Govern Overview
       
     </span>
   </a>
@@ -1872,10 +1900,10 @@
 <ol>
 <li><strong>Space Ownership</strong> — Who is responsible for which knowledge areas</li>
 <li><strong>Topic Stewardship</strong> — Subject-matter experts for specific topics within spaces</li>
-<li><strong>SLA Policies</strong> — Deadlines for gap resolution, draft review, and freshness</li>
+<li><strong>SLA Policies</strong> — Deadlines for picking up and resolving gaps and for draft review (a freshness term is stored but no check reads it today)</li>
 <li><strong>Breach Detection</strong> — Automated scanning that surfaces violations before they become incidents</li>
 </ol>
-<p>All governance features are accessible from the <strong>Governance</strong> page in the web UI (sidebar → Govern → Governance), which shows the dashboard and rules/owners management via tab navigation.</p>
+<p>All governance features are accessible from the <strong>Governance</strong> page in the web UI (sidebar → Govern → Governance), which shows the Govern overview and rules/owners management via tab navigation.</p>
 <hr />
 <h2 id="spaces-and-ownership">Spaces and Ownership<a class="headerlink" href="#spaces-and-ownership" title="Permanent link">&para;</a></h2>
 <p>A <strong>space</strong> is a logical grouping of documentation — typically aligned to a team, product area, or domain (e.g., <code>PLATFORM</code>, <code>API</code>, <code>ONBOARDING</code>, <code>SRE</code>).</p>
@@ -1892,25 +1920,33 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>POST<span class="w"> </span>/api/v1/governance/spaces/<span class="o">{</span>space<span class="o">}</span>/owners
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="o">{</span><span class="w"> </span><span class="s2">"user_id"</span>:<span class="w"> </span><span class="s2">"uuid"</span>,<span class="w"> </span><span class="s2">"role"</span>:<span class="w"> </span><span class="s2">"owner"</span><span class="w"> </span><span class="o">}</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Remove an owner</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>DELETE<span class="w"> </span>/api/v1/governance/spaces/<span class="o">{</span>space<span class="o">}</span>/owners/<span class="o">{</span>user_id<span class="o">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Make a person the owner, optionally replacing another owner (one idempotent step; admin)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>PUT<span class="w"> </span>/api/v1/governance/spaces/<span class="o">{</span>space<span class="o">}</span>/owner
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="o">{</span><span class="w"> </span><span class="s2">"user_id"</span>:<span class="w"> </span><span class="s2">"uuid"</span>,<span class="w"> </span><span class="s2">"replaces"</span>:<span class="w"> </span><span class="s2">"uuid-or-null"</span><span class="w"> </span><span class="o">}</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Remove an owner</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>DELETE<span class="w"> </span>/api/v1/governance/spaces/<span class="o">{</span>space<span class="o">}</span>/owners/<span class="o">{</span>user_id<span class="o">}</span>
 </span></code></pre></div></p>
 <h3 id="topic-stewards">Topic Stewards<a class="headerlink" href="#topic-stewards" title="Permanent link">&para;</a></h3>
-<p>A <strong>topic steward</strong> is a subject-matter expert responsible for a specific topic within a space. When a documentation gap is detected in their topic area, they're notified and can be assigned to resolve it.</p>
+<p>A <strong>topic steward</strong> takes the open gaps whose label matches their pattern. After every gap analysis, an open gap nobody has decided goes to the first of: the steward whose pattern matches the most of its label (they get a <code>gap_assigned</code> notification); the owners of the space its questions looked in, who would hear (they get a <code>gap_routed</code> notification and nobody is assigned); the team that owns the source and then the org, which do not act yet, so the gap waits. A gap someone assigned or unassigned by hand is left alone.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># List stewards</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>GET<span class="w"> </span>/api/v1/governance/stewards
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Create a steward assignment</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Create a steward (the person must be able to sign in; auto_assign_gaps is required)</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>POST<span class="w"> </span>/api/v1/governance/stewards
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="o">{</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="s2">"user_id"</span>:<span class="w"> </span><span class="s2">"uuid"</span>,
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="s2">"space"</span>:<span class="w"> </span><span class="s2">"PLATFORM"</span>,
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="s2">"topic"</span>:<span class="w"> </span><span class="s2">"kubernetes-networking"</span>,
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="s2">"description"</span>:<span class="w"> </span><span class="s2">"Owns all K8s networking documentation"</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="s2">"topic_pattern"</span>:<span class="w"> </span><span class="s2">"kubernetes|k8s"</span>,
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="s2">"display_name"</span>:<span class="w"> </span><span class="s2">"Kubernetes"</span>,
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="s2">"user_id"</span>:<span class="w"> </span><span class="s2">"uuid"</span>,
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="s2">"auto_assign_gaps"</span>:<span class="w"> </span><span class="nb">true</span>
 </span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="o">}</span>
 </span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Remove a steward</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>DELETE<span class="w"> </span>/api/v1/governance/stewards/<span class="o">{</span>id<span class="o">}</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># What a pattern would take at the next routing run (admin; counts only topics you may see)</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>POST<span class="w"> </span>/api/v1/governance/stewards/preview
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="o">{</span><span class="w"> </span><span class="s2">"topic_pattern"</span>:<span class="w"> </span><span class="s2">"kubernetes|k8s"</span><span class="w"> </span><span class="o">}</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="c1"># Remove a steward</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>DELETE<span class="w"> </span>/api/v1/governance/stewards/<span class="o">{</span>id<span class="o">}</span>
 </span></code></pre></div>
 <h3 id="my-governance">My Governance<a class="headerlink" href="#my-governance" title="Permanent link">&para;</a></h3>
 <p>Every user can see their own governance responsibilities:</p>
@@ -1935,7 +1971,7 @@
 <tbody>
 <tr>
 <td><strong>Gap Acknowledgment</strong></td>
-<td>Time from gap detection to someone acknowledging it</td>
+<td>Time from a gap opening until someone picks it up (it is assigned)</td>
 <td>24 hours</td>
 </tr>
 <tr>
@@ -1950,13 +1986,13 @@
 </tr>
 <tr>
 <td><strong>Freshness</strong></td>
-<td>Maximum age before a document is considered stale</td>
+<td>Stored with the policy; no check reads it today, so nothing is reported late for it</td>
 <td>90 days</td>
 </tr>
 </tbody>
 </table>
 <h3 id="configuring-slas">Configuring SLAs<a class="headerlink" href="#configuring-slas" title="Permanent link">&para;</a></h3>
-<p><strong>Web UI:</strong> Governance → Dashboard → SLA section shows compliance. Rules &amp; Owners tab lets you manage per-space policies.</p>
+<p><strong>Web UI:</strong> Govern › SLAs shows what is late now. Rules &amp; Owners tab lets you manage per-space policies.</p>
 <p><strong>API:</strong>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># List all SLA policies</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>GET<span class="w"> </span>/api/v1/governance/slas
@@ -1964,59 +2000,94 @@
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Set default SLA policy</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>PUT<span class="w"> </span>/api/v1/governance/slas/default
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="o">{</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="s2">"gap_ack_hours"</span>:<span class="w"> </span><span class="m">24</span>,
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="s2">"gap_acknowledgment_hours"</span>:<span class="w"> </span><span class="m">24</span>,
 </span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="s2">"gap_resolution_days"</span>:<span class="w"> </span><span class="m">7</span>,
 </span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="s2">"draft_review_hours"</span>:<span class="w"> </span><span class="m">48</span>,
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="s2">"freshness_days"</span>:<span class="w"> </span><span class="m">90</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="s2">"freshness_review_days"</span>:<span class="w"> </span><span class="m">90</span>
 </span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="o">}</span>
 </span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
 </span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># Set space-specific SLA (overrides default)</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>PUT<span class="w"> </span>/api/v1/governance/slas/spaces/<span class="o">{</span>space<span class="o">}</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>PUT<span class="w"> </span>/api/v1/governance/slas/<span class="o">{</span>space<span class="o">}</span>
 </span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="o">{</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">  </span><span class="s2">"gap_ack_hours"</span>:<span class="w"> </span><span class="m">12</span>,
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">  </span><span class="s2">"gap_acknowledgment_hours"</span>:<span class="w"> </span><span class="m">12</span>,
 </span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="w">  </span><span class="s2">"gap_resolution_days"</span>:<span class="w"> </span><span class="m">3</span>,
 </span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">  </span><span class="s2">"draft_review_hours"</span>:<span class="w"> </span><span class="m">24</span>,
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">  </span><span class="s2">"freshness_days"</span>:<span class="w"> </span><span class="m">60</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">  </span><span class="s2">"freshness_review_days"</span>:<span class="w"> </span><span class="m">60</span>
 </span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="o">}</span>
 </span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>
 </span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="c1"># Delete a space-specific policy (falls back to default)</span>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>DELETE<span class="w"> </span>/api/v1/governance/slas/spaces/<span class="o">{</span>space<span class="o">}</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>DELETE<span class="w"> </span>/api/v1/governance/slas/<span class="o">{</span>space<span class="o">}</span>
 </span></code></pre></div></p>
 <h3 id="breach-detection">Breach Detection<a class="headerlink" href="#breach-detection" title="Permanent link">&para;</a></h3>
 <p>DocBrain runs an automated SLA checker on a configurable interval (default: every hour). When a policy is breached:</p>
 <ol>
 <li>A <code>sla.breached</code> event is emitted to the event bus</li>
 <li>Space owners receive in-app notifications</li>
-<li>The breach appears on the governance dashboard</li>
+<li>The late subject is listed under Govern › SLAs and counted on the Govern overview</li>
 <li>If webhooks are configured, external systems are notified</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># List current breaches</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>GET<span class="w"> </span>/api/v1/governance/slas/breaches
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Get breach summary (counts by type and space)</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>GET<span class="w"> </span>/api/v1/governance/slas/breaches/summary
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Acknowledge a breach (stops re-alerting)</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>POST<span class="w"> </span>/api/v1/governance/slas/breaches/<span class="o">{</span>id<span class="o">}</span>/acknowledge
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># What is late now, most overdue first (viewer; refused for a key limited to some spaces)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>GET<span class="w"> </span>/api/v1/governance/breaches
 </span></code></pre></div>
 <hr />
-<h2 id="governance-dashboard">Governance Dashboard<a class="headerlink" href="#governance-dashboard" title="Permanent link">&para;</a></h2>
-<p>The dashboard provides a single view of documentation health:</p>
+<h2 id="govern-overview">Govern Overview<a class="headerlink" href="#govern-overview" title="Permanent link">&para;</a></h2>
+<p>The Govern overview (<code>/govern</code> in the console) opens on what needs a decision, then draws the figures behind it. Every figure is counted across all spaces, so a key limited to some spaces is refused.</p>
+<p><strong>Needs a decision</strong> — one row per fact, shown only while it is true:</p>
 <ul>
-<li><strong>Coverage</strong> — Percentage of topics with documentation per space</li>
-<li><strong>SLA Compliance</strong> — Which spaces are meeting their SLAs, which are in breach</li>
-<li><strong>Quality Distribution</strong> — Document scores across spaces (how many are A/B/C/D/F)</li>
-<li><strong>Capture Velocity</strong> — Fragments captured per week, trending up or down</li>
-<li><strong>Top Contributors</strong> — Who is contributing the most knowledge, by space</li>
+<li><strong>Late</strong> — gaps nobody has picked up, assigned gaps with no draft yet, gaps whose draft nobody submitted, and drafts that waited past their review stage, each with how late it is and the term it is judged by.</li>
+<li><strong>Not set up</strong> (admins only) — no SLA policy while gaps exist, no review workflow while drafts wait, ownership not learned while a source is connected.</li>
 </ul>
+<p><strong>Panels</strong></p>
+<ul>
+<li><strong>Ownership coverage</strong> — documents per space, and whether anyone with a role on the space can sign in and has notifications on.</li>
+<li><strong>SLAs against the clock</strong> — what is late now and by how much.</li>
+<li><strong>Review flow</strong> (editors and up) — where drafts wait in the default workflow's stages, and what entered, was published or was rejected in the last 30 days.</li>
+<li><strong>Structure score by space</strong> — scores per space and the weekly line.</li>
+</ul>
+<p><strong>Who sees what</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Viewer</th>
+<th>Editor and up</th>
+<th>Admin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Late rows, coverage, SLAs, structure</td>
+<td>yes</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Names of owners, stewards and assignees; a late row's space</td>
+<td>no ("Assigned", counts only)</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Review flow</td>
+<td>no</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Not-set-up rows</td>
+<td>no</td>
+<td>no</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<p>A gap's topic is shown only when at least two people other than the reader asked it, or the reader is its assignee or has a role on its space; a late draft's title follows the same rule through the gap it was written for. Who asked is never shown.</p>
+<p>How many open gaps each routing step (steward, space owners, team, nobody) would reach is counted only once gap routing runs; until then the overview sends those counts as <code>null</code>, never as 0, and shows no "reaches nobody" row.</p>
 <p><strong>API:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Full governance dashboard data</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>GET<span class="w"> </span>/api/v1/governance/dashboard
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Coverage report</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>GET<span class="w"> </span>/api/v1/governance/coverage
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># The Govern overview: what needs a decision, coverage, SLAs, review flow, structure scores</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>GET<span class="w"> </span>/api/v1/governance/overview
 </span></code></pre></div></p>
-<p>Both require <code>analyst</code> role or higher.</p>
+<p>The overview needs <code>viewer</code>. Capture velocity and top contributors are not part of it.</p>
 <hr />
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
@@ -2037,7 +2108,7 @@
 <tr>
 <td><code>SLA_DEFAULT_GAP_ACK_HOURS</code></td>
 <td><code>24</code></td>
-<td>Default hours before a gap must be acknowledged</td>
+<td>Default hours before a gap must be picked up (assigned)</td>
 </tr>
 <tr>
 <td><code>SLA_DEFAULT_GAP_RESOLUTION_DAYS</code></td>
@@ -2052,7 +2123,7 @@
 <tr>
 <td><code>SLA_DEFAULT_FRESHNESS_DAYS</code></td>
 <td><code>90</code></td>
-<td>Default days before a document is stale</td>
+<td>Default freshness term stored with new policies; no check reads it today</td>
 </tr>
 </tbody>
 </table>
@@ -2075,8 +2146,8 @@
 </thead>
 <tbody>
 <tr>
-<td>View governance dashboard</td>
-<td><code>analyst</code></td>
+<td>Read the Govern overview</td>
+<td><code>viewer</code></td>
 </tr>
 <tr>
 <td>View coverage report</td>
@@ -2099,8 +2170,8 @@
 <td><code>admin</code></td>
 </tr>
 <tr>
-<td>View/acknowledge breaches</td>
-<td><code>analyst</code></td>
+<td>List what is late now (<code>/governance/breaches</code>)</td>
+<td><code>viewer</code></td>
 </tr>
 </tbody>
 </table>
@@ -2120,7 +2191,7 @@
 <p><strong>Set SLA policies</strong> — Override defaults if the space has stricter requirements (e.g., SRE runbooks need 12h gap acknowledgment).</p>
 </li>
 <li>
-<p><strong>Monitor</strong> — The governance dashboard shows compliance. SLA breaches trigger notifications automatically.</p>
+<p><strong>Monitor</strong> — The Govern overview shows what is late and what needs a decision. SLA breaches trigger notifications automatically.</p>
 </li>
 </ol>
 

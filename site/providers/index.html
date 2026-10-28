@@ -521,7 +521,7 @@
   <a href="#model-selection-critical-for-answer-quality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Selection — Critical for Answer Quality
+        Model selection: critical for answer quality
       
     </span>
   </a>
@@ -1406,6 +1406,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../slack/" class="md-nav__link">
         
   
@@ -1928,7 +1956,7 @@
   <a href="#model-selection-critical-for-answer-quality" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Selection — Critical for Answer Quality
+        Model selection: critical for answer quality
       
     </span>
   </a>
@@ -2312,7 +2340,7 @@
   <div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>OLLAMA_TIMEOUT_SECS=300
 </span></code></pre></div></li>
 </ul>
-<h4 id="model-selection-critical-for-answer-quality">Model Selection — Critical for Answer Quality<a class="headerlink" href="#model-selection-critical-for-answer-quality" title="Permanent link">&para;</a></h4>
+<h4 id="model-selection-critical-for-answer-quality">Model selection: critical for answer quality<a class="headerlink" href="#model-selection-critical-for-answer-quality" title="Permanent link">&para;</a></h4>
 <p>DocBrain's RAG pipeline relies on the LLM to stay strictly grounded in retrieved documents and follow structured formatting rules. <strong>Only use models with strong instruction-following capabilities.</strong> Models that ignore system prompts or default to training data instead of provided context will produce fabricated answers — even when the correct documents are retrieved.</p>
 <blockquote>
 <p><strong>Key insight</strong>: Model size alone does not determine RAG quality. A 35B model purpose-built for RAG (like <code>command-r:35b</code>) will outperform a 70B general-purpose model that ignores grounding instructions. <strong>Instruction-following ability is the single most important trait for a DocBrain LLM.</strong></p>

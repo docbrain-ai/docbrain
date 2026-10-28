@@ -804,6 +804,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The four states">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-a-reader-sees-a-premise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a reader sees a premise
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -833,6 +850,17 @@
     <span class="md-ellipsis">
       
         Surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-pull-request-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The pull-request check
       
     </span>
   </a>
@@ -1097,6 +1125,34 @@
     
   
     MCP Tool Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coding Agents
   
 
     
@@ -1609,6 +1665,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="The four states">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-a-reader-sees-a-premise" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How a reader sees a premise
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1638,6 +1711,17 @@
     <span class="md-ellipsis">
       
         Surfaces
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-pull-request-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The pull-request check
       
     </span>
   </a>
@@ -1727,9 +1811,18 @@ check" — never "broken".</p>
    premises. Prose mentions, globs, URLs, flags, and placeholders are ignored — the same
    grammar the <a href="../configuration/">answer-time claim verifier</a> uses.</li>
 <li><strong>Explicit declaration.</strong> Agents capturing over MCP can pass a <code>premises</code> array to
-   <code>docbrain_annotate</code> — see <a href="../agents/">Agent Capture</a>. v1 checks <code>premise_type: "path"</code>;
-   other types are recorded but never checked (and never alert). Malformed entries are
-   skipped item-by-item — a bad premise never fails the capture.</li>
+   <code>docbrain_annotate</code> or <code>docbrain_commit_capture</code> — see <a href="../agents/">Agent Capture</a>. v1
+   checks <code>premise_type: "path"</code>; other types are recorded but never checked (and never
+   alert). Malformed entries are skipped item-by-item — a bad premise never fails the
+   capture. The array is capped at <strong>100 items</strong>; a capture declaring more is rejected with
+   <code>400</code> rather than truncated, because the sweep reads every premise row in one unpaged
+   query and that cap is what keeps its working set bounded by fragment volume.</li>
+<li><strong>A commit capture's changed files.</strong> <code>docbrain_commit_capture</code> records why a change was
+   made; the server turns each path in its <code>file_paths</code> list into a <code>path</code> premise, so the
+   capture is checked against the files it describes and is flagged when one of them moves
+   or disappears. Without it a commit capture could never be checked against the code again.
+   Repeats collapse to one premise, and the same 100-item cap applies. A commit capture sent
+   with no files declares nothing; it is served at once, labelled <em>Not checked against code</em>.</li>
 <li><strong>Backfill.</strong> <code>POST /api/v1/premises/backfill</code> (admin) extracts premises for every
    already-indexed fragment that has none. Safe to re-run; it never duplicates.</li>
 </ol>
@@ -1765,6 +1858,116 @@ check" — never "broken".</p>
 </tr>
 </tbody>
 </table>
+<h3 id="how-a-reader-sees-a-premise">How a reader sees a premise<a class="headerlink" href="#how-a-reader-sees-a-premise" title="Permanent link">&para;</a></h3>
+<p>The state is the monitor's; what it means to a reader also depends on the last verdict and on
+whether anything has checked the premise yet. The server derives one reading and sends it beside the
+raw <code>state</code> as <code>reading</code> (<code>state</code>, <code>label</code>, <code>checked_at</code>) on the capture page
+(<code>GET /api/v1/fragments/{id}/page</code>) and the premise lists (<code>GET /api/v1/premises/broken</code>). Every
+surface shows <code>label</code> as it comes and never labels a premise from <code>state</code> alone.</p>
+<table>
+<thead>
+<tr>
+<th><code>reading.state</code></th>
+<th><code>label</code></th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>holds</code></td>
+<td>Holds</td>
+<td><code>holds</code></td>
+</tr>
+<tr>
+<td><code>broken</code></td>
+<td>Broken</td>
+<td><code>broken</code></td>
+</tr>
+<tr>
+<td><code>not_found</code></td>
+<td>Not found in any connected repository</td>
+<td>a <code>dormant</code> path premise whose last check found it in no listing (<code>missing</code> or <code>moved</code>)</td>
+</tr>
+<tr>
+<td><code>not_checked_yet</code></td>
+<td>Not checked yet</td>
+<td>a <code>dormant</code> premise nothing has checked yet</td>
+</tr>
+<tr>
+<td><code>does_not_match</code></td>
+<td>Does not match the connected repository</td>
+<td>a <code>dormant</code> version or config-key premise whose value, at the last check, differs from the repository's</td>
+</tr>
+<tr>
+<td><code>cannot_be_checked</code></td>
+<td>Cannot be checked now · last verified <date></td>
+<td><code>uncheckable</code>, last verdict <code>verified</code></td>
+</tr>
+<tr>
+<td><code>cannot_be_checked</code></td>
+<td>Cannot be checked now · last found missing <date></td>
+<td><code>uncheckable</code>, last verdict <code>missing</code> (or <code>moved</code>, for a path)</td>
+</tr>
+<tr>
+<td><code>cannot_be_checked</code></td>
+<td>Cannot be checked</td>
+<td><code>uncheckable</code> with nothing kept to say, or a <code>dormant</code> premise whose last check found no connected source that owns it</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>&lt;date&gt;</code> (UTC, <code>YYYY-MM-DD</code>) is the day the premise stopped being checkable: its last verdict was
+current up to then.</p>
+<p><code>checked_at</code> is when a check last ran, and <code>null</code> while nothing has checked the premise: a new row's
+<code>last_checked_at</code> is its creation time, not a check. A <code>not_found</code> premise is still dormant: it never
+alerts and never appears on an answer.</p>
+<p>A claim that never held keeps no verdict once no connected source owns it: when a check finds no
+owner for a <code>dormant</code> premise (its repository was disconnected, or no listing or symbol value is
+loaded), the verdict it kept is dropped, so it reads <em>Cannot be checked</em> instead of describing a
+repository that is no longer connected (<em>Does not match …</em> or <em>Not found …</em> with a fresh check time).
+The next check that finds an owner writes a verdict again. A claim that ever held keeps its last
+verdict through such a gap, as above.</p>
+<p>The sweep reads every path a capture declares, including one whose top folder no connected
+repository holds: such a path reads <em>Not found in any connected repository</em> with its check time, and
+turns to <em>Holds</em> when a repository gains it.</p>
+<p><strong>A reader is told only what the repositories they can read say.</strong> A repository's listing is
+readable when the reader can read every page DocBrain holds from it, by the rule Ask applies (spaces
+and access rules; a listing with no page yet is readable unless an enforcing access rule applies).
+For a reader who cannot read every listing, a claim whose path (or, for a version or config-key
+claim, whose file) no readable listing holds, and whose recorded holder they cannot read, reads <em>Not
+found in any repository you can read</em> where it would otherwise say it holds, broke, was last
+verified, or that its value differs; its raw <code>state</code> reads <code>dormant</code> and its <code>state_changed_at</code> the
+time the claim was written. The capture's chip, the Captures tiles, the "code changed" lists and a
+capture's own list of broken claims follow the same readings: every capture response row with
+premise data is built from the reader's scope. Which listings a reader can read is worked out once
+per kind of reader and kept until the listings next refresh, at most one refresh interval. A save
+(a capture written or its claims edited) reads the listings as stored at that moment: when one was
+stored or removed since the last load, they are loaded again first, so a file in a listing stored a
+moment ago is never warned about as missing.</p>
+<p><strong>The capture chip</strong> comes from the readings too, first rule that applies: <em>Code it rests on changed</em>
+when a claim broke; when a claim was checked and does not hold, its reason in that claim's own words,
+amber: <em>Not found in any connected repository</em> (or <em>Not found in any repository you can read</em>),
+<em>Does not match the connected repository</em>, or <em>Broken</em> for a claim that broke with no basis — with
+claims of several kinds, <em>Not found</em> wins (nothing to compare against), then <em>Does not match</em>;
+<em>Checked against code</em> only when every claim holds; <em>Not checked against code</em> when nothing has been
+checked; otherwise (no claim fails and some cannot be checked now) <em>Cannot be checked now</em>, also when
+other claims hold: the capture as a whole cannot be confirmed now. A claim that
+holds beside one not checked yet, with none uncheckable, reads <em>Not checked against code</em>. The wire
+value is <code>label.check</code>: <code>checked_against_code</code>, <code>code_changed</code>, <code>not_found</code>,
+<code>not_found_where_you_can_read</code>, <code>does_not_match</code>, <code>broken</code>, <code>cannot_be_checked_now</code>,
+<code>not_checked_against_code</code>.</p>
+<p>Every surface computes the chip in its reader's scope: the capture pages, Captures, an Ask source,
+the answer page and <code>docbrain_context</code> alike, so a cached answer's chip is recomputed for whoever
+reads it. For a reader who cannot read every listing, a claim in a listing they cannot read that
+cannot be checked now reads <em>Not found in any repository you can read</em> (amber), as its row does: true
+of the repositories they can read, and silent about the rest.</p>
+<p>Summaries count readings, not states. The Captures tile <em>Captures whose code changed</em> counts captures
+with a claim that broke (<code>code_changed</code> on <code>GET /api/v1/captures/mine/impact</code> and
+<code>GET /api/v1/captures/organisation</code>), and says nothing else: a claim found missing at its first check
+never breaks, and why a capture's claim does not hold is on that capture's chip.</p>
+<p>Home's <em>Wrong now</em> line reads its claims the same way: "N were checked and not found" for document
+claims checked and found missing, "N point at files that moved" for those found at another path, and
+"have not been checked" only for the claims nothing has checked. Its coverage records <code>not_found</code> and
+<code>moved</code> inside <code>unchecked</code> (the complement of the base, which the review wall still states).</p>
 <p>Two rules keep this honest:</p>
 <ul>
 <li><strong>Only a claim proven true can die.</strong> A premise that fails verification at capture is
@@ -1776,14 +1979,50 @@ check" — never "broken".</p>
   It keeps its last verdict and basis, so you can see what was known and when. When the
   source returns, the next sweep re-verdicts it; only a genuine death alerts.</li>
 </ul>
+<p><strong>A capture that is false about its code at birth is refused.</strong> A person's capture whose declared
+<code>path</code> premise names a file that a connected repository was recorded holding (a premise's
+<code>source_ref</code>) and that no connected repository holds now is not saved: the write answers <code>422</code>
+<code>premise_removed</code>, naming every such path and never the repository. A file the author is adding has
+no such record, so it is never refused; it is served with a warning.</p>
+<p><strong>Every declared path that no listing the writer can read holds is warned about at save time</strong>, on
+a create and on an edit that sends premises (<code>warnings</code> in the response; <code>docbrain_annotate</code>,
+<code>docbrain_commit_capture</code>, <code>docbrain_revise</code> and the console show them). Only listings the writer can
+read are consulted: a repository they cannot read gives no branch, and no silence either. The warning
+names the branch DocBrain read, never the repository:</p>
+<ul>
+<li>"the file this capture rests on does not exist on branch <branch>: <path>" when a connected
+  listing owns the path's folders (the first two, three under a <code>.</code>-led top folder; with several, the
+  smallest source key). The branch is the git source's tracked branch, or the branch checked out in
+  a local source's working copy at its last refresh; a branch DocBrain could not read, or a detached
+  HEAD, is never guessed.</li>
+<li>"the file this capture rests on does not exist: <path>" when that listing's branch is not known (a
+  detached HEAD, or a listing stored before branches were recorded).</li>
+<li>"the file this capture rests on is not in any repository you can read: <path>" when no listing
+  the writer can read owns its folders.</li>
+</ul>
+<p>It is a warning, not a refusal: the capture is saved. With no connected listing loaded, nothing
+warns.
+A commit's own file list, the premises an edit keeps, and DocBrain-written summaries are never
+refused; with no connected listing loaded, nothing is.</p>
 <h2 id="the-monitor">The monitor<a class="headerlink" href="#the-monitor" title="Permanent link">&para;</a></h2>
 <p>With <code>PREMISE_MONITOR_ENABLED=true</code> (the default), the server runs a standing monitor:</p>
 <ul>
-<li><strong>Every 300 seconds</strong> it sweeps all premises against the current file listings.</li>
+<li><strong>Every 300 seconds by default</strong> (<code>PREMISE_SWEEP_INTERVAL_SECS</code>) it sweeps all premises against the current file listings.</li>
 <li><strong>On fragment-index events</strong> it extracts and initially verifies a new fragment's premises
   immediately, rather than waiting for the sweep.</li>
 <li><strong>At startup, and after any missed events,</strong> it backfills premises for indexed fragments
   that have none, so nothing is silently unmonitored.</li>
+<li><strong>A discarded or withdrawn capture's premises are not swept.</strong> Discarding a capture rejects
+  it and withdrawing takes it out of answers, so its
+  claims stop being checked and stop being reported: they do not change state again, and
+  <code>POST /api/v1/premises/check</code> never names a discarded capture. The rows are kept, frozen
+  with the state and verdict they held at the moment of the discard — the same choice the
+  discard itself makes, where the search entry goes and the capture stays with its reason —
+  so the record of what was claimed survives the rejection. A capture that is merely waiting
+  for review is not affected; only a rejected or withdrawn one stops being checked. Such a
+  capture is never served, so its claims keep their last reading even after the listing that
+  owned them is gone; every claim that is still checked reads "Cannot be checked" once its
+  owning listing is gone.</li>
 </ul>
 <p>Writes happen only when something changed; a sweep over an unchanged world writes nothing
 and emits nothing. If the monitor cannot check (database hiccup, missing listing), premises
@@ -1808,19 +2047,127 @@ dated to the commit it was observed at.</p>
 <li><strong>Web:</strong> the <strong>Premises</strong> page — broken premises newest-first with verdicts and bases, a
   collapsed Uncheckable section, and monitor health.</li>
 <li><strong>API:</strong> <code>GET /api/v1/premises/broken</code> (any state via <code>?state=</code>, paginated, analyst+),
-  <code>GET /api/v1/premises/health</code> (analyst+), <code>POST /api/v1/premises/backfill</code> (admin).</li>
-<li><strong>Events:</strong> <code>premise.broken</code> and <code>premise.restored</code> are emitted on state transitions,
-  persisted to the event log, and deliverable by <a href="../configuration/">webhooks</a> — subscribe an
-  endpoint to those event types and a premise death is POSTed to it (signed) the moment the
-  sweep detects it. Restoration (<code>broken → holds</code>) emits <code>premise.restored</code>.</li>
+  <code>GET /api/v1/premises/health</code> (analyst+), <code>POST /api/v1/premises/backfill</code> (admin),
+  <code>POST /api/v1/premises/check</code> (viewer; the pull-request check below).</li>
+<li><strong>Pull requests:</strong> <code>docbrain check-claims</code> — see <a href="#the-pull-request-check">The pull-request check</a>.</li>
+<li><strong>What is counted:</strong> a claim made by a document that has since been deleted is not current
+  content. The page, <code>/premises/health</code> and the pull-request check leave it out. The sweep
+  still reads such rows, so beside its figure the page says how many of the rows it reads
+  belong to deleted documents.</li>
+<li><strong>Events:</strong> <code>premise.broken</code> and <code>premise.restored</code> are emitted on state transitions and
+  persisted to the event log. They stay inside DocBrain: a premise event names a single page
+  or capture, so it is not delivered to webhooks. Restoration (<code>broken → holds</code>) emits
+  <code>premise.restored</code>.
+  A premise can leave its page or capture while that page or capture stays, in three ways: a
+  re-read page no longer states it, the author's edit drops it, or removing a secret makes it
+  repeat another premise of the capture and the repeat is dropped. Each is a retirement: the
+  evidence journal records it as <code>kind="retired"</code> with the premise id, its page or capture and
+  its last state, and each also emits <code>premise.retired</code> with the same fields. Both are
+  written just after the retirement commits, so a crash in that instant leaves the retirement
+  without a journal record or event.</li>
 <li><strong>Answers:</strong> the monitor watches <em>stored</em> claims; the answer-time claim verifier
   (<code>RAG_CLAIM_VERIFICATION</code>) independently checks any path an <em>answer</em> cites against the
   same listings. An answer that cites a dead path carries its own correction note, whether
-  or not the underlying fragment's premise has been swept yet.</li>
+  or not the underlying fragment's premise has been swept yet. An answer's path, never seen
+  to exist, is reported only when a connected repository holds its first two folders (three
+  when the top folder's name starts with <code>.</code>, such as <code>.github/</code>), so a one-folder path such
+  as <code>scripts/x.sh</code> is not flagged in answers; a premise that has held
+  keeps the first-segment rule below, so it is still caught here.</li>
+</ul>
+<h2 id="the-pull-request-check">The pull-request check<a class="headerlink" href="#the-pull-request-check" title="Permanent link">&para;</a></h2>
+<p><code>docbrain check-claims --diff &lt;file|-&gt;</code> asks which live claims a change would falsify, for
+the <strong>repository the change is in</strong>. A repository is named by its forge:
+<code>github:owner/repo</code> or <code>gitlab:group/project</code>, GitLab nested groups kept whole
+(<code>gitlab:group/sub/project</code>), lower-case, host dropped. The CLI makes the name on the
+runner and sends only the name — never a URL, which in CI can carry a job token:</p>
+<ol>
+<li><code>--repo &lt;name or clone URL&gt;</code>;</li>
+<li>GitHub Actions: <code>GITHUB_REPOSITORY</code> (not on Gitea or Forgejo runners, which set
+   <code>GITEA_ACTIONS</code> / <code>FORGEJO_ACTIONS</code>);</li>
+<li>GitLab CI: <code>CI_MERGE_REQUEST_PROJECT_PATH</code> (the merge request's target, also in a fork's
+   pipeline), else <code>CI_PROJECT_PATH</code>;</li>
+<li>the <code>origin</code> remote (<code>git remote get-url origin</code>); an ssh alias is resolved once with
+   <code>ssh -G</code>;</li>
+<li>none of these: exit 3, nothing sent.</li>
+</ol>
+<p>A web URL is not a name: give the clone URL or the name. A local checkout is tied to a
+repository by its own <code>origin</code> remote, read at ingest (on github.com, gitlab.com, or the
+GitHub or GitLab host the deployment is configured for).</p>
+<p>For each live claim on a removed path the server decides from recorded facts only: which
+repositories' listings hold the path, and the claiming document's own repository. A claim
+about the named repository is a <strong>finding</strong>; a claim about another repository is counted;
+anything that cannot be told is listed with its reason and one action — the page's own
+repository does not have the path, the page lives in a checkout DocBrain cannot name, a
+capture carries no repository while more than one repository holds the path, or DocBrain's
+listing does not include the path. A key restricted to spaces sees only those spaces, and
+the answer says so.</p>
+<table>
+<thead>
+<tr>
+<th>Exit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Nothing at risk in that repository, or the change removes and renames nothing.</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>Findings: the change falsifies live claims about this repository. <code>--warn-only</code> reports them and exits 0 — unless something could not be told.</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td>Could not run, or could not tell: no repository name; an empty diff on stdin; and, when the change removes or renames a path, a repository DocBrain does not read, claims it cannot tie to a repository, a key that may see no spaces, or a server too old to scope the check. Never 0, <code>--warn-only</code> included.</td>
+</tr>
+</tbody>
+</table>
+<p>The diff must be complete, or the check is answering a question nobody asked. A shallow
+checkout has no base branch to diff against, <code>git diff</code> then fails, and in a pipe without
+<code>pipefail</code> the check would read nothing. So fetch the history, write the diff to a file
+under a shell that stops on error, and pass the file. (<code>--diff -</code> with an empty stdin is
+refused with exit 3 for the same reason; an empty file means "nothing removed".)</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># GitHub Actions</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v4</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">with</span><span class="p">:</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">fetch-depth</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">            </span><span class="c1"># the base branch must exist locally</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">shell</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span><span class="w">                 </span><span class="c1"># bash -eo pipefail: a failed git diff fails the step</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="no">git diff --find-renames --name-status "origin/${{ github.base_ref }}..." &gt; change.diff</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="no">docbrain check-claims --diff change.diff</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># GitLab CI</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">check-claims</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">rules</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$CI_PIPELINE_SOURCE == "merge_request_event"</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">variables</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">GIT_DEPTH</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span><span class="w">              </span><span class="c1"># the default shallow clone may not hold the target branch</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">script</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">git fetch origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">git diff --find-renames --name-status "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME..." &gt; change.diff</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docbrain check-claims --diff change.diff</span>
+</span></code></pre></div>
+<p>Limits, stated:</p>
+<ul>
+<li>Ingest reads a checkout's remote with <code>git -c safe.directory=&lt;dir&gt;</code>, because in a
+  container the mounted checkout belongs to another user. Git reads that setting from the
+  command line from version 2.38; the DocBrain image ships a newer git. On an older git
+  outside the image, each such checkout is logged once as "dubious ownership" and stays
+  unnamed (its claims are "could not tell", never findings).</li>
+<li>A key restricted to spaces sees only its spaces' claims, but the reasons can still say
+  that another repository holds a path (listings carry no space); no claim, count or name
+  from another space is shown. Whether a repository name is one DocBrain reads is likewise
+  answered for any name the caller supplies.</li>
+<li>The premises page's sweep figures (checked, unsettleable, and how many of the checked
+  rows belong to deleted documents) describe the whole corpus, not only the spaces a
+  restricted key may see.</li>
 </ul>
 <h2 id="behaviors-worth-knowing">Behaviors worth knowing<a class="headerlink" href="#behaviors-worth-knowing" title="Permanent link">&para;</a></h2>
-<p>These follow from the attribution rule — a premise belongs to sources whose listing contains
-its first path segment — and are deliberate trade-offs in favor of precision:</p>
+<p>These follow from the attribution rules — a premise belongs to sources whose listing contains
+its first path segment; a path in an answer, or one a capture declares when it is written, belongs
+to sources that hold its first two folders, three under a <code>.</code>-led top folder — and are deliberate
+trade-offs in favor of precision:</p>
 <ul>
 <li><strong>Deleting a directory's only file reads as <code>uncheckable</code>, not <code>broken</code>.</strong> If
   <code>proof/notes.txt</code> was the only file under <code>proof/</code>, removing it removes the whole
@@ -1828,27 +2175,47 @@ its first path segment — and are deliberate trade-offs in favor of precision:<
   "nothing can speak to this" rather than guessing that a wider deletion was a targeted one.</li>
 <li><strong>A premise can re-attribute across sources.</strong> If two connected repos both have a <code>docs/</code>
   tree, a <code>docs/...</code> premise is checked against both, and is <code>broken</code> only when an owning
-  source decisively lacks it. This is the same any-owning-source semantics the answer-time
-  verifier uses.</li>
+  source decisively lacks it. The answer-time verifier also checks against every owning
+  source, but counts as owners only the sources that hold the path's first two folders.</li>
+<li><strong>Answers and new captures need two folders, premises need one.</strong> A path nobody has seen
+  exist (one an answer cites, or one a capture declares when it is written) is reported missing
+  only when a connected repository holds its first two folders, because top-level names like
+  <code>docs/</code> and <code>scripts/</code> are shared by most repositories and would otherwise flag files of
+  codebases you never connected. A premise that has held was seen to exist, which is better
+  evidence of what it is about, so it keeps the first-segment rule and still breaks when its
+  one-folder file is deleted.</li>
+<li><strong>A tool's folder needs a third folder.</strong> A top folder whose name starts with <code>.</code> (<code>.github/</code>,
+  an editor's or an agent's) holds a layout the tool decides, the same in every repository that
+  uses it, so for answers and new captures a connected repository must hold the path's first
+  three folders. The accepted loss: a file directly under such a two-level folder
+  (<code>.github/workflows/deploy.yml</code>) that is deleted from a connected repository is not flagged in
+  answers. A premise on it that has held still breaks.</li>
 <li><strong>Precision over coverage, everywhere.</strong> One false "your runbook is wrong" costs more
   than ten missed ones. That asymmetry drives every rule above: deterministic oracles only,
   dated absences, no guessing between candidates, and silence whenever the evidence is
   incomplete.</li>
 </ul>
 <h2 id="what-the-monitor-costs-to-run">What the monitor costs to run<a class="headerlink" href="#what-the-monitor-costs-to-run" title="Permanent link">&para;</a></h2>
-<p>Almost nothing, and document count is the wrong variable to worry about:</p>
+<p>Little. Its work grows with the number of claims; its memory with the number of files in
+your connected repositories:</p>
 <ul>
-<li><strong>Documents are not monitored — captured claims are.</strong> A thousand ingested documents
-  create zero premises; only knowledge fragments carry them, and only their path-shaped
-  claims. Large corpora typically produce hundreds of premises, not thousands.</li>
-<li><strong>Each check is an in-memory set lookup</strong> — microseconds. A sweep is one small database
-  read, one lookup per premise, and writes only for rows whose state or verdict actually
-  changed. A sweep over an unchanged world writes nothing and emits nothing. A thousand
-  premises is roughly a millisecond of comparison every five minutes; even a hundred
-  thousand stays well under a second.</li>
-<li><strong>The file inventory lives in memory</strong> and refreshes only when your repositories sync.
-  The Kubernetes repository's ~31,000 paths measure a few megabytes. The monitor never
-  clones anything, never reads document bodies, and never calls a model.</li>
+<li><strong>What carries premises.</strong> Every capture: its declared premises and the path-shaped
+  tokens in its inline code. Ingested documents too, but only when
+  <code>PREMISE_DOCUMENT_EXTRACTION</code> is on (it is off by default): the monitor then reads each
+  document's text once per new version and records the path-shaped tokens in its inline
+  code. Measured over 635 real documentation files, that is about 6.5 claims per document,
+  so turning it on for a corpus of 39,000 documents writes on the order of a quarter of a
+  million premise rows in its first pass.</li>
+<li><strong>Each check is an in-memory set lookup.</strong> A sweep reads the premises that a connected
+  source could settle, in pages of 1,000, and checks each one against the file inventory.
+  A premise whose state or verdict changed is written on its own; the unchanged ones on a
+  page share one batched update of their check time. Events are emitted only when a
+  premise breaks or is restored, so a sweep over an unchanged world emits nothing.</li>
+<li><strong>The file inventory lives in memory.</strong> The server reloads it from the stored listings
+  every five minutes; it changes only when a repository sync stores a new listing. The
+  monitor never clones anything and never calls a model.</li>
+<li><strong>The document pass, when it is on,</strong> costs one index-only probe per sweep when no
+  document has changed, and otherwise reads changed documents 200 at a time.</li>
 </ul>
 <p>The heavy work — cloning repositories, embedding documents — happens at ingest time, where
 it always did. The monitor adds a five-minute heartbeat of list-against-list comparison.</p>
@@ -1866,6 +2233,16 @@ it always did. The monitor adds a five-minute heartbeat of list-against-list com
 <td><code>PREMISE_MONITOR_ENABLED</code></td>
 <td><code>true</code></td>
 <td>The standing monitor. Turning it off stops sweeps and events; premise rows and the answer-time verifier are unaffected. Helm: <code>premises.monitorEnabled</code>.</td>
+</tr>
+<tr>
+<td><code>PREMISE_SWEEP_INTERVAL_SECS</code></td>
+<td><code>300</code></td>
+<td>Seconds between sweeps. The only dial on sweep cost — each sweep reads and settles every premise row. Values below <code>5</code> are raised to <code>5</code>. Helm: <code>premises.sweepIntervalSeconds</code>.</td>
+</tr>
+<tr>
+<td><code>PREMISE_DOCUMENT_EXTRACTION</code></td>
+<td><code>false</code></td>
+<td>Also extract premises from ingested documents, not only captures. Off by default: turning it on starts a one-time pass over the whole corpus (see the cost above).</td>
 </tr>
 </tbody>
 </table>
