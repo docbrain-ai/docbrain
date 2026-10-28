@@ -105,8 +105,8 @@ https, or `http://localhost` for development. Every SSO provider must land peopl
 If something is missing it stays off, and the server log and **Settings › Sign-in for apps** say why.
 
 **Settings › Sign-in for apps** shows whether it is on, lets an admin pause new sign-ins (**Allow new
-sign-ins**), checks discovery as this server sees it (**Check now**), and lists sign-in problems from the
-last 7 days. It also holds:
+sign-ins**), checks from your browser that apps can find sign-in (**Check now**), and lists sign-in
+problems from the last 7 days. It also holds:
 
 - **Web apps you allow**: an app that returns to your own computer, like Claude Code, may ask by default;
   an app that returns to a website needs an entry here, by its client ID.
