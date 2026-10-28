@@ -1,6 +1,6 @@
 ---
 name: docbrain-capture
-description: Capture what this conversation worked out into DocBrain, so the whole organization can find it later and DocBrain can tell when it stops being true. Use when a piece of work has produced knowledge written nowhere — a decision and its reason, a fix that took digging, a caveat, a procedure (how we deploy, rotate, roll back, get access), how a system is actually wired —, when a commit is about to be made whose reason is not in its message, or when asked to "capture this", "write this down", "document how we did that". Checks DocBrain first, drafts in the team's words with the file and the facts it rests on, shows the draft, and writes only after a yes.
+description: Capture what this conversation worked out into DocBrain, so the whole organization can find it later and DocBrain can tell when it stops being true. Use when a piece of work has produced knowledge written nowhere — a decision and its reason, a fix that took digging, a caveat, a procedure (how we deploy, rotate, roll back, get access), how a system is actually wired —, when a commit is about to be made whose reason is not in its message, or when asked to "capture this", "write this down", "document how we did that". Checks DocBrain first, drafts in the team's words with the file and the facts it rests on, shows the draft, and writes only after a yes (given before or after it is shown).
 allowed-tools: Read
 license: MIT
 ---
@@ -73,7 +73,7 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
 - Declare the premises it rests on: paths that must exist for the capture to hold
   (`premise_type: "path"`). Both capture tools take them; on a commit capture they are what the
   reasoning rests on beyond the files it changed. Every premise path must exist in the repository right
-  now — check it before you show the draft; a path that does not exist is not a premise, and a wrong one
+  now — check it before you show or send the draft; a path that does not exist is not a premise, and a wrong one
   goes silent forever. DocBrain re-checks the paths and flags the capture the day one disappears. A
   capture is served the moment it is written, labelled with who wrote it and what checks it: with
   premises that hold it reads *Checked against code*; with none it reads *Not checked against code*.
@@ -91,9 +91,10 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a
   gotcha or limit), `procedure` (steps — a capture with steps to run is a procedure even when it also
   explains why), `context` (background a reader needs first).
-- Keep it to what was actually established. No guesses, no "probably", no restating the code. A date
-  given without its month or year stays as given, with that said ("the 9th; month not stated"):
-  never work out the missing part yourself.
+- Keep it to what was actually established. No guesses, no "probably", no restating the code. A
+  relative date ("yesterday", "this morning") becomes the date it names, worked out from today's date.
+  A date given without its month or year stays as given, with that said ("the 9th; month not
+  stated"): never work out the missing part yourself.
 - Leave out: hostnames from `.env` files, customer or personal names, pasted logs, chat, opinions
   without a reason, and anything the person said to keep out; secrets have their own section below.
   When in doubt, leave it out. Say what kind of thing was left out ("a key, a hostname, a name") —
@@ -108,7 +109,7 @@ Other people retrieve what you capture, so a secret in a capture is shared with 
   or the variable that carries it, `DB_PASSWORD`.
 - Never paste a `.env` file, a credential file or a connection string with a password, not even part
   of one.
-- Before you show the draft, read it for anything that looks like a credential — a value after
+- Before you show or send a draft, read it for anything that looks like a credential — a value after
   `password`, `token`, `secret` or `key`, an `Authorization` header, a private key block, a URL with
   `user:password@`, a long random string that is not a hash or an id — and replace it with where it
   lives.
@@ -118,15 +119,19 @@ Other people retrieve what you capture, so a secret in a capture is shared with 
 ## Step 3 — ask once, then write
 
 Show the draft exactly as it will be sent: the fields and their values, nothing hidden. Ask for a
-yes. If the person asks for changes, show the edited draft in full and ask again. Write only the draft
-that was shown and answered with a yes, unchanged, with `docbrain_annotate` (or
-`docbrain_commit_capture`). On no, stop.
+yes. If the person asks for changes, show the edited draft in full and ask again. Write only a draft
+that was shown and answered with a yes, or one a yes given in advance covers (below), unchanged, with
+`docbrain_annotate` (or `docbrain_commit_capture`, or `docbrain_revise`). On no, stop.
 
 A yes given in advance ("if your draft says exactly this, write it") covers a draft that says what the
-person said plus the notes these rules add that only qualify it: what DocBrain cannot check, or a date
-kept as given. Write that draft once, without asking again, and in the report show exactly what was
-sent and name the note you added. It never covers a fact, value, date, reason or step the person did
-not state — a month you worked out, a cause, "no restart needed": show that draft and wait for a yes.
+person said (for a revise, also the stored capture's own text that it corrects), anchored by these
+rules (the file, lines, snippet, premises and type), plus the notes these rules add that only qualify
+it: what DocBrain cannot check, a relative date worked out from today, or a date kept as given. A note
+names what is not checked and never carries a value of its own: "the API's own limit is not checked",
+not "the API allows 50 MB (not checked)" unless the person said 50 MB. Write that draft once, without
+asking again, and in the report show exactly what was sent and name each note you added. It never
+covers a fact, value, date, reason or step the person did not state (a month you worked out, a cause
+or a "no restart needed" of your own): show that draft and wait for a yes.
 
 If the write fails — permission, validation, the server unreachable — say exactly what the tool
 reported and stop: no silent retry, no writing anywhere else. Leave the draft in the conversation so it
@@ -136,9 +141,9 @@ duplicate, offer `docbrain_revise` on the id it gave. A premise path no connecte
 more (`premise_removed`): check the path in the file tree, correct that premise or drop it, and show
 the corrected draft for a new yes; never resend it unchanged. A refusal for a secret goes by Secrets above.
 
-## Step 4 — report in one line, then stop
+## Step 4 — report, then stop
 
-Repeat what the tool reported: the capture's id, its status in the tool's word (`indexed`: it is
+In one line, repeat what the tool reported: the capture's id, its status in the tool's word (`indexed`: it is
 served now and Ask can answer from it), and any warning it returned (for example a premise path that does not exist). Its page in the console says
 who recorded it, what checks it and where it helped.
 Do not summarise the capture again; only after a yes given in advance, show once what was sent (Step
