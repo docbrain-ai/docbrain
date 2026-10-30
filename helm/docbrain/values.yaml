@@ -534,11 +534,16 @@ rag:
 # speak to a premise) is never treated as `broken`; only a decisive absence is.
 premises:
   monitorEnabled: true
-  # -- Seconds between sweeps. Each sweep reads every premise row and settles
-  # each one, so this is the only dial on that cost: raise it on a large
-  # premise table to spend less, lower it to notice a broken claim sooner.
-  # Values below 5 are raised to 5 by the server.
+  # -- Seconds between sweeps. Each sweep reads the premises a connected source
+  # could settle, in pages of 1,000, and settles each one, so this is the only
+  # dial on that cost: raise it on a large premise table to spend less, lower it
+  # to notice a broken claim sooner. Values below 5 are raised to 5 by the server.
   sweepIntervalSeconds: 300
+  # -- Also extract premises from ingested documents, not only captured fragments
+  # (PREMISE_DOCUMENT_EXTRACTION). Off by default: turning it on runs a one-time
+  # pass over the whole corpus and creates a premise row for every path-shaped
+  # claim in it; docs/premises.md gives the cost. Deterministic, no LLM call.
+  documentExtraction: false
 
 # -- OpenSearch index names (change if sharing a cluster with other apps)
 opensearch:

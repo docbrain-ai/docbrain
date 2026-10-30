@@ -40,13 +40,14 @@ check" — never "broken".
    checks `premise_type: "path"`; other types are recorded but never checked (and never
    alert). Malformed entries are skipped item-by-item — a bad premise never fails the
    capture. The array is capped at **100 items**; a capture declaring more is rejected with
-   `400` rather than truncated, because the sweep reads every premise row in one unpaged
-   query and that cap is what keeps its working set bounded by fragment volume.
+   `400` rather than truncated, so a declared premise is never dropped silently and one capture
+   cannot create an unbounded number of premise rows.
 3. **A commit capture's changed files.** `docbrain_commit_capture` records why a change was
    made; the server turns each path in its `file_paths` list into a `path` premise, so the
    capture is checked against the files it describes and is flagged when one of them moves
    or disappears. Without it a commit capture could never be checked against the code again.
-   Repeats collapse to one premise, and the same 100-item cap applies. A commit capture sent
+   Repeats collapse to one premise, and the same 100-item cap applies (paths past the 100th are
+   dropped, not refused). A commit capture sent
    with no files declares nothing; it is served at once, labelled *Not checked against code*.
 4. **Backfill.** `POST /api/v1/premises/backfill` (admin) extracts premises for every
    already-indexed fragment that has none. Safe to re-run; it never duplicates.
@@ -399,8 +400,8 @@ it always did. The monitor adds a five-minute heartbeat of list-against-list com
 | Variable | Default | Description |
 |---|---|---|
 | `PREMISE_MONITOR_ENABLED` | `true` | The standing monitor. Turning it off stops sweeps and events; premise rows and the answer-time verifier are unaffected. Helm: `premises.monitorEnabled`. |
-| `PREMISE_SWEEP_INTERVAL_SECS` | `300` | Seconds between sweeps. The only dial on sweep cost — each sweep reads and settles every premise row. Values below `5` are raised to `5`. Helm: `premises.sweepIntervalSeconds`. |
-| `PREMISE_DOCUMENT_EXTRACTION` | `false` | Also extract premises from ingested documents, not only captures. Off by default: turning it on starts a one-time pass over the whole corpus (see the cost above). |
+| `PREMISE_SWEEP_INTERVAL_SECS` | `300` | Seconds between sweeps. The only dial on sweep cost: each sweep reads the premises a connected source could settle, in pages of 1,000, and settles each one. Values below `5` are raised to `5`. Helm: `premises.sweepIntervalSeconds`. |
+| `PREMISE_DOCUMENT_EXTRACTION` | `false` | Also extract premises from ingested documents, not only captures. Off by default: turning it on starts a one-time pass over the whole corpus (see the cost above). Helm: `premises.documentExtraction`. |
 
 Premises need a git source with a recorded file listing — see the GitHub source in
 [Configuration](configuration.md). A deployment with no listings runs the monitor inertly:

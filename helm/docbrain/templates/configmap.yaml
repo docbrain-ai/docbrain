@@ -271,6 +271,7 @@ data:
   RAG_CLAIM_VERIFICATION: {{ if kindIs "invalid" .Values.rag.claimVerification }}"true"{{ else }}{{ .Values.rag.claimVerification | quote }}{{ end }}
   PREMISE_MONITOR_ENABLED: {{ if kindIs "invalid" .Values.premises.monitorEnabled }}"true"{{ else }}{{ .Values.premises.monitorEnabled | quote }}{{ end }}
   PREMISE_SWEEP_INTERVAL_SECS: {{ if kindIs "invalid" .Values.premises.sweepIntervalSeconds }}"300"{{ else }}{{ .Values.premises.sweepIntervalSeconds | quote }}{{ end }}
+  PREMISE_DOCUMENT_EXTRACTION: {{ if kindIs "invalid" .Values.premises.documentExtraction }}"false"{{ else }}{{ .Values.premises.documentExtraction | quote }}{{ end }}
   RAG_CACHE_TTL_HOURS: {{ .Values.rag.cacheTtlHours | default 24 | quote }}
   {{- /* Retired (#467): rendered only when a values file still sets it, so the server's
          startup warning tells that deployment to use cacheTtlHours: 0 instead. */}}
