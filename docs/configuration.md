@@ -976,12 +976,13 @@ This makes `allowed_spaces` ACL filtering work correctly for captured content â€
 Every capture is checked for secrets before it is saved (see
 [What a capture never holds](agents.md#what-a-capture-never-holds)). Two checks run: a fixed check of known secret
 shapes, and then the fast model your DocBrain is configured with reads the capture's text and lists any password,
-key or token written in it. **Every capture's text is sent to the configured fast model's provider for this check.**
+key or token written in it. When it lists one it reads the text twice more, and a value counts when at least two of the
+three reads agree. **Every capture's text is sent to the configured fast model's provider for this check.**
 Use a local provider if capture text must not leave your network.
 
 | Variable | Default | Description |
 |---|---|---|
-| `CAPTURE_SECRET_CHECK_TIMEOUT_SECS` | `10` | The model check's whole budget for one text, in seconds (every attempt, the reply and its parsing). The default is about three times the measured 95th-percentile reply time of a hosted fast model; size it at three times your fast model's p95 (a self-hosted model is often slower). When the budget runs out the capture is saved after the fixed check and the model checks it as soon as it can; until then it may be served. `0` is refused at startup. |
+| `CAPTURE_SECRET_CHECK_TIMEOUT_SECS` | `10` | The model check's whole budget for one text, in seconds (every attempt, the reply and its parsing). The default is about three times the measured 95th-percentile reply time of a hosted fast model; size it at three times your fast model's p95 (a self-hosted model is often slower). When the budget runs out the capture is saved after the fixed check and the model checks it as soon as it can; until then it may be served. If it runs out during the two further reads, the value counts. `0` is refused at startup. |
 | `CAPTURE_SECRET_CHECK_MAX_REPLY_TOKENS` | `4096` | The reply budget, in tokens, the model check asks the provider for. Many providers refuse a larger output cap. A reply cut off at the budget fails closed (the text is not accepted on that reply) and does not count toward the capture pause. `0` is refused at startup. |
 
 ## Memory Consolidation
