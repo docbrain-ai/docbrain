@@ -176,6 +176,45 @@ async fn a_write_tool_is_decided_by_the_server_not_by_a_cached_role() {
     assert_eq!(backend.sent().len(), 1);
 }
 
+/// #604: nothing re-checks a code hash, so the note after a save says so, and never promises a flag.
+/// It asks for premises only when none were declared.
+#[tokio::test]
+async fn a_saved_capture_promises_only_the_check_that_exists() {
+    async fn saved(arguments: Value) -> String {
+        let backend = Recording::answering(|_| {
+            Ok(ApiResponse { status: 201, body: json!({"id": ID, "status": "indexed"}).to_string() })
+        });
+        let server = McpServer::with_backend(backend);
+        let (result, _) = call(&server, "docbrain_annotate", arguments).await;
+        text(&result.expect("a result"))
+    }
+    let hash = saved(json!({"file_path": "a.rs", "annotation": "why", "code_snippet": "let x = 1;"})).await;
+    assert!(hash.contains(" Code hash saved. DocBrain does not re-check it yet; the paths in premises are what it checks."), "{hash}");
+    let tip = saved(json!({"file_path": "a.rs", "annotation": "why"})).await;
+    assert!(tip.contains(" Tip: declare premises so DocBrain can check this capture."), "{tip}");
+    let empty = saved(json!({"file_path": "a.rs", "annotation": "why", "premises": []})).await;
+    assert!(empty.contains(" Tip: declare premises so DocBrain can check this capture."), "{empty}");
+    let declared = saved(json!({
+        "file_path": "a.rs", "annotation": "why",
+        "premises": [{"premise_type": "path", "expression": "src/a.rs"}]
+    }))
+    .await;
+    assert!(!declared.contains("Tip:"), "{declared}");
+    let both = saved(json!({
+        "file_path": "a.rs", "annotation": "why", "code_snippet": "let x = 1;",
+        "premises": [{"premise_type": "path", "expression": "src/a.rs"}]
+    }))
+    .await;
+    assert!(both.contains(" Code hash saved. DocBrain does not re-check it yet; the paths in premises are what it checks."), "{both}");
+    for premises in [json!(null), json!("src/a.rs")] {
+        let none = saved(json!({"file_path": "a.rs", "annotation": "why", "premises": premises})).await;
+        assert!(none.contains(" Tip: declare premises so DocBrain can check this capture."), "{none}");
+    }
+    for note in [&hash, &tip, &empty, &declared, &both] {
+        assert!(!note.contains("flagged if the code changes") && !note.contains("drift"), "{note}");
+    }
+}
+
 /// rev 8 §4: a route refusal (role, secret gate, duplicate) is a tool result with `isError: true`, in
 /// the server's words — never a plain result a host or model could read as saved. The bodies are the
 /// server's own refusal shapes (routes/capture_refusal.rs, admin_auth.rs, fragments/lifecycle.rs).

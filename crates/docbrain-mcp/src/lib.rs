@@ -666,7 +666,7 @@ impl<B: Backend> McpServer<B> {
                             },
                             "code_snippet": {
                                 "type": "string",
-                                "description": "The actual code at the annotated location. Used to compute a hash for drift detection — if the code changes later, the annotation is flagged as potentially stale."
+                                "description": "The actual code at the annotated location. Stored as a hash; nothing re-checks it yet."
                             },
                             "space": {
                                 "type": "string",
@@ -1152,7 +1152,7 @@ impl<B: Backend> McpServer<B> {
     /// Creates a knowledge fragment via `POST /api/v1/fragments` with:
     /// - `source_type: ide_annotation`
     /// - `code_location: file_path:line_range` (or just file_path)
-    /// - `code_hash: SHA-256(code_snippet)` for drift detection
+    /// - `code_hash: SHA-256(code_snippet)`
     async fn tool_annotate(&self, args: &Value) -> Result<Value, String> {
         let gap_id = gap_cluster_id(args)?;
         let file_path = args["file_path"].as_str().ok_or_else(|| String::from("Missing 'file_path' parameter"))?;
@@ -1192,7 +1192,7 @@ impl<B: Backend> McpServer<B> {
             None => file_path.to_string(),
         };
 
-        // Compute code_hash from snippet for drift detection
+        // Compute code_hash from snippet
         let code_hash = args["code_snippet"].as_str().map(|snippet| {
             let mut hasher = Sha256::new();
             hasher.update(snippet.as_bytes());
@@ -1241,10 +1241,11 @@ impl<B: Backend> McpServer<B> {
 
         match self.create_fragment(&body).await? {
             Ok(result) => {
-                let drift_note = if code_hash.is_some() {
-                    " Code hash saved — annotation will be flagged if the code changes."
-                } else {
-                    " Tip: pass code_snippet to enable drift detection."
+                let declared = args["premises"].as_array().is_some_and(|p| !p.is_empty());
+                let check_note = match (&code_hash, declared) {
+                    (Some(_), _) => " Code hash saved. DocBrain does not re-check it yet; the paths in premises are what it checks.",
+                    (None, false) => " Tip: declare premises so DocBrain can check this capture.",
+                    (None, true) => "",
                 };
 
                 Ok(json!({
@@ -1252,7 +1253,7 @@ impl<B: Backend> McpServer<B> {
                         "type": "text",
                         "text": format!(
                             "Knowledge captured: {} annotation at {}\n{}\n{}",
-                            fragment_type, code_location, capture_report(&result), drift_note
+                            fragment_type, code_location, capture_report(&result), check_note
                         )
                     }]
                 }))
@@ -1994,6 +1995,24 @@ mod tests {
         McpServer::from_parts("http://localhost:9999".to_string(), Some("test_key".to_string()))
     }
 
+    /// #604: the hash is stored and nothing re-checks it, so no tool text may promise that it does.
+    #[test]
+    fn the_tool_text_promises_no_code_check() {
+        let list = make_server().handle_tools_list();
+        let annotate = list["tools"]
+            .as_array()
+            .expect("tools should be an array")
+            .iter()
+            .find(|t| t["name"] == "docbrain_annotate")
+            .expect("docbrain_annotate");
+        assert_eq!(
+            annotate["inputSchema"]["properties"]["code_snippet"]["description"],
+            "The actual code at the annotated location. Stored as a hash; nothing re-checks it yet."
+        );
+        let all = list.to_string();
+        assert!(!all.contains("drift detection") && !all.contains("flagged as potentially stale"));
+    }
+
     #[test]
     fn tools_list_includes_new_tools() {
         let server = make_server();
@@ -2147,7 +2166,7 @@ mod tests {
     }
 
     #[test]
-    fn annotate_computes_code_hash_for_drift() {
+    fn annotate_computes_code_hash() {
         // Verify SHA-256 hash computation matches expected output
         let code = "fn main() { println!(\"hello\"); }";
         let mut hasher = Sha256::new();
