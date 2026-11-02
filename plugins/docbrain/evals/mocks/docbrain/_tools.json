@@ -68,7 +68,7 @@
             "type": "string"
           },
           "code_snippet": {
-            "description": "The actual code at the annotated location. Used to compute a hash for drift detection — if the code changes later, the annotation is flagged as potentially stale.",
+            "description": "The actual code at the annotated location. Kept as a hash and not re-checked: name the lines a 'code' premise instead.",
             "type": "string"
           },
           "file_path": {
@@ -95,7 +95,7 @@
             "type": "string"
           },
           "premises": {
-            "description": "Optional machine-checkable premises this annotation rests on; v1 checks type 'path'",
+            "description": "Optional machine-checkable premises this annotation rests on: a 'path' that must exist, a 'version' or 'config_key' value, or a 'code' premise naming two lines of code (the docbrain-capture skill says how)",
             "items": {
               "properties": {
                 "expression": {
@@ -154,7 +154,7 @@
             "type": "string"
           },
           "premises": {
-            "description": "Optional machine-checkable premises this reasoning rests on, beyond the changed files; v1 checks type 'path'",
+            "description": "Optional machine-checkable premises this reasoning rests on, beyond the changed files: a 'path' that must exist, a 'version' or 'config_key' value, or a 'code' premise naming two lines of code (the docbrain-capture skill says how)",
             "items": {
               "properties": {
                 "expression": {

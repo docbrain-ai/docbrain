@@ -143,10 +143,13 @@ When calling `docbrain_annotate` or `docbrain_commit_capture`, agents may includ
 **Premise Types (v1):**
 
 - `path` — A file path that must exist in a connected source. DocBrain monitors this path against your git sources' file listings (see `PREMISE_MONITOR_ENABLED`). If the path is verified at capture and later disappears, the annotation fires a `premise.broken` event. Paths never found at capture remain `dormant` — they do not alert.
+- `code` — Two lines of code a statement rests on, one per line of the expression, each `<repository>:<path>#<text>` with the same repository on both (`github:owner/name` or `gitlab:group/name`, read from `git remote get-url origin`, without `.git`). Copy each `<text>` exactly from the file, the smallest piece of the line that would have to change for your statement to stop being true: a name and its value, not a whole call. Pick two lines that would both have to change for your statement to stop being true; DocBrain warns readers only when both are gone, so a line that would outlive your statement keeps a wrong note quiet. If you cannot find two such lines, declare none, and take none too if your statement is that something is absent or rests on behaviour spread over many lines: say so in the capture instead. Exactly two lines, from one repository, are stored; anything else comes back as `premise not stored: a code premise names exactly two different lines from one repository`. The capture reads *Cited code still there* while the lines are there, *A cited line is gone* when one has gone, and *Code it rests on changed* when both have.
+
+`code_snippet` is kept as a hash and is not re-checked; the `code` premise is what DocBrain checks.
 
 **Other Premise Types:**
 
-Other `premise_type` values are accepted and recorded but not currently validated. They remain in `dormant` state and never trigger alerts. This allows agents to encode additional premise types for future validation.
+Other `premise_type` values (those that are not `path`, `version`, `config_key` or `code`) are accepted and recorded but not currently validated. They remain in `dormant` state and never trigger alerts. This allows agents to encode additional premise types for future validation.
 
 **Malformed Premises:**
 
@@ -251,7 +254,7 @@ root, not at an org that has recorded nothing.
 2. You and your agent fix something real.
 3. The agent asks DocBrain whether that knowledge already exists (`docbrain_context` for the files involved — a lookup in the record, not a guess).
 4. If the org doesn't have it, the agent drafts a capture and **asks you first**. You see exactly what leaves the machine.
-5. A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One whose declared premises all hold reads *Checked against code*: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One with a claim that does not hold names why: *Not found in any connected repository* (a path no repository has, say) or *Does not match the connected repository* (a version that differs), and the save-time reply says which. One where no claim fails but some cannot be checked now (their repository is disconnected, say) reads *Cannot be checked now*, even when its other claims hold. One anchored to nothing checkable is served too, labelled *Not checked against code*, so every reader knows.
+5. A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One whose declared premises all hold reads *Cited code still there*: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One with a claim that does not hold names why: *Not found in any connected repository* (a path no repository has, say) or *Does not match the connected repository* (a version that differs), and the save-time reply says which. One where no claim fails but some cannot be checked now (their repository is disconnected, say) reads *Cannot be checked now*, even when its other claims hold. One anchored to nothing checkable is served too, labelled *Not checked against code*, so every reader knows.
 
 A capture is refused when a premise it declares names a file a connected repository was recorded
 holding and none holds now: the reply is `422 premise_removed` naming the path, and the agent corrects

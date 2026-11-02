@@ -624,7 +624,8 @@ its words and what checks it, and the console's **Captures** page shows it:
 - **Two writers.** A person (from the IDE through the skill, the CLI, the API or a `/capture` command):
   *Recorded by <name>*. DocBrain itself, summarising a thread, a pull request or a CI run:
   *Summarised by DocBrain from <source>*, with the person who asked for it credited as its capturer.
-- **Three labels**, computed when it is read: *Checked against code* (a premise it declares holds),
+- **Four labels**, computed when it is read: *Cited code still there* (a premise it declares holds),
+  *A cited line is gone* (a two-line `code` premise has lost one of its lines: a quiet grey mark, no alert),
   *Code it rests on changed* (a premise is broken: answers that cite it carry a warning and its author
   is told once), *Not checked against code* (nothing checks it, and every reader can see that).
 - **Its author manages it.** Edit (a person-written capture, while it is served), Withdraw (at any

@@ -54,7 +54,23 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
 - Anchor it. Give the file and line range it concerns (`file_path`, `line_range`). Read the file first:
   the lines you name must hold what the capture says. If the change described is not in the file, say
   so and ask where it lives; never anchor a capture to lines that do not contain it. Pass those exact
-  lines as `code_snippet`: DocBrain hashes them and flags the capture the day that code changes.
+  lines as `code_snippet`. DocBrain keeps their hash but does not re-check them; the `code` premise below is what it checks.
+- If your statement stops being true when the code changes, name what it rests on as one `code` premise of two different
+  lines of code, each on its own line of the premise:
+
+  ```
+  <repository>:<path>#<text>
+  <repository>:<path>#<text>
+  ```
+
+  `<repository>` is the repository holding both files: `github:owner/name` or `gitlab:group/name`, read from
+  `git remote get-url origin` in that checkout, without `.git`. If it is on neither, declare none. Copy each `<text>`
+  exactly from the file, and take the smallest piece of that line that would have to change for your statement to stop
+  being true: a name and its value, not a whole call. Quote a call's arguments only if the arguments are what you are
+  saying. Pick two lines that would both have to change for your statement to stop being true. DocBrain warns readers only
+  when both are gone, so a line that would outlive your statement keeps a wrong note quiet. If you cannot find two such
+  lines, declare none. Take none too if your statement is that something is absent, or if it rests on behaviour spread over
+  many lines: say so in the capture instead.
 - `docbrain_commit_capture` is for one moment: the person is about to commit, or asks to record why
   a commit was made, and the reason is not in the message. The signals are the person's own words —
   "about to commit", "before I commit", "the message will say", "record why I changed" — and when
@@ -76,7 +92,7 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
   now — check it before you show or send the draft; a path that does not exist is not a premise, and a wrong one
   goes silent forever. DocBrain re-checks the paths and flags the capture the day one disappears. A
   capture is served the moment it is written, labelled with who wrote it and what checks it: with
-  premises that hold it reads *Checked against code*; with none it reads *Not checked against code*.
+  premises that hold it reads *Cited code still there*; with none it reads *Not checked against code*.
   Declaring the premises is what earns the first label.
 - When the capture relies on something another team's or a library's code provides — a module, a
   file, an entry point you import or call — and that thing is a file, the premise names the exact
@@ -86,6 +102,7 @@ One capture per fact. Fill `resources/capture-template.md`; finished examples ar
   or a behaviour in that file — a default, a version, a key's value, an ordering, an error shape, how
   input is parsed — say in the capture that this is not checked; never write a path premise as a
   stand-in for it, because the file survives while what is in it changes.
+- DocBrain checks a path exists, a value matches, and that two cited lines are still there. It does not check behaviour, absence, or anything spread over many lines: say those in the capture.
 - When the capture answers an open question DocBrain suggested (`docbrain_suggest_capture`), pass that
   question's id as `gap_id`: the question closes for whoever asks next.
 - Choose the type: `decision` (why something was chosen), `fact` (how something works), `caveat` (a

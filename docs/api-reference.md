@@ -1901,7 +1901,7 @@ Each SSE message includes:
 
 Create a new knowledge fragment. **Requires editor role.**
 
-A capture is served the moment it is written. Its label is computed when it is read: *Checked against code* (a premise holds and none is broken), *Code it rests on changed* (a premise is broken), *Not checked against code* (otherwise). A `confidence` sent in the request is ignored.
+A capture is served the moment it is written. Its label is computed when it is read: *Cited code still there* (a premise holds and none is broken; *A cited line is gone* when a `code` premise has held and one of its two lines has gone), *Code it rests on changed* (a premise is broken), *Not checked against code* (otherwise). A `confidence` sent in the request is ignored.
 
 The server refuses, saving nothing:
 
@@ -1946,7 +1946,7 @@ Errors share one shape: `{"error": "...", "kind": "...", "id"?: "..."}`. A decla
 | `space` | string | no | Space for routing/filtering |
 | `related_doc_ids` | UUID[] | no | Related document IDs |
 | `code_location` | string | no | File path and line (e.g. `src/foo.rs:42`) |
-| `premises` | object[] | no | Conditions that must stay true for the fragment to hold, each `{"premise_type": "path", "expression": "<repo-relative path>"}`. Makes an anchored capture falsifiable. `path` is the only type checked in v1. |
+| `premises` | object[] | no | Conditions that must stay true for the fragment to hold, each `{"premise_type": "path", "expression": "<repo-relative path>"}`. Makes an anchored capture falsifiable. `path`, `version`, `config_key` and `code` are checked; a `code` expression is two lines, `<repository>:<path>#<text>` each, from one repository, and anything else is not stored (`premise not stored: a code premise names exactly two different lines from one repository`). |
 
 **Response:** `201 Created`
 ```json
@@ -2002,7 +2002,7 @@ Withdraw every live capture one author recorded, in one act. **Requires admin ro
 
 ### GET /api/v1/fragments/:id/page
 
-A capture's own page: the capture and its label, its premises with state and when last checked, its history, and the actions this caller may take. `helped` (people helped this month, open questions closed, answers marked wrong, and topic rows counting people) is returned to the capture's author only; who asked is never returned. `404` for a capture the caller cannot see.
+A capture's own page: the capture and its label, its premises with state and when last checked, its history, and the actions this caller may take. Each premise's `reading` is `{state, label, checked_at}`; a `code` premise that has held and lost one of its two lines reads `state: "line_gone"`, label *A cited line is gone*, and carries `line_gone` (`0` or `1`, the line that went; absent on every other reading). `helped` (people helped this month, open questions closed, answers marked wrong, and topic rows counting people) is returned to the capture's author only; who asked is never returned. `404` for a capture the caller cannot see.
 
 ### GET /api/v1/captures/mine/impact
 

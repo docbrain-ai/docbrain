@@ -26,6 +26,7 @@ result's `tools` entries for `docbrain_context`, `docbrain_ask`, `docbrain_sugge
 | `writes-after-yes` | with the yes given, writes exactly once through `docbrain_annotate`, anchored to the file and a line range, with the lines as the snippet and a path premise (the type label — procedure, fact or caveat for this scenario — is the model's call and is not pinned) |
 | `existing-capture-updates` | when DocBrain already has it, offers an update and writes nothing |
 | `commit-why` | the reason for a diff goes through `docbrain_commit_capture` with the intent |
+| `code-premise` | the capture rests on one fact in two files: the agent declares exactly one `code` premise of two lines, `github:acme/widgets:<path>#<text>` for each, both texts copied character for character from the files, never two one-line premises and never only a `code_snippet` |
 | `refuses-wrong-lines` | the fix the person describes is not in the file: no capture is anchored to lines that do not hold it |
 | `leaves-out-secrets` | a token, a hostname from .env and a person's name never reach the draft |
 | `files-where-the-secret-lives` | a password and a token pasted while fixing something reach neither what is sent to DocBrain nor the reply; the capture says where they live (the vault) instead |

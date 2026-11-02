@@ -36,9 +36,10 @@ check" — never "broken".
    premises. Prose mentions, globs, URLs, flags, and placeholders are ignored — the same
    grammar the [answer-time claim verifier](configuration.md) uses.
 2. **Explicit declaration.** Agents capturing over MCP can pass a `premises` array to
-   `docbrain_annotate` or `docbrain_commit_capture` — see [Agent Capture](agents.md). v1
-   checks `premise_type: "path"`; other types are recorded but never checked (and never
-   alert). Malformed entries are skipped item-by-item — a bad premise never fails the
+   `docbrain_annotate` or `docbrain_commit_capture` — see [Agent Capture](agents.md). A
+   `path`, a `version` or `config_key` value, and a `code` premise of two lines (see
+   [Code premises](#code-premises)) are checked; other types are recorded but never checked (and
+   never alert). Malformed entries are skipped item-by-item — a bad premise never fails the
    capture. The array is capped at **100 items**; a capture declaring more is rejected with
    `400` rather than truncated, so a declared premise is never dropped silently and one capture
    cannot create an unbounded number of premise rows.
@@ -74,6 +75,7 @@ surface shows `label` as it comes and never labels a premise from `state` alone.
 | `holds` | Holds | `holds` |
 | `broken` | Broken | `broken` |
 | `not_found` | Not found in any connected repository | a `dormant` path premise whose last check found it in no listing (`missing` or `moved`) |
+| `line_gone` | A cited line is gone | a `code` premise that has held, with one of its two lines gone; the reading then also carries `line_gone`, `0` or `1`, the line that went (absent otherwise) |
 | `not_checked_yet` | Not checked yet | a `dormant` premise nothing has checked yet |
 | `does_not_match` | Does not match the connected repository | a `dormant` version or config-key premise whose value, at the last check, differs from the repository's |
 | `cannot_be_checked` | Cannot be checked now · last verified <date> | `uncheckable`, last verdict `verified` |
@@ -118,11 +120,12 @@ when a claim broke; when a claim was checked and does not hold, its reason in th
 amber: *Not found in any connected repository* (or *Not found in any repository you can read*),
 *Does not match the connected repository*, or *Broken* for a claim that broke with no basis — with
 claims of several kinds, *Not found* wins (nothing to compare against), then *Does not match*;
-*Checked against code* only when every claim holds; *Not checked against code* when nothing has been
+*A cited line is gone* when a `code` claim that held has lost one of its two lines (grey, like
+*Not checked against code*: a quiet fact, never an alert); *Cited code still there* only when every claim holds; *Not checked against code* when nothing has been
 checked; otherwise (no claim fails and some cannot be checked now) *Cannot be checked now*, also when
 other claims hold: the capture as a whole cannot be confirmed now. A claim that
 holds beside one not checked yet, with none uncheckable, reads *Not checked against code*. The wire
-value is `label.check`: `checked_against_code`, `code_changed`, `not_found`,
+value is `label.check`: `checked_against_code` (the chip *Cited code still there*), `line_gone`, `code_changed`, `not_found`,
 `not_found_where_you_can_read`, `does_not_match`, `broken`, `cannot_be_checked_now`,
 `not_checked_against_code`.
 
@@ -179,6 +182,58 @@ It is a warning, not a refusal: the capture is saved. With no connected listing 
 warns.
 A commit's own file list, the premises an edit keeps, and DocBrain-written summaries are never
 refused; with no connected listing loaded, nothing is.
+
+## Code premises
+
+A `code` premise says what a capture rests on in the code itself, and DocBrain keeps checking that
+it is still there. It is declared through `docbrain_annotate` or `docbrain_commit_capture` like any
+premise, and an agent learns how from the `docbrain-capture` skill, which says:
+
+> If your statement stops being true when the code changes, name what it rests on as one `code` premise of two different
+> lines of code, each on its own line of the premise:
+>
+> ```
+> <repository>:<path>#<text>
+> <repository>:<path>#<text>
+> ```
+>
+> `<repository>` is the repository holding both files: `github:owner/name` or `gitlab:group/name`, read from
+> `git remote get-url origin` in that checkout, without `.git`. If it is on neither, declare none. Copy each `<text>`
+> exactly from the file, and take the smallest piece of that line that would have to change for your statement to stop
+> being true: a name and its value, not a whole call. Quote a call's arguments only if the arguments are what you are
+> saying. Pick two lines that would both have to change for your statement to stop being true. DocBrain warns readers only
+> when both are gone, so a line that would outlive your statement keeps a wrong note quiet. If you cannot find two such
+> lines, declare none. Take none too if your statement is that something is absent, or if it rests on behaviour spread over
+> many lines: say so in the capture instead.
+
+Exactly two lines, from the same repository, neither containing the other; anything else is not
+stored. A verdict needs both lines read. What a reader sees:
+
+| What DocBrain finds | Chip | Quiet or loud |
+|---|---|---|
+| Both lines there | *Cited code still there* | quiet |
+| It has held, and one line is gone | *A cited line is gone* | quiet: grey, no alert, no digest line, no event |
+| It has held, and both lines are gone | *Code it rests on changed* | loud: the capture is flagged, answers that cite it carry a note, its author is told once |
+| The two lines were never seen together | *Does not match the connected repository* | quiet: no alert |
+| The repository is not connected, or a line cannot be read | *Cannot be checked* | quiet |
+
+On the capture page the line that went is marked *gone*. When both are gone, an answer that draws
+on the capture carries: "⚠ Code changed: this answer draws on a note that rests on `{text1}` and
+`{text2}` in `{path}`. Neither is there any more ({basis}). Check it before relying on this." (with
+two files: "… rests on `{text1}` in `{path1}` and `{text2}` in `{path2}`. Neither is there any
+more …"). The author's digest prints the two lines joined by " · ".
+
+A capture that does not name exactly two different lines from one repository is saved, but the
+reply carries the warning `premise not stored: a code premise names exactly two different lines from
+one repository`, and an edit that does so is refused with `not saved: a code premise names exactly
+two different lines from one repository`. A repository no connected source names is saved with the
+warning `the repository this capture rests on is not connected: {repository}`; a writer who cannot
+read any repository of that name is told `premise not stored: no repository you can read is named
+{repository}` (`not saved: …` on an edit).
+
+**What it does not check.** That the code still behaves as the capture says, that something is
+absent, or anything spread over many lines. It checks that two lines a writer cited are still
+there, and says so in those words.
 
 ## The monitor
 
