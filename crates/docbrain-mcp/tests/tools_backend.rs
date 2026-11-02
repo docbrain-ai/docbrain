@@ -189,7 +189,7 @@ async fn a_saved_capture_promises_only_the_check_that_exists() {
         text(&result.expect("a result"))
     }
     let hash = saved(json!({"file_path": "a.rs", "annotation": "why", "code_snippet": "let x = 1;"})).await;
-    assert!(hash.contains(" Code hash saved. DocBrain does not re-check it yet; the paths in premises are what it checks."), "{hash}");
+    assert!(hash.contains(" Code hash saved. DocBrain does not re-check it; a 'code' premise is what it checks."), "{hash}");
     let tip = saved(json!({"file_path": "a.rs", "annotation": "why"})).await;
     assert!(tip.contains(" Tip: declare premises so DocBrain can check this capture."), "{tip}");
     let empty = saved(json!({"file_path": "a.rs", "annotation": "why", "premises": []})).await;
@@ -205,7 +205,7 @@ async fn a_saved_capture_promises_only_the_check_that_exists() {
         "premises": [{"premise_type": "path", "expression": "src/a.rs"}]
     }))
     .await;
-    assert!(both.contains(" Code hash saved. DocBrain does not re-check it yet; the paths in premises are what it checks."), "{both}");
+    assert!(both.contains(" Code hash saved. DocBrain does not re-check it; a 'code' premise is what it checks."), "{both}");
     for premises in [json!(null), json!("src/a.rs")] {
         let none = saved(json!({"file_path": "a.rs", "annotation": "why", "premises": premises})).await;
         assert!(none.contains(" Tip: declare premises so DocBrain can check this capture."), "{none}");

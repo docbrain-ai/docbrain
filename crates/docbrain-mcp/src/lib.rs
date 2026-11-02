@@ -666,7 +666,7 @@ impl<B: Backend> McpServer<B> {
                             },
                             "code_snippet": {
                                 "type": "string",
-                                "description": "The actual code at the annotated location. Stored as a hash; nothing re-checks it yet."
+                                "description": "The actual code at the annotated location. Kept as a hash and not re-checked: name the lines a 'code' premise instead."
                             },
                             "space": {
                                 "type": "string",
@@ -686,7 +686,7 @@ impl<B: Backend> McpServer<B> {
                                     },
                                     "required": ["premise_type", "expression"]
                                 },
-                                "description": "Optional machine-checkable premises this annotation rests on; v1 checks type 'path'"
+                                "description": "Optional machine-checkable premises this annotation rests on: a 'path' that must exist, a 'version' or 'config_key' value, or a 'code' premise naming two lines of code (the docbrain-capture skill says how)"
                             }
                         },
                         "required": ["file_path", "annotation"]
@@ -766,7 +766,7 @@ impl<B: Backend> McpServer<B> {
                                     },
                                     "required": ["premise_type", "expression"]
                                 },
-                                "description": "Optional machine-checkable premises this reasoning rests on, beyond the changed files; v1 checks type 'path'"
+                                "description": "Optional machine-checkable premises this reasoning rests on, beyond the changed files: a 'path' that must exist, a 'version' or 'config_key' value, or a 'code' premise naming two lines of code (the docbrain-capture skill says how)"
                             }
                         },
                         "required": ["intent"]
@@ -1243,7 +1243,7 @@ impl<B: Backend> McpServer<B> {
             Ok(result) => {
                 let declared = args["premises"].as_array().is_some_and(|p| !p.is_empty());
                 let check_note = match (&code_hash, declared) {
-                    (Some(_), _) => " Code hash saved. DocBrain does not re-check it yet; the paths in premises are what it checks.",
+                    (Some(_), _) => " Code hash saved. DocBrain does not re-check it; a 'code' premise is what it checks.",
                     (None, false) => " Tip: declare premises so DocBrain can check this capture.",
                     (None, true) => "",
                 };
@@ -2007,7 +2007,7 @@ mod tests {
             .expect("docbrain_annotate");
         assert_eq!(
             annotate["inputSchema"]["properties"]["code_snippet"]["description"],
-            "The actual code at the annotated location. Stored as a hash; nothing re-checks it yet."
+            "The actual code at the annotated location. Kept as a hash and not re-checked: name the lines a 'code' premise instead."
         );
         let all = list.to_string();
         assert!(!all.contains("drift detection") && !all.contains("flagged as potentially stale"));

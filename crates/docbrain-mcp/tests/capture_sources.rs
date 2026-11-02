@@ -71,7 +71,7 @@ fn body() -> Value {
             { "title": "A note without a link", "source_url": "",
               "capture": label("Summarised by DocBrain from #ops", "Not checked against code") },
             { "title": "A linked note", "source_url": "https://code.example/pr/7",
-              "capture": label("Recorded by an unnamed author", "Checked against code") },
+              "capture": label("Recorded by an unnamed author", "Cited code still there") },
             { "title": "A page with no link", "source_url": "" }
         ]
     })
@@ -107,7 +107,7 @@ async fn a_capture_without_a_url_is_listed_with_its_label() {
 async fn a_capture_with_a_url_is_linked_and_carries_its_label() {
     for (tool, text) in both_tools().await {
         assert!(
-            has_line(&text, "- [A linked note](https://code.example/pr/7) — Recorded by an unnamed author · Checked against code"),
+            has_line(&text, "- [A linked note](https://code.example/pr/7) — Recorded by an unnamed author · Cited code still there"),
             "{tool}: the linked capture is missing or not in the server's words:\n{text}"
         );
     }
@@ -138,11 +138,11 @@ async fn a_half_label_falls_back_to_document_behaviour() {
             { "title": "Only who, linked", "source_url": "https://code.example/a",
               "capture": { "attribution_line": "Recorded by an unnamed author" } },
             { "title": "Only check, linked", "source_url": "https://code.example/b",
-              "capture": { "check_label": "Checked against code" } },
+              "capture": { "check_label": "Cited code still there" } },
             { "title": "Only who, no link", "source_url": "",
               "capture": { "attribution_line": "Recorded by an unnamed author" } },
             { "title": "Only check, no link", "source_url": "",
-              "capture": { "check_label": "Checked against code" } }
+              "capture": { "check_label": "Cited code still there" } }
         ]
     }))
     .await;
