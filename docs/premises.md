@@ -229,7 +229,11 @@ one repository`, and an edit that does so is refused with `not saved: a code pre
 two different lines from one repository`. A repository no connected source names is saved with the
 warning `the repository this capture rests on is not connected: {repository}`; a writer who cannot
 read any repository of that name is told `premise not stored: no repository you can read is named
-{repository}` (`not saved: …` on an edit).
+{repository}` (`not saved: …` on an edit). A restricted writer whose edit keeps a pair on such a
+repository is told only `no repository you can read is named {repository}`, since the repository
+may well be connected. A path is refused unless a listing can hold it: no empty or `.` or `..`
+segment, no leading or trailing space. A path holding `#` cannot be cited, because a line is cut at
+its first `#`.
 
 **What it does not check.** That the code still behaves as the capture says, that something is
 absent, or anything spread over many lines. It checks that two lines a writer cited are still
@@ -282,7 +286,9 @@ dated to the commit it was observed at.
 
 - **Web:** the **Premises** page — broken premises newest-first with verdicts and bases, a
   collapsed Uncheckable section, and monitor health.
-- **API:** `GET /api/v1/premises/broken` (any state via `?state=`, paginated, analyst+),
+- **API:** `GET /api/v1/premises/broken` (any state via `?state=`, paginated, analyst+; `uncheckable` is
+  every premise that reads *Cannot be checked*, stored `uncheckable` or never verified with no connected
+  source to speak to it),
   `GET /api/v1/premises/health` (analyst+), `POST /api/v1/premises/backfill` (admin),
   `POST /api/v1/premises/check` (viewer; the pull-request check below).
 - **Pull requests:** `docbrain check-claims` — see [The pull-request check](#the-pull-request-check).
