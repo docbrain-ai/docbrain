@@ -122,7 +122,7 @@ DocBrain needs documents to answer questions. **Ingestion** is the process of fe
 
 ### Quick start: Use the included sample docs
 
-The sample docs are already mounted. Just run:
+The sample docs are already mounted, and the `ingest` service indexes them when the stack starts and again every hour (`INGEST_INTERVAL_SECS` in `.env`). `docker compose logs -f ingest` follows the first pass. To run a pass right now:
 
 ```bash
 docker compose exec server docbrain-ingest
@@ -207,10 +207,10 @@ sources:
       - PLAT
 ```
 
-Then restart and re-ingest:
+Then restart so the new sources are read; the next scheduled pass picks them up, or run one now:
 
 ```bash
-docker compose restart server
+docker compose restart server ingest
 docker compose exec server docbrain-ingest
 ```
 
@@ -324,7 +324,7 @@ If using Ollama, make sure it's running: `ollama list` should show your models.
 
 ### Empty answers or "no relevant documents found"
 
-You need to run ingestion first:
+The `ingest` service runs a pass when the stack starts; `docker compose logs ingest` shows whether it finished. To run a pass now:
 
 ```bash
 docker compose exec server docbrain-ingest
@@ -356,8 +356,8 @@ If you want to start fresh:
 
 ```bash
 docker compose down -v    # stops services and deletes all data
-docker compose up -d      # start fresh
-docker compose exec server docbrain-ingest   # re-ingest
+docker compose up -d      # start fresh; the ingest service indexes the docs again
+docker compose logs -f ingest   # watch that first pass
 ```
 
 ## Explore the Web UI

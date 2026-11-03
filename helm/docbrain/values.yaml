@@ -85,9 +85,14 @@ embedding:
   modelId: text-embedding-3-small
   # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
 
-# -- Ingestion source: confluence | local | github
+# -- Ingestion. A source is on when its settings are given: localDocsPath for
+# files on a volume, the confluence block for Confluence pages. Every other
+# source (GitHub and GitLab repositories, pull requests, Slack, Jira, ...) is
+# described under `sources`, a map written as the `sources:` block of
+# config/local.yaml into the ingest job; the shape is in docs/configuration.md
+# under "Document Sources".
 ingest:
-  sources: local  # comma-separated: local, confluence, github, github_pr, slack_thread, jira, etc.
+  sources: {}
   schedule: "0 */6 * * *"   # every 6 hours
   localDocsPath: /data/docs
   # confluence:
@@ -98,9 +103,7 @@ ingest:
   #   apiVersion: v2          # v2 for Cloud (default), v1 for self-hosted Data Center
   #   pageIds: ""             # comma-separated page IDs (+ all descendants); from any space
   # github:
-  #   repoUrl: ""
   #   token: ""
-  #   branch: main
 
 # -- GitLab MR real-time capture webhook
 # Enables POST /api/v1/gitlab/events for `@docbrain capture` on merge requests.
@@ -208,6 +211,463 @@ server:
   # admin UI. To enable, uncomment (and mount the Secret at this path):
   #   env:
   #     DOCBRAIN_LICENSE_FILE: "/etc/docbrain/license.jws"
+  # >>> generated: settings the chart does not name — set them under env:; do not edit; run scripts/check-config-surfaces.py --write >>>
+  # ── Config File Location ──
+  #   DOCBRAIN_CONFIG_DIR: "config"   # Directory containing YAML config files.
+  #   APP_ENV: "development"   # Selects {APP_ENV}.yaml.
+  #
+  # ── Infrastructure ──
+  #   DATABASE_URL: ""   # PostgreSQL connection string. e.g. postgres://user:pass@host:5432/db
+  #   DOCBRAIN_FINGERPRINT_KEY: ""   # Key for the fingerprints DocBrain stores of secret values it finds (HMAC-SHA256).
+  #   DOCBRAIN_FINGERPRINT_KEY_FILE: ""   # Path to a file holding the key (what Compose's generated key uses).
+  #   DB_MAX_CONNECTIONS: "25"   # Maximum connections in each PostgreSQL pool the server opens.
+  #   DB_CONNECT_TIMEOUT_SECS: "10"   # Seconds the server waits to open its database connections at start before giving up.
+  #   DB_ACQUIRE_TIMEOUT_SECS: "10"   # Seconds a request waits for a free pooled connection before it fails.
+  #   DB_IDLE_TIMEOUT_SECS: "300"   # Seconds an unused pooled connection is kept before it is closed.
+  #
+  # ── LLM Provider ──
+  #   LLM_TIMEOUT_SECS: ""   # HTTP timeout in seconds for the LLM client (default: 120).
+  #   ANTHROPIC_API_KEY: ""   # Your Anthropic API key
+  #   OPENAI_API_KEY: ""   # Your OpenAI API key
+  #   AWS_REGION: ""   # AWS region for Bedrock (e.g. us-east-1)
+  #   AWS_ACCESS_KEY_ID: ""   # AWS access key (optional — see credential chain below)
+  #   AWS_SECRET_ACCESS_KEY: ""   # AWS secret key (optional — see credential chain below)
+  #   OLLAMA_TLS_VERIFY: ""   # Set false to skip TLS verification (default: false)
+  #   OPENAI_BASE_URL: ""   # Base URL of an OpenAI-compatible endpoint to use in place of OpenAI's own, for a proxy such as LiteLLM, vLLM or LocalAI.
+  #   GROQ_API_KEY: ""   # Your Groq API key.
+  #   OPENROUTER_API_KEY: ""   # Your OpenRouter API key.
+  #   TOGETHER_API_KEY: ""   # Your Together AI API key.
+  #   DEEPSEEK_API_KEY: ""   # Your DeepSeek API key.
+  #   MISTRAL_API_KEY: ""   # Your Mistral API key.
+  #   XAI_API_KEY: ""   # Your xAI API key.
+  #   GEMINI_API_KEY: ""   # Your Google Gemini API key.
+  #   HAIKU_MODEL_ID: ""   # Deprecated name for FAST_MODEL_ID.
+  #   OLLAMA_VISION_ENABLED: ""   # Set false or 0 to stop sending images to Ollama for description.
+  #
+  # ── Azure OpenAI ──
+  #   AZURE_OPENAI_API_KEY: ""   # Azure OpenAI API key
+  #
+  # ── Cohere ──
+  #   COHERE_API_KEY: ""   # Cohere API key
+  #
+  # ── Switching Embedding Models ──
+  #   FORCE_REINDEX: "false"   # Delete and recreate OpenSearch indexes when embedding dimensions change.
+  #
+  # ── Embedding provider tuning ──
+  #   BEDROCK_INITIAL_CONCURRENCY: "2"   # Bedrock: concurrent embedding requests the adaptive limiter starts at.
+  #   BEDROCK_MAX_CONCURRENCY: "16"   # Bedrock: the most concurrent embedding requests the limiter will allow.
+  #   OLLAMA_EMBED_MAX_RETRIES: "5"   # Ollama: how many times one embedding call is tried before it fails, with a growing pause between tries (capped at 10 seconds).
+  #
+  # ── Learning pipeline ──
+  #   EMBED_LOCAL_INFERENCE_URL: ""   # Base URL of the docbrain-trainer inference sidecar.
+  #   LEARNING_AZURE_ACCOUNT: ""   # Azure storage account for model storage.
+  #   LEARNING_MIN_FEEDBACK_USERS: "3"   # Fewest distinct identified users whose feedback a training run needs.
+  #   TRAINER_API_KEY: ""   # Key the server sends to the docbrain-trainer sidecar in the X-Trainer-Key header when it asks for embeddings (EMBED_PROVIDER=local).
+  #
+  # ── Local Files ──
+  #   LOCAL_ROOT_HOLDS_REPOSITORIES: "false"   # Set true when the path holds several repositories, one per top-level directory, rather than one tree.
+  #
+  # ── Confluence ──
+  #   CONFLUENCE_API_TOKEN: ""   # API token (Cloud) or Personal Access Token (Data Center)
+  #   CONFLUENCE_PAGE_LIMIT: "0"   # Max pages to ingest per space; 0 (the default) means no limit, so the knob does nothing until set
+  #   CONFLUENCE_TLS_VERIFY: "true"   # Set to false if using self-signed or internal CA certificates
+  #   CONFLUENCE_LICENSED_GROUPS: ""   # Comma-separated names of extra Confluence groups whose members hold a licence. confluence-users and confluence-users-<site> are always counted; add a group here
+  #   CONFLUENCE_WEBHOOK_SECRET: ""   # Shared secret that signs Confluence webhook calls to /confluence/events.
+  #
+  # ── Confluence background syncs ──
+  #   CONFLUENCE_USER_SYNC_INTERVAL_SECS: "900"   # Seconds between runs of the job that resolves Confluence account ids on documents to a name and email. 0 turns it off.
+  #   CONFLUENCE_USER_SYNC_BATCH_SIZE: "100"   # Account ids resolved per run.
+  #   CONFLUENCE_USER_SYNC_REFRESH_AFTER_DAYS: "30"   # Days before an account id that was already resolved is looked up again.
+  #   CONFLUENCE_USER_SYNC_PER_CALL_DELAY_MS: "100"   # Milliseconds between Confluence calls in that job; 100 holds it to about 10 requests a second.
+  #   CONFLUENCE_SPACE_ACCESS_SYNC_INTERVAL_SECS: "0"   # Seconds between recomputes of who can see each space. 0 leaves it off.
+  #
+  # ── GitHub PR Reviews (INGEST_SOURCES=github_pr) ──
+  #   GITHUB_PR_TOKEN: ""   # GitHub personal access token with repo:read (or public_repo) scope
+  #   GITHUB_PR_REPO: ""   # Repository in owner/repo format. e.g. acme/platform
+  #   GITHUB_PR_MIN_COMMENTS: "1"   # Minimum total review comments required to index a PR.
+  #   GITHUB_PR_LABELS: ""   # Comma-separated label filter.
+  #   GITHUB_PR_API_URL: "https://api.github.com"   # Override for GitHub Enterprise deployments
+  #
+  # ── GitHub Capture Webhook Security (INGEST_SOURCES=github_pr + real-time capture) ──
+  #   GITHUB_CAPTURE_ALLOWED_REPOS: ""   # Comma-separated owner/repo pairs that are allowed to trigger capture.
+  #   GITHUB_CAPTURE_ALLOWED_USERS: ""   # Comma-separated GitHub usernames allowed to trigger capture.
+  #   GITHUB_WEBHOOK_SECRET: ""   # Secret that signs GitHub webhook calls for @docbrain capture.
+  #   GITHUB_BOT_TOKEN: ""   # GitHub token the capture feature uses to read threads and post replies.
+  #
+  # ── GitLab MR + Review Notes (INGEST_SOURCES=gitlab_mr) ──
+  #   GITLAB_MR_TOKEN: ""   # GitLab personal or project access token with api scope
+  #   GITLAB_MR_BASE_URL: "https://gitlab.com"   # Base URL for self-hosted GitLab (e.g. https://gitlab.mycompany.com)
+  #   GITLAB_MR_PROJECT_IDS: ""   # Comma-separated project paths or IDs. e.g. acme/platform,acme/backend
+  #   GITLAB_MR_MIN_NOTES: "1"   # Minimum discussion notes to index an MR.
+  #   GITLAB_MR_LABELS: ""   # Comma-separated label filter.
+  #   GITLAB_MR_TLS_VERIFY: "true"   # Set to false to skip TLS certificate verification for self-hosted with internal CA
+  #   GITLAB_TOKEN: ""   # GitLab token with api scope for the GitLab source.
+  #   GITLAB_BASE_URL: "https://gitlab.com"   # Base URL of the GitLab instance for the GitLab source.
+  #   GITLAB_TLS_VERIFY: "true"   # Set false to skip TLS certificate checks for a self-hosted GitLab with a self-signed certificate.
+  #
+  # ── GitLab MR Capture Webhook ──
+  #   GITLAB_CAPTURE_WEBHOOK_SECRET: ""   # HMAC secret shared with GitLab for webhook signature verification
+  #   GITLAB_CAPTURE_TOKEN: ""   # GitLab personal access token with api scope, used to fetch MR notes and post reply comments
+  #
+  # ── Linear (INGEST_SOURCES=linear) ──
+  #   LINEAR_API_KEY: ""   # Linear personal API key — set in config/local.yaml or env var
+  #   LINEAR_TEAMS: ""   # Comma-separated team keys to index (e.g. ENG,OPS).
+  #   LINEAR_LOOKBACK_DAYS: "365"   # How many days back to ingest completed/cancelled issues
+  #   LINEAR_STATES: "Done,Cancelled,Duplicate"   # Comma-separated state names to include
+  #
+  # ── PagerDuty (INGEST_SOURCES=pagerduty) ──
+  #   PAGERDUTY_API_TOKEN: ""   # PagerDuty REST v2 API token — set in config/local.yaml or env var
+  #   PAGERDUTY_LOOKBACK_DAYS: "180"   # Days back to ingest resolved incidents
+  #   PAGERDUTY_MIN_DURATION: "5"   # Skip incidents shorter than this many minutes (filters noise/blips)
+  #   PAGERDUTY_SERVICES: ""   # Comma-separated PagerDuty service IDs to filter.
+  #
+  # ── OpsGenie (INGEST_SOURCES=opsgenie) ──
+  #   OPSGENIE_API_KEY: ""   # OpsGenie API key — set in config/local.yaml or env var
+  #   OPSGENIE_LOOKBACK_DAYS: "180"   # Days back to ingest closed alerts
+  #   OPSGENIE_MIN_DURATION: "5"   # Skip alerts shorter than this many minutes
+  #   OPSGENIE_TEAMS: ""   # Comma-separated team names to filter.
+  #
+  # ── Zendesk (INGEST_SOURCES=zendesk) ──
+  #   ZENDESK_SUBDOMAIN: ""   # Zendesk subdomain — e.g. acme for acme.zendesk.com
+  #   ZENDESK_EMAIL: ""   # Agent email address used for Basic Auth
+  #   ZENDESK_API_TOKEN: ""   # Zendesk API token — set in config/local.yaml or env var
+  #   ZENDESK_LOOKBACK_DAYS: "180"   # Days back to ingest solved tickets
+  #   ZENDESK_MIN_RATING: ""   # Satisfaction filter: good, bad, or empty (include all)
+  #
+  # ── Intercom (INGEST_SOURCES=intercom) ──
+  #   INTERCOM_ACCESS_TOKEN: ""   # Intercom OAuth access token — set in config/local.yaml or env var
+  #   INTERCOM_LOOKBACK_DAYS: "180"   # Days back to ingest conversations
+  #   INTERCOM_MIN_MESSAGES: "2"   # Skip conversations with fewer than this many messages
+  #   INTERCOM_TAGS: ""   # Comma-separated tag names to filter.
+  #
+  # ── Microsoft Teams (INGEST_SOURCES=ms_teams) ──
+  #   MS_TEAMS_TENANT_ID: ""   # Azure AD / Entra tenant ID
+  #   MS_TEAMS_CLIENT_ID: ""   # Entra app registration client ID
+  #   MS_TEAMS_CLIENT_SECRET: ""   # Client secret for client credentials OAuth flow
+  #   MS_TEAMS_TEAMS: ""   # Comma-separated team names or IDs to filter.
+  #   MS_TEAMS_LOOKBACK_DAYS: "90"   # How many days back to ingest messages
+  #   MS_TEAMS_INCLUDE_CHATS: "false"   # Include 1:1 and group chat messages.
+  #   MS_TEAMS_INCLUDE_FILES: "true"   # Include files shared in channels (from SharePoint)
+  #   MS_TEAMS_INCLUDE_TRANSCRIPTS: "true"   # Include meeting transcripts (requires application access policy)
+  #   MS_TEAMS_MIN_REPLIES: "2"   # Minimum replies for a channel message thread to be indexed
+  #   MS_TEAMS_WEBHOOK_CLIENT_STATE: ""   # The clientState value set on the Graph change-notification subscription.
+  #
+  # ── GitHub ──
+  #   GITHUB_TOKEN: ""   # GitHub personal access token (for private repos)
+  #   GITHUB_API_URL: "https://api.github.com"   # GitHub API base URL for code and pull-request ingest and for policy-file pulls.
+  #
+  # ── Policy file sources (.docbrain/style.md) ──
+  #   GITLAB_API_URL: "https://gitlab.com"   # Base URL for GitLab when pulling a policy file.
+  #   BITBUCKET_API_URL: "https://api.bitbucket.org"   # Base URL for Bitbucket Cloud when pulling a policy file.
+  #   BITBUCKET_TOKEN: ""   # Bearer token for Bitbucket policy pulls, used when the source has no token of its own.
+  #   STYLE_SPRAWL_STALE_DAYS: "90"   # Days without an edit before a space override counts as stale in the sprawl banner on the quality page.
+  #   STYLE_SPRAWL_EXCESS_THRESHOLD: "20"   # Overrides in one space above which the sprawl banner flags that space.
+  #   POLICY_FILE_SYNC_INTERVAL_SECS: "900"   # Seconds between pulls of registered policy files. 0 turns the sync off.
+  #
+  # ── Ingest runs ──
+  #   INGEST_PRUNE_DELETED: "true"   # The code default is false when the ingest: block is absent; the shipped config/default.yaml has the block, so it is true.
+  #   INGEST_RUN_ON_STARTUP: "false"   # Run one ingest when the server starts, before the first scheduled run.
+  #   INGEST_SKIP_EXTENSIONS: ""   # Comma-separated file extensions to skip, without dots (png,zip).
+  #   FORCE_REINGEST: "false"   # true or 1 re-embeds every document whatever its stored version.
+  #   DOCBRAIN_INGEST_BIN: ""   # Path to the docbrain-ingest binary the server starts for an ingest triggered from the console or API.
+  #   INGEST_CONCURRENCY: "10"   # Confluence pages fetched and processed at once during a Confluence ingest.
+  #
+  # ── Connector scheduler ──
+  #   CONNECTOR_ENABLED: "true"   # Run the connector scheduler. false stops all connector syncs.
+  #   CONNECTOR_MAX_CONCURRENT_SYNCS: "3"   # Connector syncs that may run at once.
+  #   CONNECTOR_MAX_PAGES_PER_SYNC: "200"   # Most pages one sync fetches.
+  #   CONNECTOR_MAX_DOCS_PER_SYNC: "5000"   # Most documents one sync ingests.
+  #   CONNECTOR_MAX_DOCUMENTS_PER_SYNC: "5000"   # The same limit as CONNECTOR_MAX_DOCS_PER_SYNC, read from the config file.
+  #   CONNECTOR_FETCH_BATCH_SIZE: "50"   # Documents asked for in one fetch call to a connector.
+  #   CONNECTOR_REQUEST_TIMEOUT_SECS: "30"   # Seconds before one HTTP call to a connector times out.
+  #   CONNECTOR_SYNC_TIMEOUT_SECS: "3600"   # Seconds one whole sync may run (the default is one hour).
+  #   CONNECTOR_MAX_RESPONSE_BYTES: "10485760"   # Largest response body accepted from a connector, in bytes (10 MB).
+  #   CONNECTOR_CIRCUIT_BREAKER_THRESHOLD: "5"   # Failures in a row after which a connector is switched off.
+  #   CONNECTOR_ALLOW_INTERNAL: "false"   # Let connectors call private or internal addresses.
+  #
+  # ── Chunking ──
+  #   CHUNK_SIZE: "1500"   # Target chunk size in characters
+  #   CHUNK_OVERLAP: "200"   # Overlap between adjacent paragraph-split chunks
+  #
+  # ── RAG Pipeline ──
+  #   RAG_CONTEXT_WINDOW_BUDGET_BYTES: "65536"   # Total byte budget for expanded document context across all documents; overflow is trimmed from the lowest-ranked end.
+  #   RAG_CONTEXT_WINDOW_CHUNKS: "3"   # Neighbouring chunks fetched on each side of a matched chunk, so the answer sees the passage and not only the fragment. 0 turns the expansion off.
+  #   RAG_LIVE_DATA_BUDGET_BYTES: "32768"   # Aggregate ceiling on the LIVE DATA block — the concatenation of *every* MCP tool block spliced into one synthesis prompt.
+  #   RAG_TOP_K: "10"   # Chunks retrieved per query.
+  #   RAG_MAX_PER_SOURCE: "3"   # Max chunks per source group in the final top-k, where the group is the chunk's space: the space key for Confluence (ENG, OPS, …) and the literal local for
+  #   RAG_MAX_PER_DOCUMENT: "2"   # Max chunks from any one document in the final top-k.
+  #   RAG_BM25_BOOST: "1.0"   # BM25 keyword search weight relative to vector search.
+  #   SEARCH_MIN_SCORE: "0.0"   # Drop retrieved chunks below this relevance score. 0.0 keeps everything; 0.3–0.4 filters low-signal noise.
+  #   RAG_CANDIDATE_POOL_SIZE: "200"   # Candidates the search stage hands to the reranker for each question.
+  #   RAG_RRF_K: "60"   # Damping constant when keyword and vector results are merged by reciprocal rank.
+  #   RAG_MIN_RELEVANCE_SCORE: "0.40"   # Retrieval floor: a chunk the reranker scores below this never reaches the model.
+  #   RAG_DISPLAY_FLOOR: "0.50"   # Display floor: a chunk scored below this is never shown as a citation.
+  #   RAG_CONFIDENCE_GATE: "0.40"   # Below this answer confidence the answer is returned as "not found" with no sources; the prompt forbids answering from general knowledge.
+  #   RAG_AGENTIC_LOOP_ENABLED: "false"   # Turns on the agentic loop, which lets the model call connected tools over several rounds before it answers. 1, true, yes or on enables it; any other value
+  #   RAG_AGENTIC_LOOP_BUDGET_MS_WEB: "48000"   # Wall-clock deadline of the loop, in milliseconds, for every surface except Slack.
+  #   RAG_AGENTIC_LOOP_BUDGET_MS_SLACK: "60000"   # As RAG_AGENTIC_LOOP_BUDGET_MS_WEB, for the Slack surface, which posts its answer when done and can wait longer.
+  #   RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB: ""   # Hard cap on tool rounds for every surface except Slack, from 1 to 10. default: follows the deadline
+  #   RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK: ""   # As RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB, for Slack (5 at the default deadline). default: follows the deadline
+  #   RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD: "0.7"   # The loop keeps going while its best answer confidence is below this, from 0.0 to 1.0.
+  #   RAG_CONFIDENCE_RETRY_THRESHOLD: "0.7"   # The older name of the loop's confidence threshold, still read when RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD is unset, so a cluster that tuned it keeps its value.
+  #   RAG_MAX_CHUNKS_PER_DOC: "2"   # Most chunks of one document a single retriever may contribute before merging, so one long page cannot fill a retriever's list.
+  #   RAG_FRESHNESS_WINDOW_DAYS: "7"   # Documents updated within this many days are always added to the candidate pool, so fresh captures get a chance to be reranked. 0 turns that off.
+  #   RAG_ENTITY_CACHE_TTL_SECS: "300"   # Seconds the entity-to-space lookup is cached before it is refreshed.
+  #   RAG_MAX_REWRITES: "2"   # Most alternative phrasings of a question that are searched alongside it.
+  #   RAG_COMPOUND_DECOMPOSE: "true"   # Split a question that asks several things into sub-questions so each is reranked on its own. false or 0 skips the extra fast-model call.
+  #   RAG_RERANK_TITLE_ENRICH: "true"   # Give the reranker each chunk's title, heading and space along with its text. false or 0 sends the text alone.
+  #   RAG_TRACE_DETAIL: "false"   # true or 1 logs one line per final result for each question.
+  #
+  # ── Reranker (Stage 3 of Retrieval) ──
+  #   RAG_RERANK_PROVIDER: "none"   # none | bedrock | cohere | voyage | jina | mixedbread | pinecone | ollama | custom
+  #   RAG_RERANK_MODEL_ID: ""   # Override the default model id (e.g. rerank-v3.5, rerank-2, jina-reranker-v2-base-multilingual). default: *(provider default)*
+  #   RAG_RERANK_TOP_N: "200"   # Max candidates handed to the reranker per query.
+  #   RAG_RERANK_BATCH_SIZE: "100"   # Split large pools into batches of this size.
+  #   RAG_RERANK_TIMEOUT_SECS: "10"   # Per-request timeout.
+  #
+  # ── Hosted provider credentials ──
+  #   COHERE_RERANK_API_KEY: ""
+  #   VOYAGE_API_KEY: ""
+  #   JINA_API_KEY: ""
+  #   MIXEDBREAD_API_KEY: ""
+  #   PINECONE_API_KEY: ""   # pinecone.io — uses Api-Key header, not Bearer
+  #   RAG_RERANK_OLLAMA_BASE_URL: ""   # *(none — local)*
+  #
+  # ── Custom provider — plug-and-play for any Cohere-family rerank API ──
+  #   RAG_RERANK_CUSTOM_BASE_URL: ""   # Full POST URL, e.g. https://api.example.test/v1/rerank
+  #   RAG_RERANK_CUSTOM_API_KEY_ENV: ""   # Name of another env var that holds the API key (the key is never persisted in config.yaml)
+  #   RAG_RERANK_CUSTOM_AUTH_STYLE: "bearer_token"   # bearer_token or custom_header
+  #   RAG_RERANK_CUSTOM_AUTH_HEADER_NAME: ""   # Header name, e.g. Api-Key
+  #   RAG_RERANK_CUSTOM_DOCUMENTS_FIELD: "documents"   # Request JSON key for the documents array
+  #   RAG_RERANK_CUSTOM_TOP_N_FIELD: "top_n"   # Request JSON key for the top-N limit
+  #   RAG_RERANK_CUSTOM_RESULTS_FIELD: "results"   # Response JSON key for the results array
+  #   RAG_RERANK_CUSTOM_SCORE_FIELD: "relevance_score"   # Response JSON key for the score
+  #
+  # ── Source suppression (feedback learning loop) ──
+  #   RAG_SUPPRESSION_MIN_FEEDBACK_COUNT: "2"   # Total not-relevant events on a document (across recalled episodes) before it is suppressed. 0 disables this gate.
+  #   RAG_SUPPRESSION_MIN_UNIQUE_USERS: "2"   # Distinct users who flagged the document before it is suppressed.
+  #   RAG_SUPPRESSION_RAG_PENALTY_FACTOR: "0.1"   # Multiplier applied to a suppressed document's retrieval score.
+  #
+  # ── Autopilot / Gap Analysis ──
+  #   AUTOPILOT_CLUSTER_THRESHOLD: "0.82"   # Cosine similarity for clustering queries (0.65=loose, 0.85=strict)
+  #   AUTOPILOT_MIN_CLUSTER_SIZE: "3"   # Minimum number of queries in a cluster to be considered a gap
+  #   AUTOPILOT_MIN_UNIQUE_USERS: "2"   # Minimum distinct users that must hit the same gap
+  #   AUTOPILOT_MIN_NEGATIVE_RATIO: "0.15"   # Minimum fraction of queries on a topic that must have negative feedback
+  #   AUTOPILOT_ANSWER_TOPIC_MAX_EMBED_FAILURES: "3"   # How many hourly topic runs may fail to embed one question before that question is no longer read, so one question the embedder always rejects cannot hold the
+  #   AUTOPILOT_ANSWER_TOPICS_ENABLED: "false"   # Group answered questions into topics and show a capture's author which topics its answers covered.
+  #   AUTOPILOT_TARGET_MIN_SCORE: "45.0"   # Corpus-probe relevance floor: minimum OpenSearch hybrid (BM25+kNN, unbounded) probe score a candidate target doc must reach before autopilot auto-picks it to
+  #   GENERATED_DOCS_RETENTION_DAYS: "90"   # Retention window (days) for persisted ad-hoc generate runs shown in the web /generate History view (generated_documents table).
+  #   DOCBRAIN_GENERATE_VERIFY_SECTION_QUERY_LLM: "true"   # Enable the per-section retrieval-query LLM rewrite.
+  #   DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK: "true"   # Enable the per-claim live cross-check (the moat core): each grounded claim is re-verified against the live system it came from.
+  #   DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS: "120"   # Per-document wall-clock budget (seconds) for the live cross-check. 0 is a disable sentinel (same honest path as DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK=false).
+  #   DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K: "12"   # top_k for the two independent non-agentic corpus probes (broad hybrid + catalog title) that confirm a *false* gap before a section degrades to NEEDS INPUT.
+  #   DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS: "2"   # Max send-back rounds for the post-assess review gate that re-aims a stale section back to write.
+  #   AUTOPILOT_APPLIED_WRITES_RETENTION_DAYS: "30"   # Days the record of what an autopilot write replaced (what a revert needs) is kept, before the nightly prune deletes it.
+  #   DOCBRAIN_GENERATE_MAX_CONCURRENT_SECTION_ASKS: "16"   # Most section questions in flight at once across all running generate requests and the nightly autopilot loop.
+  #   DOCBRAIN_GENERATE_REFUSE_MIN_ONTOPIC: "3"   # generate refuses to write a draft when fewer than this many supported claims are about the topic asked.
+  #   VERIFY_CORPUS_MIN_SCORE: "45.0"   # Search score above which a gap labelled as a missing document is corrected to poor coverage, because the corpus does have something on it.
+  #
+  # ── Improvement evidence ──
+  #   IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS: "72"   # Hours after a fix is published before one whose re-ingest was never confirmed is shown as stale instead of as still in flight.
+  #
+  # ── Draft Publishing — Closing the Feedback Loop ──
+  #   GITHUB_PUBLISH_PR_LABELS: "docbrain,auto-generated"   # Comma-separated labels added to each pull request a draft opens in the GitHub repository target.
+  #   GITHUB_PUBLISH_API_URL: "https://api.github.com"   # GitHub API base URL for that target.
+  #   GITLAB_PUBLISH_MR_LABELS: "docbrain,auto-generated"   # Comma-separated labels added to each merge request a draft opens in the GitLab repository target.
+  #   GITHUB_PUBLISH_TOKEN: ""   # GitHub token with contents and pull-request write scope, used when a draft is published to a GitHub repository.
+  #   GITHUB_PUBLISH_REPO: ""   # Repository, as owner/repo, that receives published drafts.
+  #   GITHUB_PUBLISH_BRANCH: "main"   # Branch the pull request is opened against, or committed to when GITHUB_PUBLISH_CREATE_PR is false.
+  #   GITHUB_PUBLISH_DOCS_PATH: "docs"   # Directory in the repository where published drafts are written.
+  #   GITHUB_PUBLISH_CREATE_PR: "true"   # true opens a pull request for each draft. false commits straight to the branch.
+  #   GITLAB_PUBLISH_TOKEN: ""   # GitLab token with api scope, used when a draft is published to a GitLab repository.
+  #   GITLAB_PUBLISH_BASE_URL: "https://gitlab.com"   # GitLab base URL for that target.
+  #   GITLAB_PUBLISH_PROJECT_ID: ""   # Project that receives published drafts, as a numeric id or a namespace/repo path.
+  #   GITLAB_PUBLISH_BRANCH: "main"   # Branch the merge request is opened against, or committed to when GITLAB_PUBLISH_CREATE_MR is false.
+  #   GITLAB_PUBLISH_DOCS_PATH: "docs"   # Directory in the repository where published drafts are written.
+  #   GITLAB_PUBLISH_CREATE_MR: "true"   # true opens a merge request for each draft. false commits straight to the branch.
+  #
+  # ── Freshness Scoring ──
+  #   FRESHNESS_LLM_CALLS_PER_PASS: "50"   # Documents given the content-currency check (a model call each) per freshness run.
+  #   FRESHNESS_LINK_CHECKS_PER_PASS: "20"   # Documents whose links are checked (an HTTP HEAD each) per freshness run.
+  #
+  # ── Secret check on captures ──
+  #   CAPTURE_SECRET_CHECK_TIMEOUT_SECS: "10"   # The model check's whole budget for one text, in seconds (every attempt, the reply and its parsing).
+  #   CAPTURE_SECRET_CHECK_MAX_REPLY_TOKENS: "4096"   # The reply budget, in tokens, the model check asks the provider for.
+  #
+  # ── Conversation distillation, fragment clustering and CI capture ──
+  #   DISTILLATION_ENABLED: "true"   # Distil captured Slack threads and pull-request discussions into fragments after a capture.
+  #   DISTILLATION_MAX_CONCURRENT: "3"   # Most distillation model calls at once.
+  #   DISTILLATION_MAX_CONTENT_CHARS: "8000"   # Characters of a conversation sent to the model.
+  #   DISTILLATION_MAX_FRAGMENTS: "5"   # Most summaries kept per conversation.
+  #   FRAGMENT_CLUSTERING_ENABLED: "true"   # Group related fragments into clusters.
+  #   FRAGMENT_CLUSTER_THRESHOLD: "0.80"   # Cosine similarity at or above which fragments are grouped.
+  #   FRAGMENT_MIN_CLUSTER_SIZE: "3"   # Fewest fragments that make a cluster.
+  #   FRAGMENT_MIN_SOURCE_DIVERSITY: "2"   # Fewest distinct source types a cluster must span.
+  #   FRAGMENT_MAX_PER_CLUSTERING_RUN: "2000"   # Most fragments one clustering run looks at.
+  #   CI_ANALYZE_ENABLED: "true"   # Build the CI/CD capture analyzer at start (it uses the configured model). false leaves the CI capture endpoints without an analyzer.
+  #   FRAGMENT_REVIEW_THRESHOLD: "0.4"   # Summary floor.
+  #   FRAGMENT_MAX_CONTENT_LENGTH: "10000"   # Longest capture accepted, in characters.
+  #   FRAGMENT_MAX_PER_AUTHOR_PER_HOUR: "60"   # Captures one author may write in any rolling hour, counted in the database so every replica sees one count.
+  #
+  # ── Memory Retention (Production) ──
+  #   EPISODE_RETENTION_DAYS: "90"   # Delete answers (episodes) older than N days; 0 or less keeps them forever.
+  #   AUDIT_RETENTION_DAYS: ""   # Delete audit log entries older than N days. default: 0 (disabled)
+  #
+  # ── Semantic quality scoring ──
+  #   SEMANTIC_QUALITY_ENABLED: "true"   # false turns the sweep off.
+  #   SEMANTIC_QUALITY_INTERVAL_HOURS: "24"   # Hours between sweeps; the first runs five minutes after the server starts. 0 is accepted and runs sweeps back to back.
+  #   SEMANTIC_QUALITY_BUDGET: "50"   # Most documents rated in one sweep, capped at 100 whatever you set.
+  #   SEMANTIC_QUALITY_STRUCTURAL_THRESHOLD: "40.0"   # Lowest structural score a document needs before it is rated by the model.
+  #
+  # ── Evidence Bundles ──
+  #   EVIDENCE_ENABLED: "true"   # Master switch for the evidence journal.
+  #   EVIDENCE_CHECKPOINT_EVERY_N: "256"   # Emit a signed checkpoint after this many journal records.
+  #   EVIDENCE_CHECKPOINT_EVERY_SECS: "3600"   # Emit a signed checkpoint after this many seconds even if the record count hasn't reached EVIDENCE_CHECKPOINT_EVERY_N yet.
+  #   EVIDENCE_RECOVERY_PUBKEY: ""   # Hex-encoded Ed25519 public key for the cold recovery key, declared at genesis.
+  #   EVIDENCE_TSA_URL: ""   # RFC 3161 timestamp authority endpoint.
+  #   EVIDENCE_WITNESS_DIR: ""   # Directory for append-only, dated witness files (witness-YYYY-MM-DD.jsonl) your organization publishes independently.
+  #
+  # ── Knowledge Health ──
+  #   HEALTH_ENGINE_INTERVAL_SECS: "21600"   # Seconds between scheduled engine runs — four runs a day, with the first one 60 seconds after boot.
+  #   HEALTH_OPEN_CAP: "10"   # The most findings that may be open at once, across the organisation.
+  #   HEALTH_WINDOW_DAYS: "30"   # How far back a detector looks when counting the retrievals and questions that give a finding its impact.
+  #   DOCBRAIN_PUBLIC_URL: ""   # Public origin of the console, used to build each finding's deep link (<origin>/?finding=<id>).
+  #
+  # ── Image Extraction ──
+  #   IMAGE_EXTRACTION_ENABLED: "true"   # Set to false to skip image processing entirely
+  #
+  # ── Jira (INGEST_SOURCES=jira) ──
+  #   JIRA_BASE_URL: ""   # Jira instance URL. e.g. https://mycompany.atlassian.net
+  #   JIRA_USER_EMAIL: ""   # Service account email for Basic auth (Jira Cloud)
+  #   JIRA_API_TOKEN: ""   # Atlassian API token (generate at id.atlassian.com)
+  #   JIRA_PROJECTS: ""   # Comma-separated project keys. e.g. PROJ,INFRA,PLATFORM.
+  #   JIRA_JQL_FILTER: ""   # Extra JQL clause appended to the default query. e.g. priority = High
+  #   JIRA_LOOKBACK_DAYS: "365"   # How many days back to ingest resolved issues
+  #   JIRA_ISSUE_TYPES: "Bug,Story,Task,Epic"   # Comma-separated issue types to include
+  #
+  # ── Slack Threads (INGEST_SOURCES=slack_thread) ──
+  #   SLACK_INGEST_TOKEN: ""   # Bot token with channels:history, channels:read, users:read OAuth scopes
+  #   SLACK_INGEST_CHANNELS: ""   # Comma-separated channel names to index (leading # optional).
+  #   SLACK_INGEST_MIN_REPLIES: "3"   # Minimum replies for a thread to be indexed (reply volume signals value)
+  #   SLACK_INGEST_REACTIONS: "white_check_mark,bookmark"   # Comma-separated reaction names that mark a thread indexable, regardless of reply count
+  #   SLACK_INGEST_LOOKBACK_DAYS: "90"   # How far back to look for threads
+  #
+  # ── Slack Integration ──
+  #   SLACK_BOT_TOKEN: ""   # Slack bot token starting with xoxb-
+  #   SLACK_SIGNING_SECRET: ""   # Slack app signing secret for webhook verification
+  #   NOTIFICATION_INTERVAL_HOURS: "24"   # How often health alerts are posted to the alert channel (requires Slack)
+  #   NOTIFICATION_SPACE_FILTER: ""   # No longer read: it scoped the author DMs about documents, which were retired.
+  #   SLACK_GAP_NOTIFICATION_CHANNEL: ""   # Slack channel that receives a message when a gap analysis finds new critical gaps.
+  #
+  # ── Slack Capture Access Control ──
+  #   SLACK_CAPTURE_ALLOWED_CHANNELS: ""   # Comma-separated channel names (without #) or channel IDs that are allowed to use /docbrain capture.
+  #   SLACK_CAPTURE_ALLOWED_USERS: ""   # Comma-separated Slack usernames or user IDs allowed to trigger /docbrain capture.
+  #
+  # ── Server ──
+  #   RUST_LOG: "info"   # Log verbosity and filter, in the tracing filter syntax: a level (trace, debug, info, warn, error) or per-module directives such as docbrain_core=debug,info.
+  #   LOG_FORMAT: ""   # json writes one JSON object per log line, for log aggregators.
+  #   NOTIFICATION_RETENTION_DAYS: "30"   # Days the notification feed keeps an entry.
+  #   MAX_QUERY_LENGTH: "4000"   # Longest question or incident description the server accepts.
+  #   DOCBRAIN_LICENSE_FILE: ""   # Path to a subscription certificate file.
+  #
+  # ── Background workers ──
+  #   SIGNAL_INGEST_INTERVAL_SECS: "900"   # Seconds between runs of the behavioural-signal ingester.
+  #   EXPERTISE_SCORER_INTERVAL_SECS: "3600"   # Seconds between runs of the expertise scorer.
+  #   CALIBRATION_REFIT_INTERVAL_SECS: "604800"   # Seconds between refits of the expertise calibration model (the default is one week).
+  #   UI_GATE_REFRESH_INTERVAL_SECS: "300"   # Seconds between runs of the ownership-accuracy audit that decides whether confident attributions are shown. 0 leaves them hidden for good.
+  #   DOCBRAIN_ATTESTATION_INTERVAL_SECS: "604800"   # Seconds between identity-attestation snapshots (the default is one week).
+  #   SECRET_SCAN_INTERVAL_SECS: "300"   # Seconds between passes that scan changed documents for secrets. 0 turns the pass off.
+  #
+  # ── Expertise ownership gate ──
+  #   EXPERTISE_GATE_V_MIN: "1.0"   # Lowest decayed team score that can publish.
+  #   EXPERTISE_GATE_N_MIN: "5"   # Fewest raw signals that can publish.
+  #   EXPERTISE_GATE_M_ASKERS: "2"   # Fewest distinct people who must have asked about the subject.
+  #   EXPERTISE_GATE_DIVERSITY_MIN: "2"   # Fewest distinct signal types the evidence must come from.
+  #   EXPERTISE_GATE_MARGIN_FRAC: "0.25"   # How far the leading team must beat the second, as a fraction of the second's score.
+  #   EXPERTISE_GATE_UI_ENABLED: "false"   # Master switch for showing confident ownership to people.
+  #   EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES: "30"   # Fewest audited confident attributions before the gate can open; with fewer it stays closed whatever the rate.
+  #   EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR: "0.0"   # Highest audited confidently-wrong rate at which confident ownership is shown.
+  #
+  # ── Reconciler ──
+  #   RECONCILER_ENABLED: "true"   # Anything except false or 0 leaves the reconciler on, so a typo does not switch off the repair.
+  #   RECONCILER_INTERVAL_MINUTES: "10"   # Minutes between reconciler cycles.
+  #   RECONCILER_BATCH_LIMIT: "500"   # The most documents or chunks one pass inspects per cycle.
+  #
+  # ── Command-line client ──
+  #   DOCBRAIN_CORPUS_DROP_ALERT: "0.10"   # The fraction of a corpus that may disappear between two looks at the same server URL before the CLI says so.
+  #   DOCBRAIN_GENERATE_TIMEOUT_SECS: "900"   # How long docbrain generate waits for the server, in seconds.
+  #
+  # ── Event bus and outbound webhooks ──
+  #   EVENT_BUS_CAPACITY: "4096"   # Events the bus buffers before a slow listener starts missing some.
+  #   WEBHOOK_DELIVERY_TIMEOUT_SECONDS: "10"   # Seconds one webhook delivery attempt may take.
+  #   WEBHOOK_CIRCUIT_BREAKER_THRESHOLD: "10"   # Failed deliveries in a row after which a webhook subscription is switched off.
+  #   WEBHOOK_MAX_RETRIES: "4"   # Delivery attempts, counting the first.
+  #   ALLOW_INTERNAL_WEBHOOKS: "false"   # true or 1 lets a webhook target localhost or a private address.
+  #
+  # ── Governance SLA checker ──
+  #   SLA_CHECKER_INTERVAL_HOURS: "1"   # Hours between runs of the checker.
+  #   SLA_CHECKER_QUERY_TIMEOUT_SECS: "30"   # Seconds the checker's database transaction may run.
+  #   SLA_CHECKER_MAX_EVENTS_PER_RUN: "50"   # Most breaches announced in one run.
+  #
+  # ── Rate Limiting ──
+  #   IP_LOGIN_MAX_FAILURES: "100"   # Failed login attempts allowed per IP per window before the IP is answered 429
+  #   IP_LOGIN_LOCKOUT_WINDOW_SECS: "600"   # Length of that window in seconds; also the Retry-After value on the 429
+  #   TRUSTED_PROXY_HOPS: ""   # Unset: the client IP is the socket address and X-Forwarded-For is ignored. default: unset (Docker Compose: 1)
+  #
+  # ── Auth / Sessions ──
+  #   MAX_PAT_DAYS: "90"   # Longest life, in days, of an API key a person creates for themselves and of an app connection made with Sign-in for apps.
+  #   ADMIN_KEY_FILE: "/app/admin-bootstrap-key.txt"   # Where to write the admin bootstrap key on first boot
+  #   IDLE_TIMEOUT_HOURS: "0"   # Hours without use after which an API key is rejected as if expired, whatever its lifetime. 0 turns it off.
+  #   BOOTSTRAP_KEY_ENABLED: "true"   # false, 0, no or off revokes the bootstrap admin key at start and keeps it revoked; if the revoke fails the server refuses to start.
+  #   BOOTSTRAP_ADMIN_KEY: ""   # Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does.
+  #
+  # ── Access lists at ingest ──
+  #   GITHUB_CAPTURE_TOKEN: ""   # Token used to read who can see a GitHub document during ingest when GITHUB_TOKEN is not set.
+  #   ACCESS_MEMBERSHIP_SWEEP_SECS: "240"   # Seconds between reads of who belongs to each Confluence space and group and each Slack channel, which access decisions are made from. 0 turns the sweep off.
+  #   ACCESS_STATE_SWEEP_SECS: "900"   # Seconds between reads of who can open each Confluence page and Jira issue. 0 turns the sweep off.
+  #
+  # ── Access-list backfill tool ──
+  #   ACL_BACKFILL_SOURCE: "confluence"   # Which source to backfill.
+  #   ACL_BACKFILL_LIMIT: "0"   # Most documents to process in one run. 0 means no limit.
+  #   ACL_BACKFILL_FORCE: "false"   # true or 1 fetches and overwrites access lists that already exist.
+  #   ACL_BACKFILL_SPACE: ""   # Limit the run to one space key.
+  #
+  # ── Restoring removed secrets from a backup ──
+  #   BACKUP_DATABASE_URL: ""   # Connection string of the database restored from the backup.
+  #
+  # ── MCP Tool Platform ──
+  #   DOCBRAIN_SSRF_ALLOW_LOOPBACK_FOR_INTERNAL_SHIMS: ""   # Required to load the shipped in-process shim manifests. confluence_rest and jira_rest are served by docbrain-server itself at
+  #   MCP_REGISTRY_PUBKEY: ""   # Base64-encoded 32-byte Ed25519 public key used to verify the signed registry index and per-manifest signatures.
+  #   DOCBRAIN_PUBLIC_BASE_URL: "http://localhost:3000"   # Origin that MCP sign-in (OAuth) uses to build its callback address.
+  #   MCP_OAUTH_ENCRYPTION_KEY: ""   # Base64 key of exactly 32 bytes that encrypts stored per-user tool sign-in tokens.
+  #   DOCBRAIN_MCP_SECRET_KEY: ""   # Base64 key of 32 bytes that encrypts secrets typed into a manifest in the console.
+  #   DOCBRAIN_INTERNAL_MCP_SECRET: ""   # Bearer secret the built-in tool shims require from the orchestrator, which calls them on the loopback address; generated at start when unset (a temporary one
+  #   DOCBRAIN_MCP_LOG_RENDERED_BLOCKS: "false"   # 1, true, yes or on logs how each tool result was framed in the answer prompt: the header, the argument line and the sizes, never the body.
+  #
+  # ── Rootly on-call shim ──
+  #   ROOTLY_API_TOKEN: ""   # Org-level Rootly API token.
+  #   ROOTLY_BASE_URL: "https://api.rootly.com"   # Rootly REST API base URL.
+  #
+  # ── Generic OIDC (Google, Okta, Auth0, Azure AD, Keycloak, …) ──
+  #   OIDC_CLIENT_ID: ""   # OAuth2 client ID
+  #   OIDC_CLIENT_SECRET: ""   # OAuth2 client secret
+  #   OIDC_ACCEPT_INVALID_CERTS: "false"   # Set to true to skip TLS verification for OIDC discovery.
+  #
+  # ── GitHub OAuth 2.0 ──
+  #   GITHUB_CLIENT_ID: ""   # GitHub OAuth App client ID
+  #   GITHUB_CLIENT_SECRET: ""   # GitHub OAuth App client secret
+  #
+  # ── GitLab OIDC ──
+  #   GITLAB_CLIENT_ID: ""   # GitLab application client ID
+  #   GITLAB_CLIENT_SECRET: ""   # GitLab application client secret
+  #
+  # ── Who may sign in ──
+  #   OIDC_ALLOW_EMAIL_LINKING: "false"   # true or 1 lets a first SSO login attach to an existing local account with the same email, but only when the IdP reports that email as verified.
+  #
+  # ── RBAC Role Mapping ──
+  #   OIDC_ANALYST_GROUPS: ""   # Comma-separated IdP group names → analyst (the role between editor and admin: it can moderate answers and fragments)
+  #   OIDC_SYNC_ROLE_ON_LOGIN: "true"   # Set false or 0 to stop the IdP rewriting an existing user's role at each login, so a role an admin set in DocBrain survives.
+  # <<< generated <<<
   env: {}
 
 # -- DocBrain Web UI
@@ -421,7 +881,6 @@ stream:
   enabled: false               # Opt-in; set true to enable proactive alerting
   intervalMinutes: 30          # How often to scan for events (minutes)
   incidentWarningMinUsers: 2   # Min unique users in 2h window to trigger incident warning
-  # alertChannel: ""           # Slack channel for critical alerts (optional)
   expertiseGapDays: 90         # Days without expert activity before gap alert
 
 # -- Memory consolidation scheduler

@@ -44,6 +44,10 @@ docker run -e DOCBRAIN_FINGERPRINT_KEY -e DOCBRAIN_CONFIG_DIR=/etc/docbrain -v /
 | `REDIS_URL` | No | `redis://localhost:6379` | Redis for working memory (session context). Optional — falls back to in-memory if not set. |
 | `DOCBRAIN_FINGERPRINT_KEY` | Yes, or the file below | — | Key for the fingerprints DocBrain stores of secret values it finds (HMAC-SHA256). Docker Compose and the Helm chart generate one on first start when you supply none. See [The fingerprint key](#the-fingerprint-key) below. |
 | `DOCBRAIN_FINGERPRINT_KEY_FILE` | No | — | Path to a file holding the key (what Compose's generated key uses). `DOCBRAIN_FINGERPRINT_KEY` wins when both are set. |
+| `DB_MAX_CONNECTIONS` | No | `25` | Maximum connections in each PostgreSQL pool the server opens. It opens one pool per database role (at least two), so the database can see a multiple of this number. |
+| `DB_CONNECT_TIMEOUT_SECS` | No | `10` | Seconds the server waits to open its database connections at start before giving up. |
+| `DB_ACQUIRE_TIMEOUT_SECS` | No | `10` | Seconds a request waits for a free pooled connection before it fails. |
+| `DB_IDLE_TIMEOUT_SECS` | No | `300` | Seconds an unused pooled connection is kept before it is closed. |
 
 ### The fingerprint key
 
@@ -146,6 +150,17 @@ Set `LLM_PROVIDER` to choose your LLM backend. Supported providers: `anthropic`,
 | `DRAFT_MODEL_ID` | All | Model used for **autopilot draft generation** (two-phase reasoning + writing). Falls back to `LLM_MODEL_ID` if not set. Use a high-capability model here — drafts benefit from stronger reasoning. Example: `claude-opus-4` or `gpt-4o`. |
 | `DRAFT_LLM_PROVIDER` | All | Provider for draft generation. Falls back to `LLM_PROVIDER` if not set. Allows cross-provider drafting — e.g. use Gemini Flash for Q&A but Anthropic Claude for drafts. When set, DocBrain creates a separate LLM client for draft generation. |
 | `LLM_THINKING_BUDGET` | anthropic/bedrock | Extended thinking token budget (tokens). `0` or unset = disabled. Only applies to the primary `LLM_MODEL_ID` — never to `FAST_MODEL_ID` or `INGEST_LLM_MODEL_ID`. |
+| `OPENAI_BASE_URL` | openai | Base URL of an OpenAI-compatible endpoint to use in place of OpenAI's own, for a proxy such as LiteLLM, vLLM or LocalAI. Unset (the default) calls OpenAI. |
+| `GROQ_API_KEY` | groq | Your Groq API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `OPENROUTER_API_KEY` | openrouter | Your OpenRouter API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `TOGETHER_API_KEY` | together | Your Together AI API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `DEEPSEEK_API_KEY` | deepseek | Your DeepSeek API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `MISTRAL_API_KEY` | mistral | Your Mistral API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `XAI_API_KEY` | xai | Your xAI API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `GEMINI_API_KEY` | gemini | Your Google Gemini API key. Unset (the default) sends an empty key, so every call fails until it is set. |
+| `HAIKU_MODEL_ID` | All | Deprecated name for `FAST_MODEL_ID`. The server and ingest read settings through the config loader, where both names write the same setting and `HAIKU_MODEL_ID` is applied after `FAST_MODEL_ID`, so when both are set `HAIKU_MODEL_ID` wins. Only code that builds the client straight from the environment reads `FAST_MODEL_ID` first and uses this name only when it is unset. |
+| `DOCBRAIN_LLM_EFFORT` | bedrock | How hard Anthropic models on Bedrock reason: `low`, `medium`, `high`, `xhigh` or `max`. Unset, or a value that is not one of those (which logs a warning), uses `high`. The higher settings mostly add latency. |
+| `OLLAMA_VISION_ENABLED` | ollama | Set `false` or `0` to stop sending images to Ollama for description. Anything else, or unset, leaves vision on (the default is on). |
 
 ### OpenAI-compatible providers
 
@@ -250,6 +265,42 @@ To migrate:
 |----------|---------|-------------|
 | `FORCE_REINDEX` | `false` | Delete and recreate OpenSearch indexes when embedding dimensions change. Set once during migration, then remove. |
 
+### Embedding provider tuning
+
+Each setting applies only while its provider is the one selected.
+
+| Variable | Default | Description |
+|---|---|---|
+| `BEDROCK_INITIAL_CONCURRENCY` | `2` | Bedrock: concurrent embedding requests the adaptive limiter starts at. It backs off when Bedrock throttles. Held between 1 and `BEDROCK_MAX_CONCURRENCY`. |
+| `BEDROCK_MAX_CONCURRENCY` | `16` | Bedrock: the most concurrent embedding requests the limiter will allow. |
+| `OLLAMA_EMBED_MAX_RETRIES` | `5` | Ollama: how many times one embedding call is tried before it fails, with a growing pause between tries (capped at 10 seconds). Zero or a value that is not a number keeps the default. |
+
+### Learning pipeline
+
+Settings for the fine-tuned embedding model the `docbrain-trainer` sidecar produces (`EMBED_PROVIDER=local`). Several are accepted but not yet acted on (the rows say which), and the server warns at start when one of the three promotion settings is set.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMBED_LOCAL_INFERENCE_URL` | — | Base URL of the `docbrain-trainer` inference sidecar. Required when `EMBED_PROVIDER=local`; the provider is refused without it. |
+| `LEARNING_AZURE_ACCOUNT` | — | Azure storage account for model storage. Required when the storage backend is `azure`; model storage cannot be set up without it. |
+| `LEARNING_MIN_FEEDBACK_USERS` | `3` | Fewest distinct identified users whose feedback a training run needs. Anonymous feedback does not count, and a run with fewer is rejected by the poison guard. |
+| `LEARNING_ENABLED` | `false` | Turns the learning pipeline on. Off, the configured embedding provider is used unchanged and none of the other `LEARNING_*` settings matter. |
+| `LEARNING_STORAGE_BACKEND` | `local` | Where trained model files are kept: `local`, `s3`, `gcs` or `azure`. Any other value stops the pipeline from starting. |
+| `LEARNING_LOCAL_PATH` | `/app/models` | Directory for model files when the backend is `local`. |
+| `LEARNING_S3_BUCKET` | — | S3 bucket for model files. Required when the backend is `s3`; the pipeline cannot start without it. |
+| `LEARNING_S3_PREFIX` | `docbrain/models` | Key prefix inside the S3 bucket. |
+| `LEARNING_S3_REGION` | `us-east-1` | AWS region of the S3 bucket. |
+| `LEARNING_GCS_BUCKET` | — | Google Cloud Storage bucket for model files. Required when the backend is `gcs`; the pipeline cannot start without it. |
+| `LEARNING_GCS_PREFIX` | `docbrain/models` | Object prefix inside the GCS bucket. |
+| `LEARNING_AZURE_CONTAINER` | — | Azure Blob container for model files. Required, together with `LEARNING_AZURE_ACCOUNT`, when the backend is `azure`. |
+| `LEARNING_TRAINER_URL` | `http://docbrain-trainer:8080` | Base URL of the `docbrain-trainer` sidecar the pipeline sends training work to. |
+| `LEARNING_BASE_MODEL_ID` | `sentence-transformers/all-MiniLM-L6-v2` | Hugging Face model that fine-tuning starts from. It must match the base model the trainer sidecar is configured with. |
+| `LEARNING_MIN_TRIPLETS` | `200` | Fewest training triplets (a query, a right passage and a wrong one) a run needs. With fewer, the run is skipped and logged. |
+| `LEARNING_CIRCUIT_BREAKER_THRESHOLD` | `0.05` | How far, as a fraction, a new model may lower average answer confidence before it is rolled back. `0.05` is 5 percent. |
+| `LEARNING_POISON_DETECTION` | `true` | Reject a training run whose feedback looks like it came from bots or one person. `false` skips the check. |
+| `LEARNING_MAX_SINGLE_USER_FRACTION` | `0.80` | Largest share of a run's feedback one user may supply before the poison check rejects the run. |
+| `TRAINER_API_KEY` | — | Key the server sends to the `docbrain-trainer` sidecar in the `X-Trainer-Key` header when it asks for embeddings (`EMBED_PROVIDER=local`). Unset sends no header, which suits a sidecar that has no key. |
+
 ## Document Sources
 
 A source is enabled by the **presence of its block** under the top-level
@@ -285,6 +336,7 @@ source selection and the resource lists moved to YAML.
 | Variable | Default | Description |
 |---|---|---|
 | `LOCAL_DOCS_PATH` | `./examples/sample-docs` | Path to local markdown/text files to ingest |
+| `LOCAL_ROOT_HOLDS_REPOSITORIES` | `false` | Set `true` when the path holds several repositories, one per top-level directory, rather than one tree. Claim checking is then confined to one repository at a time. DocBrain cannot tell the two layouts apart, so it has to be told. |
 
 ### Confluence
 
@@ -298,6 +350,8 @@ source selection and the resource lists moved to YAML.
 | `CONFLUENCE_API_VERSION` | `v2` | `v2` for Confluence Cloud, `v1` for self-hosted Data Center |
 | `CONFLUENCE_PAGE_LIMIT` | `0` | Max pages to ingest per space; `0` (the default) means no limit, so the knob does nothing until set |
 | `CONFLUENCE_TLS_VERIFY` | `true` | Set to `false` if using self-signed or internal CA certificates |
+| `CONFLUENCE_LICENSED_GROUPS` | — | Comma-separated names of extra Confluence groups whose members hold a licence. `confluence-users` and `confluence-users-<site>` are always counted; add a group here when licences come through a custom one, or those people are denied. |
+| `CONFLUENCE_WEBHOOK_SECRET` | — | Shared secret that signs Confluence webhook calls to `/confluence/events`. Setting it turns the Confluence webhook on; it also needs `CONFLUENCE_BASE_URL` and `CONFLUENCE_API_TOKEN`, or the server logs a warning and leaves it off. |
 
 **Ingestion modes:**
 
@@ -306,6 +360,18 @@ source selection and the resource lists moved to YAML.
 | Whole spaces | `CONFLUENCE_SPACE_KEYS=DOCS,ENG` | All pages in the listed spaces |
 | Specific page trees | `CONFLUENCE_PAGE_IDS=421856743,41912006` | Listed pages + every descendant, from any space |
 | Both | `CONFLUENCE_SPACE_KEYS=DOCS` + `CONFLUENCE_PAGE_IDS=421856743` | Spaces first, then any page trees not already covered |
+
+### Confluence background syncs
+
+Two server-side jobs that need the Confluence connection above. They stay idle when Confluence is not configured.
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONFLUENCE_USER_SYNC_INTERVAL_SECS` | `900` | Seconds between runs of the job that resolves Confluence account ids on documents to a name and email. `0` turns it off. |
+| `CONFLUENCE_USER_SYNC_BATCH_SIZE` | `100` | Account ids resolved per run. |
+| `CONFLUENCE_USER_SYNC_REFRESH_AFTER_DAYS` | `30` | Days before an account id that was already resolved is looked up again. |
+| `CONFLUENCE_USER_SYNC_PER_CALL_DELAY_MS` | `100` | Milliseconds between Confluence calls in that job; 100 holds it to about 10 requests a second. |
+| `CONFLUENCE_SPACE_ACCESS_SYNC_INTERVAL_SECS` | `0` | Seconds between recomputes of who can see each space. `0` leaves it off. It writes access decisions, so turn it on deliberately after checking coverage. |
 
 ### GitHub PR Reviews (`INGEST_SOURCES=github_pr`)
 
@@ -316,12 +382,12 @@ This captures the architectural "why" that lives in code review threads.
 |---|---|---|
 | `GITHUB_PR_TOKEN` | — | GitHub personal access token with `repo:read` (or `public_repo`) scope |
 | `GITHUB_PR_REPO` | — | Repository in `owner/repo` format. e.g. `acme/platform` |
-| `GITHUB_PR_LOOKBACK_DAYS` | `365` | How many days back to ingest merged PRs |
 | `GITHUB_PR_MIN_COMMENTS` | `1` | Minimum total review comments required to index a PR. Set higher (e.g. `3`) to skip trivial PRs. |
 | `GITHUB_PR_LABELS` | — | Comma-separated label filter. Only PRs with at least one matching label are indexed. Empty = index all. |
 | `GITHUB_PR_API_URL` | `https://api.github.com` | Override for GitHub Enterprise deployments |
 
 **Notes:**
+- How far back to look is `lookback_days` under `sources.github.pull_requests` in the config file (default `365`); it has no environment variable.
 - Only **merged** PRs are indexed — open, closed-without-merge, and draft PRs are skipped.
 - Bot comments (Dependabot, GitHub Actions, Codecov, etc.) are automatically filtered out.
 - Deleted review comments (empty body) are excluded.
@@ -337,6 +403,8 @@ The GitHub capture feature lets engineers trigger ingestion by commenting `@docb
 |---|---|---|
 | `GITHUB_CAPTURE_ALLOWED_REPOS` | — | Comma-separated `owner/repo` pairs that are allowed to trigger capture. Empty = all repos. e.g. `myorg/backend,myorg/frontend` |
 | `GITHUB_CAPTURE_ALLOWED_USERS` | — | Comma-separated GitHub usernames allowed to trigger capture. Empty = all users. e.g. `alice,bob` |
+| `GITHUB_WEBHOOK_SECRET` | — | Secret that signs GitHub webhook calls for `@docbrain capture`. Capture stays off unless this and a bot token (`GITHUB_BOT_TOKEN`, or `GITHUB_PR_TOKEN` as a fallback) are both set. |
+| `GITHUB_BOT_TOKEN` | — | GitHub token the capture feature uses to read threads and post replies. Also the second choice, after `GITHUB_TOKEN`, when DocBrain pulls a `.docbrain/style.md` policy file. |
 
 A 500KB content size guard is applied to all capture requests. If a PR or issue thread exceeds this limit, DocBrain posts a reply explaining that the thread was too large to capture.
 
@@ -351,12 +419,15 @@ Ingests merged merge request descriptions and discussion threads. Works with git
 | `GITLAB_MR_TOKEN` | — | GitLab personal or project access token with `api` scope |
 | `GITLAB_MR_BASE_URL` | `https://gitlab.com` | Base URL for self-hosted GitLab (e.g. `https://gitlab.mycompany.com`) |
 | `GITLAB_MR_PROJECT_IDS` | — | Comma-separated project paths or IDs. e.g. `acme/platform,acme/backend` |
-| `GITLAB_MR_LOOKBACK_DAYS` | `365` | How many days back to ingest merged MRs |
 | `GITLAB_MR_MIN_NOTES` | `1` | Minimum discussion notes to index an MR. Set higher to skip trivial MRs. |
 | `GITLAB_MR_LABELS` | — | Comma-separated label filter. Empty = index all. |
 | `GITLAB_MR_TLS_VERIFY` | `true` | Set to `false` to skip TLS certificate verification for self-hosted with internal CA |
+| `GITLAB_TOKEN` | — | GitLab token with `api` scope for the GitLab source. Also the fallback token when a policy-file pull has none of its own. |
+| `GITLAB_BASE_URL` | `https://gitlab.com` | Base URL of the GitLab instance for the GitLab source. Set it for a self-hosted GitLab. |
+| `GITLAB_TLS_VERIFY` | `true` | Set `false` to skip TLS certificate checks for a self-hosted GitLab with a self-signed certificate. |
 
 **Notes:**
+- How far back to look is `lookback_days` under `sources.gitlab.merge_requests` in the config file (default `365`); it has no environment variable.
 - Only **merged** MRs are indexed — open, draft (`Draft:` / `WIP:` title prefix or `draft: true` field), and unmerged MRs are skipped.
 - System notes (label changes, approvals, "merged" events) are automatically filtered — only human discussion notes are indexed.
 - **Cross-document references** are automatically extracted from MR descriptions and notes — URLs to GitHub PRs, Jira tickets, Confluence pages, and other GitLab MRs/issues are classified. GitLab shorthand references (`!123` for MRs, `#123` for issues) within the same project are also resolved.
@@ -407,6 +478,8 @@ The GitLab capture feature lets engineers trigger ingestion by commenting `@docb
 | `GITLAB_CAPTURE_BASE_URL` | `https://gitlab.com` | GitLab instance base URL (override for self-hosted) |
 | `GITLAB_CAPTURE_ALLOWED_USERS` | — | Comma-separated GitLab usernames allowed to trigger capture. Empty = all users. |
 | `GITLAB_CAPTURE_ALLOWED_PROJECTS` | — | Comma-separated project paths allowed to trigger capture. Empty = all projects. e.g. `myorg/myrepo` |
+| `GITLAB_BOT_USER_ID` | — | Numeric GitLab user id of the account behind `GITLAB_CAPTURE_TOKEN`. Events authored by this user are ignored, so the bot does not react to its own notes. A value that is not a number is ignored. |
+| `GITLAB_CAPTURE_TLS_INSECURE` | `false` | `true`, `1` or `yes` skips TLS certificate checks when calling the capture GitLab instance. Use it only for a self-signed certificate you cannot replace. |
 
 ---
 
@@ -560,6 +633,7 @@ Ingests channel message threads, 1:1/group chats, channel files (SharePoint), an
 | `MS_TEAMS_INCLUDE_FILES` | `true` | Include files shared in channels (from SharePoint) |
 | `MS_TEAMS_INCLUDE_TRANSCRIPTS` | `true` | Include meeting transcripts (requires application access policy) |
 | `MS_TEAMS_MIN_REPLIES` | `2` | Minimum replies for a channel message thread to be indexed |
+| `MS_TEAMS_WEBHOOK_CLIENT_STATE` | — | The `clientState` value set on the Graph change-notification subscription. Live ingestion from Teams webhooks needs it together with the tenant, client and secret above, and a notification whose value differs is dropped. |
 
 **`config/local.yaml` example:**
 ```yaml
@@ -612,9 +686,56 @@ ms_teams:
 
 | Variable | Default | Description |
 |---|---|---|
-| `GITHUB_REPO_URL` | — | GitHub repository URL. e.g. `https://github.com/your-org/your-docs` |
 | `GITHUB_TOKEN` | — | GitHub personal access token (for private repos) |
-| `GITHUB_BRANCH` | `main` | Branch to ingest |
+| `GITHUB_API_URL` | `https://api.github.com` | GitHub API base URL for code and pull-request ingest and for policy-file pulls. Set it for GitHub Enterprise. Shares its setting with `GITHUB_PR_API_URL`. |
+
+The repository and branch to ingest are listed in `sources.github.code.repos` in the config file, as `owner/repo` or `owner/repo:branch`; there are no environment variables for them.
+
+### Policy file sources (`.docbrain/style.md`)
+
+A repository can carry a `.docbrain/style.md` that DocBrain pulls in as policy rules. These settings point the pullers at self-hosted hosts and set when the quality banner flags rule sprawl.
+
+| Variable | Default | Description |
+|---|---|---|
+| `GITLAB_API_URL` | `https://gitlab.com` | Base URL for GitLab when pulling a policy file. Set it for a self-hosted GitLab. |
+| `BITBUCKET_API_URL` | `https://api.bitbucket.org` | Base URL for Bitbucket Cloud when pulling a policy file. |
+| `BITBUCKET_TOKEN` | — | Bearer token for Bitbucket policy pulls, used when the source has no token of its own. |
+| `STYLE_SPRAWL_STALE_DAYS` | `90` | Days without an edit before a space override counts as stale in the sprawl banner on the quality page. Accepts 1 to 365; anything else keeps the default. |
+| `STYLE_SPRAWL_EXCESS_THRESHOLD` | `20` | Overrides in one space above which the sprawl banner flags that space. Accepts 1 to 1000; anything else keeps the default. |
+| `POLICY_FILE_SYNC_INTERVAL_SECS` | `900` | Seconds between pulls of registered policy files. `0` turns the sync off. A value that is not a whole number keeps the default. |
+
+### Ingest runs
+
+What an ingest run does around the sources, read by the ingest binary and the server.
+
+| Variable | Default | Description |
+|---|---|---|
+| `INGEST_PRUNE_DELETED` | `true` | The code default is `false` when the `ingest:` block is absent; the shipped `config/default.yaml` has the block, so it is `true`. After a run, remove documents that have disappeared from their source (their chunks leave the index and the document is marked deleted). Skipped when the run saw zero documents, as a guard against a network failure wiping the corpus. |
+| `INGEST_RUN_ON_STARTUP` | `false` | Run one ingest when the server starts, before the first scheduled run. |
+| `INGEST_SKIP_EXTENSIONS` | — | Comma-separated file extensions to skip, without dots (`png,zip`). When set it replaces the built-in skip list (images, audio, video, archives and similar), and an empty value skips nothing. Unset keeps the built-in list. |
+| `FORCE_REINGEST` | `false` | `true` or `1` re-embeds every document whatever its stored version. Set it for one run, then remove it. |
+| `DOCBRAIN_INGEST_BIN` | — | Path to the `docbrain-ingest` binary the server starts for an ingest triggered from the console or API. Unset uses the binary next to the server, then `docbrain-ingest` on the path. |
+| `INGEST_CONCURRENCY` | `10` | Confluence pages fetched and processed at once during a Confluence ingest. A value that is not a number stops the ingest. |
+| `DOCBRAIN_SELF_INGEST` | `true` | Index DocBrain's own documentation, from `DOCBRAIN_DOCS_PATH`, so it can answer questions about itself. The shipped `config/default.yaml` sets `true`; the code default is `false` when the `ingest:` block is absent. Skipped when the directory does not exist. |
+| `DOCBRAIN_DOCS_PATH` | `./docs` | Directory of documentation that self-ingest reads. |
+
+### Connector scheduler
+
+The scheduler and sync engine for HTTP connectors. Set in the `connectors:` block or by these variables.
+
+| Variable | Default | Description |
+|---|---|---|
+| `CONNECTOR_ENABLED` | `true` | Run the connector scheduler. `false` stops all connector syncs. |
+| `CONNECTOR_MAX_CONCURRENT_SYNCS` | `3` | Connector syncs that may run at once. |
+| `CONNECTOR_MAX_PAGES_PER_SYNC` | `200` | Most pages one sync fetches. |
+| `CONNECTOR_MAX_DOCS_PER_SYNC` | `5000` | Most documents one sync ingests. |
+| `CONNECTOR_MAX_DOCUMENTS_PER_SYNC` | `5000` | The same limit as `CONNECTOR_MAX_DOCS_PER_SYNC`, read from the config file. Once one sync has listed this many documents it stops listing and the rest wait for the next sync. When both are set, `CONNECTOR_MAX_DOCS_PER_SYNC` wins. |
+| `CONNECTOR_FETCH_BATCH_SIZE` | `50` | Documents asked for in one fetch call to a connector. |
+| `CONNECTOR_REQUEST_TIMEOUT_SECS` | `30` | Seconds before one HTTP call to a connector times out. |
+| `CONNECTOR_SYNC_TIMEOUT_SECS` | `3600` | Seconds one whole sync may run (the default is one hour). |
+| `CONNECTOR_MAX_RESPONSE_BYTES` | `10485760` | Largest response body accepted from a connector, in bytes (10 MB). |
+| `CONNECTOR_CIRCUIT_BREAKER_THRESHOLD` | `5` | Failures in a row after which a connector is switched off. |
+| `CONNECTOR_ALLOW_INTERNAL` | `false` | Let connectors call private or internal addresses. Leave it off unless a connector genuinely lives on your network, because it removes the guard against server-side request forgery. |
 
 ## Chunking
 
@@ -634,12 +755,13 @@ Controls how documents are split into chunks for embedding. See **[docs/chunking
 | `PREMISE_SWEEP_INTERVAL_SECS` | `300` | Seconds between premise monitor sweeps. Each sweep reads the premises a connected source could settle, in pages of 1,000, and settles each one, so this is the only dial on that cost: raise it on a large premise table to spend less, lower it to notice a broken claim sooner. Values below `5` are raised to `5` — a zero period is rejected by the timer, and a one-second sweep spends a core re-deriving verdicts that cannot have changed. Fragment-index events still verify a new fragment's premises immediately, independent of this interval. Helm: `premises.sweepIntervalSeconds`. |
 | `PREMISE_DOCUMENT_EXTRACTION` | `false` | Also extract premises from ingested documents, not only from captured fragments. Off by default, and deliberately so: turning it on runs a one-time backfill over the whole corpus and creates a premise row for every path-shaped claim in it (measured over 635 real documentation files at roughly 6.5 claims per document, so a 39,000-document instance writes on the order of a quarter of a million rows on its first pass). The sweep skips the premises nothing can settle. Deterministic — no LLM call. `docs/premises.md` describes the document pass and its cost. Helm: `premises.documentExtraction`. |
 | `RAG_CACHE_TTL_HOURS` | `24` | How long a cached answer is served (hours). `0` turns the answer cache off. A cached answer is served only to the exact same question, character for character, asked outside a conversation — a reworded question, or one about a different file or service, runs the full pipeline. (`RAG_CACHE_THRESHOLD`, the old similarity threshold, is retired and ignored; the server logs a warning when it is set as an environment variable or Helm value `rag.cacheThreshold`; as `rag.cache_threshold` in a config file it is ignored without a warning.) |
-| `FAST_LLM_PROVIDER` | unset | Run the FAST model on a **different provider** than `LLM_PROVIDER`. Unset — or naming the same provider — keeps the previous behaviour, where the fast model is another model on the primary provider. This exists because the two models do different jobs: side-calls (query rewriting, the retrieval judge, the MCP meta-gateway's argument builder) need **speed**, and one of them runs *inside* tool dispatch where the whole request waits on it, while synthesis needs depth. On a self-hosted single GPU those requirements conflict — measured 2026-09-06/07, an argument-builder call needing ~8s of GPU waited over 30s behind synthesis on Ollama (which serialises per model) and timed out the dispatch; giving it a second local model instead traded that queueing for weight eviction. `FAST_LLM_PROVIDER=anthropic` with a local `LLM_PROVIDER=ollama` resolves both without giving up self-hosted synthesis. Providers needing async initialisation (`bedrock`, `vertex_ai`) are refused here with a message naming the variable, rather than failing later as an unexplained side-call error. Supply that provider's own credentials as usual (e.g. `ANTHROPIC_API_KEY`). |
+| `FAST_LLM_PROVIDER` | — | Run the FAST model on a **different provider** than `LLM_PROVIDER`. Unset — or naming the same provider — keeps the previous behaviour, where the fast model is another model on the primary provider. This exists because the two models do different jobs: side-calls (query rewriting, the retrieval judge, the MCP meta-gateway's argument builder) need **speed**, and one of them runs *inside* tool dispatch where the whole request waits on it, while synthesis needs depth. On a self-hosted single GPU those requirements conflict — measured 2026-09-06/07, an argument-builder call needing ~8s of GPU waited over 30s behind synthesis on Ollama (which serialises per model) and timed out the dispatch; giving it a second local model instead traded that queueing for weight eviction. `FAST_LLM_PROVIDER=anthropic` with a local `LLM_PROVIDER=ollama` resolves both without giving up self-hosted synthesis. Providers needing async initialisation (`bedrock`, `vertex_ai`) are refused here with a message naming the variable, rather than failing later as an unexplained side-call error. Supply that provider's own credentials as usual (e.g. `ANTHROPIC_API_KEY`). |
 | `RAG_RETRIEVAL_LADDER_ENABLED` | `false` | Synthesize **two** answers — one from the indexed corpus alone, one that also includes live MCP tool output — and let an LLM judge keep the better one. Off by default. It exists because the normal fused path puts corpus chunks *and* live tool output into one prompt, where live output can make an otherwise good corpus answer **worse**: measured 2026-09-04, a FluxCD question answered at 0.90 confidence from the corpus alone fell to 0.15 once a Confluence tool returned results into the same prompt. With the ladder on, live data can only help. The extra cost is paid **only when a tool fires** — a corpus-only question runs a single synthesis exactly as before — and the two syntheses run concurrently, so the added wall-clock is roughly one judge call rather than a whole second answer. |
 | `RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS` | `10000` | Hard timeout for the judge call. On timeout the answer with the higher self-graded confidence wins — a safe degradation, not a failure. This was `1500`, which no local model can meet: a judge call against a 14B model measured 46-120s, so self-hosted deployments silently never ran the judge at all and always took the fallback. Raise it to get a real judgement from a local model; lower it to bound added latency and accept the fallback. |
 | `RAG_RETRIEVAL_LADDER_GRAPH_THRESHOLD` | `0.5` | Below this winning confidence, the answer is augmented with graph-derived related-topics text. |
-| `RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID` | unset | Model for the judge call. Unset uses the configured fast model. |
+| `RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID` | — | Model for the judge call. Unset uses the configured fast model. |
 | `RAG_CONTEXT_WINDOW_BUDGET_BYTES` | `65536` | Total byte budget for expanded **document** context across all documents; overflow is trimmed from the lowest-ranked end. The real limit is your model's *token* window (~3.2 bytes/token measured), so lower it if your model's window is small — and watch the `stage="rag.staged.context_window"` log line, because providers truncate an over-long prompt silently rather than erroring. |
+| `RAG_CONTEXT_WINDOW_CHUNKS` | `3` | Neighbouring chunks fetched on each side of a matched chunk, so the answer sees the passage and not only the fragment. `0` turns the expansion off. Lookup questions (find, who owns) never expand. |
 | `RAG_LIVE_DATA_BUDGET_BYTES` | `32768` | **Aggregate** ceiling on the LIVE DATA block — the concatenation of *every* MCP tool block spliced into one synthesis prompt. Each tool's own output is already capped by `DOCBRAIN_MCP_DEFAULT_TOOL_OUTPUT_CAP_BYTES` (default 32768), so this setting is what bounds **several tools answering at once**; nothing else does. Measured 2026-09-04: a Confluence tool returned 103,479 bytes and reached the prompt as 8,475 after per-tool capping and redaction, so one tool rarely approaches this ceiling. Over budget the block is truncated with an explicit marker and a `warn` log (`live tool output exceeds the synthesis budget`), because a provider does not reject an over-long prompt — it drops the overflow silently. |
 | `RAG_TOP_K` | `10` | Chunks retrieved per query. Higher = more context passed to LLM, higher token cost. |
 | `RAG_MAX_PER_SOURCE` | `3` | Max chunks per **source group** in the final top-k, where the group is the chunk's `space`: the space key for Confluence (`ENG`, `OPS`, …) and the literal `local` for local-file ingest — *not* the `source_type`. A distribution cap: it stops one group crowding out the others. **Skipped entirely when fewer than two groups are eligible** — with a single group (local-only, one-space Confluence, …) it would otherwise cap total LLM context at 3 chunks regardless of `RAG_TOP_K`, which starves synthesis and presents as a weak model rather than a truncated context. With two or more groups it binds normally, and it may then leave the result under `RAG_TOP_K` by design: two groups at the default of 3 yield at most 6 chunks even with `RAG_TOP_K=10`. Raise this value if you want a small number of groups to fill top-k. |
@@ -648,6 +770,28 @@ Controls how documents are split into chunks for embedding. See **[docs/chunking
 | `SEARCH_MIN_SCORE` | `0.0` | Drop retrieved chunks below this relevance score. `0.0` keeps everything; `0.3`–`0.4` filters low-signal noise. |
 | `OPENSEARCH_INDEX` | `docbrain-chunks` | Name of the document chunk index in OpenSearch |
 | `OPENSEARCH_EPISODE_INDEX` | `docbrain-episodes` | Name of the episode (Q&A history) index in OpenSearch |
+| `RAG_FRESHNESS_PRE_DIVERSITY` | — | Removed. It had re-enabled an old freshness multiplier on retrieval; the server ignores it and logs a warning when it is set. Delete it from your configuration. |
+| `RAG_CANDIDATE_POOL_SIZE` | `200` | Candidates the search stage hands to the reranker for each question. More raises recall and reranker cost; fewer than about 100 hurts recall on large corpora. |
+| `RAG_RRF_K` | `60` | Damping constant when keyword and vector results are merged by reciprocal rank. A larger value favours chunks that rank well in both lists; a smaller one favours each list's top hits. |
+| `RAG_MIN_RELEVANCE_SCORE` | `0.40` | Retrieval floor: a chunk the reranker scores below this never reaches the model. See Grounding floors below for what lowering costs. |
+| `RAG_DISPLAY_FLOOR` | `0.50` | Display floor: a chunk scored below this is never shown as a citation. |
+| `RAG_CONFIDENCE_GATE` | `0.40` | Below this answer confidence the answer is returned as "not found" with no sources; the prompt forbids answering from general knowledge. |
+| `RAG_AGENTIC_LOOP_ENABLED` | `false` | Turns on the agentic loop, which lets the model call connected tools over several rounds before it answers. `1`, `true`, `yes` or `on` enables it; any other value leaves it off (an unrecognised one logs a warning). |
+| `RAG_AGENTIC_LOOP_BUDGET_MS_WEB` | `48000` | Wall-clock deadline of the loop, in milliseconds, for every surface except Slack. A whole number from `1000` to `120000`; anything else logs a warning and uses the default. `ASK_WALL_CLOCK_SECS` can shorten it further. |
+| `RAG_AGENTIC_LOOP_BUDGET_MS_SLACK` | `60000` | As `RAG_AGENTIC_LOOP_BUDGET_MS_WEB`, for the Slack surface, which posts its answer when done and can wait longer. |
+| `RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB` | follows the deadline | Hard cap on tool rounds for every surface except Slack, from `1` to `10`. Unset, the cap is what the deadline pays for at 12 seconds a round (`4` at the default deadline). Set it only to cap cost whatever the time; to allow more steps, lengthen the deadline. An out-of-range value logs a warning and uses the derived cap. |
+| `RAG_AGENTIC_LOOP_MAX_ROUNDS_SLACK` | follows the deadline | As `RAG_AGENTIC_LOOP_MAX_ROUNDS_WEB`, for Slack (`5` at the default deadline). |
+| `RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD` | `0.7` | The loop keeps going while its best answer confidence is below this, from `0.0` to `1.0`. Unset, it reads `RAG_CONFIDENCE_RETRY_THRESHOLD` first and uses `0.7` only if both are unset. A value that is set but invalid uses `0.7` without trying the other. |
+| `RAG_CONFIDENCE_RETRY_THRESHOLD` | `0.7` | The older name of the loop's confidence threshold, still read when `RAG_AGENTIC_LOOP_CONFIDENCE_THRESHOLD` is unset, so a cluster that tuned it keeps its value. Same range and rules. Prefer the new name. |
+| `RAG_MAX_CHUNKS_PER_DOC` | `2` | Most chunks of one document a single retriever may contribute before merging, so one long page cannot fill a retriever's list. Each retriever is counted separately. |
+| `RAG_FRESHNESS_WINDOW_DAYS` | `7` | Documents updated within this many days are always added to the candidate pool, so fresh captures get a chance to be reranked. `0` turns that off. |
+| `RAG_ENTITY_CACHE_TTL_SECS` | `300` | Seconds the entity-to-space lookup is cached before it is refreshed. |
+| `RAG_MAX_REWRITES` | `2` | Most alternative phrasings of a question that are searched alongside it. Each costs one more keyword and one more vector search. `0` turns rewriting off. |
+| `RAG_COMPOUND_DECOMPOSE` | `true` | Split a question that asks several things into sub-questions so each is reranked on its own. `false` or `0` skips the extra fast-model call. |
+| `RAG_RERANK_TITLE_ENRICH` | `true` | Give the reranker each chunk's title, heading and space along with its text. `false` or `0` sends the text alone. |
+| `RAG_TRACE_DETAIL` | `false` | `true` or `1` logs one line per final result for each question. Verbose; for diagnosing a missing source. |
+| `RAG_FUSION_PREFER_FUSED` | `false` | `true` always answers from one pass over the indexed documents and every live-tool result together, and never uses the winner-pick ladder. |
+| `RAG_CACHE_THRESHOLD` | — | Retired. The answer cache now serves only an exact repeat of a question, so a similarity threshold means nothing. The server ignores it and logs a warning when it is set. To turn the cache off, set `RAG_CACHE_TTL_HOURS=0`. |
 
 ### Tool-output caps (the truncation chain)
 
@@ -748,8 +892,7 @@ The reranker feeds four downstream floors in `rag.*` that are the single biggest
 |---|---|---|---|
 | `rag.min_relevance_score` | `0.40` | Chunks below this never reach the LLM | **Hallucination risk** — the LLM sees weaker evidence and writes confident answers from chunks that only tangentially match |
 | `rag.display_floor` | `0.50` | Chunks below this are never shown as citations | **User trust** — tangentially-related docs appear in the sources list and erode credibility |
-| `rag.confidence_gate` | `0.40` | Below this, sources are hidden entirely (answer shown as "general knowledge") | Sources render on low-confidence answers that may mislead users |
-| `rag.strong_answer_floor` | `0.55` | Below this, the answer carries a "low confidence" disclaimer | UI stops warning users about borderline matches |
+| `rag.confidence_gate` | `0.40` | Below this, the answer is returned as "not found" with no sources | Sources render on low-confidence answers that may mislead users |
 
 **Calibration:** a cross-encoder's `[0, 1]` score is **not** a percentage. For Cohere Rerank v3.5 and similar models, `> 0.70` means "directly answers the question", `0.50–0.70` is "strong supporting evidence", `0.40–0.50` is "topically related", `0.30–0.40` is "shares keywords but usually noise". Defaults draw the lines at "topically related" for retrieval and "strong evidence" for citation display.
 
@@ -804,8 +947,22 @@ The Autopilot module automatically identifies documentation gaps from user query
 | `DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK_BUDGET_SECS` | `120` | Per-document wall-clock budget (seconds) for the live cross-check. `0` is a disable sentinel (same honest path as `DOCBRAIN_GENERATE_VERIFY_CROSS_CHECK=false`). The cross-check's internal per-call and probe timeouts are fixed safety rails, not tunable. |
 | `DOCBRAIN_GENERATE_VERIFY_BROAD_PROBE_TOP_K` | `12` | `top_k` for the two independent non-agentic corpus probes (broad hybrid + catalog title) that confirm a *false* gap before a section degrades to `NEEDS INPUT`. Floored at `1` (a `0`-`top_k` probe returns no candidates). Default `12` (parity with the per-section ask candidate set). |
 | `DOCBRAIN_GENERATE_VERIFY_REVIEW_MAX_ROUNDS` | `2` | Max send-back rounds for the post-assess review gate that re-aims a stale section back to write. **Hard-capped at `2`** (the documented maximum); a value `>2` is silently clamped to `2`. `0` disables send-back rewrites (stale claims still ship with a loud inline marker). |
+| `AUTOPILOT_APPLIED_WRITES_RETENTION_DAYS` | `30` | Days the record of what an autopilot write replaced (what a revert needs) is kept, before the nightly prune deletes it. |
+| `DOCBRAIN_GENERATE_MAX_CONCURRENT_SECTION_ASKS` | `16` | Most section questions in flight at once across all running `generate` requests and the nightly autopilot loop. Held between 8 and 128. Raise it for generate throughput at the cost of load on the retrieval path. |
+| `DOCBRAIN_GENERATE_REFUSE_MIN_ONTOPIC` | `3` | `generate` refuses to write a draft when fewer than this many supported claims are about the topic asked. Not applied when you gave a source to start from or merged into an existing page, or when the ask has no distinctive term. |
+| `AUTOPILOT_TREND_V2_ENABLED` | `true` | Use the five-state gap trend (improving, stable, worsening, no gaps open, insufficient signal). Only `true` (any case) or `1` keeps it on; any other non-empty value goes back to the older three-state trend. An empty value keeps it on. |
+| `AUTOPILOT_TREND_MIN_EVENTS` | `5` | Fewest gap events (new plus resolved, over four weeks) before a trend is reported. Below it the trend reads insufficient signal. |
+| `AUTOPILOT_TREND_IMPROVING_THRESHOLD` | `0.75` | Resolved-to-new ratio at or above which the trend reads improving. |
+| `AUTOPILOT_TREND_WORSENING_THRESHOLD` | `0.40` | Resolved-to-new ratio below which the trend reads worsening. Between this and the improving threshold it reads stable. |
+| `VERIFY_CORPUS_MIN_SCORE` | `45.0` | Search score above which a gap labelled as a missing document is corrected to poor coverage, because the corpus does have something on it. Read at each check, so it can be tuned without a restart. |
 
 > **Small teams / dev environments:** Set `AUTOPILOT_CRITICAL_USERS=1`, `AUTOPILOT_CRITICAL_SIGNALS=3`, `AUTOPILOT_CRITICAL_THRESHOLD=0.3` to see critical gaps with minimal signal. See [autopilot.md](autopilot.md) for a full tuning guide.
+
+### Improvement evidence
+
+| Variable | Default | Description |
+|---|---|---|
+| `IMPROVEMENT_REINGEST_CONFIRM_TIMEOUT_HOURS` | `72` | Hours after a fix is published before one whose re-ingest was never confirmed is shown as stale instead of as still in flight. |
 
 ### Draft Publishing — Closing the Feedback Loop
 
@@ -834,10 +991,24 @@ draft_publish:
 
 | Variable | Default | Description |
 |---|---|---|
-| `DRAFT_PUBLISH_TARGET` | `none` | Where to publish drafts: `confluence` or `none` |
+| `DRAFT_PUBLISH_TARGET` | `none` | Where to publish drafts: `confluence`, `github`, `gitlab` or `none` |
 | `DRAFT_PUBLISH_CONFLUENCE_SPACE_KEY` | — | Confluence space key (e.g. `ENG`, `SAAS`) |
 | `DRAFT_PUBLISH_PARENT_PAGE_ID` | — | Optional Confluence parent page ID |
 | `DRAFT_PUBLISH_AUTO_INGEST` | `true` | Re-ingest the published page on next ingest cycle |
+| `GITHUB_PUBLISH_PR_LABELS` | `docbrain,auto-generated` | Comma-separated labels added to each pull request a draft opens in the GitHub repository target. |
+| `GITHUB_PUBLISH_API_URL` | `https://api.github.com` | GitHub API base URL for that target. Set it for GitHub Enterprise. |
+| `GITLAB_PUBLISH_MR_LABELS` | `docbrain,auto-generated` | Comma-separated labels added to each merge request a draft opens in the GitLab repository target. |
+| `GITHUB_PUBLISH_TOKEN` | — | GitHub token with contents and pull-request write scope, used when a draft is published to a GitHub repository. Kept separate from the ingest token. Publishing to GitHub needs this and `GITHUB_PUBLISH_REPO`. |
+| `GITHUB_PUBLISH_REPO` | — | Repository, as `owner/repo`, that receives published drafts. |
+| `GITHUB_PUBLISH_BRANCH` | `main` | Branch the pull request is opened against, or committed to when `GITHUB_PUBLISH_CREATE_PR` is `false`. |
+| `GITHUB_PUBLISH_DOCS_PATH` | `docs` | Directory in the repository where published drafts are written. |
+| `GITHUB_PUBLISH_CREATE_PR` | `true` | `true` opens a pull request for each draft. `false` commits straight to the branch. |
+| `GITLAB_PUBLISH_TOKEN` | — | GitLab token with `api` scope, used when a draft is published to a GitLab repository. Publishing to GitLab needs this and `GITLAB_PUBLISH_PROJECT_ID`. |
+| `GITLAB_PUBLISH_BASE_URL` | `https://gitlab.com` | GitLab base URL for that target. Set it for a self-hosted GitLab. |
+| `GITLAB_PUBLISH_PROJECT_ID` | — | Project that receives published drafts, as a numeric id or a `namespace/repo` path. |
+| `GITLAB_PUBLISH_BRANCH` | `main` | Branch the merge request is opened against, or committed to when `GITLAB_PUBLISH_CREATE_MR` is `false`. |
+| `GITLAB_PUBLISH_DOCS_PATH` | `docs` | Directory in the repository where published drafts are written. |
+| `GITLAB_PUBLISH_CREATE_MR` | `true` | `true` opens a merge request for each draft. `false` commits straight to the branch. |
 
 **Confluence credentials** (shared with the ingest connector):
 
@@ -867,6 +1038,12 @@ Response:
 | `CONTRADICTION_CHECKS_PER_PASS` | `10` | Max docs checked for contradictions per freshness run (LLM cost; increase for more coverage) |
 | `CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS` | `true` | Include recent Slack/PR/Jira docs in the contradiction pass alongside stalest docs |
 | `CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS` | `90` | Only event-based docs edited within this many days are eligible for contradiction checks |
+| `FRESHNESS_LLM_CALLS_PER_PASS` | `50` | Documents given the content-currency check (a model call each) per freshness run. Raise it for a large corpus: at 50 a day, 10,000 documents take about 200 days to cover. Each call costs tokens in proportion to the document. |
+| `FRESHNESS_LINK_CHECKS_PER_PASS` | `20` | Documents whose links are checked (an HTTP HEAD each) per freshness run. Cheap next to the model checks. |
+| `FRESHNESS_ENGAGEMENT_V2_ENABLED` | `false` | Add reader engagement (who retrieved and who rated a document) to freshness scoring. A value that is not `true` or `false` logs a warning and leaves it off. |
+| `FRESHNESS_ENGAGEMENT_MIN_RETRIEVERS` | `3` | Fewest distinct people who must have retrieved a document in the window before its engagement counts. Must be above zero. |
+| `FRESHNESS_ENGAGEMENT_MIN_VOTERS` | `3` | Fewest distinct people who must have rated a document in the window before its engagement counts. Must be above zero. |
+| `FRESHNESS_ENGAGEMENT_WINDOW_DAYS` | `180` | Days of retrievals and ratings that count. Older activity is ignored, so a document nobody touches drifts back to neutral. |
 
 ### Event-Based Source Types
 
@@ -985,6 +1162,27 @@ Use a local provider if capture text must not leave your network.
 | `CAPTURE_SECRET_CHECK_TIMEOUT_SECS` | `10` | The model check's whole budget for one text, in seconds (every attempt, the reply and its parsing). The default is about three times the measured 95th-percentile reply time of a hosted fast model; size it at three times your fast model's p95 (a self-hosted model is often slower). When the budget runs out the capture is saved after the fixed check and the model checks it as soon as it can; until then it may be served. If it runs out during the two further reads, the value counts. `0` is refused at startup. |
 | `CAPTURE_SECRET_CHECK_MAX_REPLY_TOKENS` | `4096` | The reply budget, in tokens, the model check asks the provider for. Many providers refuse a larger output cap. A reply cut off at the budget fails closed (the text is not accepted on that reply) and does not count toward the capture pause. `0` is refused at startup. |
 
+### Conversation distillation, fragment clustering and CI capture
+
+Distillation turns a captured conversation into a few knowledge fragments, clustering groups related fragments, and CI capture analyses merged pull requests and deployments through the API.
+
+| Variable | Default | Description |
+|---|---|---|
+| `DISTILLATION_ENABLED` | `true` | Distil captured Slack threads and pull-request discussions into fragments after a capture. Every distilled thread sends its text to the configured model. |
+| `DISTILLATION_MAX_CONCURRENT` | `3` | Most distillation model calls at once. Held between 1 and 50. |
+| `DISTILLATION_MAX_CONTENT_CHARS` | `8000` | Characters of a conversation sent to the model. Held between 100 and 50000. |
+| `DISTILLATION_MAX_FRAGMENTS` | `5` | Most summaries kept per conversation. Held between 1 and 5. |
+| `FRAGMENT_CLUSTERING_ENABLED` | `true` | Group related fragments into clusters. When off, the clusters endpoint answers 503. |
+| `FRAGMENT_CLUSTER_THRESHOLD` | `0.80` | Cosine similarity at or above which fragments are grouped. |
+| `FRAGMENT_MIN_CLUSTER_SIZE` | `3` | Fewest fragments that make a cluster. |
+| `FRAGMENT_MIN_SOURCE_DIVERSITY` | `2` | Fewest distinct source types a cluster must span. |
+| `FRAGMENT_MAX_PER_CLUSTERING_RUN` | `2000` | Most fragments one clustering run looks at. |
+| `FRAGMENT_AUTO_INDEX_THRESHOLD` | — | Removed: every capture is now served at once. The server still starts when it is set and logs one warning naming it. Delete it from your configuration. |
+| `CI_ANALYZE_ENABLED` | `true` | Build the CI/CD capture analyzer at start (it uses the configured model). `false` leaves the CI capture endpoints without an analyzer. |
+| `FRAGMENT_REVIEW_THRESHOLD` | `0.4` | Summary floor. A DocBrain summary whose model-reported confidence is below this is not stored; everything at or above it is served, labelled. The name is kept for compatibility; nothing is queued for review. |
+| `FRAGMENT_MAX_CONTENT_LENGTH` | `10000` | Longest capture accepted, in characters. |
+| `FRAGMENT_MAX_PER_AUTHOR_PER_HOUR` | `60` | Captures one author may write in any rolling hour, counted in the database so every replica sees one count. A value below 1 is raised to 1. |
+
 ## Memory Consolidation
 
 | Variable | Default | Description |
@@ -1017,6 +1215,16 @@ The Documentation Analytics module tracks organizational documentation health ov
 | `VELOCITY_HOURLY_RATE` | `75` | Hourly engineer cost in USD for ROI calculation. |
 | `VELOCITY_BULK_UPDATE_MULTIPLE` | `10.0` | Bulk re-ingest guard for net knowledge velocity. A week whose `docs_updated` count exceeds this multiple of the rolling weekly-update norm is treated as a bulk sweep (e.g. a full re-ingest) and capped to the norm, so it cannot inflate the velocity headline or flip the maintenance trend to "accelerating". Lower it on a corpus with very steady authoring to catch smaller sweeps; raise it if legitimate maintenance bursts are being mistaken for sweeps. **Must be finite and `>= 1.0`** — a value of 0, negative, or NaN collapses the bulk-sweep threshold to 0 (every week misclassified as a sweep) and is rejected at startup with a clear error. |
 | `VELOCITY_SUBSTANTIVE_UPDATE_CEILING` | `2000` | Absolute ceiling on a single week's substantive (bulk-excluded) update contribution. Applied after the rolling-norm cap to guard the case where the entire history is inflated and the median itself is poisoned. A genuine week of hand-authored doc updates does not exceed this. **Must be `>= 1`** — a negative value or 0 silently zeroes all substantive updates and is rejected at startup with a clear error. |
+| `VELOCITY_ROI_V2_ENABLED` | `true` | Use the current return-on-documentation method: needs enough distinct users, leaves out admins, caps each user's votes and recomputes from live data. `false` goes back to the older raw-count formula, which is not suited to executive reporting. |
+| `VELOCITY_ROI_MIN_MINUTES_LOW` | `5` | Low end, in minutes, of the time saved per helpful answer. Together with the high end it sets the range the ROI figure is shown in. |
+| `VELOCITY_ROI_MIN_MINUTES_HIGH` | `25` | High end, in minutes, of the time saved per helpful answer. |
+| `VELOCITY_ROI_MIN_DISTINCT_USERS` | `3` | Fewest distinct non-admin users with positive feedback in the window before any ROI is shown. Below it the page reads insufficient signal. |
+| `VELOCITY_ROI_EXCLUDE_ADMIN` | `true` | Leave admins' votes out of the ROI count, because the people who run the product rate it differently. Set `false` only with a reason. |
+| `VELOCITY_ROI_MAX_VOTES_PER_USER` | `10` | Most votes from one user counted in the window, so a single enthusiastic user cannot dominate the figure. |
+| `VELOCITY_TRIBAL_V2_ENABLED` | `true` | Use the current tribal-knowledge method: a percentage over real domains, with a signal check. `false` goes back to the older fixed rule of two experts and no check. |
+| `VELOCITY_TRIBAL_MAX_EXPERTS` | `2` | A domain with this many experts or fewer counts as tribal. A five-person team might use `1`; a large organisation might use `5`. |
+| `VELOCITY_TRIBAL_MIN_DOMAINS` | `3` | Fewest domains with feedback signal before the tribal percentage is shown. Below it the page reads insufficient signal. |
+| `VELOCITY_MAINTENANCE_TREND_MIN_SNAPSHOTS` | `4` | Fewest snapshots with real activity (documents created or updated, or gap events) before the maintenance trend gives a verdict. Below it the page reads insufficient signal. |
 
 ```yaml
 velocity:
@@ -1026,26 +1234,29 @@ velocity:
   substantive_update_abs_ceiling: 2000
 ```
 
+### Semantic quality scoring
+
+A background sweep in which the language model rates documents that already passed the structural score on accuracy, completeness, clarity and actionability. Set in the `semantic_quality:` block or by these variables.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SEMANTIC_QUALITY_ENABLED` | `true` | `false` turns the sweep off. |
+| `SEMANTIC_QUALITY_INTERVAL_HOURS` | `24` | Hours between sweeps; the first runs five minutes after the server starts. `0` is accepted and runs sweeps back to back. |
+| `SEMANTIC_QUALITY_BUDGET` | `50` | Most documents rated in one sweep, capped at `100` whatever you set. |
+| `SEMANTIC_QUALITY_STRUCTURAL_THRESHOLD` | `40.0` | Lowest structural score a document needs before it is rated by the model. |
+
 ## Knowledge Stream
 
 The Knowledge Stream proactively detects and pushes intelligence: incident early warnings (multiple users hitting the same issue), expertise gaps (domains with single-point-of-failure risk), and context-aware doc updates.
 
+Set in the `stream:` block of the config file or by these variables. The block also accepts `alert_channel`, which nothing reads: the stream posts no message.
+
 | Variable | Default | Description |
 |---|---|---|
-| `STREAM_ENABLED` | `false` | Enable the knowledge stream (proactive push intelligence). Opt-in. |
-| `STREAM_INTERVAL_MINUTES` | `30` | How often the stream engine scans for incidents and expertise gaps. |
-| `STREAM_INCIDENT_WARNING_MIN_USERS` | `2` | Minimum unique users asking troubleshoot questions about the same service in 2 hours to trigger an incident warning. |
-| `STREAM_ALERT_CHANNEL` | — | Slack channel for critical stream alerts (optional). |
-| `STREAM_EXPERTISE_GAP_DAYS` | `90` | Days without expert activity before triggering an expertise gap alert. |
-
-```yaml
-stream:
-  enabled: false
-  interval_minutes: 30
-  incident_warning_min_users: 2
-  alert_channel: ~
-  expertise_gap_days: 90
-```
+| `STREAM_ENABLED` | `false` | `true` runs the stream loop inside the server; the start-up log says `Knowledge stream scheduled every N minutes` or `Knowledge stream disabled`. |
+| `STREAM_INTERVAL_MINUTES` | `30` | Minutes between stream runs; `0` runs every minute. |
+| `STREAM_INCIDENT_WARNING_MIN_USERS` | `2` | Distinct users who must have asked the same troubleshooting question (or one answered with low confidence) within two hours before an incident early warning is raised. |
+| `STREAM_EXPERTISE_GAP_DAYS` | `90` | Days; an expertise gap fires for a domain whose latest attribution is older than this and names two or fewer individuals. |
 
 ## Evidence Bundles
 
@@ -1078,6 +1289,7 @@ adapter. Findings are readable at `/health` in the console, over
 | `HEALTH_ENGINE_INTERVAL_SECS` | `21600` | Seconds between scheduled engine runs — four runs a day, with the first one 60 seconds after boot. Set `0` to turn the scheduler off entirely; the boot log then says so, and findings can still be produced on demand with `POST /api/v1/health/run` (admin). A value between `1` and `59` is raised to `60` with a warning: a whole run takes a database-wide lock and walks every detector, so an interval mistyped as `6` would hold that lock continuously. A malformed value warns, naming the value it rejected, and falls back to the default — a typo turns into a slower notice, never into silence. Two servers on one database need no coordination: the second run is refused by an advisory lock, logged as routine, and changes nothing. |
 | `HEALTH_OPEN_CAP` | `10` | The most findings that may be `open` at once, across the organisation. The cap is the product decision, not a performance one — a list nobody can finish is a list nobody reads, so the engine holds the rest at `queued` and promotes them as slots free. Claiming a finding moves it to `in_progress` and frees its slot, so the number of findings *awaiting a decision* stays at the cap; `in_progress` is deliberately uncapped, because only a person can create one and a claim left untouched for 14 days expires back to `open`. Each run also re-contests the open slots: a queued finding that outranks the lowest open one by a clear margin takes its place, and the displaced finding returns to `queued`, never to resolved or dismissed. Minimum `1`. |
 | `HEALTH_WINDOW_DAYS` | `30` | How far back a detector looks when counting the retrievals and questions that give a finding its impact. Clamped to `7..=365`. Widening it raises the reach of long-lived pages; narrowing it makes the list follow what people are reading this week. |
+| `DOCBRAIN_PUBLIC_URL` | — | Public origin of the console, used to build each finding's deep link (`<origin>/?finding=<id>`). Unset leaves the link relative. A trailing slash is trimmed. |
 
 Findings carry no asker identities — evidence is counts and texts. Who changed
 a finding's state is recorded separately and shown to admins only.
@@ -1164,6 +1376,7 @@ architecture decisions, how-to answers, anything marked with a target reaction.
 | `SLACK_SIGNING_SECRET` | — | Slack app signing secret for webhook verification |
 | `NOTIFICATION_INTERVAL_HOURS` | `24` | How often health alerts are posted to the alert channel (requires Slack) |
 | `NOTIFICATION_SPACE_FILTER` | — | No longer read: it scoped the author DMs about documents, which were retired. Setting it logs a warning |
+| `SLACK_GAP_NOTIFICATION_CHANNEL` | — | Slack channel that receives a message when a gap analysis finds new critical gaps. Unset sends none. Needs `SLACK_BOT_TOKEN`. |
 
 ### Slack Capture Access Control
 
@@ -1183,9 +1396,82 @@ Channel check matches against both `channel_name` and `channel_id`. User check m
 | Variable | Default | Description |
 |---|---|---|
 | `SERVER_PORT` | `3000` | Port the DocBrain API server listens on |
-| `SERVER_HOST` | `0.0.0.0` | Host/interface to bind |
-| `LOG_LEVEL` | `info` | Log verbosity: `trace`, `debug`, `info`, `warn`, `error` |
+| `SERVER_BIND` | `127.0.0.1` | Address the DocBrain API server binds to. Use `0.0.0.0` in a container so the port is reachable; the Compose file and the Helm chart both set it. |
+| `RUST_LOG` | `info` | Log verbosity and filter, in the `tracing` filter syntax: a level (`trace`, `debug`, `info`, `warn`, `error`) or per-module directives such as `docbrain_core=debug,info`. Read by the server and the ingest binary. |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3001` | Comma-separated allowed CORS origins for the web UI |
+| `LOG_FORMAT` | — | `json` writes one JSON object per log line, for log aggregators. Anything else, or unset, writes compact text. Read by the server and by the ingest binary. |
+| `NOTIFICATION_RETENTION_DAYS` | `30` | Days the notification feed keeps an entry. A value that is not a whole number above zero is ignored and the default applies. |
+| `MAX_QUERY_LENGTH` | `4000` | Longest question or incident description the server accepts. A longer one is refused with a 400. An admin config reload applies a change without a restart. |
+| `DOCBRAIN_LICENSE_FILE` | — | Path to a subscription certificate file. When set it takes precedence over a certificate uploaded in the console, and the server warns if the two differ. Unset uses the uploaded one. The certificate gates nothing: DocBrain keeps working either way. |
+
+### Background workers
+
+Each worker runs on its own timer inside the server. Setting an interval to `0` turns that worker off.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SIGNAL_INGEST_INTERVAL_SECS` | `900` | Seconds between runs of the behavioural-signal ingester. |
+| `EXPERTISE_SCORER_INTERVAL_SECS` | `3600` | Seconds between runs of the expertise scorer. |
+| `CALIBRATION_REFIT_INTERVAL_SECS` | `604800` | Seconds between refits of the expertise calibration model (the default is one week). The model is also fitted once at start. |
+| `UI_GATE_REFRESH_INTERVAL_SECS` | `300` | Seconds between runs of the ownership-accuracy audit that decides whether confident attributions are shown. `0` leaves them hidden for good. A value that is not a whole number logs a warning and the default applies. |
+| `DOCBRAIN_ATTESTATION_INTERVAL_SECS` | `604800` | Seconds between identity-attestation snapshots (the default is one week). Each snapshot counts identities per connected source over a fixed 90-day window. |
+| `SECRET_SCAN_INTERVAL_SECS` | `300` | Seconds between passes that scan changed documents for secrets. `0` turns the pass off. A value between 1 and 59 is raised to 60; a value that is not a whole number keeps the default. |
+
+### Expertise ownership gate
+
+The thresholds a team must clear before DocBrain publishes it as the owner of a subject. Every one must hold or the scorer abstains. Set in the `expertise_gate:` block or by these variables.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EXPERTISE_GATE_V_MIN` | `1.0` | Lowest decayed team score that can publish. |
+| `EXPERTISE_GATE_N_MIN` | `5` | Fewest raw signals that can publish. Below it the reason reads "fewer than N signals". |
+| `EXPERTISE_GATE_M_ASKERS` | `2` | Fewest distinct people who must have asked about the subject. |
+| `EXPERTISE_GATE_DIVERSITY_MIN` | `2` | Fewest distinct signal types the evidence must come from. |
+| `EXPERTISE_GATE_MARGIN_FRAC` | `0.25` | How far the leading team must beat the second, as a fraction of the second's score. A subject with only one scored team passes this check. |
+| `EXPERTISE_GATE_UI_ENABLED` | `false` | Master switch for showing confident ownership to people. While `false` the gate stays closed and ownership is never shown. |
+| `EXPERTISE_GATE_UI_MIN_AUDIT_SAMPLES` | `30` | Fewest audited confident attributions before the gate can open; with fewer it stays closed whatever the rate. |
+| `EXPERTISE_GATE_UI_CONFIDENTLY_WRONG_BAR` | `0.0` | Highest audited confidently-wrong rate at which confident ownership is shown. At `0.0` only a rate of zero opens it. |
+
+### Reconciler
+
+Finds documents whose search-index entries have drifted from the database and queues them for re-index, and removes index entries of captures whose row is gone. Each cycle is bounded, and a drifted corpus is repaired over several cycles.
+
+| Variable | Default | Description |
+|---|---|---|
+| `RECONCILER_ENABLED` | `true` | Anything except `false` or `0` leaves the reconciler on, so a typo does not switch off the repair. |
+| `RECONCILER_INTERVAL_MINUTES` | `10` | Minutes between reconciler cycles. |
+| `RECONCILER_BATCH_LIMIT` | `500` | The most documents or chunks one pass inspects per cycle. |
+
+### Command-line client
+
+Read by the `docbrain` CLI on the machine it runs on, not by the server.
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCBRAIN_CORPUS_DROP_ALERT` | `0.10` | The fraction of a corpus that may disappear between two looks at the same server URL before the CLI says so. Beats the `corpus_drop_alert_fraction` key in `~/.docbrain/config.json`. A value outside `0.0` to `1.0` is ignored. |
+| `DOCBRAIN_GENERATE_TIMEOUT_SECS` | `900` | How long `docbrain generate` waits for the server, in seconds. Held between 30 and 900; a value that is not a number keeps the default. A long generate against an existing page can take several minutes. |
+
+### Event bus and outbound webhooks
+
+The internal event bus is always on. These settings size it and govern the webhooks DocBrain sends to your own endpoints.
+
+| Variable | Default | Description |
+|---|---|---|
+| `EVENT_BUS_CAPACITY` | `4096` | Events the bus buffers before a slow listener starts missing some. Held between 16 and 65536. |
+| `WEBHOOK_DELIVERY_TIMEOUT_SECONDS` | `10` | Seconds one webhook delivery attempt may take. Held between 1 and 60. |
+| `WEBHOOK_CIRCUIT_BREAKER_THRESHOLD` | `10` | Failed deliveries in a row after which a webhook subscription is switched off. Held between 3 and 100. |
+| `WEBHOOK_MAX_RETRIES` | `4` | Delivery attempts, counting the first. Held between 1 and 10. |
+| `ALLOW_INTERNAL_WEBHOOKS` | `false` | `true` or `1` lets a webhook target localhost or a private address. Off, those targets are refused. Turn it on only when the receiver is on your own network. |
+
+### Governance SLA checker
+
+The periodic check that finds subjects that have breached a space's SLA and announces each one. The SLA limits themselves are stored per space.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SLA_CHECKER_INTERVAL_HOURS` | `1` | Hours between runs of the checker. |
+| `SLA_CHECKER_QUERY_TIMEOUT_SECS` | `30` | Seconds the checker's database transaction may run. A statement that hits it rolls the whole run back. |
+| `SLA_CHECKER_MAX_EVENTS_PER_RUN` | `50` | Most breaches announced in one run. The rest are announced on the next run. |
 
 ## Rate Limiting
 
@@ -1225,6 +1511,57 @@ provider's signature or shared secret instead.
 | `MAX_PAT_DAYS` | `90` | Longest life, in days, of an API key a person creates for themselves and of an app connection made with Sign-in for apps. The 30-day unused limit on app connections is fixed. |
 | `SESSION_RATE_LIMIT_RPM` | `240` | Requests per minute for a login session key. Named tokens keep the `60` default; a browser session needs more, because one page load issues several calls and the auth guard retries. Too low shows up as a UI that looks like an outage. |
 | `ADMIN_KEY_FILE` | `/app/admin-bootstrap-key.txt` | Where to write the admin bootstrap key on first boot |
+| `IDLE_TIMEOUT_HOURS` | `0` | Hours without use after which an API key is rejected as if expired, whatever its lifetime. `0` turns it off. |
+| `BOOTSTRAP_KEY_ENABLED` | `true` | `false`, `0`, `no` or `off` revokes the bootstrap admin key at start and keeps it revoked; if the revoke fails the server refuses to start. Set it once you have created your own admin keys. |
+| `BOOTSTRAP_ADMIN_KEY` | — | Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to `ADMIN_KEY_FILE`. |
+
+### Access lists at ingest
+
+Which source access lists are carried onto indexed documents, and how often the access state is rechecked. The Confluence mode sits here with the others so one table covers every source.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ACL_CONFLUENCE_MODE` | `off` | How Confluence page access is carried into answers. `off` records no access list. `mirror` copies each page's Confluence permissions, so people only see pages they can open there. `public` marks every page open to all. `admin_only` marks every page admin-only. A space can override it with `ACL_CONFLUENCE_SPACE_<KEY>` (the space key in capitals). An unknown value logs a warning and counts as `off`. |
+| `ACL_GITHUB_MODE` | `off` | How access to GitHub documents (captures, pull requests and other GitHub documents) is carried into answers. Same values as `ACL_CONFLUENCE_MODE`: `off`, `mirror`, `public` or `admin_only`; an unknown value counts as `off`. Needs `GITHUB_TOKEN` or `GITHUB_CAPTURE_TOKEN`; with neither, no access list is read. |
+| `ACL_SLACK_MODE` | `off` | How access to Slack documents (threads and captures) is carried into answers. Same values as `ACL_CONFLUENCE_MODE`; an unknown value counts as `off`. Needs `SLACK_BOT_TOKEN`; without it, no access list is read. |
+| `ACL_JIRA_MODE` | `off` | How access to Jira issues is carried into answers. Same values as `ACL_CONFLUENCE_MODE`; an unknown value counts as `off`. Needs `JIRA_BASE_URL` and `JIRA_API_TOKEN` (and `JIRA_USER_EMAIL` for Cloud); without them, no access list is read. |
+| `GITHUB_CAPTURE_TOKEN` | — | Token used to read who can see a GitHub document during ingest when `GITHUB_TOKEN` is not set. With neither set, no access list is read for GitHub documents. |
+| `ACCESS_MEMBERSHIP_SWEEP_SECS` | `240` | Seconds between reads of who belongs to each Confluence space and group and each Slack channel, which access decisions are made from. `0` turns the sweep off. Otherwise a whole number from `60` to `480`; anything else is a configuration error and the server does not start. |
+| `ACCESS_STATE_SWEEP_SECS` | `900` | Seconds between reads of who can open each Confluence page and Jira issue. `0` turns the sweep off. Otherwise a whole number from `300` to `1500`; anything else is a configuration error and the server does not start. |
+
+### Access lists at query time
+
+Whether the access lists carried onto documents are applied when a question is answered, and what a person is told when something was filtered out. Set in the `acl:` block or by these variables.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ACL_MODE` | `off` | Whether answers are filtered by who may read each source. `off` applies no filter. `warn` works out what would be filtered and logs it, but keeps every result, so you can check coverage on a real corpus first. `enforce` drops what the asker may not read. |
+| `ACL_UNKNOWN_POLICY` | `deny` | What to do with a chunk that carries no access list: `deny` or `allow`. Under `enforce`, `deny` drops it and `allow` keeps it. |
+| `ACL_RECALL_OVERFETCH` | `1.0` | Declared as the factor by which the search `top_k` is raised while the filter is active, but no code reads it yet, so changing it has no effect. |
+| `ACL_USER_PRINCIPAL_MAX_AGE_SECS` | `3600` | Seconds after which a person's stored group memberships count as stale and are left out of what they may read. `0` turns this check off. |
+| `ACL_DENIAL_MODE` | `disclosed_no_count` | What an answer says when access filtering removed content. `silent` gives generic text and no counts. `disclosed_no_count` says a filter was applied without saying how much. `disclosed` adds the number of chunks filtered. Admins see `disclosed` by default. |
+| `ACL_DENIAL_REFERRAL` | — | Who the denial text tells people to contact; it fills `<referral>` in the message. Default `your administrator`. |
+| `ACL_DENIAL_AUDIT` | `false` | `true` writes a row to the `acl_audit_log` table whenever a denial removed content, for compliance review. |
+| `ACL_DENIAL_AUDIT_RAW_QUERY` | `false` | `true` stores the question text in the audit log. Off, only a SHA-256 hash is stored. Queries can themselves be sensitive, so leave it off unless a compliance rule needs the text. |
+
+### Access-list backfill tool
+
+`docbrain-acl-backfill` copies source-system access lists onto documents that were indexed before access mirroring existed. It walks one source's documents, stores each access list, and updates every chunk in the search index. It is resumable: by default it skips documents that already have an access list. It reads the same `ACL_CONFLUENCE_MODE` setting as ingest and does useful work only when that is `mirror`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ACL_BACKFILL_SOURCE` | `confluence` | Which source to backfill. |
+| `ACL_BACKFILL_LIMIT` | `0` | Most documents to process in one run. `0` means no limit. |
+| `ACL_BACKFILL_FORCE` | `false` | `true` or `1` fetches and overwrites access lists that already exist. |
+| `ACL_BACKFILL_SPACE` | — | Limit the run to one space key. Unset or empty walks every space. |
+
+### Restoring removed secrets from a backup
+
+Read by the `secret_restore` admin tool, which puts back text the secret scan removed, using a database restored from an earlier backup. It runs dry unless told to apply, and also needs `DATABASE_URL` for the live database.
+
+| Variable | Default | Description |
+|---|---|---|
+| `BACKUP_DATABASE_URL` | — | Connection string of the database restored from the backup. Required by the tool; every session it opens on this database is read only. |
 
 ## MCP Tool Platform
 
@@ -1240,12 +1577,21 @@ enable live tool fan-out at answer time.
 | `MCP_TOOLS_FANOUT_MAX_CONCURRENT` | `8` | Max concurrent gateway dispatches in a single fan-out pass (clamped 1..=64). Caps how many tool calls are in flight at once so an always-on full-catalog fan-out under many users can't become a spawn storm. The total wall-clock budget is a separate, fixed bound. |
 | `MCP_TOOLS_FANOUT_MAX_ADMITTED_CHARS` | `24000` | Max TOTAL chars of live-tool evidence admitted into a single generate fan-out (clamped 1000..=200000). Delta #5 admits one chunk per tool, so a verbose catalog can stuff the writing prompt with huge live evidence (token cost + lost-in-the-middle); this bounds the sum, dropping whole lowest-priority chunks past the budget at chunk boundaries (never truncated mid-chunk). Applies only to live chunks; corpus chunks keep their own budget. |
 | `MCP_TOOLS_FANOUT_COOLDOWN_SECS` | `30` | Per-connector cooldown TTL in seconds (`0` disables; clamped 0..=600). When a connector returns a rate-limit (429), timeout, or transient (5xx / transport) failure, it is skipped from dispatch for this TTL ACROSS requests, so the always-on full-catalog fan-out can't re-hammer a flaky / rate-limited connector on every generate + regenerate. Keyed ONLY on the connector's OWN recent failures and CLEARED the moment it succeeds, so a connector that succeeded more recently than it failed is never suppressed (anti-DoS-on-the-good-tool). |
-| `DOCBRAIN_SSRF_ALLOW_LOOPBACK_FOR_INTERNAL_SHIMS` | unset | **Required to load the shipped in-process shim manifests.** `confluence_rest` and `jira_rest` are served by docbrain-server itself at `http://localhost:${DOCBRAIN_SERVER_PORT}/internal/mcp/*`, so their endpoint host is loopback by design. The manifest validator's SSRF check rejects loopback by default, and without this set both manifests are skipped at boot (`manifest failed to materialize ... is in a disallowed range`) leaving `manifest_count=0`. Set to `1` or `true` to allow **loopback only** — RFC1918, link-local and IMDS (169.254.169.254) addresses stay blocked, and non-loopback hostnames are still resolved and checked at probe time. |
+| `DOCBRAIN_SSRF_ALLOW_LOOPBACK_FOR_INTERNAL_SHIMS` | — | **Required to load the shipped in-process shim manifests.** `confluence_rest` and `jira_rest` are served by docbrain-server itself at `http://localhost:${DOCBRAIN_SERVER_PORT}/internal/mcp/*`, so their endpoint host is loopback by design. The manifest validator's SSRF check rejects loopback by default, and without this set both manifests are skipped at boot (`manifest failed to materialize ... is in a disallowed range`) leaving `manifest_count=0`. Set to `1` or `true` to allow **loopback only** — RFC1918, link-local and IMDS (169.254.169.254) addresses stay blocked, and non-loopback hostnames are still resolved and checked at probe time. |
 | `MCP_REGISTRY_PUBKEY` | — | Base64-encoded 32-byte Ed25519 public key used to verify the signed registry index and per-manifest signatures. When unset, `/api/v1/admin/mcp/registry*` and `/install-from-registry` return `503` and the server boots normally; admins can still install via the paste/URL endpoint. No default. |
 | `MCP_REGISTRY_URL` | `https://registry.docbrain-ai.com/v1/index.json` | URL of the signed registry index. |
 | `MCP_REGISTRY_CACHE_PATH` | `/var/lib/docbrain/registry-cache/index.json` | Disk path for the cached registry index. Acts as the Tier 2 fallback when the network fetch fails. |
 | `DOCBRAIN_K8S_SECRET_NAME` | — | Kubernetes Secret name embedded in the kubectl command rendered by `/api/v1/admin/mcp/secrets/audit/{id}`. Optional — when unset the rendered command shows a `<set DOCBRAIN_K8S_SECRET_NAME>` placeholder. |
 | `DOCBRAIN_K8S_NAMESPACE` | — | Kubernetes namespace for the same audit endpoint. Optional — placeholder when unset. |
+| `DOCBRAIN_PUBLIC_BASE_URL` | `http://localhost:3000` | Origin that MCP sign-in (OAuth) uses to build its callback address. Set it to the address clients reach DocBrain at. `DOCBRAIN_WEB_BASE_URL` falls back to this value when it is unset. |
+| `MCP_OAUTH_ENCRYPTION_KEY` | — | Base64 key of exactly 32 bytes that encrypts stored per-user tool sign-in tokens. Without it MCP sign-in is disabled and its endpoints answer `503`. Generate one with `openssl rand -base64 32`. |
+| `MCP_MANIFEST_DIR` | `/etc/docbrain/manifests` | Directory the tool manifests are read from. If it does not exist, MCP sign-in is disabled and the server logs a warning. The Helm chart sets `/etc/docbrain/mcp-manifests`. |
+| `DOCBRAIN_MCP_SECRET_KEY` | — | Base64 key of 32 bytes that encrypts secrets typed into a manifest in the console. Unset, those inline secrets are refused, while secrets taken from the environment keep working. |
+| `DOCBRAIN_INTERNAL_MCP_SECRET` | — | Bearer secret the built-in tool shims require from the orchestrator, which calls them on the loopback address; generated at start when unset (a temporary one, with a note in the log). Set it in production so the value survives a restart; otherwise a rolling deploy drops in-flight sessions. |
+| `DOCBRAIN_DM_PERSIST_POLICY` | `strict` | What happens to direct-message content returned by a tool (today, Slack). `strict` removes it before it reaches the answer, the cache or memory. `warn` logs it but keeps it, for staging only. `allow` keeps it. An unknown value logs a warning and uses `strict`. |
+| `DOCBRAIN_MCP_LOG_RENDERED_BLOCKS` | `false` | `1`, `true`, `yes` or `on` logs how each tool result was framed in the answer prompt: the header, the argument line and the sizes, never the body. For diagnosing how the model was shown a result. Read once at start. |
+| `DOCBRAIN_DM_REDACTOR_DEBUG_PROBE` | `false` | Diagnostic only, off by default. `true`, `1`, `yes` or `on` logs a warning for each Slack tool call with the first part of the parsed response and the redaction report. Direct-message text can land in the log while it is on, so turn it on briefly and back off. |
+| `DOCBRAIN_OAUTH_EXCHANGE_DEBUG_PROBE` | `false` | Diagnostic only, off by default. `true` logs the full authorize URL on every tool sign-in, and, when a token exchange cannot be decoded, the first part of the provider's raw reply. That reply can hold part of a credential, so turn it on briefly and back off. |
 
 YAML equivalent:
 
@@ -1356,6 +1702,16 @@ See **[docs/sso.md](sso.md)** for full setup instructions and a provider compari
 | `GITLAB_REDIRECT_URI` | — | Callback URL. e.g. `https://docbrain.co/api/v1/auth/gitlab/callback` |
 | `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` if your self-hosted GitLab uses a corporate/private CA |
 
+### Who may sign in
+
+These settings decide who is allowed to sign in over SSO, not which role they get.
+
+| Variable | Default | Description |
+|---|---|---|
+| `OIDC_ALLOWED_GROUPS` | — | Comma-separated IdP group names, or GitHub organisations, allowed to sign in. When set, someone in none of them is refused unless an allowed domain matches. With neither this nor `OIDC_ALLOWED_DOMAINS` set, every authenticated user may sign in. |
+| `OIDC_ALLOWED_DOMAINS` | — | Comma-separated email domains allowed to sign in, for example `acme.com,acme.org`. A person who matches a domain or a group is let in; with neither list set, everyone is. |
+| `OIDC_ALLOW_EMAIL_LINKING` | `false` | `true` or `1` lets a first SSO login attach to an existing local account with the same email, but only when the IdP reports that email as verified. Off, such a login does not take over the account. |
+
 ### RBAC Role Mapping
 
 Controls what role new SSO users receive. Roles are re-evaluated on every login.
@@ -1367,6 +1723,8 @@ Controls what role new SSO users receive. Roles are re-evaluated on every login.
 | `OIDC_ADMIN_EMAILS` | — | Comma-separated emails that always get admin |
 | `OIDC_ADMIN_GROUPS` | — | Comma-separated IdP group names → admin |
 | `OIDC_EDITOR_GROUPS` | — | Comma-separated IdP group names → editor |
+| `OIDC_ANALYST_GROUPS` | — | Comma-separated IdP group names → analyst (the role between editor and admin: it can moderate answers and fragments) |
+| `OIDC_SYNC_ROLE_ON_LOGIN` | `true` | Set `false` or `0` to stop the IdP rewriting an existing user's role at each login, so a role an admin set in DocBrain survives. |
 
 ## How to configure DocBrain
 

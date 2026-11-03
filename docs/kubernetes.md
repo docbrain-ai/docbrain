@@ -129,7 +129,6 @@ The chart creates a PersistentVolumeClaim and mounts it at `ingest.localDocsPath
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
   --set llm.anthropicApiKey=sk-ant-... \
-  --set ingest.sources=local \
   --set ingest.localDocsPath=/data/docs \
   --set ingest.docsStorage=10Gi
 ```
@@ -140,7 +139,6 @@ helm install docbrain ./helm/docbrain \
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
   --set llm.anthropicApiKey=sk-ant-... \
-  --set ingest.sources=confluence \
   --set ingest.confluence.baseUrl=https://yourcompany.atlassian.net \
   --set ingest.confluence.email=user@yourcompany.com \
   --set ingest.confluence.apiToken=ATATT... \

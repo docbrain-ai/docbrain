@@ -4,7 +4,8 @@
 # Usage:
 #   cp .env.example .env        # add your LLM keys, Confluence token, etc.
 #   (the fingerprint key is generated into the docbrain-keys volume on first start; back it up)
-#   docker compose up -d        # starts all services
+#   docker compose up -d        # starts all services; the ingest service indexes your
+#                               # sources at start and then every INGEST_INTERVAL_SECS (3600)
 #
 # Configuration:
 #   YAML defaults are baked into the Docker image (config/default.yaml +
@@ -68,7 +69,9 @@ services:
   # unless you supplied DOCBRAIN_FINGERPRINT_KEY or a key file already exists. Never replaces a
   # key, never prints one. Two starts at once cannot write two keys (the link below is atomic).
   keys:
-    image: ghcr.io/docbrain-ai/docbrain:latest
+    image: ${DOCBRAIN_IMAGE:-ghcr.io/docbrain-ai/docbrain:latest}
+    pull_policy: ${DOCBRAIN_PULL_POLICY:-always}
+    platform: ${DOCBRAIN_PLATFORM:-linux/amd64}
     restart: "no"
     environment:
       DOCBRAIN_FINGERPRINT_KEY: ${DOCBRAIN_FINGERPRINT_KEY:-}
@@ -97,9 +100,9 @@ services:
         rm -f "$$tmp"
 
   server:
-    image: ghcr.io/docbrain-ai/docbrain:latest
-    pull_policy: always
-    platform: linux/amd64
+    image: ${DOCBRAIN_IMAGE:-ghcr.io/docbrain-ai/docbrain:latest}
+    pull_policy: ${DOCBRAIN_PULL_POLICY:-always}
+    platform: ${DOCBRAIN_PLATFORM:-linux/amd64}
     # Captures an MCP client started finish before the server stops (it waits up to 130 s).
     stop_grace_period: 180s
     # No host port: the proxy is the single front door (same-origin /api/* + /*).
@@ -206,10 +209,62 @@ services:
       # - trainer_models:/data/models
     restart: unless-stopped
 
+  # Indexes every configured source at start and then every INGEST_INTERVAL_SECS (default 3600).
+  # A run that fails (the server is still migrating, a source is unreachable) is retried after
+  # 60 s until the first success; later failures wait for the next interval. INGEST_INTERVAL_SECS=0
+  # runs once. `docker compose exec server docbrain-ingest` still runs one pass right now.
+  ingest:
+    image: ${DOCBRAIN_IMAGE:-ghcr.io/docbrain-ai/docbrain:latest}
+    pull_policy: ${DOCBRAIN_PULL_POLICY:-always}
+    platform: ${DOCBRAIN_PLATFORM:-linux/amd64}
+    depends_on:
+      keys:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      server:
+        condition: service_started
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-docbrain}:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/${POSTGRES_DB:-docbrain}
+      OPENSEARCH_URL: http://opensearch:9200
+      REDIS_URL: redis://redis:6379
+      DOCBRAIN_FINGERPRINT_KEY: ${DOCBRAIN_FINGERPRINT_KEY:-}
+      DOCBRAIN_FINGERPRINT_KEY_FILE: /keys/fingerprint.key
+      INGEST_INTERVAL_SECS: ${INGEST_INTERVAL_SECS:-3600}
+    volumes:
+      - docbrain-keys:/keys:ro
+      - ./examples/sample-docs:/data/docs:ro
+      - ./docs:/app/docs:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -u
+        case "$$INGEST_INTERVAL_SECS" in
+          ''|*[!0-9]*) echo "ingest: INGEST_INTERVAL_SECS must be a whole number of seconds, got '$$INGEST_INTERVAL_SECS'"; exit 1;;
+        esac
+        until docbrain-ingest; do echo "ingest: run failed; next try in 60 s"; sleep 60; done
+        if [ "$$INGEST_INTERVAL_SECS" -eq 0 ]; then
+          echo "ingest: INGEST_INTERVAL_SECS=0, ran once; idle until the stack restarts"
+          while :; do sleep 86400; done
+        fi
+        while :; do
+          sleep "$$INGEST_INTERVAL_SECS"
+          docbrain-ingest || echo "ingest: run failed; next run in $$INGEST_INTERVAL_SECS s"
+        done
+    restart: unless-stopped
+
   web:
-    image: ghcr.io/docbrain-ai/docbrain-web:latest
-    pull_policy: always
-    platform: linux/amd64
+    image: ${DOCBRAIN_WEB_IMAGE:-ghcr.io/docbrain-ai/docbrain-web:latest}
+    pull_policy: ${DOCBRAIN_PULL_POLICY:-always}
+    platform: ${DOCBRAIN_PLATFORM:-linux/amd64}
     # No host port: served through the proxy at the same origin as /api/*.
     expose:
       - "3001"

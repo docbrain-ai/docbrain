@@ -80,6 +80,8 @@ cp -r ~/my-docs/* examples/sample-docs/
 
 ### Run Ingestion
 
+With docker compose the `ingest` service runs a pass when the stack starts and every hour after (`INGEST_INTERVAL_SECS` in `.env`); `docker compose logs -f ingest` follows it. To run a pass now:
+
 ```bash
 docker compose exec server docbrain-ingest
 ```
@@ -144,10 +146,10 @@ confluence:
 ### Step 4: Run Ingestion
 
 ```bash
-# Restart the server to pick up the new config
-docker compose restart server
+# Restart so the new config is read
+docker compose restart server ingest
 
-# Run ingestion
+# Run a pass now (the ingest service also runs one every hour)
 docker compose exec server docbrain-ingest
 ```
 
@@ -255,8 +257,8 @@ non-empty — an empty list is a startup error.
 ### Run Ingestion
 
 ```bash
-docker compose restart server
-docker compose exec server docbrain-ingest
+docker compose restart server ingest   # read the new config
+docker compose exec server docbrain-ingest   # run a pass now, or wait for the next scheduled one
 ```
 
 ### What Gets Ingested
@@ -317,7 +319,7 @@ Image descriptions use the `HAIKU_MODEL_ID` model if set (recommended for cost e
 
 ## Real-Time Sync: Confluence Webhooks
 
-By default, DocBrain ingests documents when you run `docbrain-ingest` manually or on a cron schedule. But if you want pages to sync **automatically** the moment they're created, updated, or deleted in Confluence, enable webhook integration.
+By default, DocBrain ingests documents on a schedule (the compose `ingest` service, the chart's ingest CronJob, or `docbrain-ingest` run by hand). But if you want pages to sync **automatically** the moment they're created, updated, or deleted in Confluence, enable webhook integration.
 
 ### What It Does
 
@@ -420,7 +422,7 @@ The answer should reflect the latest content.
 
 | | Webhooks | Scheduled Ingest (`docbrain-ingest`) |
 |---|---|---|
-| **Latency** | Seconds after page edit | Hours (depends on cron interval) |
+| **Latency** | Seconds after page edit | Up to one interval: `INGEST_INTERVAL_SECS` with compose (an hour by default), the CronJob schedule on Kubernetes |
 | **Scope** | Single page per event | All pages in configured spaces |
 | **Use case** | Real-time sync for active teams | Bulk initial load, catch-up, re-indexing |
 | **Requirements** | Public HTTPS URL, Confluence webhook config | Just a cron schedule |
@@ -673,13 +675,17 @@ Either way, outdated design decisions, replaced architectures and deprecated pro
 
 ### Updating Documents
 
-Run ingestion again to pick up changes:
+The scheduled pass picks up changes (every hour with compose); to pick them up now:
 
 ```bash
 docker compose exec server docbrain-ingest
 ```
 
 DocBrain uses upsert logic — new and changed documents are updated, unchanged documents are skipped. This is safe to run repeatedly.
+
+### Scheduled Ingestion (docker compose)
+
+The `ingest` service in `docker-compose.yml` runs a pass when the stack starts and every `INGEST_INTERVAL_SECS` seconds after (3600 by default; `0` runs once). A pass that fails before the first success is retried after 60 s. `docker compose logs -f ingest` follows it.
 
 ### Scheduled Ingestion (Kubernetes)
 

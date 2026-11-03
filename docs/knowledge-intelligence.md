@@ -209,7 +209,6 @@ stream:
   intervalMinutes: 30            # Scan frequency
   incidentWarningMinUsers: 2     # Min unique users within 2h for incident warning
   expertiseGapDays: 90           # Days of expert inactivity before gap alert
-  # alertChannel: ""             # Optional Slack channel for critical alerts
 ```
 
 ```bash
@@ -218,7 +217,6 @@ STREAM_ENABLED=true
 STREAM_INTERVAL_MINUTES=30
 STREAM_INCIDENT_WARNING_MIN_USERS=2
 STREAM_EXPERTISE_GAP_DAYS=90
-STREAM_ALERT_CHANNEL=#docbrain-alerts
 ```
 
 ### Example Use Cases
