@@ -1,7 +1,7 @@
 {
   "name": "docbrain",
   "description": "DocBrain for coding agents: capture what a conversation worked out into your organization's knowledge, with the file it concerns and the facts it rests on, after one yes.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "DocBrain"
   },
