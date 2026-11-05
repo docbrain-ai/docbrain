@@ -839,7 +839,7 @@ The reranker rescores the candidate pool from stage 2 with a cross-encoder, prod
 |---|---|---|
 | `RAG_RERANK_PROVIDER` | `none` | `none` \| `bedrock` \| `cohere` \| `voyage` \| `jina` \| `mixedbread` \| `pinecone` \| `ollama` \| `custom` |
 | `RAG_RERANK_MODEL_ID` | *(provider default)* | Override the default model id (e.g. `rerank-v3.5`, `rerank-2`, `jina-reranker-v2-base-multilingual`) |
-| `RAG_RERANK_TOP_N` | `200` | Max candidates handed to the reranker per query. Larger = better recall, linearly higher cost. |
+| `RAG_RERANK_TOP_N` | `200` | Max documents handed to the reranker per query, plus up to half as many captures (every capture you may read is scored on top, so documents keep their places). Larger = better recall, linearly higher cost. |
 | `RAG_RERANK_BATCH_SIZE` | `100` | Split large pools into batches of this size. Clamped to `[1, 1000]`. |
 | `RAG_RERANK_TIMEOUT_SECS` | `10` | Per-request timeout. Reranker is on the critical path of every `/api/v1/ask` request. |
 
