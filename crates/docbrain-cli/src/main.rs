@@ -138,9 +138,13 @@ enum Commands {
         /// and suppresses progress output, so stdout is machine-readable.
         #[arg(long)]
         json: bool,
-        /// Answer from indexed docs only; live connector tools are not called.
-        /// Ownership and metadata lookups still work.
-        #[arg(long)]
+        /// on: DocBrain may call your connected tools when they help (the
+        /// default). off: answer from everything DocBrain holds (docs,
+        /// captures, claims, ownership) without calling a connected tool.
+        #[arg(long, value_enum, ignore_case = true, value_name = "on|off")]
+        tools: Option<ToolsSwitch>,
+        /// The first name of `--tools off`, kept so existing scripts work.
+        #[arg(long, hide = true, conflicts_with = "tools")]
         docs_only: bool,
         /// Also return every document the answer's model was given and the
         /// text it was given (`evidence` in the JSON), so a quoted line can be
@@ -549,6 +553,19 @@ enum HealthAction {
     },
     /// Print this deployment's kf/1 JSON Schema, for `validate --schema`
     KfSchema,
+}
+
+/// `docbrain ask --tools on|off`, the console's "Tools on" / "Tools off".
+#[derive(Clone, Copy, PartialEq, Eq, Debug, clap::ValueEnum)]
+enum ToolsSwitch {
+    On,
+    Off,
+}
+
+/// Whether an ask turns tools off: `--tools off`, or its first name
+/// `--docs-only`. `--tools on` and no flag both leave it to the server.
+fn tools_off(tools: Option<ToolsSwitch>, docs_only: bool) -> bool {
+    docs_only || tools == Some(ToolsSwitch::Off)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
@@ -3616,9 +3633,9 @@ async fn run(cli: Cli, shell: &'static ShellIdentityEnv) -> Result<()> {
             ))?;
             handle_token(&server_url, action, &key).await?;
         }
-        Commands::Ask { question, cont, session, new: _, verbose, json, docs_only, evidence } => {
+        Commands::Ask { question, cont, session, new: _, verbose, json, tools, docs_only, evidence } => {
             let session = session_for_ask(session.as_deref(), cont, read_local_session);
-            ask(&server_url, &question, session.as_deref(), verbose, json || evidence, docs_only, evidence, api_key.as_deref()).await?;
+            ask(&server_url, &question, session.as_deref(), verbose, json || evidence, tools_off(tools, docs_only), evidence, api_key.as_deref()).await?;
         }
         Commands::Health { action } => match action {
             HealthAction::Findings { state, format } => {
@@ -4410,16 +4427,16 @@ async fn trace_query(
     Ok(())
 }
 
-/// Sets `tools_enabled: false` on the `/api/v1/ask` request body when
-/// `--docs-only` was passed; otherwise leaves the key absent so the server's
-/// own default (and any admin-configured master switch) stays authoritative.
-/// Mirrors `buildAskBody` on the web side (web/src/lib/api.ts) — never sets
-/// `true`: an explicit `true` could override a server-side default that
-/// turns live tools off. `tools_enabled: false` disables MCP/live connector
-/// tools ONLY; internal ownership/metadata tools stay eligible
-/// (`crates/docbrain-core/src/rag/synthesis.rs:4327`).
-fn apply_docs_only(body: &mut serde_json::Value, docs_only: bool) {
-    if docs_only {
+/// Sets `tools_enabled: false` on the `/api/v1/ask` request body when tools
+/// are off; otherwise leaves the key absent so the server's own default (and
+/// any admin-configured master switch) stays authoritative. Mirrors
+/// `buildAskBody` on the web side (web/src/lib/api.ts) — never sets `true`: an
+/// explicit `true` could override a server-side default that turns tools off.
+/// `tools_enabled: false` stops connected tools ONLY; DocBrain's own ownership
+/// and metadata lookups stay eligible (`run_loop_first` in
+/// `crates/docbrain-core/src/rag/synthesis.rs`).
+fn apply_tools_off(body: &mut serde_json::Value, tools_off: bool) {
+    if tools_off {
         body["tools_enabled"] = serde_json::Value::Bool(false);
     }
 }
@@ -4476,7 +4493,7 @@ async fn ask(
     session_id: Option<&str>,
     verbose: bool,
     json: bool,
-    docs_only: bool,
+    tools_off: bool,
     evidence: bool,
     api_key: Option<&str>,
 ) -> Result<()> {
@@ -4511,7 +4528,7 @@ async fn ask(
 
     // --json wants one parseable document, so ask the server not to stream.
     let mut body = serde_json::json!({ "question": question, "stream": !json });
-    apply_docs_only(&mut body, docs_only);
+    apply_tools_off(&mut body, tools_off);
     apply_evidence(&mut body, evidence);
 
     if let Some(sid) = session_id {
@@ -8331,45 +8348,65 @@ mod tests {
         assert!(msg.contains("without --continue"), "{msg}");
     }
 
-    /// `--docs-only` parses and defaults off. Mirrors the web Sources control:
-    /// the flag restricts an ask to indexed docs (no live connector tools),
-    /// ownership/metadata tools stay eligible either way.
-    #[test]
-    fn ask_parses_docs_only_flag() {
-        let cli = Cli::try_parse_from(["docbrain", "ask", "how do I deploy?", "--docs-only"])
-            .expect("ask with --docs-only parses");
-        match cli.command {
-            Commands::Ask { docs_only, .. } => assert!(docs_only),
+    /// Whether an `ask` command line turns tools off, or the parse error.
+    fn tools_off_for(args: &[&str]) -> Result<bool, clap::Error> {
+        let mut argv = vec!["docbrain", "ask", "how do I deploy?"];
+        argv.extend_from_slice(args);
+        match Cli::try_parse_from(argv)?.command {
+            Commands::Ask { tools, docs_only, .. } => Ok(tools_off(tools, docs_only)),
             _ => panic!("expected Commands::Ask"),
         }
     }
 
+    /// `--tools on|off` is the Ask switch the console shows as "Tools on" /
+    /// "Tools off" (#729). No flag leaves the choice to the server.
     #[test]
-    fn ask_docs_only_defaults_off() {
-        let cli = Cli::try_parse_from(["docbrain", "ask", "how do I deploy?"])
-            .expect("minimal ask invocation parses");
-        match cli.command {
-            Commands::Ask { docs_only, .. } => assert!(!docs_only, "docs_only defaults off"),
-            _ => panic!("expected Commands::Ask"),
+    fn ask_parses_the_tools_switch() {
+        assert!(tools_off_for(&["--tools", "off"]).expect("--tools off parses"));
+        assert!(tools_off_for(&["--tools=off"]).expect("--tools=off parses"));
+        assert!(tools_off_for(&["--tools", "OFF"]).expect("case does not matter"));
+        assert!(!tools_off_for(&["--tools", "on"]).expect("--tools on parses"));
+        assert!(!tools_off_for(&[]).expect("no flag parses"), "tools are not off by default");
+    }
+
+    #[test]
+    fn ask_refuses_a_tools_value_that_is_not_on_or_off() {
+        for bad in [&["--tools", "maybe"][..], &["--tools", ""], &["--tools"], &["--tools", "true"]] {
+            assert!(tools_off_for(bad).is_err(), "{bad:?} must be refused, not guessed");
         }
     }
 
-    /// `apply_docs_only` is the pure fn that turns `--docs-only` into the
-    /// `/api/v1/ask` request body's `tools_enabled` key — mirrors
-    /// `buildAskBody` on the web side (web/src/lib/api.ts). The default case
-    /// must OMIT the key (never send `true`) so the server's own default and
-    /// any admin master switch stay authoritative.
+    /// `--docs-only` was the first name of the same switch: scripts that pass
+    /// it keep working, it is no longer advertised, and it cannot be combined
+    /// with `--tools` to say two things at once.
     #[test]
-    fn apply_docs_only_omits_the_key_by_default() {
+    fn docs_only_still_turns_tools_off_and_is_hidden() {
+        assert!(tools_off_for(&["--docs-only"]).expect("--docs-only parses"));
+        assert!(tools_off_for(&["--docs-only", "--tools", "on"]).is_err());
+        let help = <Cli as clap::CommandFactory>::command()
+            .find_subcommand_mut("ask")
+            .expect("ask subcommand")
+            .render_long_help()
+            .to_string();
+        assert!(help.contains("--tools"), "{help}");
+        assert!(!help.contains("--docs-only"), "{help}");
+    }
+
+    /// `apply_tools_off` turns the switch into the `/api/v1/ask` body's
+    /// `tools_enabled` key — mirrors `buildAskBody` on the web side
+    /// (web/src/lib/api.ts). Tools on must OMIT the key (never send `true`) so
+    /// the server's own default and any admin master switch stay authoritative.
+    #[test]
+    fn apply_tools_off_omits_the_key_when_tools_are_on() {
         let mut body = serde_json::json!({ "question": "q", "stream": true });
-        apply_docs_only(&mut body, false);
+        apply_tools_off(&mut body, false);
         assert!(body.get("tools_enabled").is_none());
     }
 
     #[test]
-    fn apply_docs_only_sets_false_for_docs_only() {
+    fn apply_tools_off_sets_false_when_tools_are_off() {
         let mut body = serde_json::json!({ "question": "q", "stream": true });
-        apply_docs_only(&mut body, true);
+        apply_tools_off(&mut body, true);
         assert_eq!(body["tools_enabled"], serde_json::Value::Bool(false));
     }
 
@@ -8404,10 +8441,10 @@ mod tests {
     }
 
     #[test]
-    fn apply_docs_only_never_sets_true() {
-        for docs_only in [true, false] {
+    fn apply_tools_off_never_sets_true() {
+        for off in [true, false] {
             let mut body = serde_json::json!({ "question": "q" });
-            apply_docs_only(&mut body, docs_only);
+            apply_tools_off(&mut body, off);
             assert_ne!(body.get("tools_enabled"), Some(&serde_json::Value::Bool(true)));
         }
     }

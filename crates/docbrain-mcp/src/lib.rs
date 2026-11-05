@@ -574,6 +574,10 @@ impl<B: Backend> McpServer<B> {
                             "session_id": {
                                 "type": "string",
                                 "description": SESSION_ID_DESCRIPTION
+                            },
+                            "tools_enabled": {
+                                "type": "boolean",
+                                "description": TOOLS_ENABLED_DESCRIPTION
                             }
                         },
                         "required": ["question"]
@@ -890,6 +894,7 @@ impl<B: Backend> McpServer<B> {
         if let Some(sid) = session_id {
             body["session_id"] = json!(sid);
         }
+        apply_tools_enabled(&mut body, args)?;
         let request = ApiRequest::post(ApiPath::fixed("/api/v1/ask"), body).long();
         let response = match self.json(request).await {
             Ok(v) => v,
@@ -1683,6 +1688,25 @@ impl<B: Backend> McpServer<B> {
 
 /// `docbrain_ask`'s `session_id` description, shared with the docs.
 const SESSION_ID_DESCRIPTION: &str = "Continue a conversation: pass only a session_id returned by a previous docbrain_ask, so a follow-up is understood in context. Omit it to start a new conversation. A conversation can be continued by the same DocBrain user (the API key's linked user, or the key itself when it has none).";
+
+/// `docbrain_ask`'s `tools_enabled` description: the Ask "Tools on/off" switch (#729).
+const TOOLS_ENABLED_DESCRIPTION: &str = "Set false to answer from everything DocBrain holds (docs, captures, claims, ownership) without calling a connected tool. Omit it to let DocBrain call connected tools when they help.";
+
+/// Turns `docbrain_ask`'s `tools_enabled` argument into the ask body. Only
+/// `false` is sent, like the console and the CLI: an absent key keeps the
+/// server's default and the admin master switch in charge, and an explicit
+/// `true` could override a server that turns tools off. Anything that is not
+/// a boolean is refused rather than read as on or off.
+fn apply_tools_enabled(body: &mut Value, args: &Value) -> Result<(), String> {
+    match args.get("tools_enabled") {
+        None | Some(Value::Null) | Some(Value::Bool(true)) => Ok(()),
+        Some(Value::Bool(false)) => {
+            body["tools_enabled"] = json!(false);
+            Ok(())
+        }
+        Some(_) => Err(String::from("'tools_enabled' must be true or false")),
+    }
+}
 
 /// The tool error for a `session_id` the server will not continue.
 const START_NEW_CONVERSATION: &str = "start a new conversation: omit session_id";

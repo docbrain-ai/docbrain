@@ -30,6 +30,10 @@
           "session_id": {
             "description": "Continue a conversation: pass only a session_id returned by a previous docbrain_ask, so a follow-up is understood in context. Omit it to start a new conversation. A conversation can be continued by the same DocBrain user (the API key's linked user, or the key itself when it has none).",
             "type": "string"
+          },
+          "tools_enabled": {
+            "description": "Set false to answer from everything DocBrain holds (docs, captures, claims, ownership) without calling a connected tool. Omit it to let DocBrain call connected tools when they help.",
+            "type": "boolean"
           }
         },
         "required": [

@@ -17,6 +17,7 @@ The **MCP Tool Platform** is the answer-time complement. At every `/ask`, after 
 - **Open protocol.** DocBrain speaks [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) 2024-11-05 Streamable HTTP. Any MCP-compliant server works.
 - **Off by default.** When `MCP_TOOLS_ENABLED=false` (the default), the synthesis path is byte-identical to the pre-MCP path: no orchestrator, no fast-LLM dispatch, no measurable overhead.
 - **Every surface.** Tools dispatch uniformly wherever you ask — the web UI, Slack, the `docbrain ask "..."` CLI and MCP hosts calling `docbrain_ask` all run the same orchestrator. (CLI and MCP questions previously skipped tool dispatch; they no longer do.)
+- **Tools off for one question.** Every surface can turn tools off: **Tools off** on the console's Ask page, `docbrain ask --tools off`, or `tools_enabled: false` on `docbrain_ask` and `POST /api/v1/ask`. The answer still draws on everything DocBrain holds (documents, captures, claims, ownership); only the connected tools are skipped.
 - **Intent-based, not keyword-based.** The tool picker infers intent from the *meaning* of the question, not from keywords. "Any active incidents?" will search the relevant connected tools without the user ever naming "Jira" or "Confluence".
 
 !!! info "Live tools vs. external connectors"
