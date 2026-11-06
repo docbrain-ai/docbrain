@@ -421,7 +421,7 @@ server:
   # ── Reranker (Stage 3 of Retrieval) ──
   #   RAG_RERANK_PROVIDER: "none"   # none | bedrock | cohere | voyage | jina | mixedbread | pinecone | ollama | custom
   #   RAG_RERANK_MODEL_ID: ""   # Override the default model id (e.g. rerank-v3.5, rerank-2, jina-reranker-v2-base-multilingual). default: *(provider default)*
-  #   RAG_RERANK_TOP_N: "200"   # Max documents handed to the reranker per query, plus up to half as many captures (every capture you may read is scored on top, so documents keep their places).
+  #   RAG_RERANK_TOP_N: "200"   # Max documents handed to the reranker per query, plus up to half as many captures (every capture you may read is scored on top, so documents keep their places)
   #   RAG_RERANK_BATCH_SIZE: "100"   # Split large pools into batches of this size.
   #   RAG_RERANK_TIMEOUT_SECS: "10"   # Per-request timeout.
   #
