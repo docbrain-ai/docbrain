@@ -4,6 +4,7 @@ resolver = "2"
 members = [
   "crates/docbrain-cli",
   "crates/docbrain-mcp",
+  "crates/docbrain-knowledge",
 ]
 
 [workspace.package]

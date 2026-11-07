@@ -1,0 +1,24 @@
+{
+  "id": "8-resolving-submodule",
+  "spec": "§8 item 44; C14: an anchor inside a submodule",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'submodule'\nchecks:\n  - config_key: 'vendor/lib/values.yaml#a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "vendor/lib": {
+      "submodule": "4d7a2c1f00000000000000000000000000000000"
+    }
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "submodule"
+          }
+        ]
+      }
+    }
+  }
+}

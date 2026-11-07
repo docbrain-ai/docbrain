@@ -1,0 +1,13 @@
+{
+  "id": "4.2-empty-body",
+  "spec": "§4.2 an empty body makes the record invalid; §8 item 28",
+  "op": "parse",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-production-api-replicas.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'decision'\ntitle: 'Production API runs at least two replicas'\napplies_to: ['charts/api/**', 'envs/prod/**']\nchecks:\n  - config_key: 'charts/api/values.yaml#replicaCount'\n    must: '>= 2'\n  - path: 'docs/runbooks/api-rollout.md'\n    must: 'exist'\n---\n"
+  },
+  "expect": {
+    "invalid": "empty-body",
+    "line": 13,
+    "col": 1
+  }
+}

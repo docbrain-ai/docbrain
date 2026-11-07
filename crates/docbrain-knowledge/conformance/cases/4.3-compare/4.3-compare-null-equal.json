@@ -1,0 +1,21 @@
+{
+  "id": "4.3-compare-null-equal",
+  "spec": "§4.3 Expectations, the value table: null is equal only to null",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'null-equal'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== null'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: null\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "id": "4.3-states-worst-wins",
+  "spec": "§4.3 Record state: broken over stale over unverifiable over holds; no checks hold",
+  "op": "status",
+  "tree": {
+    "a.yaml": "x: 1\ns: '0.125'\n",
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'stale'\nchecks:\n  - config_key: 'a.yaml#x'\n    must: '== 1'\n  - config_key: 'a.yaml#s'\n    must: '<= 0.25'\n  - config_key: 'a.yaml#x'\n    assumes: '== 2'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'broken'\nchecks:\n  - config_key: 'a.yaml#x'\n    assumes: '== 2'\n  - config_key: 'a.yaml#x'\n    must: '== 3'\n---\nWhy this matters.\n",
+    ".knowledge/records/c.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'unverifiable'\nchecks:\n  - config_key: 'a.yaml#x'\n    must: 'exist'\n  - config_key: 'a.yaml#s'\n    must: '<= 0.25'\n---\nWhy this matters.\n",
+    ".knowledge/records/d.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ad'\nkind: 'fact'\ntitle: 'no checks'\napplies_to: ['src/**']\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "stale",
+        "checks": [
+          {
+            "state": "holds"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "number-or-version"
+          },
+          {
+            "state": "stale",
+            "reason": "false"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "stale",
+            "reason": "false"
+          },
+          {
+            "state": "broken",
+            "reason": "false"
+          }
+        ]
+      },
+      ".knowledge/records/c.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "holds"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "number-or-version"
+          }
+        ]
+      },
+      ".knowledge/records/d.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

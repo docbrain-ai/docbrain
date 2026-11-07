@@ -1,0 +1,21 @@
+{
+  "id": "4.3-compare-exact-decimal",
+  "spec": "§4.3 Expectations, the value table: exact decimal comparison: 3.10 equals 3.1",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'exact-decimal'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== 3.1'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: 3.10\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "8-10-record-moves-folder",
+  "spec": "§8 item 10: a record moved to another folder, its anchors rewritten to the same files: the same check",
+  "op": "gate",
+  "base": {
+    "svc/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'a/f.txt'\n    must: 'exist'\n---\nWhy 1.\n",
+    "svc/a/f.txt": "x\n"
+  },
+  "tree": {
+    "svc/a/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'f.txt'\n    must: 'exist'\n---\nWhy 1.\n",
+    "svc/a/f.txt": "x\n"
+  },
+  "expect": {
+    "knowledge": {
+      "added": [
+        "svc/a/.knowledge/records/x.md"
+      ],
+      "removed": [
+        "svc/.knowledge/records/x.md"
+      ]
+    }
+  }
+}

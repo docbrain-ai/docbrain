@@ -1,0 +1,22 @@
+{
+  "id": "4.3-config-key-map-value-compare",
+  "spec": "§4.3 config_key: a value that is a map is unverifiable under an op",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'map-value-compare'\nchecks:\n  - config_key: 'values.yaml#resources.limits'\n    must: '== 1Gi'\n---\nWhy this value matters.\n",
+    "values.yaml": "resources:\n  limits:\n    memory: 1Gi\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "not-a-scalar"
+          }
+        ]
+      }
+    }
+  }
+}

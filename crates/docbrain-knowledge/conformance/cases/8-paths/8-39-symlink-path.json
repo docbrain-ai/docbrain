@@ -1,0 +1,37 @@
+{
+  "id": "8-39-symlink-path",
+  "spec": "§8 item 39, C14: a link as the anchored path or a directory above it is unverifiable, never followed",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'links'\nchecks:\n  - path: 'config.yaml'\n    must: 'exist'\n  - path: 'deploy/values.yaml'\n    must: 'exist'\n  - code: 'deploy/values.yaml'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "real.yaml": "a: 1\n",
+    "config.yaml": {
+      "symlink": "real.yaml"
+    },
+    "deploy": {
+      "symlink": "envs/prod"
+    },
+    "envs/prod/values.yaml": "a: 1\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "symbolic-link"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "symbolic-link"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "symbolic-link"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "4.3-config-key-layers-missing-file",
+  "spec": "§4.3 config_key: a layer whose file is missing defines nothing",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'layers-missing-file'\nchecks:\n  - config_key:\n      - 'deploy/base/values.yaml#resources.limits.memory'\n      - 'deploy/prod/values.yaml#resources.limits.memory'\n    must: '== 256Mi'\n---\nWhy this value matters.\n",
+    "deploy/base/values.yaml": "resources:\n  limits:\n    memory: 256Mi\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "4.7-newer-schema-routes",
+  "spec": "§4.7 a newer schema's record is shown with its title and kind; it routes by the applies_to it writes",
+  "note": "A newer record's applies_to is read whole, never defaulted from its checks. Its checks are not read, so it carries no must.",
+  "op": "context",
+  "tree": {
+    "src/a.rs": "x\n",
+    ".knowledge/records/a.md": "---\nknowledge: 2\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 'newer'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 2\nid: 'k3v9q2x7m002'\nkind: 'decision'\ntitle: 'newer, no applies_to'\nchecks:\n  - path: 'src/a.rs'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/c.md": "---\nknowledge: 1\nid: 'k3v9q2x7m003'\nkind: 'fact'\ntitle: 'current'\napplies_to: ['src/**']\nchecks:\n  - path: 'src/a.rs'\n    must: 'exist'\n---\nWhy this matters.\n"
+  },
+  "paths": [
+    "src/a.rs"
+  ],
+  "expect": {
+    "order": [
+      "k3v9q2x7m003",
+      "k3v9q2x7m001"
+    ]
+  }
+}

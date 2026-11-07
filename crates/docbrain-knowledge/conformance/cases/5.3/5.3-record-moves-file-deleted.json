@@ -1,0 +1,36 @@
+{
+  "id": "5.3-record-moves-file-deleted",
+  "spec": "§8 item 10: a record moved to another folder while its file is deleted: one rule 1 finding at its new path",
+  "op": "gate",
+  "base": {
+    "svc/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'a/f.txt'\n    must: 'exist'\n---\nWhy 1.\n",
+    "svc/a/f.txt": "x\n",
+    "svc/a/g.txt": "y\n"
+  },
+  "tree": {
+    "svc/a/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'f.txt'\n    must: 'exist'\n---\nWhy 1.\n",
+    "svc/a/g.txt": "y\n"
+  },
+  "expect": {
+    "findings": [
+      {
+        "class": "broken",
+        "rule": 1,
+        "id": "k3v9q2x7m001",
+        "record": "svc/a/.knowledge/records/x.md",
+        "anchor": "svc/a/f.txt",
+        "reasons": [
+          "missing-file"
+        ]
+      }
+    ],
+    "knowledge": {
+      "added": [
+        "svc/a/.knowledge/records/x.md"
+      ],
+      "removed": [
+        "svc/.knowledge/records/x.md"
+      ]
+    }
+  }
+}

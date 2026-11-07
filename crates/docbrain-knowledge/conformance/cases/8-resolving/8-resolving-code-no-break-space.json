@@ -1,0 +1,31 @@
+{
+  "id": "8-resolving-code-no-break-space",
+  "spec": "§8 item 62, C4: only ASCII whitespace is removed; a no-break space is a character",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'space'\nchecks:\n  - code: 'src/lib.rs'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'nbsp'\nchecks:\n  - code: 'src/lib.rs'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "src/lib.rs": "retry(3, backoff::exponential());\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "false"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

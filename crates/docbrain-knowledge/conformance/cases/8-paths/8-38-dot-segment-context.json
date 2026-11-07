@@ -1,0 +1,17 @@
+{
+  "id": "8-38-dot-segment-context",
+  "spec": "§4.3 Paths: `applies_to: ['./src/**']` is `src/**`",
+  "op": "context",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't'\napplies_to: ['./src/**']\n---\nWhy this matters.\n",
+    "src/a.rs": "x\n"
+  },
+  "paths": [
+    "src/a.rs"
+  ],
+  "expect": {
+    "order": [
+      "k3v9q2x7m001"
+    ]
+  }
+}

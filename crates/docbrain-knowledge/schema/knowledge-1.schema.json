@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": ".knowledge/ record front matter, schema 1",
+  "description": "The shape of a record's front matter, read as JSON (SEMANTICS.md §The record). Passing this schema does not make a record valid. It cannot express: that every string is single-quoted and knowledge is the one plain integer; hidden text and conflict markers; the body (present, not empty); duplicate keys, anchors, aliases, tags and merge keys; paths (confinement, the empty path, a config_key glob directory) and the config_key key-path grammar; the 8 KiB front matter and 64 KiB file bounds. Unknown keys are legal: an x- key is ignored and any other is reported once.",
+  "type": "object",
+  "required": ["knowledge", "id", "kind", "title"],
+  "properties": {
+    "knowledge": { "const": 1 },
+    "id": { "$ref": "#/$defs/id" },
+    "kind": { "enum": ["decision", "fact", "procedure", "question"] },
+    "title": { "type": "string", "minLength": 1, "pattern": "^[^\\n]*$" },
+    "applies_to": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "checks": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/check" } },
+    "supersedes": { "$ref": "#/$defs/id" }
+  },
+  "$defs": {
+    "id": {
+      "description": "12 Crockford base32 characters, lower case; an id beginning 0000 is reserved for documentation.",
+      "type": "string",
+      "pattern": "^[0-9abcdefghjkmnpqrstvwxyz]{12}$",
+      "not": { "pattern": "^0000" }
+    },
+    "check": {
+      "description": "One verb; at most one anchor; text only with code. A check with no known anchor is an unknown check kind, legal when it has another key (an x- key does not count, which this schema cannot express).",
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "config_key": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "code": { "type": "string", "pattern": "^[^*?]+$" },
+        "text": { "type": "string" },
+        "must": { "type": "string" },
+        "assumes": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["must"], "not": { "required": ["assumes"] } },
+        { "required": ["assumes"], "not": { "required": ["must"] } }
+      ],
+      "not": {
+        "anyOf": [
+          { "required": ["path", "config_key"] },
+          { "required": ["path", "code"] },
+          { "required": ["config_key", "code"] },
+          { "required": ["path", "text"] },
+          { "required": ["config_key", "text"] }
+        ]
+      },
+      "dependentRequired": { "code": ["text"] },
+      "if": { "not": { "anyOf": [{ "required": ["path"] }, { "required": ["config_key"] }, { "required": ["code"] }] } },
+      "then": { "minProperties": 2 }
+    }
+  }
+}

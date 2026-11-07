@@ -1,0 +1,32 @@
+{
+  "id": "8-resolving-code-line-deleted",
+  "spec": "§8 item 48: the guarded line is gone: broken under must, stale under assumes",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'must'\nchecks:\n  - code: 'src/lib.rs'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'assumes'\nchecks:\n  - code: 'src/lib.rs'\n    text: 'retry(3, backoff::exponential());'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    "src/lib.rs": "fn run() {\n    retry(4, backoff::exponential());\n}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "false"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "stale",
+        "checks": [
+          {
+            "state": "stale",
+            "reason": "false"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "4.6-folder-wide",
+  "spec": "§4.6 a record covering its whole folder (no checks and no applies_to, or '**') is named by status",
+  "note": "A superseded record is context for nothing, so it is not named.",
+  "op": "status",
+  "tree": {
+    "svc/.knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'no checks'\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'star'\napplies_to: ['**']\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/c.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'narrow'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/d.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ad'\nkind: 'fact'\ntitle: 'checks'\nchecks:\n  - path: 'src'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/e.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ae'\nkind: 'fact'\ntitle: 'both'\napplies_to: ['src/**', '**']\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/f.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1af'\nkind: 'fact'\ntitle: 'superseded'\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/g.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ag'\nkind: 'fact'\ntitle: 'superseder'\nsupersedes: 'k3v9q2x7m1af'\n---\nWhy this matters.\n",
+    "svc/src/main.rs": "x\n"
+  },
+  "expect": {
+    "records": {
+      "svc/.knowledge/records/a.md": {
+        "state": "holds",
+        "checks": []
+      },
+      "svc/.knowledge/records/b.md": {
+        "state": "holds",
+        "checks": []
+      },
+      "svc/.knowledge/records/c.md": {
+        "state": "holds",
+        "checks": []
+      },
+      "svc/.knowledge/records/d.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      "svc/.knowledge/records/e.md": {
+        "state": "holds",
+        "checks": []
+      },
+      "svc/.knowledge/records/f.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ag",
+        "checks": []
+      },
+      "svc/.knowledge/records/g.md": {
+        "state": "holds",
+        "checks": []
+      }
+    },
+    "folder_wide": [
+      "svc/.knowledge/records/a.md",
+      "svc/.knowledge/records/b.md",
+      "svc/.knowledge/records/e.md",
+      "svc/.knowledge/records/g.md"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "4.3-config-key-alias",
+  "spec": "§4.3 config_key: an alias is its anchor's value",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'alias'\nchecks:\n  - config_key: 'c.yaml#svc.image'\n    must: '== a:1'\n---\nWhy this value matters.\n",
+    "c.yaml": "x-common: &c\n  image: 'a:1'\nsvc: *c\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

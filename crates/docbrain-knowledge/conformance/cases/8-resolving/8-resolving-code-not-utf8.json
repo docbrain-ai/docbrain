@@ -1,0 +1,24 @@
+{
+  "id": "8-resolving-code-not-utf8",
+  "spec": "§8 item 62: a code file that is not UTF-8 is unverifiable: encoding",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'bytes'\nchecks:\n  - code: 'src/lib.rs'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "src/lib.rs": {
+      "base64": "cmV0cnkoMywgYmFja29mZjo6ZXhwb25lbnRpYWwoKSk7/wo="
+    }
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "encoding"
+          }
+        ]
+      }
+    }
+  }
+}

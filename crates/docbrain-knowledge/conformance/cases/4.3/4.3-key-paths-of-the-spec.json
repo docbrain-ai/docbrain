@@ -1,0 +1,12 @@
+{
+  "id": "4.3-key-paths-of-the-spec",
+  "spec": "§4.3 key path examples",
+  "op": "parse",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-production-api-replicas.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'decision'\ntitle: 'Production API runs at least two replicas'\napplies_to: ['charts/api/**', 'envs/prod/**']\nchecks:\n  - config_key: 'infra/prod/*.tf#resource.aws_db_instance.prod.multi_az'\n    must: '== true'\n  - config_key: 'infra/prod/*.tf#resource.aws_security_group.web.ingress[from_port=443].to_port'\n    must: '== 443'\n  - config_key: 'infra/prod/*.tf#terraform.required_version'\n    assumes: 'exist'\n  - config_key: 'apps/api/jobs.yaml#[kind=Job,metadata.name=api-migrate].metadata.annotations.\"argocd.argoproj.io/sync-wave\"'\n    must: '== -1'\n  - config_key: 'Cargo.lock#package[name=sqlx].version'\n    assumes: '>= 0.8'\n---\nA single replica took the API down for 11 minutes on 2026-09-02 during a node drain:\nthe pod disruption budget cannot protect one pod. Two replicas with the PDB at\n`minAvailable: 1` survive a drain. Cost was reviewed and accepted; a cost change goes\nthrough a new decision that supersedes this one.\n"
+  },
+  "expect": {
+    "valid": true,
+    "unknown_keys": []
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "8-files-same-id-two-folders",
+  "spec": "§8 item 20: the same id in two folders is two records; supersession stays in its folder",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'root'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    "vendor/lib/.knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'vendored'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    "vendor/lib/.knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1aa'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": []
+      },
+      "vendor/lib/.knowledge/records/a.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ab",
+        "checks": []
+      },
+      "vendor/lib/.knowledge/records/b.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "5.3-invalidated-only",
+  "spec": "§5.3 changed: a record made invalid while its must holds: changed, invalid",
+  "op": "gate",
+  "base": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - config_key: 'v.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n",
+    "v.yaml": "replicas: 3\n"
+  },
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - config_key: 'v.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n<<<<<<< ours\nx\n=======\ny\n>>>>>>> theirs\n",
+    "v.yaml": "replicas: 3\n"
+  },
+  "expect": {
+    "findings": [
+      {
+        "class": "changed",
+        "change": "invalid",
+        "id": "k3v9q2x7m001",
+        "record": ".knowledge/records/a.md",
+        "anchor": "v.yaml#replicas",
+        "reasons": [
+          "invalid"
+        ]
+      }
+    ],
+    "knowledge": {
+      "edited": [
+        ".knowledge/records/a.md"
+      ]
+    }
+  }
+}

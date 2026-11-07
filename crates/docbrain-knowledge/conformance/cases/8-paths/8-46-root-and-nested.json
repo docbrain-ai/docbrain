@@ -1,0 +1,30 @@
+{
+  "id": "8-46-root-and-nested",
+  "spec": "§8 item 46: a root record and a nested record on one file are both records; no shadowing",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'root'\nchecks:\n  - path: 'svc/a.rs'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'nested'\nchecks:\n  - path: 'a.rs'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "svc/a.rs": "x\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      "svc/.knowledge/records/b.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

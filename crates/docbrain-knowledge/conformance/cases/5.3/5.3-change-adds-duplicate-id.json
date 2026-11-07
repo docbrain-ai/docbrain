@@ -1,0 +1,30 @@
+{
+  "id": "5.3-change-adds-duplicate-id",
+  "spec": "§5.3 findings on the change: a duplicate id it adds to a folder",
+  "op": "gate",
+  "base": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\n---\nWhy 1.\n"
+  },
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\n---\nWhy 1.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\n---\nWhy 1.\n"
+  },
+  "expect": {
+    "change_findings": [
+      {
+        "duplicate-id": {
+          "id": "k3v9q2x7m001",
+          "paths": [
+            ".knowledge/records/a.md",
+            ".knowledge/records/b.md"
+          ]
+        }
+      }
+    ],
+    "knowledge": {
+      "added": [
+        ".knowledge/records/b.md"
+      ]
+    }
+  }
+}

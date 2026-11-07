@@ -1,0 +1,26 @@
+{
+  "id": "5.3-new-check-kind-unknown",
+  "spec": "§5.3: a new check that cannot be judged (a newer check kind) is listed under knowledge changes",
+  "op": "gate",
+  "base": {
+    "README": "x\n"
+  },
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\nchecks:\n  - url: 'https://example.org'\n    must: 'exist'\n---\nWhy 1.\n",
+    "README": "x\n"
+  },
+  "expect": {
+    "knowledge": {
+      "added": [
+        ".knowledge/records/a.md"
+      ],
+      "new_unverifiable": [
+        {
+          "record": ".knowledge/records/a.md",
+          "check": 0,
+          "reason": "unknown"
+        }
+      ]
+    }
+  }
+}

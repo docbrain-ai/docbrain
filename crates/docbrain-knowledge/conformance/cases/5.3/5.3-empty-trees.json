@@ -1,0 +1,8 @@
+{
+  "id": "5.3-empty-trees",
+  "spec": "§5.3: empty trees give an empty report",
+  "op": "gate",
+  "base": {},
+  "tree": {},
+  "expect": {}
+}

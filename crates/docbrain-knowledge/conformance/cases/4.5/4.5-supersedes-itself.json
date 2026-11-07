@@ -1,0 +1,19 @@
+{
+  "id": "4.5-supersedes-itself",
+  "spec": "§4.5, §8 item 16: a supersedes naming its own record has no effect",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1aa'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": []
+      }
+    },
+    "problems": {
+      ".knowledge/records/a.md": "itself"
+    }
+  }
+}

@@ -1,0 +1,190 @@
+# conformance/coverage.tsv: every rule of the design's §4.3, §4.6, §4.7, §5.3, §7.1, §7.2, §7.5, §7.6 and §8,
+# with what proves it. Columns: ref, rule, cover. A cover token is a case id; `test:<file>::<name>`, a #[test]
+# of this crate, for a bound too large for a case; `<owner>:#<issue>` for a part outside this crate (cli,
+# server, job, skill); or `git`, git's own behaviour, where no reader acts. tests/coverage.rs checks every token.
+ref	rule	cover
+§4.3 paths	Paths are relative to the folder's parent directory and stay inside it; `/`, byte for byte; an entry is a file, a symbolic link or a submodule entry	4.2-scope-subfolder 8-38-leading-slash 8-38-dot-dot 8-38-backslash 8-39-symlink-path 8-44-inside-submodule 8-38-dot-segment 8-38-dot-segment-context 8-38-dot-only test:src/path.rs::dot_segments_are_dropped
+§4.3 globs	`*` and `?` stop at `/`; `**` is a whole segment; dot names match; no classes, braces or escapes; a path without `*` or `?` is literal	8-40-brackets-literal 8-41-double-star 8-38-dotfile 4.3-glob-dir 4.3-glob-dir-double-star test:src/path.rs::question_mark_is_one_char_never_slash test:src/path.rs::dot_names_match_like_others test:src/path.rs::many_double_stars_stay_polynomial
+§4.3 anchor path	anchors table, `path`: whether at least one entry matches; a literal path naming a directory holds while a file lies under it	8-41-double-star 8-42-directory-exists 5.3-glob-dir-keeps-unmatched
+§4.3 anchor config_key	anchors table, `config_key`: the scalar at `<file>#<key path>`, or a list read as layers; or whether the key is present	4.3-layers 4.3-key-paths-of-the-spec 4.3-no-key-path 4.3-config-key-map-value-exist
+§4.3 anchor code	anchors table, `code`: a literal path plus `text`; whether the text occurs in the file exactly once	4.3-code-check 4.3-code-is-literal 4.3-code-needs-text 4.3-text-without-code 8-resolving-code-twice
+§4.3 anchor count	a check has exactly one anchor	4.3-no-anchor 4.3-two-anchors
+§4.3 config_key globs	a glob within one directory merges every matching file; a key in two of them is defined twice; HCL blocks with the same type and labels merge by attribute	4.3-config-key-glob-yaml-one-file 4.3-config-key-glob-yaml-two-files 4.3-config-key-glob-hcl-merge 4.3-config-key-glob-defined-twice 4.3-config-key-glob-stays-in-directory 4.3-config-key-glob-no-match 4.3-config-key-glob-unread-file 4.3-glob-dir
+§4.3 layers	layers are read in order; the last layer that defines the key wins; a missing file defines nothing; the key is missing only when no layer defines it	4.3-config-key-layers-last-wins 4.3-config-key-layers-key-absent 4.3-config-key-layers-missing-file 4.3-config-key-layers-missing-key 4.3-config-key-layers-missing-file-everywhere 4.3-config-key-layers-later-unreadable 4.3-empty-config-layers
+§4.3 key path grammar	dot segments, quoted segments with `\"` and `\\`, `[n]`, `[k=v]` selectors compared as `==`; a selector that matches nothing is missing, more than one ambiguous	4.3-bad-key-path 4.3-config-key-quoted-segment-unicode 4.3-config-key-index 4.3-config-key-index-past-end 4.3-config-key-key-on-list 4.3-config-key-selector-no-match 4.3-config-key-selector-two-matches 4.3-config-key-selector-compares-as-eq 4.3-config-key-selector-unverifiable 4.3-config-key-cargo-lock-selector
+§4.3 multi-document	a multi-document file without a root selector holds the key in exactly one document	4.3-config-key-multi-document-one 4.3-config-key-multi-document-ambiguous 4.3-config-key-multi-document-selector 4.3-config-key-multi-document-index
+§4.3 merge key	a key absent from a mapping with a `<<` merge key is `merge key`, never missing	4.3-config-key-merge-key 4.3-config-key-merge-key-present-key
+§4.3 HCL key paths	block type, then labels, then nested block types; a repeated nested block is selected like a list element	4.3-config-key-glob-hcl-resource 4.3-config-key-hcl-nested-selector 4.3-config-key-hcl-nested-no-selector 4.3-config-key-hcl-negative-number
+§4.3 formats	YAML 1.2 core, JSON, TOML and HCL literals; a file that does not parse is `format`; any other format is unverifiable	8-resolving-does-not-parse 8-resolving-unknown-format 8-resolving-lock-file-name 8-resolving-format-case-sensitive 8-resolving-crlf 8-resolving-bom 8-resolving-bom-twice 8-resolving-encoding 8-resolving-empty-file
+§4.3 unverifiable reasons	a template per value, an HCL expression or `dynamic` block, a Git LFS pointer, a file inside a submodule, a value that is a map or a list	4.3-config-key-template-value 4.3-config-key-template-sibling 4.3-config-key-hcl-expression 4.3-config-key-hcl-dynamic 8-resolving-lfs-pointer 8-resolving-submodule 4.3-config-key-map-value-compare 4.3-config-key-tag
+§4.3 code text	ASCII whitespace removed from both; at least 24 scalar values; at most 2,048 bytes; twice or more is ambiguous; not UTF-8 is `encoding`	8-resolving-code-floor 8-resolving-code-cap 8-resolving-code-twice 8-resolving-code-not-utf8 8-resolving-code-vertical-tab 8-resolving-code-no-break-space 8-resolving-code-crlf
+§4.3 verbs	exactly one of `must` and `assumes` per check; a check judges whatever the record's kind	4.3-no-verb 4.3-two-verbs 8-69-question-keeps-checks
+§4.3 expectations	`'exist'` or `'<op> <literal>'`, six ops; `exist` holds whatever the value	4.3-config-key-map-value-exist 4.3-states-ops-on-path-and-code 4.7-unknown-op
+§4.3 value number	value table, a number: exact decimal under `==` and `!=`, a literal that is not a decimal is not comparable; ordered ops use the decimal reading only	4.3-compare-exact-decimal 4.3-compare-big-integer 4.3-compare-number-literal-not-decimal 4.3-compare-number-never-version 4.3-compare-number-decimal-only
+§4.3 value string	value table, a string: exact text equality under `==` and `!=`; the readings rule when ordered	4.3-compare-string-is-text 4.3-compare-readings-agree 4.3-compare-range-equality-is-text
+§4.3 value boolean	value table, a boolean: the literal must be `true` or `false`; ordered is not comparable	4.3-compare-bool-true 4.3-compare-bool-literal 4.3-compare-bool-ordered
+§4.3 value null	value table, `null`: equal only to `null`; ordered is not comparable	4.3-compare-null-equal 4.3-compare-null-not-zero 4.3-compare-null-ordered
+§4.3 readings rule	decimal and version readings; a number is never a version; a `v` string is a version only; disagreement is `number or version`; a range is unverifiable; SemVer 2.0 precedence	4.3-compare-v-value 4.3-compare-prerelease 4.3-compare-range 4.3-compare-version-vs-text 4.3-compare-number-never-version
+§4.3 readings '-1'	readings table: `'-1'` against `'== -1'` holds: the text is equal	4.3-compare-string-annotation
+§4.3 readings '0.8'	readings table: `'0.8'` against `'< 0.9'` holds: both readings agree	4.3-compare-readings-agree
+§4.3 readings '0.9.1'	readings table: `'0.9.1'` against `'< 0.9'` is broken: only the version reading applies	4.3-compare-version-only 4.3-compare-version-only-assumes
+§4.3 readings '3.9'	readings table: `'3.9'` against `'>= 3.10'` is `number or version`; against `'>= v3.10'` broken	4.3-compare-readings-disagree 4.3-compare-v-literal
+§4.3 readings '0.5'	readings table: `'0.5'` against `'<= 0.25'` is `number or version`, never a silent pass	4.3-compare-sampling-rate
+§4.3 readings 2	readings table: `2` against `'>= 2'` holds	4.3-compare-number
+§4.3 readings 0.5	readings table: `0.5` against `'>= 0.25'` holds: a number is a decimal only	4.3-compare-number-decimal-only
+§4.3 readings true	readings table: `true` against `'== yes'` is not comparable: the literal is not a boolean	4.3-compare-bool-literal
+§4.3 state holds	states table, `holds`: resolved, and the expectation is true	4.3-code-check 4.3-compare-number
+§4.3 state broken	states table, `broken`: a `must` whose expectation is false, or whose file or key is missing	4.3-states-missing-is-never-unverifiable 4.3-compare-version-only
+§4.3 state stale	states table, `stale`: an `assumes` whose expectation is false, or whose file or key is missing	4.3-compare-version-only-assumes 4.3-config-key-layers-assumes-stale
+§4.3 state unverifiable	states table, `unverifiable`: the reason is always given; a missing file or key is never unverifiable; never reported as holds	4.3-states-missing-is-never-unverifiable 4.3-compare-readings-disagree 8-50-unverifiable-at-both
+§4.3 record state	`invalid`, else `superseded`, else the worst of its checks; a record without checks holds	4.3-states-worst-wins 4.5-supersedes-same-folder 4.2-empty-body 4.4-example-id 8-39-symlink-record
+§4.6 placement	`.knowledge/` at the root and in any subdirectory; records are the `*.md` files anywhere under `<folder>/records/`	8-files-moved-into-subdirectory 8-files-not-records 8-46-root-and-nested 4.2-scope-subfolder
+§4.6 README	`.knowledge/README.md` exists only at the root	cli:#535
+§4.6 discovery	discovery reads the path set of H, never the disk; `record` stages the file it writes	test:tests/git_tree.rs::commit_tree_matches_memtree 8-43-not-tracked cli:#535
+§4.6 applies_to default	`applies_to` defaults to the files the record's checks anchor	4.6-routing-default-applies-to
+§4.6 folder-wide	a record covering its whole folder is context for every file there; `status` names every such record	4.6-folder-wide 8-87-root-records-cap
+§4.6 routing match	every record from every folder on each path's way up whose `applies_to` matches, read from front matter only	8-46-root-and-nested-context 8-47-applies-to-nothing-context 4.7-newer-schema-routes
+§4.6 routing never	superseded and invalid records never route; `status` lists them	4.6-routing-never-superseded-or-invalid 4.7-grease-routes
+§4.6 routing order	`broken` and `stale` first, the nearest folder, the narrowest glob, a `must` first, kind, title, id	4.6-routing-order
+§4.6 routing cap	the cap of 20 after ordering, then `N more (K broken or stale)`	4.6-routing-cap-hides-broken 8-87-root-records-cap test:src/route.rs::cap_and_overflow_counts
+§4.7 additive	an unknown check kind or op is `unverifiable: unknown`; the record still routes and shows	4.7-unknown-check-kind 4.7-unknown-op 4.3-states-ops-on-path-and-code 4.7-grease-status 4.7-grease-routes 5.3-new-check-kind-unknown
+§4.7 newer schema	a newer schema's checks are `unverifiable: newer schema`, title and kind shown, never rewritten; a `knowledge` that is not an integer is invalid	4.7-newer-schema 4.7-newer-schema-status 4.7-newer-schema-routes 4.7-knowledge-decimal 4.7-knowledge-quoted 4.7-knowledge-leading-zero cli:#535
+§4.7 keys	`x-` keys are ignored silently; other unknown keys are reported once	4.7-x-key 4.7-unknown-key 4.7-check-unknown-key 4.7-grease-status
+§4.7 GREASE	the corpus carries unknown keys, check kinds and ops, and a newer schema that supersedes a schema-1 record	4.7-grease-status 4.7-grease-routes 4.5-newer-schema-supersedes
+§5.3 H	H is `<rev>`'s tree, else the tree `git add -u` then `git write-tree` would write, computed without changing the index	test:tests/git_tree.rs::commit_tree_matches_memtree cli:#534
+§5.3 B	B is the tree of the merge base of `<base>` and H's commit; several merge bases exit 3	test:tests/git_tree.rs::several_merge_bases cli:#534
+§5.3 objects	both trees are read by exact byte path from git's objects; a partial clone fetches what it needs; a shallow clone without B exits 3	test:tests/git_tree.rs::blobless_clone_fetches_in_one_batch test:tests/git_tree.rs::offline_missing_object test:tests/git_tree.rs::gate_on_commits_equals_memtree cli:#534
+§5.3 live	a check is live when its record is valid, of schema 1 and not superseded	5.3-invalidated-only 8-22-newer-schema-holds 8-18-supersede-only
+§5.3 same check	same id, verb, parsed expectation and key path or text; each path equal or following	8-06-moved-file-anchor-follows 5.3-glob-moves 5.3-directory-moves-whole 5.3-one-layer-moves 5.3-layer-dropped 5.3-literal-prefix-sibling 5.3-unicode-path-follows 5.3-glob-dir-keeps-unmatched 5.3-id-changed 5.3-exact-twin-first-removed 8-77-no-rename-detection
+§5.3 same check scope	the same check is sought only among records in folders above a changed path (Q5)	5.3-nested-folder-unread
+§5.3 rule 1	a live `must` of H `broken` at H unless the same check was live and `broken` in B; or `unverifiable` at H after holding at B	8-68-tightened-broken 8-19-superseder-deleted 8-19-repaired-from-invalid 8-07-moved-file-anchor-left-behind 5.3-dir-becomes-file 5.3-submodule-removed 5.3-symlink-removed 8-49-value-becomes-template 7.6-value-moves-into-a-parser-difference
+§5.3 rule 2	a live `must` of B not `broken` at B, with no same check live in H, `broken` at H as B wrote it, or `unverifiable` after holding	8-66-edited-must-passes-old-violated 8-13-record-deleted-broken 8-18-supersede-and-break 5.3-invalidated-in-breaking-change 8-22-newer-schema-broken 5.3-broken-at-b-removed 5.3-removed-assumes-silent
+§5.3 changed	a live `must` of B with no same check in H that rule 2 does not break; the finding says what happened	8-13-record-deleted-holds 8-18-supersede-only 5.3-invalidated-only 5.3-record-made-symlink 8-22-newer-schema-holds 8-67-check-removed 5.3-anchor-moved-old-kept 8-68-tightened-holds 5.3-verb-changed 5.3-verb-beats-expectation
+§5.3 stale	a live `assumes` of H that does not hold at H, unless it did not hold at B; the note names a same-content file	8-70-bump-trips-assumes 8-07-moved-file-assumes-left-behind
+§5.3 broken before	a check rule 1 excused: one count line, never a finding	5.3-broken-before-counted 5.3-broken-retitled-counted 5.3-broken-before-untouched
+§5.3 knowledge changes	records added, edited or removed; anchors that followed a moved file; a new `must` that is `unverifiable` at H	8-01-concurrent-records 8-06-moved-file-anchor-follows 8-51-new-unverifiable-must 5.3-new-check-kind-unknown 5.3-record-made-executable
+§5.3 findings on the change	a duplicate id it adds; a `supersedes` it writes naming another folder's record, an unknown id or its own record	5.3-change-adds-duplicate-id 5.3-change-supersedes-other-folder 5.3-change-supersedes-unknown-and-own 5.3-copy-breaks 5.3-change-adds-secret-shape
+§5.3 never findings	a check that was never verifiable; a record the change did not touch	5.3-never-verifiable 5.3-untouched-duplicate-not-reported 5.3-exact-twin-first-untouched 8-50-unverifiable-at-both 5.3-empty-trees
+§5.3 grouping	one finding per record and anchored key; the worst class wins; every reason listed	5.3-worst-class-wins
+§5.3 bullet own change	a record never excuses its own change; a decision turned into a question keeps its checks	8-66-edited-must-passes-old-violated 8-69-question-keeps-checks 8-69-question-drops-checks 5.3-invalidated-in-breaking-change 8-18-supersede-and-break
+§5.3 bullet fence	a constraint comes down in a change of its own (Q2)	8-67-relax-only 8-67-value-after-relax 8-67-check-removed 8-14-decommission-first-change 8-14-decommission-second-change
+§5.3 bullet moved file	a moved file takes its anchor along in the same change; left behind, it is `broken` naming the same-content file	8-06-moved-file-anchor-follows 8-07-moved-file-anchor-left-behind 8-07-moved-and-edited-names-nothing
+§5.3 bullet comes back	a constraint that comes back judges at once	8-19-superseder-deleted 8-19-repaired-from-invalid
+§5.3 bullet unknown	unknown is not an excuse: rule 1 excuses only a check `broken` at B	8-50-unverifiable-then-violated
+§5.3 bullet new unverifiable	a new check that cannot be judged is listed under knowledge changes; `record` refuses it	8-51-new-unverifiable-must 5.3-new-check-kind-unknown cli:#535
+§5.3 cost	a check none of whose inputs changed keeps its state; only folders above changed paths are read; `--no-renames`	5.3-identical-trees 5.3-mode-change-only 5.3-broken-before-untouched 5.3-nested-folder-unread test:tests/gate_props.rs::reads_only_above_changed test:tests/git_tree.rs::changed_paths_no_renames
+§5.3 output	text with at most 10 findings, then `N more`; `--json` (`format: 1`); `--sarif` (SARIF 2.1.0)	cli:#534
+§5.3 exit	0; 2 under `--fail-on broken`; a pathspec after `--`; 3 on usage, a missing object, several merge bases or a base not in local history; a bound is never an exit code	cli:#534 test:src/gate.rs::anchored_file_past_its_bound_is_broken
+§5.3 reference job	the job judges a merge commit against its first parent, `docbrain status --base M^1 M`; fetch depth 2	job:#534
+§5.3 job not editable	`pull_request_target`, read-only, the CLI pinned by version and checksum, the change read only as objects; elsewhere `CODEOWNERS` or protected configuration	job:#534
+§5.3 job inert text	the CLI's text printed between stop-commands tokens; annotation messages escaped	job:#534
+§5.3 job up to date	blocking is sound only on an up-to-date target; the scheduled `status --fail-on broken` reports the rest	job:#534
+§5.3 job output	text and the exit code by default; SARIF upload optional; the judging records come from the target	job:#534
+§7.1 framing	every output frames records as data with a per-call delimiter and indented or escaped bodies	cli:#535
+§7.1 hidden text	the set named against Unicode 17.0: C0 and C1 controls, format characters, variation selectors; a BOM at the start, joiners between letters and the three direction marks allowed	8-31-hidden-text 8-31-ansi-escape 8-31-variation-selectors 8-32-bidi-override 8-32-direction-marks 8-33-crlf-bom 8-33-lone-cr test:src/charset/mod.rs::tables_pin_unicode_17 test:src/charset/mod.rs::zwj_between_letters_marks_emoji_only test:src/charset/mod.rs::bom_only_at_start
+§7.1 record refuses	`record` refuses to write a hidden-text character	cli:#535
+§7.1 not reviewed	records proposed in the change are labelled not reviewed; in CI the judging records come from the merge base and the target's job file	cli:#534 job:#534
+§7.1 default branch	the server indexes only the default branch	server:#533
+§7.1 facts	the skill, the README and the pointer say records are facts, not instructions	skill:#535
+§7.2 confinement	relative to the folder's parent and inside it; no `..` segment, leading `/`, drive letter, `~` or backslash; never under `.git/`	8-38-leading-slash 8-38-dot-dot 8-38-drive-letter 8-38-tilde 8-38-backslash 8-38-dot-git 8-38-empty-path 8-38-config-file 4.2-scope-subfolder
+§7.2 symbolic links	a symbolic link is a tree entry of mode 120000, never followed: an anchor naming one or through one is `symbolic link`; a record file that is one is invalid	8-39-symlink-path 8-39-symlink-glob 8-39-symlink-record 8-resolving-symlink-directory 8-resolving-symlink-file 8-resolving-symlink-glob-match test:tests/git_tree.rs::symlink_and_submodule_modes
+§7.2 writes	writes from `record` obey the same rule	cli:#535
+§7.5 never an exit	an exceeded bound is `unverifiable` (or an `invalid` record) with the bound named; a `must` that held at B and crosses a bound at H is `broken`	test:src/gate.rs::anchored_file_past_its_bound_is_broken test:src/gate.rs::past_the_bound_judges_every_check
+§7.5 record file	64 KiB, checked from the tree entry's size before reading	8-27-large-body test:src/folder.rs::record_bound_on_the_bytes_read
+§7.5 front matter	8 KiB, nesting depth 32	4.2-front-matter-bound test:src/yaml.rs::strict_depth_bound
+§7.5 checks per record	100	4.2-checks-bound
+§7.5 anchored file	per format, well above the largest real files of that format, lockfiles included	test:src/gate.rs::anchored_file_past_its_bound_is_broken test:src/resolve.rs::bound_from_entry_size_before_read test:src/check.rs::code_file_bound_from_the_entry test:tests/git_tree.rs::read_cuts_past_the_bound test:src/resolve.rs::each_format_has_its_own_bound
+§7.5 resolver depth	64; alias expansion in anchored YAML capped	test:src/format/json.rs::json_depth_bound test:src/format/toml.rs::toml_depth_bound test:src/format/hcl.rs::depth_bound test:src/yaml.rs::alias_into_depth_is_bounded test:src/yaml.rs::billion_laughs_hits_budget test:src/yaml.rs::alias_budget_charges_the_bytes_an_alias_copies test:src/yaml.rs::alias_budget_charges_the_copy_an_anchor_keeps
+§7.5 records per pass	100,000; the excess, in byte order of path, listed in one line by folder	test:src/folder.rs::records_per_pass_bound test:src/folder.rs::bound_follows_path_order_across_folders cli:#534
+§7.5 hook	p95 under 300 ms per edit; at most 20 records and 4 KiB per edit	cli:#535
+§7.6 duplicate key	a duplicate key on an anchored path is `defined twice`	4.3-config-key-duplicate-key 8-resolving-json-duplicate 8-resolving-toml-duplicate 4.3-config-key-glob-yaml-two-files test:src/yaml.rs::duplicate_keys_survive_to_the_map
+§7.6 YAML 1.1	a scalar YAML 1.1 and 1.2 read differently is unverifiable whatever the expectation; `on:` is a string key	4.3-config-key-yaml11-exist 4.3-compare-yaml11-on 4.3-compare-yaml11-n 4.3-compare-yaml11-yes-mixed-case 4.3-compare-yaml11-octal 4.3-compare-yaml11-sexagesimal 4.3-compare-actions-on-key 8-resolving-inf-exist
+§7.6 merge key	a merge key a key may come from makes an absent key `merge key`	4.3-config-key-merge-key
+§7.6 into a shape	a change that moves a guarded value into such a shape is `broken`, not silence	7.6-value-moves-into-a-parser-difference
+§8.1	two branches create records concurrently: different ids, different files, no conflict	8-01-concurrent-records
+§8.2	two branches edit one record: conflict markers make it invalid until resolved	4.2-conflict-markers 4.2-setext-heading git
+§8.3	one branch removes a record, another edits it: the person merging decides	git
+§8.4	a record file renamed or moved into a subdirectory: identity is the id; the name is cosmetic	8-files-moved-into-subdirectory
+§8.5	squash merges and rebases: identity by id; sync is idempotent	8-files-moved-into-subdirectory server:#533
+§8.6	an anchored file moved with its anchor in the same change: the same check at the new path	8-06-moved-file-anchor-follows
+§8.7	an anchored file moved, the anchor left behind: `broken` with "update the anchor", or `stale`	8-07-moved-file-anchor-left-behind 8-07-moved-file-assumes-left-behind 8-07-moved-and-edited-names-nothing
+§8.8	a whole directory moves with its folder and records: every anchor follows	8-08-directory-moves-with-folder
+§8.9	a file moves out of its folder's parent: the record moves with it, or it is broken	8-09-file-leaves-folder-parent 8-09-file-leaves-record-left-behind
+§8.10	a record moved to another folder with its anchors rewritten: the same check	8-10-record-moves-folder 5.3-record-moves-file-deleted
+§8.11	code moved from a file that remains: not the same check	8-11-code-moved-to-existing-file 8-11-code-copied-first-change 5.3-anchor-moved-old-kept
+§8.12	a guarded key restructured in its file: `broken`; a key path changed in the same change	8-12-key-restructured 8-12-key-path-changed-same-change
+§8.13	a record deleted: rule 2 judges its `must` checks at H	8-13-record-deleted-holds 8-13-record-deleted-broken
+§8.14	a service decommissioned in one change is `broken`; in two changes `changed`, then nothing	8-14-decommission-in-one-change 8-14-decommission-first-change 8-14-decommission-second-change
+§8.15	removing a body for privacy: the next sync drops it	server:#533
+§8.16	`supersedes` naming an unknown id, another folder's record or its own: a finding, no effect	4.5-supersedes-unknown-id 4.5-supersedes-other-folder 4.5-supersedes-itself 5.3-change-supersedes-other-folder 5.3-change-supersedes-unknown-and-own
+§8.17	a supersession cycle: a finding; no member is superseded	4.5-cycle 4.5-three-cycle
+§8.18	a change supersedes a `must` and breaks it: rule 2	8-18-supersede-and-break 8-18-supersede-only
+§8.19	the superseding record deleted, or a record repaired from invalid: rule 1 with no excuse	8-19-superseder-deleted 8-19-repaired-from-invalid
+§8.20	two records with one id in one folder: both evaluate; a finding on the change; the server indexes the first	4.4-duplicate-id-both-evaluate 5.3-change-adds-duplicate-id 8-files-same-id-two-folders server:#533
+§8.21	`knowledge: 2` is `newer schema`, never rewritten; `1.0` or `'1'` is invalid	4.7-newer-schema 4.7-newer-schema-status 4.7-knowledge-decimal 4.7-knowledge-quoted cli:#535
+§8.22	a record changed to `knowledge: 2`: rule 2 judges B's checks	8-22-newer-schema-holds 8-22-newer-schema-broken
+§8.23	a schema-2 record that supersedes a schema-1 record: honoured	4.5-newer-schema-supersedes 4.7-grease-status
+§8.24	an unknown key is reported once; an `x-` key is ignored	4.7-unknown-key 4.7-x-key 4.7-check-unknown-key
+§8.25	anchors, aliases, tags, merge keys or duplicate keys in front matter: invalid	8-25-anchor 8-25-alias 8-25-tag 8-25-merge-key 8-25-duplicate-key 8-25-duplicate-nested-key
+§8.26	a plain or double-quoted string in front matter: `use single quotes`; `knowledge: 1` the one integer	8-26-plain-string 8-26-double-quoted 4.2-plain-title 4.2-integer-title cli:#535
+§8.27	a body above 64 KiB is refused; the context output shows the first paragraph and the path	8-27-large-body cli:#535
+§8.28	an empty body: `record` refuses; a hand-written one is invalid	4.2-empty-body 4.2-blank-body cli:#535
+§8.29	a binary or non-`.md` file under `records/`: ignored, reported once	8-files-not-records
+§8.30	an id starting `0000` is invalid	4.4-example-id 8-files-example-id
+§8.31	a hidden-text character, an ANSI escape or a run of variation selectors: invalid with line and column	8-31-hidden-text 8-31-ansi-escape 8-31-variation-selectors cli:#535
+§8.32	a body in any language with the three direction marks is valid; bidirectional controls stay invalid	8-32-direction-marks 8-32-bidi-override test:src/charset/mod.rs::ordinary_text_in_any_language_passes
+§8.33	CRLF or a BOM accepted on read; the CLI writes LF without a BOM	8-33-crlf-bom 8-33-crlf-position 8-33-lone-cr cli:#535
+§8.34	two slugs that differ only by case: two ids, two files	8-files-slugs-differ-by-case
+§8.35	an agent writes 500 records in one change: listed under knowledge changes; no cap	cli:#534
+§8.36	an agent pins a value it just chose under `must`: listed for review; the skill's eval suite catches it	skill:#535
+§8.37	a record about another repository's path: no cross-repository anchor in schema 1	8-38-dot-dot 4.2-scope-subfolder
+§8.38	a leading `/`, `..`, a drive letter, `~`, a backslash, or under `.git/`: invalid; on Windows `record` writes `/`	8-38-leading-slash 8-38-dot-dot 8-38-drive-letter 8-38-tilde 8-38-backslash 8-38-dot-git 8-38-empty-path 8-38-dotfile 8-38-config-file cli:#535
+§8.39	a symbolic link as an anchored file or a component: `symbolic link`; as a record file: invalid	8-39-symlink-path 8-39-symlink-glob 8-39-symlink-record 8-resolving-symlink-file 8-resolving-symlink-directory 8-resolving-symlink-glob-match
+§8.40	`app/[slug]/page.tsx` is literal	8-40-brackets-literal
+§8.41	`docs/**` is every file under `docs/`, never a file named `docs`	8-41-double-star
+§8.42	a directory path under `exist` holds while a file lies under it	8-42-directory-exists
+§8.43	an anchor on an ignored or untracked file: not in H, so `broken` or `stale`; the reason "not tracked"; `record` refuses it	8-43-not-tracked cli:#534 cli:#535
+§8.44	an anchor inside a git submodule: `inside a submodule`	8-44-inside-submodule 8-resolving-submodule 8-resolving-submodule-glob
+§8.45	an anchored file stored in Git LFS: `LFS pointer`; `record` refuses it	8-45-lfs-pointer 8-resolving-lfs-pointer cli:#535
+§8.46	a root record and a nested record both match: both shown, nearest first	8-46-root-and-nested 8-46-root-and-nested-context
+§8.47	`applies_to` matching nothing: context for nothing; `status` says so	8-47-applies-to-nothing 8-47-applies-to-nothing-context
+§8.48	the guarded line deleted, or the key missing: `broken` under `must`, `stale` under `assumes`	8-resolving-code-line-deleted 4.3-config-key-layers-missing-key 4.3-states-missing-is-never-unverifiable
+§8.49	a guarded value replaced by an expression, a template or a range: rule 1, no longer checkable	8-49-value-becomes-template
+§8.50	`unverifiable` at B then violated at H is `broken`; unverifiable at both is never a finding	8-50-unverifiable-then-violated 8-50-unverifiable-at-both
+§8.51	a new `must` that is `unverifiable` at H: listed under knowledge changes; `record` refuses it	8-51-new-unverifiable-must cli:#535
+§8.52	a layer whose file is missing defines nothing	4.3-config-key-layers-missing-file 4.3-config-key-layers-missing-file-everywhere
+§8.53	`terraform {}` in two files merges by attribute; an attribute set twice is `defined twice`	4.3-config-key-glob-hcl-merge 4.3-config-key-glob-defined-twice
+§8.54	a key absent beside a `<<` merge key: `merge key`	4.3-config-key-merge-key
+§8.55	a multi-document YAML file with the key in two documents: `ambiguous`	4.3-config-key-multi-document-ambiguous
+§8.56	an Ansible vars file with one Jinja value: that value is `template`; the other keys resolve	4.3-config-key-template-value 4.3-config-key-template-sibling
+§8.57	`on:` is a string key; `on`, `off`, `yes`, `no`, `y`, `n`, `0755`, `1:30` are unverifiable	4.3-compare-actions-on-key 4.3-compare-yaml11-on 4.3-compare-yaml11-n 4.3-compare-yaml11-yes-mixed-case 4.3-compare-yaml11-octal 4.3-compare-yaml11-sexagesimal
+§8.58	TOML datetimes are text under `==`, not comparable when ordered; `.inf`, `.nan` not comparable; `0x1F` is 31	4.3-compare-toml-datetime-equal 4.3-compare-toml-datetime-ordered 4.3-compare-yaml-inf 4.3-compare-yaml-nan 4.3-compare-yaml-hex 8-resolving-toml-datetime
+§8.59	a selector value is compared as `==` compares	4.3-config-key-selector-compares-as-eq
+§8.60	an ordered comparison between a version and a non-version: not comparable	4.3-compare-version-vs-text
+§8.61	a decimal string whose two readings disagree: `number or version`; `record` refuses it	4.3-compare-decimal-string-disagrees 4.3-compare-decimal-string-as-many-decimals 4.3-compare-readings-disagree cli:#535
+§8.62	a `code` file not UTF-8: `encoding`; only ASCII whitespace removed; the floor counts scalar values	8-resolving-code-not-utf8 8-resolving-code-no-break-space 8-resolving-code-floor
+§8.63	a formatter re-wraps or re-indents guarded code: holds	8-resolving-code-rewrapped
+§8.64	the guarded text left in a comment: holds	8-resolving-code-in-comment
+§8.65	an anchored file grows past its bound: `unverifiable` with the bound; held at B, so `broken`	test:src/gate.rs::anchored_file_past_its_bound_is_broken
+§8.66	a change edits a `must` so the new one passes while the old one is violated: rule 2	8-66-edited-must-passes-old-violated
+§8.67	a change only removes, loosens or supersedes a `must`: `changed`; the next change may alter the value	8-67-relax-only 8-67-check-removed 8-67-value-after-relax
+§8.68	a tightened `must`: `changed: expectation`; the new check judged by rule 1	8-68-tightened-holds 8-68-tightened-broken
+§8.69	a decision turned into a question: the kind never changes judging	8-69-question-keeps-checks 8-69-question-drops-checks
+§8.70	a dependency bump that trips an `assumes`: `stale`; one that trips a `must`: `broken`	8-70-bump-trips-assumes 8-70-bump-trips-must
+§8.71	a shallow CI clone without the base commit: exit 3 with the fetch hint	test:tests/git_tree.rs::offline_missing_object cli:#534
+§8.72	several merge bases: exit 3, "pass the base commit"; the reference job passes `M^1`	test:tests/git_tree.rs::several_merge_bases cli:#534 job:#534
+§8.73	a pull request into a release branch, or a retargeted stacked one: merge commit against its first parent	job:#534
+§8.74	two changes that pass alone and break together: caught only with up-to-date branches or a merge queue, else by the scheduled status	job:#534
+§8.75	a change edits the job file or its flags: `pull_request_target`, or `CODEOWNERS` and protected configuration	job:#534
+§8.76	a proposed record with a workflow-command line: printed between stop-commands tokens	job:#534
+§8.77	`diff.renames`, `diff.renameLimit` or `merge.renames` set locally: no effect	8-77-no-rename-detection test:tests/git_tree.rs::changed_paths_no_renames
+§8.78	a sparse checkout or sparse index: H takes paths outside the cone from the index; anchors read from objects	cli:#534
+§8.79	a blobless partial clone: one batch of fetches; offline with a missing object, exit 3	test:tests/git_tree.rs::blobless_clone_fetches_in_one_batch test:tests/git_tree.rs::offline_missing_object cli:#534
+§8.80	context for 5,000 paths: routing through the cache, then the cap	4.6-routing-cap-hides-broken test:src/route.rs::cap_and_overflow_counts test:src/route.rs::many_paths_read_once cli:#535
+§8.81	more than 100,000 records: the excess, in byte order of path, listed in one line by folder	test:src/folder.rs::records_per_pass_bound test:src/folder.rs::bound_follows_path_order_across_folders cli:#534
+§8.82	more than 1,000 files in one directory under `records/`: the README suggests one per year	cli:#535
+§8.83	a subagent edits a file its parent already saw records for: the hook's dedupe is keyed by the receiving context	cli:#535
+§8.84	offline, air-gapped or the server down: everything local works; sync resumes	cli:#534 server:#533
+§8.85	records on a non-default branch: local tools read H; the server reads the default branch only	test:tests/git_tree.rs::commit_tree_matches_memtree server:#533
+§8.86	the folder inside a Docker context, a Helm package or an npm package: the README gives the ignore lines	cli:#535
+§8.87	root records filling every edit's context: local and narrow first, the cap announced; `status` names every folder-wide record	8-87-root-records-cap 4.6-folder-wide cli:#535

@@ -1,0 +1,13 @@
+{
+  "id": "4.3-code-needs-text",
+  "spec": "§4.3 anchors (C7): code needs text",
+  "op": "parse",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-production-api-replicas.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'decision'\ntitle: 'Production API runs at least two replicas'\napplies_to: ['charts/api/**', 'envs/prod/**']\nchecks:\n  - code: 'src/lib.rs'\n    must: 'exist'\n---\nA single replica took the API down for 11 minutes on 2026-09-02 during a node drain:\nthe pod disruption budget cannot protect one pod. Two replicas with the PDB at\n`minAvailable: 1` survive a drain. Cost was reviewed and accepted; a cost change goes\nthrough a new decision that supersedes this one.\n"
+  },
+  "expect": {
+    "invalid": "missing-key:text",
+    "line": 8,
+    "col": 5
+  }
+}

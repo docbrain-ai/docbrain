@@ -1,0 +1,21 @@
+{
+  "id": "8-files-slugs-differ-by-case",
+  "spec": "§8 item 34: two slugs differing by case are two files with two ids",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-Retry-Policy.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'Retry policy'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/k3v9q2x7m1ac-retry-policy.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'retry policy'\napplies_to: ['src/**']\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-Retry-Policy.md": {
+        "state": "holds",
+        "checks": []
+      },
+      ".knowledge/records/k3v9q2x7m1ac-retry-policy.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

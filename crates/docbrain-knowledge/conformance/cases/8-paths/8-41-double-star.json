@@ -1,0 +1,32 @@
+{
+  "id": "8-41-double-star",
+  "spec": "§8 item 41: docs/** is every file under docs/, never a file named docs",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'file named docs'\nchecks:\n  - path: 'docs/**'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'guide'\nchecks:\n  - path: 'guide/**'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "docs": "x\n",
+    "guide/a/b.md": "x\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "missing-file"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

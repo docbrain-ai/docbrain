@@ -1,0 +1,19 @@
+{
+  "id": "8-46-root-and-nested-context",
+  "spec": "§8 item 46: a root record and a nested record both match: both shown, nearest first; no shadowing",
+  "op": "context",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't'\napplies_to: ['**']\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m002'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    "svc/src/main.rs": "x\n"
+  },
+  "paths": [
+    "svc/src/main.rs"
+  ],
+  "expect": {
+    "order": [
+      "k3v9q2x7m002",
+      "k3v9q2x7m001"
+    ]
+  }
+}

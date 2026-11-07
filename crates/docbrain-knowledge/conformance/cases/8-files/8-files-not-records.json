@@ -1,0 +1,35 @@
+{
+  "id": "8-files-not-records",
+  "spec": "§8 item 29 and C19: a non-.md entry under records/ is reported once; a .md entry is a record",
+  "note": "A binary .md file is a record (C19), invalid because it is not UTF-8; binary files of other names are ignored.",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/notes.txt": "x\n",
+    ".knowledge/records/diagram.png": {
+      "base64": "iVBORw0KGgoA/w=="
+    },
+    ".knowledge/records/README.MD": "x\n",
+    ".knowledge/records/k3v9q2x7m1ab-a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'a'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/k3v9q2x7m1ac-binary.md": {
+      "base64": "LS0tCmtub3dsZWRnZTogMQr//go="
+    }
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-a.md": {
+        "state": "holds",
+        "checks": []
+      },
+      ".knowledge/records/k3v9q2x7m1ac-binary.md": {
+        "state": "invalid",
+        "reason": "parse",
+        "checks": []
+      }
+    },
+    "ignored": [
+      ".knowledge/records/README.MD",
+      ".knowledge/records/diagram.png",
+      ".knowledge/records/notes.txt"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "id": "4.3-config-key-template-sibling",
+  "spec": "§4.3 config_key; §8 item 56: the file's other keys resolve",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'template-sibling'\nchecks:\n  - config_key: 'group_vars/all.yml#db_port'\n    must: '== 5432'\n---\nWhy this value matters.\n",
+    "group_vars/all.yml": "db_host: \"{{ lookup('env', 'DB') }}\"\ndb_port: 5432\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "4.3-compare-sampling-rate",
+  "spec": "§4.3 Expectations, the readings table: '0.5' <= 0.25 is number or version, never a silent pass",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'sampling-rate'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '<= 0.25'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: '0.5'\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "number-or-version"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "4.3-config-key-hcl-expression",
+  "spec": "§4.3 config_key: an HCL expression is unverifiable",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'hcl-expression'\nchecks:\n  - config_key: 'main.tf#locals.a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "main.tf": "locals {\n  a = var.x\n}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "expression"
+          }
+        ]
+      }
+    }
+  }
+}

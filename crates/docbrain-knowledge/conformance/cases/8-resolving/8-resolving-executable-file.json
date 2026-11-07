@@ -1,0 +1,23 @@
+{
+  "id": "8-resolving-executable-file",
+  "spec": "§4.3 config_key: an executable file is read",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'executable-file'\nchecks:\n  - config_key: 'values.yaml#a'\n    must: '== 1'\n---\nWhy this value matters.\n",
+    "values.yaml": {
+      "exec": "a: 1\n"
+    }
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

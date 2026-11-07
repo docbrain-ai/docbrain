@@ -1,0 +1,33 @@
+{
+  "id": "8-38-dot-segment",
+  "spec": "§4.3 Paths: a `.` segment is dropped, so `./x` and `a/./b` name `x` and `a/b`",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 't'\nchecks:\n  - path: './README.md'\n    must: 'exist'\n  - path: 'docs/./guide.md'\n    must: 'exist'\n  - config_key: './values.yaml#a'\n    must: '== 1'\n  - code: './src/./lib.rs'\n    text: 'fn retry_with_backoff(attempts: u32)'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "README.md": "x\n",
+    "docs/guide.md": "x\n",
+    "values.yaml": "a: 1\n",
+    "src/lib.rs": "pub fn retry_with_backoff(attempts: u32) {}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          },
+          {
+            "state": "holds"
+          },
+          {
+            "state": "holds"
+          },
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

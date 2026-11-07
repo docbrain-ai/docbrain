@@ -1,0 +1,21 @@
+{
+  "id": "4.3-compare-toml-datetime-equal",
+  "spec": "§8 item 58: TOML datetimes are text under ==",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'toml-datetime-equal'\nchecks:\n  - config_key: 'config.toml#d'\n    must: '== 1979-05-27T07:32:00Z'\n---\nWhy this value matters.\n",
+    "config.toml": "d = 1979-05-27T07:32:00Z\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

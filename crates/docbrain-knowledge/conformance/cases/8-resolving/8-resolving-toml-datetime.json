@@ -1,0 +1,21 @@
+{
+  "id": "8-resolving-toml-datetime",
+  "spec": "§4.3 config_key: a TOML datetime is its text",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'toml-datetime'\nchecks:\n  - config_key: 'a.toml#d'\n    must: '== 1979-05-27'\n---\nWhy this value matters.\n",
+    "a.toml": "d = 1979-05-27\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

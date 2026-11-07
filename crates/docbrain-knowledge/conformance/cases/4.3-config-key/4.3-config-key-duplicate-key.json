@@ -1,0 +1,22 @@
+{
+  "id": "4.3-config-key-duplicate-key",
+  "spec": "§7.6: a duplicate key is defined twice",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'duplicate-key'\nchecks:\n  - config_key: 'values.yaml#a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "values.yaml": "a: 1\na: 2\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "defined-twice"
+          }
+        ]
+      }
+    }
+  }
+}

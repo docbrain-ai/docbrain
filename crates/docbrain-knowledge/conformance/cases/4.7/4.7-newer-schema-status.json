@@ -1,0 +1,23 @@
+{
+  "id": "4.7-newer-schema-status",
+  "spec": "§4.7, §8 item 21: a newer schema is unverifiable, never judged; a quoted knowledge is invalid",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/n.md": "---\nknowledge: 2\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'newer'\nchecks:\n  - service: 'api'\n    within: '5m'\n---\nWhy.\n",
+    ".knowledge/records/q.md": "---\nknowledge: '1'\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'quoted'\napplies_to: ['src/**']\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/n.md": {
+        "state": "unverifiable",
+        "reason": "newer-schema",
+        "checks": []
+      },
+      ".knowledge/records/q.md": {
+        "state": "invalid",
+        "reason": "schema-integer",
+        "checks": []
+      }
+    }
+  }
+}

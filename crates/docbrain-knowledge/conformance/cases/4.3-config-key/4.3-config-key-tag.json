@@ -1,0 +1,22 @@
+{
+  "id": "4.3-config-key-tag",
+  "spec": "§4.3 config_key; C13: an explicitly tagged node",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'tag'\nchecks:\n  - config_key: 'values.yaml#a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "values.yaml": "a: !Ref x\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "tag"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "id": "8-51-new-unverifiable-must",
+  "spec": "§8 item 51: a new must unverifiable at H: listed under knowledge changes with its reason",
+  "op": "gate",
+  "base": {
+    "v.yaml": "x: '{{ v }}'\n"
+  },
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\nchecks:\n  - config_key: 'v.yaml#x'\n    must: '== 1'\n---\nWhy 1.\n",
+    "v.yaml": "x: '{{ v }}'\n"
+  },
+  "expect": {
+    "knowledge": {
+      "added": [
+        ".knowledge/records/a.md"
+      ],
+      "new_unverifiable": [
+        {
+          "record": ".knowledge/records/a.md",
+          "check": 0,
+          "reason": "template"
+        }
+      ]
+    }
+  }
+}

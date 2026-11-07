@@ -1,0 +1,26 @@
+{
+  "id": "8-43-not-tracked",
+  "spec": "§8 item 43: a file not in the tree is missing: broken under must, stale under assumes",
+  "note": "The reason the CLI prints, \"not tracked\", is its own; the tree only says the file is missing.",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'build output'\nchecks:\n  - path: 'build/out.js'\n    must: 'exist'\n  - path: 'build/out.js'\n    assumes: 'exist'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "missing-file"
+          },
+          {
+            "state": "stale",
+            "reason": "missing-file"
+          }
+        ]
+      }
+    }
+  }
+}

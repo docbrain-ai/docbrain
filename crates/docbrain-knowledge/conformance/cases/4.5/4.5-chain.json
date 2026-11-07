@@ -1,0 +1,28 @@
+{
+  "id": "4.5-chain",
+  "spec": "§4.5 a superseded record's own supersedes still applies",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/c.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'first'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/d.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ad'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1ac'\n---\nWhy this matters.\n",
+    ".knowledge/records/e.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ae'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1ad'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/c.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ad",
+        "checks": []
+      },
+      ".knowledge/records/d.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ae",
+        "checks": []
+      },
+      ".knowledge/records/e.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

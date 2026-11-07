@@ -1,0 +1,33 @@
+{
+  "id": "8-18-supersede-only",
+  "spec": "§8 items 18 and 67: a change only supersedes a must: changed, superseded",
+  "op": "gate",
+  "base": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - config_key: 'v.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n",
+    "v.yaml": "replicas: 3\n"
+  },
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - config_key: 'v.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m002'\nkind: 'decision'\ntitle: 't2'\nsupersedes: 'k3v9q2x7m001'\n---\nWhy 2.\n",
+    "v.yaml": "replicas: 3\n"
+  },
+  "expect": {
+    "findings": [
+      {
+        "class": "changed",
+        "change": "superseded",
+        "id": "k3v9q2x7m001",
+        "record": ".knowledge/records/a.md",
+        "anchor": "v.yaml#replicas",
+        "reasons": [
+          "superseded"
+        ]
+      }
+    ],
+    "knowledge": {
+      "added": [
+        ".knowledge/records/b.md"
+      ]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "8-09-file-leaves-folder-parent",
+  "spec": "§8 item 9: a file leaves its folder's parent directory; the record moves with it, anchor rewritten: the same check",
+  "op": "gate",
+  "base": {
+    "svc/a/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'lib.rs'\n    must: 'exist'\n---\nWhy 1.\n",
+    "svc/a/lib.rs": "pub fn f() {}\n",
+    "svc/a/main.rs": "fn main() {}\n"
+  },
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'shared/lib.rs'\n    must: 'exist'\n---\nWhy 1.\n",
+    "shared/lib.rs": "pub fn f() {}\n",
+    "svc/a/main.rs": "fn main() {}\n"
+  },
+  "expect": {
+    "knowledge": {
+      "added": [
+        ".knowledge/records/a.md"
+      ],
+      "removed": [
+        "svc/a/.knowledge/records/x.md"
+      ],
+      "followed": [
+        [
+          "svc/a/lib.rs",
+          "shared/lib.rs"
+        ]
+      ]
+    }
+  }
+}

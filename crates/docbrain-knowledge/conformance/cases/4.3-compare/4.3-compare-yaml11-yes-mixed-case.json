@@ -1,0 +1,22 @@
+{
+  "id": "4.3-compare-yaml11-yes-mixed-case",
+  "spec": "§8 item 57: YAML 1.1 and 1.2 read yEs differently (§7.6)",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'yaml11-yes-mixed-case'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== yEs'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: yEs\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "yaml-1.1"
+          }
+        ]
+      }
+    }
+  }
+}
