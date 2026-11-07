@@ -305,7 +305,7 @@ mod tests {
         for t in ["", " ", "{} {}", "[] x", "\u{feff}\u{feff}{}", "\u{a0}{}", "\u{c}{}", "nul", "truee", "True"] {
             assert_eq!(read_json(t), Err(Unverifiable::Format), "{t:?}");
         }
-        // C21: one BOM is skipped. A top-level scalar is a JSON text (RFC 8259 §2).
+        // one BOM is skipped. A top-level scalar is a JSON text (RFC 8259 §2).
         assert_eq!(read_json("\u{feff}{}"), Ok(map(vec![])));
         assert_eq!(read_json(" \t\r\n true \n"), Ok(Value::Scalar(Scalar::Bool(true))));
         assert_eq!(read_json("null"), Ok(Value::Scalar(Scalar::Null)));

@@ -1,0 +1,21 @@
+{
+  "id": "compare-decimal-string-as-many-decimals",
+  "spec": "Edge case 61: the literal with as many decimals as the value",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'decimal-string-as-many-decimals'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '<= 0.250'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: '0.125'\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

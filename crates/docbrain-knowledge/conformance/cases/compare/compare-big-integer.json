@@ -1,0 +1,21 @@
+{
+  "id": "compare-big-integer",
+  "spec": "Values and comparison, the value table: exact decimal: no integer loses digits",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'big-integer'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '> 12345678901234567890122'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: 12345678901234567890123\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

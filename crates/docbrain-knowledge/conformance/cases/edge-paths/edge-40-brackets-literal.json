@@ -1,0 +1,32 @@
+{
+  "id": "edge-40-brackets-literal",
+  "spec": "Edge case 40: brackets in an anchor are literal, never a class",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'page'\nchecks:\n  - path: 'app/[slug]/page.tsx'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'class'\nchecks:\n  - path: 'web/[slug]/page.tsx'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "app/[slug]/page.tsx": "x\n",
+    "web/s/page.tsx": "x\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "missing-file"
+          }
+        ]
+      }
+    }
+  }
+}

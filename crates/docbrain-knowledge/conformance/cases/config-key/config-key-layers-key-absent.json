@@ -1,0 +1,22 @@
+{
+  "id": "config-key-layers-key-absent",
+  "spec": "Resolving values: a later layer without the key leaves the earlier value",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'layers-key-absent'\nchecks:\n  - config_key:\n      - 'deploy/base/values.yaml#resources.limits.memory'\n      - 'deploy/prod/values.yaml#resources.limits.memory'\n    must: '== 256Mi'\n---\nWhy this value matters.\n",
+    "deploy/base/values.yaml": "resources:\n  limits:\n    memory: 256Mi\n",
+    "deploy/prod/values.yaml": "replicas: 3\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

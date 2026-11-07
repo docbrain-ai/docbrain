@@ -1,0 +1,22 @@
+{
+  "id": "compare-yaml-inf",
+  "spec": "Edge case 58: YAML .inf is not comparable",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'yaml-inf'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '> 1'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: .inf\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "not-comparable"
+          }
+        ]
+      }
+    }
+  }
+}

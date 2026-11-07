@@ -1,0 +1,24 @@
+{
+  "id": "config-key-glob-yaml-two-files",
+  "spec": "Resolving values: a key defined in two of a glob's files is defined twice",
+  "note": "Each YAML file is read alone; the same content in two files is still two definitions.",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'glob-yaml-two-files'\nchecks:\n  - config_key: 'config/*.yaml#db.port'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "config/a.yaml": "db:\n  port: 1\n",
+    "config/b.yaml": "db:\n  port: 1\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "defined-twice"
+          }
+        ]
+      }
+    }
+  }
+}

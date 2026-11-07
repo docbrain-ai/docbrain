@@ -21,6 +21,14 @@ const FIELDS: [&str; 8] = ["id", "spec", "note", "op", "tree", "base", "paths", 
 /// Ops whose reader is not built yet; their cases are counted, not run.
 const PENDING: [&str; 0] = [];
 
+/// A case's `spec` names what it proves: an edge case `SEMANTICS.md` lists (`Edge case 12`, `Edge cases 18 and
+/// 67`), or a section of `SEMANTICS.md` by its heading, then the end, `:`, `,`, `;` or ` (`.
+fn cites(spec: &str, sections: &[&str], edges: u32) -> bool {
+    let number = |r: &str| r.split(|c: char| !c.is_ascii_digit()).next().and_then(|d| d.parse::<u32>().ok()).is_some_and(|n| (1..=edges).contains(&n));
+    let edge = ["Edge case ", "Edge cases "].iter().any(|p| spec.strip_prefix(p).is_some_and(number));
+    edge || sections.iter().any(|h| spec.strip_prefix(h).is_some_and(|r| r.is_empty() || [":", ",", ";", " ("].iter().any(|t| r.starts_with(t))))
+}
+
 fn check_json(c: &CheckState) -> Value {
     match c {
         CheckState::Holds(_) => json!({"state": "holds"}),
@@ -31,7 +39,7 @@ fn check_json(c: &CheckState) -> Value {
 }
 
 /// `status` as the corpus writes it (`conformance/README.md`). A section left out of `expect` is empty.
-/// `context` at the design's cap: the routed records' ids in order (a record without a readable id by its
+/// `context` at the cap of `SEMANTICS.md` §Routing: the routed records' ids in order (a record without a readable id by its
 /// path), and what the cap hides; `more` and `more_broken_or_stale` left out are 0.
 fn run_context(case: &Value) -> Result<(), String> {
     let paths = case["paths"].as_array().ok_or("paths is not an array")?;
@@ -222,7 +230,7 @@ fn run_status(case: &Value) -> Result<(), String> {
     if errors.is_empty() { Ok(()) } else { Err(errors.join("; ")) }
 }
 
-/// C19: the scope is the directory above the first `.knowledge/records/` on the path.
+/// the scope is the directory above the first `.knowledge/records/` on the path.
 fn scope_of(path: &str) -> Option<String> {
     let segs: Vec<&str> = path.split('/').collect();
     let i = segs.windows(2).position(|w| w == [".knowledge", "records"])?;
@@ -258,6 +266,11 @@ fn corpus() {
     walk(&root, &mut files);
     files.sort();
     assert!(!files.is_empty(), "no cases under {}", root.display());
+    let semantics = include_str!("../SEMANTICS.md");
+    // The sections that state rules: not the list of sections, the edge cases (cited by number) or this corpus.
+    let sections: Vec<&str> = semantics.lines().filter_map(|l| l.strip_prefix("## ")).filter(|h| !["Sections", "Edge cases", "Conformance"].contains(h)).collect();
+    let edges = semantics.split("\n## Edge cases\n").nth(1).and_then(|s| s.split("\n## ").next()).expect("SEMANTICS.md has §Edge cases")
+        .lines().filter_map(|l| l.split_once(". ").and_then(|(n, _)| n.parse::<u32>().ok())).max().expect("edge cases");
     let (mut ran, mut pending, mut failed, mut ids) = (0, 0, Vec::new(), HashSet::new());
     for f in &files {
         let name = f.strip_prefix(&root).unwrap_or(f).display().to_string();
@@ -272,7 +285,7 @@ fn corpus() {
         let shape = case.as_object().map_or(Err("not an object".to_owned()), |o| match o.keys().find(|k| !FIELDS.contains(&k.as_str())) {
             Some(k) => Err(format!("unknown field {k}")),
             None if id.is_empty() || !ids.insert(id.clone()) => Err("missing or repeated id".to_owned()),
-            None if !case["spec"].as_str().is_some_and(|s| s.starts_with('§')) => Err("spec must cite a section".to_owned()),
+            None if !case["spec"].as_str().is_some_and(|s| cites(s, &sections, edges)) => Err("spec must name a section of SEMANTICS.md or an edge case".to_owned()),
             None => Ok(()),
         });
         let op = case["op"].as_str().unwrap_or_default();

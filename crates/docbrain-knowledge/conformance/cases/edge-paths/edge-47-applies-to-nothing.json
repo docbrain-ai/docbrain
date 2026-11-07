@@ -1,0 +1,16 @@
+{
+  "id": "edge-47-applies-to-nothing",
+  "spec": "Edge case 47: applies_to matching nothing is context for nothing; the record still holds",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'nothing'\napplies_to: ['nothing/**']\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

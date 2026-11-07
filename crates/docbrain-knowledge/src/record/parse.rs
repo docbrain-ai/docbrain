@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! `parse_record`: the strict reading of one record file (spec §4.2-§4.5, §4.7, §7.1, §7.2, §7.5;
-//! clarifications C6-C9, C15, C19-C21; `SEMANTICS.md` §The record). The steps run in a fixed order and
+//! `parse_record`: the strict reading of one record file (`SEMANTICS.md` §The record, §States,
+//! §Hidden text, §Paths and globs, §Bounds). The steps run in a fixed order and
 //! the first that fails is the reason; within one step, the first in the file.
 
 use std::collections::HashSet;
@@ -146,7 +146,7 @@ fn read(scope: &str, bytes: &[u8]) -> Res<Parsed> {
     for &(p, s) in &paths {
         rel(scope, s, p)?;
     }
-    // 20: a config_key file glob stays within one directory (C9).
+    // 20: a config_key file glob stays within one directory.
     for c in &raw {
         if let RawAnchor::ConfigKey(layers) = &c.anchor
             && let Some(&(_, p)) = layers.iter().find(|&&(s, _)| glob_dir(file_part(s)))
@@ -198,7 +198,7 @@ fn read(scope: &str, bytes: &[u8]) -> Res<Parsed> {
     }))
 }
 
-/// One check after its keys are read (C7), before its paths and key paths are.
+/// One check after its keys are read, before its paths and key paths are.
 struct RawCheck<'a> {
     pos: Pos,
     verb: Verb,
@@ -213,7 +213,7 @@ enum RawAnchor<'a> {
     Unknown(String),
 }
 
-/// C7: exactly one verb; at most one anchor; `text` with `code` only, and `code` needs `text`; no anchor
+/// exactly one verb; at most one anchor; `text` with `code` only, and `code` needs `text`; no anchor
 /// but another non-`x-` key is an unknown check kind; then each known key's value has its type.
 fn raw_check<'a>(i: usize, c: &'a Node, unknown: &mut Vec<(Pos, String)>) -> Res<RawCheck<'a>> {
     let pos = at(c);
@@ -281,7 +281,7 @@ fn known_check_key(t: &str) -> Option<&'static str> {
     CHECK_KEYS.iter().find(|k| **k == t).copied()
 }
 
-/// `knowledge` per C6: a plain scalar `[1-9][0-9]*`; a value past `u64::MAX` reads as `u64::MAX`.
+/// `knowledge` per a plain scalar `[1-9][0-9]*`; a value past `u64::MAX` reads as `u64::MAX`.
 fn schema_integer(v: &Node) -> Option<u64> {
     let NodeKind::Scalar { text, style: Style::Plain } = &v.kind else { return None };
     let b = text.as_bytes();
@@ -289,7 +289,7 @@ fn schema_integer(v: &Node) -> Option<u64> {
     ok.then(|| text.parse().unwrap_or(u64::MAX))
 }
 
-/// A record of a newer schema: what reads as schema 1 reads it (§4.7). `applies_to` is taken only as written and
+/// A record of a newer schema: what reads as schema 1 reads it (`SEMANTICS.md` §The record). `applies_to` is taken only as written and
 /// only whole, never defaulted from checks a newer schema may mean differently.
 fn newer(scope: &str, schema: u64, top: &[(Node, Node)]) -> Parsed {
     let s = |name: &str| lookup(top, name).and_then(scalar);
@@ -306,7 +306,7 @@ fn newer(scope: &str, schema: u64, top: &[(Node, Node)]) -> Parsed {
     }
 }
 
-/// C20: non-empty, and no line break after folding.
+/// non-empty, and no line break after folding.
 fn title_ok(t: &str) -> bool {
     !t.is_empty() && !t.contains('\n')
 }
@@ -391,13 +391,13 @@ fn file_part(s: &str) -> &str {
     s.split_once('#').map_or(s, |(f, _)| f)
 }
 
-/// C9: a wildcard before the last segment, or a last segment `**`, leaves one directory.
+/// a wildcard before the last segment, or a last segment `**`, leaves one directory.
 fn glob_dir(file: &str) -> bool {
     let (dirs, last) = file.rsplit_once('/').unwrap_or(("", file));
     dirs.contains(['*', '?']) || last == "**"
 }
 
-/// C15: each `path` anchor's path (and `<path>/**` when literal), each `config_key` layer's file, each
+/// each `path` anchor's path (and `<path>/**` when literal), each `config_key` layer's file, each
 /// `code` file, once each in check order; the whole folder when that names nothing.
 fn default_applies(scope: &str, checks: &[Check]) -> Vec<RepoGlob> {
     let mut out: Vec<RepoGlob> = Vec::new();
@@ -447,7 +447,7 @@ fn split(text: &str) -> Option<(&str, &str, u32)> {
     None
 }
 
-/// C21: the line of a `<<<<<<<` line that a later `>>>>>>>` line follows.
+/// the line of a `<<<<<<<` line that a later `>>>>>>>` line follows.
 fn conflict_marker(text: &str) -> Option<u32> {
     let mut open = None;
     for (i, line) in (1u32..).zip(text.split('\n')) {
@@ -535,14 +535,14 @@ through a new decision that supersedes this one.
         format!("{HEAD}{CHECKS}---\n{BODY}")
     }
 
-    /// The spec record with `old` (which must occur) replaced once by `new`.
+    /// The full example record with `old` (which must occur) replaced once by `new`.
     fn swap(old: &str, new: &str) -> Vec<u8> {
         let s = spec();
         assert!(s.contains(old), "{old:?}");
         s.replacen(old, new, 1).into_bytes()
     }
 
-    /// The spec record with its `checks` block replaced by `block` (under `checks:`).
+    /// The full example record with its `checks` block replaced by `block` (under `checks:`).
     fn with_checks(block: &str) -> Vec<u8> {
         format!("{HEAD}checks:\n{block}---\n{BODY}").into_bytes()
     }
@@ -739,7 +739,7 @@ through a new decision that supersedes this one.
 
     #[test]
     fn render_writes_the_spec_shape() {
-        // A one-layer config_key is one line, as the spec writes it; several layers are a list.
+        // A one-layer config_key is one line; several layers are a list.
         let check = |layers: &[&str]| DraftCheck {
             anchor: DraftAnchor::ConfigKey(layers.iter().map(|l| (*l).to_owned()).collect()),
             verb: Verb::Must,

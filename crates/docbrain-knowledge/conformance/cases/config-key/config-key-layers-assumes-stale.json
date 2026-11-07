@@ -1,0 +1,23 @@
+{
+  "id": "config-key-layers-assumes-stale",
+  "spec": "Resolving values: the same comparison under assumes is stale",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'layers-assumes-stale'\nchecks:\n  - config_key:\n      - 'deploy/base/values.yaml#resources.limits.memory'\n      - 'deploy/prod/values.yaml#resources.limits.memory'\n    assumes: '== 256Mi'\n---\nWhy this value matters.\n",
+    "deploy/base/values.yaml": "resources:\n  limits:\n    memory: 256Mi\n",
+    "deploy/prod/values.yaml": "resources:\n  limits:\n    memory: 512Mi\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "stale",
+        "checks": [
+          {
+            "state": "stale",
+            "reason": "false"
+          }
+        ]
+      }
+    }
+  }
+}

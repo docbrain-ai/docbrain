@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Record identity (spec §4.4): 12 characters of lower-case Crockford base32, 60 random bits.
+//! Record identity (`SEMANTICS.md` §The record): 12 characters of lower-case Crockford base32, 60 random bits.
 
 use std::fmt;
 

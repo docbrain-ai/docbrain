@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! The MCP Streamable HTTP binding's decision table (#601 rev 8 §4.1): one test per row.
+//! The MCP Streamable HTTP binding's decision table: one test per row.
 //! Modern requests (revision 2026-07-28) carry their version in `_meta` and mirror it in
 //! headers; legacy requests (2025-11-25, 2025-06-18) open with a headerless `initialize`.
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! HCL attribute literals and block merging (clarification C12, `SEMANTICS.md` §Resolving values).
+//! HCL attribute literals and block merging (`SEMANTICS.md` §Resolving values).
 
 use std::collections::HashMap;
 
@@ -47,7 +47,7 @@ pub struct HclBlock {
 /// An attribute's line is 1-based.
 pub fn read_hcl(src: &str) -> Result<HclBody, Unverifiable> {
     let src = src.strip_prefix('\u{feff}').unwrap_or(src);
-    // C21 skips one BOM.
+    // One BOM is skipped (`SEMANTICS.md` §Resolving values).
     if src.starts_with('\u{feff}') {
         return Err(Unverifiable::Format);
     }
@@ -144,7 +144,7 @@ fn object(o: &Object) -> Value {
     m.finish(false)
 }
 
-/// C12: a template with any interpolation or directive is an expression.
+/// a template with any interpolation or directive is an expression.
 fn literal(t: &Template) -> Value {
     let mut s = String::new();
     for e in t.iter() {
@@ -156,7 +156,7 @@ fn literal(t: &Template) -> Value {
     Value::Scalar(Scalar::Str(s))
 }
 
-/// C12: the files of one glob as one value. Top-level blocks key by type then labels and merge by attribute;
+/// the files of one glob as one value. Top-level blocks key by type then labels and merge by attribute;
 /// an attribute set twice is `defined-twice`. A nested block type (with its labels) is its body when it occurs
 /// once and a list when it repeats. A `dynamic "x"` block makes `x` an `expression`. Depth counts every map
 /// and list from the root (root = 1); beyond `RESOLVER_DEPTH` anywhere, the whole value is
@@ -452,7 +452,7 @@ mod tests {
         let v = merged(&["terraform {\n  required_providers {\n    aws = {\n      source = \"hashicorp/aws\"\n      version = \"~> 5.0\"\n    }\n  }\n}\n"]);
         assert_eq!(at(&v, &["terraform", "required_providers", "aws", "version"]), &st("~> 5.0"));
         assert_eq!(attr("{ \"a.b\" = 1, c: [2] }"), map(vec![("a.b", num("1")), ("c", Value::List(vec![num("2")]))]));
-        // The parser refuses `k` twice; `k` and `"k"` are the same key by text (C10).
+        // The parser refuses `k` twice; `k` and `"k"` are the same key by text.
         assert_eq!(read_hcl("a = { k = 1, k = 2 }\n"), Err(Unverifiable::DefinedTwice));
         assert_eq!(attr("{ k = 1, \"k\" = 2 }"), map(vec![("k", Value::Opaque(Unverifiable::DefinedTwice))]));
     }
@@ -474,7 +474,7 @@ mod tests {
         for t in ["a = ", "a = (", "a = \"x", "block {", "a = 1 2\n", "= 1\n", "\u{feff}\u{feff}a = 1\n"] {
             assert_eq!(read_hcl(t), Err(Unverifiable::Format), "{t:?}");
         }
-        // C21: one BOM is skipped.
+        // one BOM is skipped.
         assert_eq!(merge_files(&[read_hcl("\u{feff}a = 1\n").unwrap()]), map(vec![("a", num("1"))]));
         assert_eq!(merge_files(&[read_hcl("").unwrap()]), map(vec![]));
     }
@@ -578,7 +578,7 @@ mod tests {
         // Three files, one attribute in all three: still defined twice, once.
         let v = merged(&["a = 1\n", "a = 1\n", "a = 1\n"]);
         assert_eq!(v, map(vec![("a", Value::Opaque(Unverifiable::DefinedTwice))]));
-        // An identifier label and a quoted one with the same text are the same key (C10).
+        // An identifier label and a quoted one with the same text are the same key.
         let v = merged(&["r x {\n  a = 1\n}\n", "r \"x\" {\n  b = 2\n}\n"]);
         assert_eq!(at(&v, &["r", "x"]), &map(vec![("a", num("1")), ("b", num("2"))]));
         // Multibyte text survives, in a value, a key and a label.

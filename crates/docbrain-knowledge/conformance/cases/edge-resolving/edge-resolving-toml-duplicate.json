@@ -1,0 +1,23 @@
+{
+  "id": "edge-resolving-toml-duplicate",
+  "spec": "Resolving values, parser differences: a TOML key defined twice",
+  "note": "TOML forbids a key defined twice, so the whole file is defined twice.",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'toml-duplicate'\nchecks:\n  - config_key: 'a.toml#b'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "a.toml": "a = 1\na = 2\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "defined-twice"
+          }
+        ]
+      }
+    }
+  }
+}

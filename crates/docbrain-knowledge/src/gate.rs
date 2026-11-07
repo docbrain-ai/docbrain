@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! The change gate, reference form: two rules over two trees (`SEMANTICS.md` §The gate; design §5.3; C17,
-//! C18, C23).
+//! The change gate, reference form: two rules over two trees (`SEMANTICS.md`
+//! §The gate).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -15,7 +15,7 @@ use crate::record::{Anchor, Check, Expectation, Id, Parsed, Record, Verb};
 use crate::resolve::FileCache;
 use crate::tree::{ChangedPaths, Entry, Mode, Oid, Tree, TreeError};
 
-/// What happened to a `must` of B that has no same check live in H and still does not fail (§5.3 `changed`).
+/// What happened to a `must` of B that has no same check live in H and still does not fail (`changed` in `SEMANTICS.md` §The gate).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ChangeKind {
@@ -53,7 +53,7 @@ pub struct Finding {
     pub same_content: Option<String>,
 }
 
-/// A finding on the change itself, never a record state (C18).
+/// A finding on the change itself, never a record state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum ChangeFinding {
@@ -120,7 +120,7 @@ impl Class {
     }
 }
 
-/// §5.3 "The same check": same id, verb and parsed expectation; key paths or `code` texts equal; the same
+/// `SEMANTICS.md` §The gate: same id, verb and parsed expectation; key paths or `code` texts equal; the same
 /// number of layers; and each position's root path equal, or B's path matches nothing in H.
 pub fn same_check(h: (&Id, &Check), b: (&Id, &Check), head: &dyn Tree) -> Result<bool, TreeError> {
     if h.0 != b.0 || h.1.verb != b.1.verb || h.1.expect != b.1.expect {
@@ -155,7 +155,7 @@ fn positions<'a>(h: &'a Check, b: &'a Check) -> Option<Vec<(&'a RepoGlob, &'a Re
     }
 }
 
-/// R6: whether any entry of `tree` is at or under a literal path, or matched by a glob; links and submodules
+/// Whether any entry of `tree` is at or under a literal path, or matched by a glob; links and submodules
 /// count (the matching of a `path` anchor, `SEMANTICS.md` §Three anchors).
 fn matches_any(tree: &dyn Tree, g: &RepoGlob) -> Result<bool, TreeError> {
     if g.is_literal() {
@@ -166,7 +166,7 @@ fn matches_any(tree: &dyn Tree, g: &RepoGlob) -> Result<bool, TreeError> {
 }
 
 /// How a finding names a check's place: the root path of its first position, `<file>#<key path>` for a
-/// `config_key` (R9).
+/// `config_key`.
 fn place(c: &Check, at: usize) -> String {
     match &c.anchor {
         Anchor::Path(g) | Anchor::Code { file: g, .. } => g.root.clone(),
@@ -175,9 +175,9 @@ fn place(c: &Check, at: usize) -> String {
     }
 }
 
-/// R11: a check is affected by a change when a record file of its folder changed, or a changed path is
+/// A check is affected by a change when a record file of its folder changed, or a changed path is
 /// matched by one of its inputs, lies under a literal input, or is a directory at or above a literal input or
-/// a glob's literal directory (C14).
+/// a glob's literal directory.
 ///
 /// Each clause is tried only on the changed paths that can satisfy it, so the work follows the change: the
 /// records directory's run for the first, and `touch_candidates` for each input.
@@ -289,7 +289,7 @@ fn prefetch_inputs<'a>(tree: &dyn Tree, checks: impl Iterator<Item = &'a Check>)
     tree.prefetch(&oids);
 }
 
-/// The text of a failed check's reason (R8): `false` carries the value and, under an op, the expectation.
+/// The text of a failed check's reason: `false` carries the value and, under an op, the expectation.
 fn fail_reason(f: &Fail, c: &Check) -> String {
     match (f, &c.expect) {
         (Fail::False { actual }, Expectation::Exist) => format!("false: {}", actual.as_str()),
@@ -324,14 +324,14 @@ struct Pass<'a> {
     head_folders: &'a [Folder],
 }
 
-/// The gate over every check of the folders above a changed path (R1), the changed paths computed from both
-/// trees' entries (R12). The reference the footprint form is proven against.
+/// The gate over every check of the folders above a changed path, the changed paths computed from both
+/// trees' entries. The reference the footprint form is proven against.
 pub fn gate_full(base: &dyn Tree, head: &dyn Tree) -> Result<GateReport, TreeError> {
     run(base, head, &changed_between(base, head)?, true)
 }
 
-/// The gate by the footprint rule (§5.3 "Cost follows the change"): the folders above a changed path, and in
-/// them only the checks the change affected (R11). `changed` is every path added, removed, or with another
+/// The gate by the footprint rule (`SEMANTICS.md` §Cost): the folders above a changed path, and in
+/// them only the checks the change affected. `changed` is every path added, removed, or with another
 /// mode or oid between the two trees. Equal to `gate_full` over the same trees.
 pub fn gate(base: &dyn Tree, head: &dyn Tree, changed: &ChangedPaths) -> Result<GateReport, TreeError> {
     run(base, head, changed, false)
@@ -374,7 +374,7 @@ struct Matching {
     followed: BTreeSet<(String, String)>,
 }
 
-/// Same checks with every root path equal pair first (F2): an H check that has one in B is the same check as
+/// Same checks with every root path equal pair first: an H check that has one in B is the same check as
 /// those alone, and follows nothing. Otherwise a twin elsewhere (same id, its path gone from H) would excuse
 /// or condemn a check the change did not touch, and the twin's own removal would never be judged.
 fn exact(h: &Check, b: &Check) -> bool {
@@ -411,8 +411,8 @@ fn matching(head: &dyn Tree, in_base: &[Live<'_>], in_head: &[Live<'_>]) -> Resu
     Ok(m)
 }
 
-/// The two rules (§5.3), over the live checks of both trees. With `every` false, only the checks the change
-/// affected are judged: under F2 any other yields nothing (`SEMANTICS.md` §Cost).
+/// The two rules (`SEMANTICS.md` §The gate), over the live checks of both trees. With `every` false, only the checks the change
+/// affected are judged: any other yields nothing (`SEMANTICS.md` §Cost).
 fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: bool) -> Result<GateReport, TreeError> {
     let need = |l: &Live<'_>| every || affected(l.check(), l.scope, pass.changed);
     let judged: Vec<usize> = (0..in_head.len()).filter(|&i| need(&in_head[i])).collect();
@@ -428,7 +428,7 @@ fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: boo
 
     let (mut members, mut broken_before, mut new_unverifiable) = (Vec::new(), 0, Vec::new());
     // Rule 1 (H judges H) and the stale notes. An excuse needs every same check of B to qualify, and at least
-    // one (R2); an unverifiable state is a finding only after holding at B (R3, R4).
+    // one; an unverifiable state is a finding only after holding at B.
     for &i in &judged {
         let h = &in_head[i];
         let state = head.of(in_head, i)?;
@@ -459,7 +459,7 @@ fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: boo
         }
     }
     // Rule 2 (B is not dropped): not broken at B, evaluated at H as B wrote it. Unverifiable at both trees is
-    // never a finding (R3).
+    // never a finding.
     let mut rule_2 = Vec::new();
     for &j in &dropped {
         let b = &in_base[j];
@@ -484,7 +484,7 @@ fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: boo
         };
         rule_2.push(x);
     }
-    // Rule 1's members, then rule 2's, then the stale notes (R10).
+    // Rule 1's members, then rule 2's, then the stale notes.
     let (stale, rule_1): (Vec<_>, Vec<_>) = members.into_iter().partition(|m| m.class == Class::Stale);
     let added = added_files(pass)?;
     let findings = group(pass, rule_1.into_iter().chain(rule_2).chain(stale), &added)?;
@@ -494,7 +494,7 @@ fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: boo
     Ok(GateReport { findings, change_findings, broken_before, knowledge })
 }
 
-/// R5: what happened to B's record, found by id among H's records that have one (the first live by path,
+/// What happened to B's record, found by id among H's records that have one (the first live by path,
 /// else the first by path), else at B's path when the record there has no readable id.
 fn change_kind(b: &Live<'_>, pass: &Pass<'_>) -> Result<ChangeKind, TreeError> {
     let all = || pass.head_folders.iter().flat_map(|f| &f.records);
@@ -549,7 +549,7 @@ fn added_files(pass: &Pass<'_>) -> Result<Vec<(String, Oid)>, TreeError> {
     Ok(out)
 }
 
-/// R7: for a check missing its file at H, the first added file whose content is that of one of its literal
+/// For a check missing its file at H, the first added file whose content is that of one of its literal
 /// input paths in B (a regular file there, absent from H).
 fn same_content(c: &Check, pass: &Pass<'_>, added: &[(String, Oid)]) -> Result<Option<String>, TreeError> {
     for g in check_inputs(c).iter().filter(|g| g.is_literal()) {
@@ -567,7 +567,7 @@ fn same_content(c: &Check, pass: &Pass<'_>, added: &[(String, Oid)]) -> Result<O
     Ok(None)
 }
 
-/// One finding per (id, record path, anchor): the worst class wins, every reason kept in member order (R10).
+/// One finding per (id, record path, anchor): the worst class wins, every reason kept in member order.
 fn group<'a>(pass: &Pass<'_>, members: impl Iterator<Item = Member<'a>>, added: &[(String, Oid)]) -> Result<Vec<Finding>, TreeError> {
     let mut findings: Vec<Finding> = Vec::new();
     // (id, record path, anchor) -> index in `findings`.
@@ -621,8 +621,8 @@ fn knowledge_changes(pass: &Pass<'_>, followed: BTreeSet<(String, String)>, mut 
     Ok(k)
 }
 
-/// C18: a duplicate id, a `supersedes` without effect, a cycle and a secret shape (§7.3), only where a record
-/// file the change added or edited takes part; by kind, then path (R10).
+/// a duplicate id, a `supersedes` without effect, a cycle and a secret shape (`SEMANTICS.md` §Secrets), only where a record
+/// file the change added or edited takes part; by kind, then path.
 fn change_findings(head: &dyn Tree, head_folders: &[Folder], k: &KnowledgeChanges) -> Result<Vec<ChangeFinding>, TreeError> {
     let touched: BTreeSet<&str> = k.added.iter().chain(&k.edited).map(String::as_str).collect();
     let (mut dups, mut sups, mut cycles) = (Vec::new(), Vec::new(), Vec::new());
@@ -777,7 +777,7 @@ mod tests {
 
     #[test]
     fn record_never_excuses_its_own_change() {
-        // §8 item 66: the new must passes while the old one is violated: B's record judges at H.
+        // Edge case 66: the new must passes while the old one is violated: B's record judges at H.
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 2")]))), ("v.yaml", "replicas: 3\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 1")]))), ("v.yaml", "replicas: 1\n")]);
         let r = run(&b, &h);
@@ -789,7 +789,7 @@ mod tests {
 
     #[test]
     fn relax_only_is_changed() {
-        // §8 item 67: only the record is loosened; the value is unchanged.
+        // Edge case 67: only the record is loosened; the value is unchanged.
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 2")]))), ("v.yaml", "replicas: 3\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 1")]))), ("v.yaml", "replicas: 3\n")]);
         let r = run(&b, &h);
@@ -800,7 +800,7 @@ mod tests {
 
     #[test]
     fn tightened_must_judged_by_rule_1() {
-        // §8 item 68: changed, and the new check is judged by rule 1 at H.
+        // Edge case 68: changed, and the new check is judged by rule 1 at H.
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 2")]))), ("v.yaml", "replicas: 3\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 4")]))), ("v.yaml", "replicas: 3\n")]);
         let r = run(&b, &h);
@@ -813,7 +813,7 @@ mod tests {
 
     #[test]
     fn moved_file_anchor_follows() {
-        // §8 item 6: the anchor names the new path in the same change: the same check, nothing fires.
+        // Edge case 6: the anchor names the new path in the same change: the same check, nothing fires.
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[path("old/f.txt", "must")]))), ("old/f.txt", "x\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[path("new/f.txt", "must")]))), ("new/f.txt", "x\n")]);
         let r = run(&b, &h);
@@ -824,8 +824,8 @@ mod tests {
 
     #[test]
     fn moved_file_anchor_left_behind() {
-        // §8 item 7: rule 1 broken (must) or stale (assumes), naming the file added with the same content;
-        // a config_key whose only file moved is missing-file too (R7).
+        // Edge case 7: rule 1 broken (must) or stale (assumes), naming the file added with the same content;
+        // a config_key whose only file moved is missing-file too.
         let cs = checks(&[path("old/f.txt", "must"), path("old/f.txt", "assumes")]);
         let k = checks(&[key("old/v.yaml#a", "must", "== 1")]);
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), (&a("k.md"), &rec(2, "fact", &k)), ("old/f.txt", "x\n"), ("old/v.yaml", "a: 1\n"), ("z.txt", "x\n")]);
@@ -851,7 +851,7 @@ mod tests {
 
     #[test]
     fn code_moved_to_existing_file_is_broken() {
-        // §8 item 11: the old file remains, so B's check judges it and finds the text gone.
+        // Edge case 11: the old file remains, so B's check judges it and finds the text gone.
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[code("a.rs", T)]))), ("a.rs", &format!("fn a() {{ {T} }}\n")), ("b.rs", "fn b() {}\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[code("b.rs", T)]))), ("a.rs", "fn a() {}\n"), ("b.rs", &format!("fn b() {{ {T} }}\n"))]);
         let r = run(&b, &h);
@@ -865,7 +865,7 @@ mod tests {
 
     #[test]
     fn decommission_needs_two_changes() {
-        // §8 item 14: the service, its folder and records deleted in one change: rule 2 for each must.
+        // Edge case 14: the service, its folder and records deleted in one change: rule 2 for each must.
         let x = "svc/a/.knowledge/records/x.md";
         let cs = checks(&[path("main.rs", "must"), key("conf.yaml#replicas", "must", ">= 2")]);
         let b = tree(&[(x, &rec(1, "decision", &cs)), ("svc/a/main.rs", "fn main() {}\n"), ("svc/a/conf.yaml", "replicas: 2\n"), ("README", "x\n")]);
@@ -885,7 +885,7 @@ mod tests {
 
     #[test]
     fn unknown_is_not_an_excuse() {
-        // §8 item 50: unverifiable at B (a template), violated at H: broken; unverifiable at both: nothing.
+        // Edge case 50: unverifiable at B (a template), violated at H: broken; unverifiable at both: nothing.
         let cs = checks(&[key("v.yaml#x", "must", "== 1")]);
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "x: '{{ v }}'\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "x: 2\n")]);
@@ -898,7 +898,7 @@ mod tests {
 
     #[test]
     fn no_longer_checkable_is_broken() {
-        // §8 item 49: held at B, an expression (here a template) at H: rule 1, "no longer checkable".
+        // Edge case 49: held at B, an expression (here a template) at H: rule 1, "no longer checkable".
         let cs = checks(&[key("v.yaml#x", "must", "== 1")]);
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "x: 1\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "x: '{{ v }}'\n")]);
@@ -910,8 +910,7 @@ mod tests {
     #[test]
     fn broken_before_counts_only_touched() {
         // Rule 1 excuses a must broken at both trees; the count holds only checks whose inputs or folder the
-        // change touched. svc/c lies above no changed path: it is never read, so its broken must never fires
-        // (R1, C23).
+        // change touched. svc/c lies above no changed path: it is never read, so its broken must never fires.
         let t = |r: &str| {
             tree(&[
                 (&a("root.md"), &rec(1, "fact", &checks(&[path("gone.txt", "must"), key("v.yaml#r", "must", ">= 5")]))),
@@ -929,7 +928,7 @@ mod tests {
 
     #[test]
     fn vendored_twin_does_not_absorb_deletion() {
-        // C23: the same check is sought only in folders above a changed path; the untouched twin is not one.
+        // the same check is sought only in folders above a changed path; the untouched twin is not one.
         let rec_a = rec(1, "fact", &checks(&[path("main.rs", "must")]));
         let b = tree(&[
             ("svc/a/.knowledge/records/x.md", &rec_a),
@@ -943,7 +942,7 @@ mod tests {
 
     #[test]
     fn decision_to_question_keeps_judging() {
-        // §8 item 69: the kind never changes judging; with the checks kept rule 1 judges, removed rule 2.
+        // Edge case 69: the kind never changes judging; with the checks kept rule 1 judges, removed rule 2.
         let cs = checks(&[key("v.yaml#replicas", "must", ">= 2")]);
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &cs)), ("v.yaml", "replicas: 3\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "question", &cs)), ("v.yaml", "replicas: 1\n")]);
@@ -954,7 +953,7 @@ mod tests {
 
     #[test]
     fn twin_holding_is_not_excused() {
-        // R2: H's check is the same check as two of B's (both B paths are gone from H); one held at B, so
+        // H's check is the same check as two of B's (both B paths are gone from H); one held at B, so
         // rule 1 does not excuse it.
         let one = |p: &str| rec(1, "fact", &checks(&[path(p, "must")]));
         let b = tree(&[("a/.knowledge/records/x.md", &one("f")), ("a/f", "x\n"), ("b/.knowledge/records/x.md", &one("f"))]);
@@ -968,7 +967,7 @@ mod tests {
 
     #[test]
     fn exact_twin_first_elsewhere_removed() {
-        // F2: the untouched root check has its own copy in B, so the removed twin of svc/a (same id, a path
+        // The untouched root check has its own copy in B, so the removed twin of svc/a (same id, a path
         // that matched at B) is not its same check. The removal is judged by rule 2; the root is not judged.
         let one = rec(1, "fact", &checks(&[path("main.rs", "must")]));
         let b = tree(&[(&a("x.md"), &one), ("svc/a/.knowledge/records/x.md", &one), ("svc/a/main.rs", "fn main() {}\n")]);
@@ -981,7 +980,7 @@ mod tests {
 
     #[test]
     fn exact_twin_first_untouched_layers() {
-        // F2: two untouched twins, one with a layer that exists and overrides (broken), one with a layer that
+        // Two untouched twins, one with a layer that exists and overrides (broken), one with a layer that
         // matches nothing (holds). The broken one is judged against its own copy only: no finding.
         // Paths are relative to the folder: both twins read svc/a/v.yaml.
         let k = |v: &str, l: &str| format!("  - config_key:\n      - '{v}#replicas'\n      - '{l}#replicas'\n    must: '>= 2'\n");
@@ -1013,7 +1012,7 @@ mod tests {
 
     #[test]
     fn never_verifiable_is_silent() {
-        // R3: a B must unverifiable at B and at H gives no finding when its record goes; one that can be
+        // A B must unverifiable at B and at H gives no finding when its record goes; one that can be
         // judged at H is changed.
         let unknown = "  - url: 'https://example.org'\n    must: 'exist'\n";
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &format!("checks:\n{unknown}"))), ("README", "x\n")]);
@@ -1028,7 +1027,7 @@ mod tests {
 
     #[test]
     fn new_unverifiable_assumes_is_silent() {
-        // R4 and §8 item 51: a new check that cannot be judged is not a finding; a new must is listed.
+        // Edge case 51: a new check that cannot be judged is not a finding; a new must is listed.
         let unknown = |verb: &str| format!("  - url: 'https://example.org'\n    {verb}: 'exist'\n");
         let b = tree(&[("README", "x\n")]);
         let h = tree(&[("README", "x\n"), (&a("a.md"), &rec(1, "fact", &format!("checks:\n{}{}", unknown("assumes"), unknown("must"))))]);
@@ -1040,7 +1039,7 @@ mod tests {
 
     #[test]
     fn invalidated_record_says_invalid() {
-        // R5: a record made invalid has no id; it is found at its own path.
+        // A record made invalid has no id; it is found at its own path.
         let cs = checks(&[key("v.yaml#replicas", "must", ">= 2")]);
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "replicas: 3\n")]);
         let broken = format!("{}<<<<<<< ours\nx\n=======\ny\n>>>>>>> theirs\n", rec(1, "fact", &cs));
@@ -1050,7 +1049,7 @@ mod tests {
 
     #[test]
     fn directory_anchor_does_not_follow() {
-        // R6: B's directory anchor still has files under it in H, so the rewritten anchor is not the same check.
+        // B's directory anchor still has files under it in H, so the rewritten anchor is not the same check.
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[path("roles/vault", "must")]))), ("roles/vault/main.yml", "x\n"), ("roles/other/main.yml", "x\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[path("roles/other", "must")]))), ("roles/vault/main.yml", "x\n"), ("roles/other/main.yml", "x\n")]);
         let kind = ChangeKind::AnchorMoved { from: "roles/vault".into(), to: "roles/other".into() };
@@ -1059,7 +1058,7 @@ mod tests {
 
     #[test]
     fn superseded_and_newer_schema() {
-        // §8 items 18 and 22: superseded or moved to a newer schema in the change: rule 2 judges B's must.
+        // Edge cases 18 and 22: superseded or moved to a newer schema in the change: rule 2 judges B's must.
         let cs = checks(&[key("v.yaml#replicas", "must", ">= 2")]);
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &cs)), ("v.yaml", "replicas: 3\n")]);
         let sup = rec(2, "decision", "supersedes: 'k3v9q2x7m001'\n");
@@ -1074,7 +1073,7 @@ mod tests {
 
     #[test]
     fn revived_record_judged_without_excuse() {
-        // §8 item 19: deleting the superseding record revives a broken must; it was not live in B.
+        // Edge case 19: deleting the superseding record revives a broken must; it was not live in B.
         let cs = checks(&[key("v.yaml#replicas", "must", ">= 2")]);
         let sup = rec(2, "decision", "supersedes: 'k3v9q2x7m001'\n");
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &cs)), (&a("b.md"), &sup), ("v.yaml", "replicas: 1\n")]);
@@ -1085,7 +1084,7 @@ mod tests {
 
     #[test]
     fn change_findings_only_on_touched_records() {
-        // C18: a duplicate id, a supersedes without effect and a cycle are findings only on record files the
+        // a duplicate id, a supersedes without effect and a cycle are findings only on record files the
         // change added or edited; an old duplicate in a folder the change also reads is not.
         let old = [(a("d1.md"), rec(9, "fact", "")), (a("d2.md"), rec(9, "fact", ""))];
         let mut b = tree(&[("svc/.knowledge/records/a.md", &rec(1, "fact", ""))]);
@@ -1113,7 +1112,7 @@ mod tests {
 
     #[test]
     fn gate_reports_secret_in_added_record() {
-        // §7.3, C18: a secret shape in a record file the change added or edited is a change finding with rule,
+        // `SEMANTICS.md` §Secrets: a secret shape in a record file the change added or edited is a change finding with rule,
         // line and column, by path; never a gate failure, never a record state. Untouched and removed ones are not.
         let tok = format!("db_sk_{}", "q7zx3mk9".repeat(4));
         let with = |n: usize| format!("---\nknowledge: 1\nid: 'k3v9q2x7m{n:03}'\nkind: 'fact'\ntitle: 't{n}'\n---\nUse {tok} here.\n");
@@ -1134,7 +1133,7 @@ mod tests {
 
     #[test]
     fn anchored_file_past_its_bound_is_broken() {
-        // §8 item 65: held at B, past the anchored-file bound at H: rule 1, no longer checkable.
+        // Edge case 65: held at B, past the anchored-file bound at H: rule 1, no longer checkable.
         let cs = checks(&[key("big.toml#v", "must", "== 1")]);
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("big.toml", "v = 1\n")]);
         let pad = crate::bounds::anchored_file_max(crate::format::Format::Toml) as usize;
@@ -1172,7 +1171,7 @@ mod tests {
 
     #[test]
     fn worst_class_first_then_path() {
-        // R10: findings are ordered by class (broken, changed, stale) before record path.
+        // Findings are ordered by class (broken, changed, stale) before record path.
         let recs = [(a("a.md"), rec(1, "fact", &checks(&[path("s.txt", "assumes")]))), (a("b.md"), rec(2, "fact", &checks(&[path("m.txt", "must")])))];
         let mut b = tree(&[("s.txt", "x\n"), ("m.txt", "x\n")]);
         let mut h = MemTree::new();
@@ -1185,7 +1184,7 @@ mod tests {
 
     #[test]
     fn a_group_keeps_its_first_members_title() {
-        // R10: rule 1's member (H's record) and rule 2's (B's) are one finding of one class; the first, H's,
+        // Rule 1's member (H's record) and rule 2's (B's) are one finding of one class; the first, H's,
         // names it.
         let b = tree(&[(&a("a.md"), &rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 2")]))), ("v.yaml", "replicas: 3\n")]);
         let renamed = rec(1, "decision", &checks(&[key("v.yaml#replicas", "must", ">= 4")])).replace("title: 't1'", "title: 'renamed'");
@@ -1197,7 +1196,7 @@ mod tests {
 
     #[test]
     fn a_file_that_is_no_record_is_no_knowledge_change() {
-        // R11: a file under records/ that is not `*.md` affects no check of the folder; a `*.md` outside
+        // A file under records/ that is not `*.md` affects no check of the folder; a `*.md` outside
         // records/ is no record. A record added under records/ is both.
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[path("missing", "must")])))]);
         let mut h = b.clone();
@@ -1211,7 +1210,7 @@ mod tests {
 
     #[test]
     fn an_old_cycle_is_no_finding_of_an_unrelated_change() {
-        // C18: a cycle is a change finding only when a record the change added or edited is in it.
+        // a cycle is a change finding only when a record the change added or edited is in it.
         let c1 = rec(6, "fact", "supersedes: 'k3v9q2x7m007'\n");
         let mut b = tree(&[(&a("c1.md"), &c1), (&a("c2.md"), &rec(7, "fact", "supersedes: 'k3v9q2x7m006'\n"))]);
         b.file(&a("d.md"), rec(8, "fact", ""));
@@ -1224,13 +1223,13 @@ mod tests {
 
     #[test]
     fn rule_2_no_longer_checkable_or_moved() {
-        // R3: B's must held at B and is unverifiable at H as B wrote it: broken by rule 2, no longer checkable.
+        // B's must held at B and is unverifiable at H as B wrote it: broken by rule 2, no longer checkable.
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &checks(&[key("v.yaml#x", "must", "== 1")]))), ("v.yaml", "x: 1\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", "")), ("v.yaml", "x: '{{ v }}'\n")]);
         let r = run(&b, &h);
         assert_eq!(found(&r), [(Class::Broken { rule: 2 }, a("a.md").as_str(), "v.yaml#x")]);
         assert_eq!(r.findings[0].reasons, ["no-longer-checkable: template"]);
-        // R7: its file moved: missing-file, naming the file the change added with the same content.
+        // Its file moved: missing-file, naming the file the change added with the same content.
         let h = tree(&[(&a("a.md"), &rec(1, "fact", "")), ("w.yaml", "x: 1\n")]);
         let r = run(&b, &h);
         assert_eq!(found(&r), [(Class::Broken { rule: 2 }, a("a.md").as_str(), "v.yaml#x")]);
@@ -1240,7 +1239,7 @@ mod tests {
 
     #[test]
     fn assumes_no_longer_checkable_is_stale() {
-        // R4: an assumes that held at B and is unverifiable at H is a stale note, no longer checkable.
+        // An assumes that held at B and is unverifiable at H is a stale note, no longer checkable.
         let cs = checks(&[key("v.yaml#x", "assumes", "== 1")]);
         let b = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "x: 1\n")]);
         let h = tree(&[(&a("a.md"), &rec(1, "fact", &cs)), ("v.yaml", "x: '{{ v }}'\n")]);
@@ -1251,7 +1250,7 @@ mod tests {
 
     #[test]
     fn change_kind_reads_the_live_record() {
-        // R5: among H's records with B's id, the first live one by path says what happened (here the verb),
+        // Among H's records with B's id, the first live one by path says what happened (here the verb),
         // though a newer-schema copy with the id sorts first.
         let must = checks(&[key("v.yaml#x", "must", ">= 1")]);
         let b = tree(&[(&a("b.md"), &rec(1, "fact", &must)), ("v.yaml", "x: 1\n")]);

@@ -1,0 +1,22 @@
+{
+  "id": "config-key-selector-two-matches",
+  "spec": "Resolving values: a selector that matches more than one is ambiguous",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'selector-two-matches'\nchecks:\n  - config_key: 'p.yaml#ports[port=1].x'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "p.yaml": "ports:\n- {port: 1, x: 1}\n- {port: 1, x: 2}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "ambiguous"
+          }
+        ]
+      }
+    }
+  }
+}

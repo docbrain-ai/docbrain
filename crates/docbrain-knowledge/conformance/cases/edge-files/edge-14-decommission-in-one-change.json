@@ -1,0 +1,43 @@
+{
+  "id": "edge-14-decommission-in-one-change",
+  "spec": "Edge case 14: a service, its folder and records deleted in one change: rule 2, broken, for each must",
+  "op": "gate",
+  "base": {
+    "svc/a/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'main.rs'\n    must: 'exist'\n  - config_key: 'conf.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n",
+    "svc/a/main.rs": "fn main() {}\n",
+    "svc/a/conf.yaml": "replicas: 2\n",
+    "README": "x\n"
+  },
+  "tree": {
+    "README": "x\n"
+  },
+  "expect": {
+    "findings": [
+      {
+        "class": "broken",
+        "rule": 2,
+        "id": "k3v9q2x7m001",
+        "record": "svc/a/.knowledge/records/x.md",
+        "anchor": "svc/a/conf.yaml#replicas",
+        "reasons": [
+          "missing-file"
+        ]
+      },
+      {
+        "class": "broken",
+        "rule": 2,
+        "id": "k3v9q2x7m001",
+        "record": "svc/a/.knowledge/records/x.md",
+        "anchor": "svc/a/main.rs",
+        "reasons": [
+          "missing-file"
+        ]
+      }
+    ],
+    "knowledge": {
+      "removed": [
+        "svc/a/.knowledge/records/x.md"
+      ]
+    }
+  }
+}

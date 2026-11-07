@@ -100,8 +100,8 @@ const MAX_BACKSCAN_WINDOW: usize = EOCD_FIXED_LEN + MAX_COMMENT_LEN;
 const U16_SENTINEL: u16 = 0xFFFF;
 const U32_SENTINEL: u32 = 0xFFFF_FFFF;
 
-/// General-purpose bit flag value this profile requires, exactly (APPNOTE
-/// §4.4.4 bit 11, UTF-8 names) — the ONLY value `ContainerReader::open`
+/// General-purpose bit flag value this profile requires, exactly
+/// (APPNOTE §4.4.4 bit 11, UTF-8 names) — the ONLY value `ContainerReader::open`
 /// accepts and the ONLY value `ContainerWriter::finish` ever emits (see
 /// module docs on why this is exact equality, not a per-bit check).
 pub(crate) const GPBF_UTF8: u16 = 0x0800;

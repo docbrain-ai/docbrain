@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Records: one Markdown file with YAML front matter (spec §4.2-§4.5, §4.7; `SEMANTICS.md` §The record).
+//! Records: one Markdown file with YAML front matter (`SEMANTICS.md` §The record, §States).
 
 mod id;
 mod keypath;
@@ -16,7 +16,7 @@ pub use render::{Draft, DraftAnchor, DraftCheck, render};
 use crate::path::RepoGlob;
 use crate::reason::Invalid;
 
-/// The four kinds (§4.1).
+/// The four kinds (`SEMANTICS.md` §The record).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Kind {
     Decision,
@@ -53,7 +53,7 @@ impl fmt::Display for Kind {
     }
 }
 
-/// A check's verb (§4.3): `must` judges changes; `assumes` makes the record stale.
+/// A check's verb (`SEMANTICS.md` §States): `must` judges changes; `assumes` makes the record stale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Verb {
     Must,
@@ -75,7 +75,7 @@ impl fmt::Display for Verb {
     }
 }
 
-/// A comparison op (§4.3).
+/// A comparison op (`SEMANTICS.md` §States).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
     Eq,
@@ -108,8 +108,8 @@ impl fmt::Display for Op {
     }
 }
 
-/// A check's expectation (§4.3): `exist`, or an op and a literal. Anything else is kept as written and is
-/// judged `unverifiable: unknown` (§4.7).
+/// A check's expectation (`SEMANTICS.md` §States): `exist`, or an op and a literal. Anything else is kept as written and is
+/// judged `unverifiable: unknown` (`SEMANTICS.md` §The record).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expectation {
     Exist,
@@ -153,7 +153,7 @@ pub struct Layer {
     pub key: KeyPath,
 }
 
-/// What a check is anchored to (§4.3). `Unknown` keeps an unknown check kind's first key (§4.7).
+/// What a check is anchored to (`SEMANTICS.md` §States). `Unknown` keeps an unknown check kind's first key (`SEMANTICS.md` §The record).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Anchor {
     Path(RepoGlob),
@@ -177,7 +177,7 @@ pub struct Record {
     pub id: Id,
     pub kind: Kind,
     pub title: String,
-    /// As written when `applies_written`; else the default (C15), or the whole folder when the checks
+    /// As written when `applies_written`; else the default, or the whole folder when the checks
     /// name no file.
     pub applies_to: Vec<RepoGlob>,
     pub applies_written: bool,
@@ -191,7 +191,7 @@ pub struct Record {
 
 impl Record {
     /// The body from its first non-blank line to the line before the next line of only ASCII whitespace,
-    /// without the final line end (C20).
+    /// without the final line end.
     pub fn first_paragraph(&self) -> &str {
         let blank = |l: &str| l.chars().all(|c| matches!(c, '\t' | '\x0C' | '\r' | ' '));
         let (mut start, mut end, mut off) = (None, self.body.len(), 0);
@@ -215,7 +215,7 @@ impl Record {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Parsed {
     Valid(Record),
-    /// `knowledge` above 1: the record is shown, never judged or rewritten (§4.7). Each field is filled
+    /// `knowledge` above 1: the record is shown, never judged or rewritten (`SEMANTICS.md` §The record). Each field is filled
     /// when it reads as schema 1 reads it; `applies_to` only as written, all or nothing (it routes by it).
     Newer {
         schema: u64,

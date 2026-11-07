@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Folders, record files, supersession and `status` (`SEMANTICS.md` §States; design §4.4, §4.5, §4.6; C19).
+//! Folders, record files, supersession and `status` (`SEMANTICS.md` §States, §Routing).
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -10,7 +10,7 @@ use crate::record::{Id, Kind, Parsed, parse_record};
 use crate::resolve::FileCache;
 use crate::tree::{Entry, Mode, Oid, Tree, TreeError};
 
-/// Why a `supersedes` has no effect (§4.5).
+/// Why a `supersedes` has no effect (`SEMANTICS.md` §States).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SupersedeProblem {
@@ -34,7 +34,7 @@ pub struct RecordFile {
 pub struct Folder {
     pub scope: String,
     pub records: Vec<RecordFile>,
-    /// Entries under `records/` that are not records, reported once (C19).
+    /// Entries under `records/` that are not records, reported once.
     pub ignored: Vec<String>,
     /// Ids held by two or more records, with their paths in byte order.
     pub duplicates: Vec<(Id, Vec<String>)>,
@@ -64,7 +64,7 @@ pub struct StatusReport {
 
 const RECORDS: &str = ".knowledge/records";
 
-/// C19: the scope of the folder an entry belongs to: the directory before the first `.knowledge/records/` on
+/// The scope of the folder an entry belongs to: the directory before the first `.knowledge/records/` on
 /// its path, `""` at the root. `None` when the path lies in no folder's records.
 pub(crate) fn scope_of(path: &str) -> Option<&str> {
     let mut start = 0;
@@ -188,7 +188,7 @@ fn id_of(p: &Parsed) -> Option<Id> {
 }
 
 /// A record's own id and the id it supersedes. The key's meaning is fixed at schema 1, so a newer record's
-/// counts (§4.5); a record without an id supersedes nothing.
+/// counts (`SEMANTICS.md` §States); a record without an id supersedes nothing.
 fn supersedes_of(p: &Parsed) -> Option<(Id, Id)> {
     match p {
         Parsed::Valid(r) => r.supersedes.map(|t| (r.id, t)),
@@ -197,7 +197,7 @@ fn supersedes_of(p: &Parsed) -> Option<(Id, Id)> {
     }
 }
 
-/// §4.4, §4.5: duplicates, the `supersedes` that have no effect, cycles, and who supersedes whom.
+/// `SEMANTICS.md` §States: duplicates, the `supersedes` that have no effect, cycles, and who supersedes whom.
 fn supersede(f: &mut Folder) {
     let mut by_id: BTreeMap<Id, Vec<usize>> = BTreeMap::new();
     for (i, r) in f.records.iter().enumerate() {
@@ -362,7 +362,7 @@ pub(crate) fn record_status(tree: &dyn Tree, f: &RecordFile, cache: &mut FileCac
                     (worst(&checks), checks)
                 }
             };
-            // §4.6: context for every file of its folder; a superseded record is context for none.
+            // `SEMANTICS.md` §States, folder-wide records: context for every file of its folder; a superseded record is context for none.
             let wide = (r.checks.is_empty() && !r.applies_written) || r.applies_to.iter().any(|g| g.rel == "**");
             let folder_wide = wide && f.superseded_by.is_none();
             RecordStatus { path, id: Some(r.id), kind: Some(r.kind), title: Some(r.title.clone()), state, checks, folder_wide }

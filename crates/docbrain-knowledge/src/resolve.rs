@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Resolving a `config_key` (spec §4.3 "`config_key`", §7.6; `SEMANTICS.md` §Resolving values): layers, globs,
+//! Resolving a `config_key` (`SEMANTICS.md` §Resolving values): layers, globs,
 //! documents and key paths, over a tree.
 
 use std::collections::{BTreeMap, HashMap};
@@ -15,7 +15,7 @@ use crate::value::Value;
 
 const MISSING: Resolved = Resolved::Missing(Fail::MissingKey);
 const LFS_POINTER: &[u8] = b"version https://git-lfs.github.com/spec/";
-/// C21: a Git LFS pointer is a blob under this many bytes.
+/// a Git LFS pointer is a blob under this many bytes.
 const LFS_POINTER_MAX: usize = 1_024;
 
 /// What a `config_key` resolves to. `Present` holds whatever is at the key, a map or list included; a scalar
@@ -181,7 +181,7 @@ pub(crate) fn parent(path: &str) -> &str {
     path.rsplit_once('/').map_or("", |(d, _)| d)
 }
 
-/// C14: the reason a link or a submodule gives when it is `dir` or any directory above it.
+/// the reason a link or a submodule gives when it is `dir` or any directory above it.
 pub(crate) fn link_above(tree: &dyn Tree, dir: &str) -> Result<Option<Unverifiable>, TreeError> {
     for (end, _) in dir.match_indices('/').chain([(dir.len(), "")]) {
         if end > 0
@@ -204,7 +204,7 @@ pub(crate) fn link_reason(mode: Mode) -> Option<Unverifiable> {
 /// One layer; `None` when no file matches.
 fn layer(tree: &dyn Tree, l: &Layer, cache: &mut FileCache) -> Result<Option<Resolved>, TreeError> {
     let glob = &l.file;
-    // C14: a link or a submodule as any directory above the file, or above a glob's matches.
+    // a link or a submodule as any directory above the file, or above a glob's matches.
     let base = if glob.is_literal() { parent(&glob.root) } else { glob.literal_dir() };
     if let Some(u) = link_above(tree, base)? {
         return Ok(Some(Resolved::Unverifiable(u)));
@@ -239,7 +239,7 @@ fn layer(tree: &dyn Tree, l: &Layer, cache: &mut FileCache) -> Result<Option<Res
     if !unheld.is_empty() {
         tree.prefetch(&unheld);
     }
-    // Each file alone, one at a time in path order, except that a glob's HCL files merge into one value (C12),
+    // Each file alone, one at a time in path order, except that a glob's HCL files merge into one value,
     // which stands where the first HCL file does, so a reason is the first in path order.
     let segs = &l.key.segs;
     let hcl: Vec<Oid> = files.iter().filter(|(f, ..)| *f == Some(Format::Hcl)).map(|(_, oid, _)| oid.clone()).collect();
@@ -300,7 +300,7 @@ fn bounded(b: &[u8], f: Format) -> Result<&str, Unverifiable> {
     if bytes(b.len()) > anchored_file_max(f) { Err(OVER) } else { text(b) }
 }
 
-/// C21 and §8 item 62: an LFS pointer, then UTF-8.
+/// `SEMANTICS.md` §Resolving values and edge case 62: an LFS pointer, then UTF-8.
 pub(crate) fn text(bytes: &[u8]) -> Result<&str, Unverifiable> {
     if bytes.len() < LFS_POINTER_MAX && bytes.starts_with(LFS_POINTER) {
         return Err(Unverifiable::LfsPointer);
@@ -396,7 +396,7 @@ fn one_of(outcomes: impl IntoIterator<Item = Resolved>, two: Unverifiable) -> Re
     one.finish(two)
 }
 
-/// C11: one document is that document; with two or more, a leading index or selector picks among them, and a
+/// one document is that document; with two or more, a leading index or selector picks among them, and a
 /// key must be in exactly one.
 fn documents(docs: &[Value], segs: &[Seg]) -> Resolved {
     match (docs, segs.split_first()) {
@@ -427,7 +427,7 @@ fn walk(mut v: &Value, segs: &[Seg]) -> Resolved {
             Err(r) => return r,
         }
     }
-    // §7.6: a value nobody can read is unverifiable whatever the expectation, `exist` included. A number no
+    // `SEMANTICS.md` §Resolving values: a value nobody can read is unverifiable whatever the expectation, `exist` included. A number no
     // decimal holds (`.inf`) is read, so it is a value that no op compares.
     match (opaque(v), v) {
         (Some(u), _) => Resolved::Unverifiable(u),
@@ -445,7 +445,7 @@ fn opaque(v: &Value) -> Option<Unverifiable> {
     }
 }
 
-/// One key step; `Err` is the answer. A non-empty list needs a selector (C12).
+/// One key step; `Err` is the answer. A non-empty list needs a selector.
 fn key<'a>(v: &'a Value, k: &str) -> Result<&'a Value, Resolved> {
     if let Some(u) = opaque(v) {
         return Err(Resolved::Unverifiable(u));
@@ -462,7 +462,7 @@ fn key<'a>(v: &'a Value, k: &str) -> Result<&'a Value, Resolved> {
 }
 
 /// What an index or a selector picks from: a list, or a map as the one element it is (a block or a document
-/// that occurs once, C11 and C12).
+/// that occurs once).
 fn elements(v: &Value) -> Result<&[Value], Resolved> {
     if let Some(u) = opaque(v) {
         return Err(Resolved::Unverifiable(u));
@@ -474,7 +474,7 @@ fn elements(v: &Value) -> Result<&[Value], Resolved> {
     }
 }
 
-/// C16: the one element whose keys equal the values, as `==` compares. Two certain matches are ambiguous; an
+/// the one element whose keys equal the values, as `==` compares. Two certain matches are ambiguous; an
 /// element whose comparison is unverifiable may match, so its reason wins over one match.
 fn select<'a>(items: &'a [Value], criteria: &[(Vec<String>, String)]) -> Result<&'a Value, Resolved> {
     let (mut found, mut count, mut reason) = (None, 0, None);
@@ -679,7 +679,7 @@ mod tests {
         assert_eq!(res(&t, &[&format!("{web}ingress[from_port=443].to_port")]), num("443"));
         assert_eq!(res(&t, &[&format!("{web}ingress[from_port=80].to_port")]), num("8080"));
         assert_eq!(res(&t, &[&format!("{web}ingress[from_port=22].to_port")]), MISSING_KEY);
-        // A repeated nested block needs a selector (C12).
+        // A repeated nested block needs a selector.
         assert_eq!(res(&t, &[&format!("{web}ingress.to_port")]), unv(Unverifiable::Ambiguous));
         // A block that occurs once is its body, and a selector still applies.
         t.file("infra/sg.tf", "resource \"aws_security_group\" \"web\" {\n  ingress {\n    from_port = 443\n    to_port = 443\n  }\n}\n");
@@ -743,7 +743,7 @@ mod tests {
     fn ansible_template_value_only() {
         let mut t = MemTree::new();
         t.file("group_vars/all.yml", "db_host: \"{{ lookup('env', 'DB') }}\"\ndb_port: 5432\nmode: '{% if a %}x{% endif %}'\nhosts: \"{{ groups.web }}\"\n");
-        // §7.6: unverifiable whatever the expectation, `exist` included.
+        // `SEMANTICS.md` §Resolving values: unverifiable whatever the expectation, `exist` included.
         let tmpl = unv(Unverifiable::Template);
         assert_eq!(res(&t, &["group_vars/all.yml#db_host"]), tmpl);
         assert_eq!(res(&t, &["group_vars/all.yml#mode"]), tmpl);
@@ -766,7 +766,7 @@ mod tests {
         t.file(".github/workflows/ci.yml", "on:\n  push:\n    branches: [main]\nv: on\n");
         let branches = Resolved::Present(Value::List(vec![Value::Scalar(Scalar::Str("main".into()))]));
         assert_eq!(res(&t, &[".github/workflows/ci.yml#on.push.branches"]), branches);
-        // §7.6: unverifiable whatever the expectation, `exist` included; still a scalar, so nothing is below it.
+        // `SEMANTICS.md` §Resolving values: unverifiable whatever the expectation, `exist` included; still a scalar, so nothing is below it.
         assert_eq!(res(&t, &[".github/workflows/ci.yml#v"]), unv(Unverifiable::Yaml11));
         assert_eq!(res(&t, &[".github/workflows/ci.yml#v.x"]), MISSING_KEY);
         // A number no decimal holds is read, in both versions: a value, which no op compares (§Values and comparison).
@@ -903,7 +903,7 @@ mod tests {
 
     #[test]
     fn each_format_has_its_own_bound() {
-        // §7.5: per format, above real lockfiles. A 40 MiB package-lock is read; a 20 MiB TOML file is over.
+        // `SEMANTICS.md` §Bounds: per format, above real lockfiles. A 40 MiB package-lock is read; a 20 MiB TOML file is over.
         let mib = 1_048_576;
         let over = unv(Unverifiable::Bound(Bound::AnchoredFile));
         let mut t = MemTree::new();
@@ -1102,7 +1102,7 @@ mod tests {
 
     #[test]
     fn held_stays_within_the_budget() {
-        // C1: a glob over many files keeps at most the budget of them, and answers as an unbounded pass does.
+        // a glob over many files keeps at most the budget of them, and answers as an unbounded pass does.
         let mut t = MemTree::new();
         let pad = "x".repeat(1_000);
         for i in 0..8 {
@@ -1126,7 +1126,7 @@ mod tests {
 
     #[test]
     fn reasons_are_charged_too() {
-        // C1, second pass: a reason is kept as well, so it is charged, or a tree of many unreadable files would
+        // A reason is kept as well, so it is charged, or a tree of many unreadable files would
         // grow what a pass keeps without bound.
         let mut t = MemTree::new();
         for i in 0..200 {
@@ -1139,7 +1139,7 @@ mod tests {
 
     #[test]
     fn hcl_set_is_bounded_as_one_file() {
-        // C1: a glob's HCL files merge into one value, so together they are bounded as one HCL file.
+        // a glob's HCL files merge into one value, so together they are bounded as one HCL file.
         let mut t = MemTree::new();
         t.file("d/a.tf", "a = 1\n").file("d/b.tf", "b = 2\n");
         let half = anchored_file_max(Format::Hcl) / 2;
@@ -1243,7 +1243,7 @@ mod tests {
 
     #[test]
     fn the_budget_never_changes_an_answer() {
-        // C1: every status, context and gate case of the corpus answers alike whatever a pass may keep: nothing,
+        // every status, context and gate case of the corpus answers alike whatever a pass may keep: nothing,
         // or about one small file, so each read lets the one before it go.
         use crate::test_common::{mem_tree, walk};
         let mut files = Vec::new();

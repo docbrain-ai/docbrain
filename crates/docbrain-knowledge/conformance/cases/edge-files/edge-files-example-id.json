@@ -1,0 +1,17 @@
+{
+  "id": "edge-files-example-id",
+  "spec": "Edge case 30: an id starting 0000 is invalid",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/0000000000a1-example.md": "---\nknowledge: 1\nid: '0000000000a1'\nkind: 'fact'\ntitle: 'example'\napplies_to: ['src/**']\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/0000000000a1-example.md": {
+        "state": "invalid",
+        "reason": "example-id",
+        "checks": []
+      }
+    }
+  }
+}

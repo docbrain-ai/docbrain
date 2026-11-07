@@ -1,0 +1,22 @@
+{
+  "id": "supersession-supersedes-same-folder",
+  "spec": "States, a record supersedes the record with that id in its folder; a superseded record's checks are not evaluated",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'old'\nchecks:\n  - path: 'gone.txt'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1aa'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ab",
+        "checks": []
+      },
+      ".knowledge/records/b.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

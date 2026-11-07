@@ -1,0 +1,33 @@
+{
+  "id": "edge-resolving-code-twice",
+  "spec": "States, code: two or more occurrences are ambiguous; overlapping occurrences count",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'twice'\nchecks:\n  - code: 'a.rs'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'overlap'\nchecks:\n  - code: 'b.rs'\n    text: 'aaaaaaaaaaaaaaaaaaaaaaaa'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "a.rs": "retry(3, backoff::exponential());\nretry(3, backoff::exponential());\n",
+    "b.rs": "aaaaaaaaaaaaaaaaaaaaaaaaa\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "ambiguous"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "ambiguous"
+          }
+        ]
+      }
+    }
+  }
+}

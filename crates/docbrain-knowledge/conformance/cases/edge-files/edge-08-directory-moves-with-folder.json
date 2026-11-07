@@ -1,0 +1,35 @@
+{
+  "id": "edge-08-directory-moves-with-folder",
+  "spec": "Edge case 8: a directory moves with its folder and records: every anchor follows, nothing fires",
+  "op": "gate",
+  "base": {
+    "svc/a/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'main.rs'\n    must: 'exist'\n  - config_key: 'conf.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n",
+    "svc/a/main.rs": "fn main() {}\n",
+    "svc/a/conf.yaml": "replicas: 2\n"
+  },
+  "tree": {
+    "services/a/.knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'decision'\ntitle: 't1'\nchecks:\n  - path: 'main.rs'\n    must: 'exist'\n  - config_key: 'conf.yaml#replicas'\n    must: '>= 2'\n---\nWhy 1.\n",
+    "services/a/main.rs": "fn main() {}\n",
+    "services/a/conf.yaml": "replicas: 2\n"
+  },
+  "expect": {
+    "knowledge": {
+      "added": [
+        "services/a/.knowledge/records/x.md"
+      ],
+      "removed": [
+        "svc/a/.knowledge/records/x.md"
+      ],
+      "followed": [
+        [
+          "svc/a/conf.yaml",
+          "services/a/conf.yaml"
+        ],
+        [
+          "svc/a/main.rs",
+          "services/a/main.rs"
+        ]
+      ]
+    }
+  }
+}

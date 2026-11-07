@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! The state of one check and of one record (`SEMANTICS.md` §States; design §4.3 "Three anchors", "States of
-//! one check", "Record state"; C5, C8, C14).
+//! The state of one check and of one record (`SEMANTICS.md`
+//! §States).
 
 use std::sync::Arc;
 
@@ -42,7 +42,7 @@ enum Outcome {
 }
 
 /// One check in `tree`. An unknown anchor or expectation is `unknown`; an op on a `path` or a `code` is
-/// `not-comparable` (C8), judged before the tree is read.
+/// `not-comparable`, judged before the tree is read.
 pub fn eval_check(tree: &dyn Tree, check: &Check, cache: &mut FileCache) -> Result<CheckState, TreeError> {
     let outcome = match (&check.anchor, &check.expect) {
         (Anchor::Unknown(_), _) | (_, Expectation::Unknown(_)) => Outcome::Unverifiable(Unverifiable::Unknown),
@@ -63,7 +63,7 @@ pub fn eval_check(tree: &dyn Tree, check: &Check, cache: &mut FileCache) -> Resu
     })
 }
 
-/// A match holds; a literal naming a directory holds while an entry lies under it (§8 item 42).
+/// A match holds; a literal naming a directory holds while an entry lies under it (edge case 42).
 fn path(tree: &dyn Tree, g: &RepoGlob) -> Result<Outcome, TreeError> {
     let base = if g.is_literal() { parent(&g.root) } else { g.literal_dir() };
     if let Some(u) = link_above(tree, base)? {
@@ -76,7 +76,7 @@ fn path(tree: &dyn Tree, g: &RepoGlob) -> Result<Outcome, TreeError> {
             None => Outcome::Fail(Fail::MissingFile),
         });
     }
-    // C14: any regular match holds; only link or submodule matches give their reason.
+    // any regular match holds; only link or submodule matches give their reason.
     let mut reason = None;
     for (p, e) in tree.list(g.literal_dir())? {
         if !g.matches(&p) {
@@ -122,7 +122,7 @@ fn shown(s: &Scalar) -> Option<Shown> {
     }
 }
 
-/// C4: the whitespace removed from a `code` text and from the file before the text is looked for.
+/// the whitespace removed from a `code` text and from the file before the text is looked for.
 fn squeeze(s: &str) -> String {
     s.chars().filter(|c| !matches!(c, '\u{9}' | '\u{a}' | '\u{c}' | '\u{d}' | ' ')).collect()
 }
@@ -136,7 +136,7 @@ fn code(tree: &dyn Tree, file: &RepoGlob, text: &str, cache: &mut FileCache) -> 
     if let Some(u) = link_reason(e.mode) {
         return Ok(Outcome::Unverifiable(u));
     }
-    // C5: the cap is on the text as parsed, the floor on scalar values after removal.
+    // the cap is on the text as parsed, the floor on scalar values after removal.
     let needle = squeeze(text);
     if text.len() > CODE_TEXT_MAX_BYTES || needle.chars().count() < CODE_TEXT_MIN_SCALARS {
         return Ok(Outcome::Unverifiable(Unverifiable::Bound(Bound::CodeText)));
@@ -170,7 +170,7 @@ fn code(tree: &dyn Tree, file: &RepoGlob, text: &str, cache: &mut FileCache) -> 
     })
 }
 
-/// C5: occurrences at every start position, overlaps included, counted to 2.
+/// occurrences at every start position, overlaps included, counted to 2.
 fn occurrences(hay: &str, needle: &str) -> usize {
     let step = needle.chars().next().map_or(1, char::len_utf8);
     let (mut n, mut from) = (0, 0);
@@ -299,16 +299,16 @@ mod tests {
         assert_eq!(one(&t, &path("ansible/roles/vaul", "exist")), CheckState::Broken(Fail::MissingFile));
         t.remove("ansible/roles/vault/tasks/main.yml");
         assert_eq!(one(&t, &path("ansible/roles/vault", "exist")), CheckState::Broken(Fail::MissingFile));
-        // Item 41: `docs/**` is every file under `docs/`, never a file named `docs`.
+        // Edge case 41: `docs/**` is every file under `docs/`, never a file named `docs`.
         t.file("docs", "x");
         assert_eq!(one(&t, &path("docs/**", "exist")), CheckState::Broken(Fail::MissingFile));
         t.remove("docs").file("docs/a/b.md", "x");
         assert_eq!(one(&t, &path("docs/**", "exist")), CheckState::Holds(None));
-        // Item 40: brackets are literal.
+        // Edge case 40: brackets are literal.
         t.file("app/[slug]/page.tsx", "x");
         assert_eq!(one(&t, &path("app/[slug]/page.tsx", "exist")), CheckState::Holds(None));
         assert_eq!(one(&t, &path("app/s/page.tsx", "exist")), CheckState::Broken(Fail::MissingFile));
-        // C8: only `exist` on a path.
+        // only `exist` on a path.
         assert_eq!(one(&t, &path("docs/**", "== 1")), unv(Unverifiable::NotComparable));
         assert_eq!(one(&t, &path("docs/**", "~= 1")), unv(Unverifiable::Unknown));
     }
@@ -321,7 +321,7 @@ mod tests {
         t.symlink("deploy", "elsewhere");
         assert_eq!(one(&t, &path("deploy/values.yaml", "exist")), unv(Unverifiable::SymbolicLink));
         assert_eq!(one(&t, &path("deploy/*.yaml", "exist")), unv(Unverifiable::SymbolicLink));
-        // C14: for a `path` glob, any regular match holds; only link matches give the reason.
+        // for a `path` glob, any regular match holds; only link matches give the reason.
         t.file("g/a.yaml", "x").symlink("g/b.yaml", "a.yaml");
         assert_eq!(one(&t, &path("g/*.yaml", "exist")), CheckState::Holds(None));
         t.remove("g/a.yaml");
@@ -350,25 +350,25 @@ mod tests {
         let c = |f: &str| code(f, RETRY);
         t.file("a.rs", format!("fn main() {{\n    {RETRY}\n}}\n"));
         assert_eq!(one(&t, &c("a.rs")), CheckState::Holds(None));
-        // Item 63: re-wrapped and re-indented.
+        // Edge case 63: re-wrapped and re-indented.
         t.file("a.rs", "fn main() {\n\tretry(\n\t\t3,\n\t\tbackoff::exponential()\n\t);\n}\n");
         assert_eq!(one(&t, &c("a.rs")), CheckState::Holds(None));
         // CRLF and form feed are whitespace.
         t.file("a.rs", "retry(3,\r\n\x0Cbackoff::exponential());\r\n");
         assert_eq!(one(&t, &c("a.rs")), CheckState::Holds(None));
-        // Item 64: left in a comment.
+        // Edge case 64: left in a comment.
         t.file("a.rs", format!("// {RETRY}\n"));
         assert_eq!(one(&t, &c("a.rs")), CheckState::Holds(None));
-        // Item 48: the guarded line is gone, or one character changed.
+        // Edge case 48: the guarded line is gone, or one character changed.
         t.file("a.rs", "retry(4, backoff::exponential());\n");
         assert_eq!(one(&t, &c("a.rs")), CheckState::Broken(Fail::False { actual: Shown::new("0 occurrences") }));
-        // C4: U+000B is not removed; item 62: a no-break space is a character.
+        // U+000B is not removed; edge case 62: a no-break space is a character.
         t.file("a.rs", "retry(3,\x0Bbackoff::exponential());\n");
         assert_eq!(one(&t, &c("a.rs")), CheckState::Broken(Fail::False { actual: Shown::new("0 occurrences") }));
         t.file("a.rs", "retry(3,\u{a0}backoff::exponential());\n");
         assert_eq!(one(&t, &code("a.rs", "retry(3, backoff::exponential());")), CheckState::Broken(Fail::False { actual: Shown::new("0 occurrences") }));
         assert_eq!(one(&t, &code("a.rs", "retry(3,\u{a0}backoff::exponential());")), CheckState::Holds(None));
-        // Twice, and C5: overlapping occurrences count.
+        // Twice, and overlapping occurrences count.
         t.file("a.rs", format!("{RETRY}\n{RETRY}\n"));
         assert_eq!(one(&t, &c("a.rs")), unv(Unverifiable::Ambiguous));
         let run = |n: usize| "a".repeat(n);
@@ -390,7 +390,7 @@ mod tests {
         assert_eq!(one(&t, &c("e.rs")), unv(Unverifiable::Encoding));
         t.file("e.rs", "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a\nsize 1\n");
         assert_eq!(one(&t, &c("e.rs")), unv(Unverifiable::LfsPointer));
-        // C8: only `exist` on `code`.
+        // only `exist` on `code`.
         let op = format!("  - code: 'a.rs'\n    text: '{RETRY}'\n    must: '== 1'\n");
         assert_eq!(one(&t, &op), unv(Unverifiable::NotComparable));
         // A missing file is never unverifiable, even with a text under the floor.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! MCP's Streamable HTTP binding, as DocBrain's own `/api/v1/mcp` serves it (#601 rev 8 §4.1).
+//! MCP's Streamable HTTP binding, as DocBrain's own `/api/v1/mcp` serves it.
 //!
 //! The server is "dual-era": a modern request (revision 2026-07-28) carries its protocol version
 //! in `_meta` and mirrors it, the method and the tool name in headers, which must agree with the
@@ -20,7 +20,7 @@ use crate::{JsonRpcError, McpServer, SERVER_NAME, SERVER_VERSION};
 /// The modern revision this endpoint speaks.
 pub const MODERN_VERSION: &str = "2026-07-28";
 /// The legacy revisions it serves, newest first. 2025-03-26 is not offered over HTTP: it
-/// requires batches and has no version header (#601 rev 8 §4.1).
+/// requires batches and has no version header.
 pub const LEGACY_VERSIONS: [&str; 2] = ["2025-11-25", "2025-06-18"];
 
 const META_VERSION: &str = "io.modelcontextprotocol/protocolVersion";
@@ -79,7 +79,7 @@ impl ToolCall {
     }
 }
 
-/// Read one request (§4.1's decision table, after Origin and authentication).
+/// Read one request (the binding's decision table, after Origin and authentication).
 pub fn prepare<B: Backend>(server: &McpServer<B>, view: HttpView) -> Prepared {
     let message: Value = match serde_json::from_slice(view.body) {
         Ok(v) => v,
@@ -159,7 +159,7 @@ fn modern<B: Backend>(
 
 fn legacy<B: Backend>(server: &McpServer<B>, id: Value, notification: bool, method: &str, params: &Value) -> Prepared {
     // `notifications/initialized` and `notifications/cancelled` (ignored: nothing to cancel in a
-    // stateless server; a disconnect stops the call, #601 rev 8 §4.3).
+    // stateless server; a disconnect stops the call).
     if notification {
         return Prepared::Reply { status: 202, body: None };
     }

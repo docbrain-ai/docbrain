@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 //! The reason vocabulary: why a check is `unverifiable` or `broken`/`stale`, and why a record is `invalid`.
 //!
-//! Spec §4.3 "States of one check", §4.4, §4.5, §7.5. Every code here is stable published text
+//! `SEMANTICS.md` §States, §Bounds. Every code here is stable published text
 //! (`SEMANTICS.md` §Reasons): kebab-case, never reworded. A code is unique within its state; a reader
 //! always reports the state beside the code.
 
 use std::borrow::Cow;
 
-/// A named bound (§7.5). An exceeded bound is an `unverifiable` check or an `invalid` record naming it.
+/// A named bound (`SEMANTICS.md` §Bounds). An exceeded bound is an `unverifiable` check or an `invalid` record naming it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bound {
     RecordFile,
@@ -61,7 +61,7 @@ impl Bound {
     }
 }
 
-/// Why a check is `unverifiable` (§4.3): the value cannot be judged. Never reported as `holds`.
+/// Why a check is `unverifiable` (`SEMANTICS.md` §Reasons): the value cannot be judged. Never reported as `holds`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Unverifiable {
     Format,
@@ -134,7 +134,7 @@ impl Shown {
     }
 }
 
-/// Why a check does not hold although its value was judged (§4.3): `broken` under `must`, `stale` under
+/// Why a check does not hold although its value was judged (`SEMANTICS.md` §Reasons): `broken` under `must`, `stale` under
 /// `assumes`. A missing file or key is never `unverifiable`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Fail {
@@ -154,7 +154,7 @@ impl Fail {
     }
 }
 
-/// Why a record is `invalid` (§4.2, §4.3, §4.4, §7.1, §7.2, §7.5). `MissingKey` and `Type` name the
+/// Why a record is `invalid` (`SEMANTICS.md` §Reasons). `MissingKey` and `Type` name the
 /// front-matter key; their codes are `missing-key:<key>` and `type:<key>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Invalid {

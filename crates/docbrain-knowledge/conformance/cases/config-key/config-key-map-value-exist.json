@@ -1,0 +1,21 @@
+{
+  "id": "config-key-map-value-exist",
+  "spec": "Values and comparison, expectations: exist holds on a map",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'map-value-exist'\nchecks:\n  - config_key: 'values.yaml#resources.limits'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "values.yaml": "resources:\n  limits:\n    memory: 1Gi\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

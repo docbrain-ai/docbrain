@@ -215,7 +215,7 @@ async fn a_saved_capture_promises_only_the_check_that_exists() {
     }
 }
 
-/// rev 8 §4: a route refusal (role, secret gate, duplicate) is a tool result with `isError: true`, in
+/// A route refusal (role, secret gate, duplicate) is a tool result with `isError: true`, in
 /// the server's words — never a plain result a host or model could read as saved. The bodies are the
 /// server's own refusal shapes (routes/capture_refusal.rs, admin_auth.rs, fragments/lifecycle.rs).
 #[tokio::test]
@@ -230,7 +230,7 @@ async fn a_refused_capture_edit_or_withdraw_is_a_tool_error_in_the_servers_words
         ("docbrain_annotate", annotate.clone(), 403, viewer.clone(), "Not saved (403): Editor role required".to_string()),
         ("docbrain_annotate", annotate.clone(), 409, json!({"error": format!("already captured: {ID}"), "kind": "already_captured", "id": ID}),
             format!("Already saved: {ID}. DocBrain already has this capture; use docbrain_revise to change it.")),
-        // Another capture at the same anchor (rev 8 §4.2, B6): its id, so the person can be offered a revise.
+        // Another capture at the same anchor: its id, so the person can be offered a revise.
         ("docbrain_annotate", annotate, 409, json!({"error": "a capture with this source_id already exists", "kind": "duplicate_source", "id": ID}),
             format!("Not saved (409): a capture with this source_id already exists (id {ID}); use docbrain_revise on it to change that capture.")),
         ("docbrain_commit_capture", json!({"intent": "why"}), 403, viewer, "Not saved (403): Editor role required".to_string()),

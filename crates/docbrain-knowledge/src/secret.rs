@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-//! The open secret screen (spec §7.3, owner ruling Q3): the well-known token shapes, under the same ids and the
+//! The open secret screen (`SEMANTICS.md` §Secrets): the well-known token shapes, under the same ids and the
 //! same regular expressions as the server's catalogue, which stays a superset at sync, and with the server's test
-//! for a documented shape (owner ruling 2026-11-07; SEMANTICS.md §Secrets). A hit is a rule and a position, never
+//! for a documented shape. A hit is a rule and a position, never
 //! the text.
 
 use std::ops::Range;

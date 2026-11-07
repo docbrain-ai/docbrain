@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 //! One YAML reader for record front matter (strict) and anchored files (anchors expanded), over
-//! yaml-rust2's event parser so the scalar style, anchors, tags and marks are all seen (spec §4.2
-//! "Parsing", §7.5, §7.6). Mapping entries are kept in order, duplicates included: detection is the
+//! yaml-rust2's event parser so the scalar style, anchors, tags and marks are all seen (`SEMANTICS.md`
+//! §The record, §Bounds, §Resolving values). Mapping entries are kept in order, duplicates included: detection is the
 //! caller's.
 
 use std::collections::HashMap;

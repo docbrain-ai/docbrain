@@ -1,0 +1,25 @@
+{
+  "id": "edge-45-lfs-pointer",
+  "spec": "Edge case 45: a code check on an LFS pointer is unverifiable; the path itself exists",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'model'\nchecks:\n  - path: 'models/m.bin'\n    must: 'exist'\n  - code: 'models/m.bin'\n    text: 'retry(3, backoff::exponential());'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "models/m.bin": "version https://git-lfs.github.com/spec/v1\noid sha256:4d7a2c1f\nsize 12345\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "holds"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "lfs-pointer"
+          }
+        ]
+      }
+    }
+  }
+}

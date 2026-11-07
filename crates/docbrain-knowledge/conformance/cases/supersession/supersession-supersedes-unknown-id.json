@@ -1,0 +1,24 @@
+{
+  "id": "supersession-supersedes-unknown-id",
+  "spec": "States, edge case 16: a supersedes naming an unknown id has no effect",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'a'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1zz'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": []
+      },
+      ".knowledge/records/b.md": {
+        "state": "holds",
+        "checks": []
+      }
+    },
+    "problems": {
+      ".knowledge/records/b.md": "not-in-folder"
+    }
+  }
+}

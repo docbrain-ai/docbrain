@@ -1,0 +1,21 @@
+{
+  "id": "config-key-merge-key-present-key",
+  "spec": "Resolving values: a key present beside << is read as written",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'merge-key-present-key'\nchecks:\n  - config_key: 'c.yaml#svc.c'\n    must: '== 2'\n---\nWhy this value matters.\n",
+    "c.yaml": "base: &b\n  a: 1\nsvc:\n  <<: *b\n  c: 2\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

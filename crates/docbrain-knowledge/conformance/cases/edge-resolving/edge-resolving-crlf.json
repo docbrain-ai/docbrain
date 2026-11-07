@@ -1,0 +1,22 @@
+{
+  "id": "edge-resolving-crlf",
+  "spec": "Resolving values: CRLF line ends in every format",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'crlf'\nchecks:\n  - config_key: 'a.toml#a.b'\n    must: '== 1'\n---\nWhy this value matters.\n",
+    "a.json": "{\"a\": {\"b\": 1}}\r\n",
+    "a.toml": "[a]\r\nb = 1\r\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! The hidden-text rule (spec §7.1, clarification C22; `SEMANTICS.md` §Hidden text), on the Unicode 17.0
+//! The hidden-text rule (`SEMANTICS.md` §Hidden text), on the Unicode 17.0
 //! tables generated into `tables.rs`. `std`'s Unicode tables are never used here.
 
 pub mod tables;
@@ -24,12 +24,12 @@ const LF: u32 = 0x0A;
 const CR: u32 = 0x0D;
 const ZWNJ: u32 = 0x200C;
 const ZWJ: u32 = 0x200D;
-/// The implicit direction marks: they reorder nothing (§7.1).
+/// The implicit direction marks: they reorder nothing (`SEMANTICS.md` §Hidden text).
 const DIRECTION_MARKS: [u32; 3] = [0x200E, 0x200F, 0x061C];
-/// The variation selectors that are hidden even alone (§7.1).
+/// The variation selectors that are hidden even alone (`SEMANTICS.md` §Hidden text).
 const SUPPLEMENTARY_VS: (u32, u32) = (0xE0100, 0xE01EF);
 
-/// A non-ASCII letter, mark or emoji: the neighbours a joiner may sit between (C22).
+/// A non-ASCII letter, mark or emoji: the neighbours a joiner may sit between.
 fn joinable(c: Option<u32>) -> bool {
     matches!(c, Some(c) if c > 0x7F
         && (in_table(tables::LETTER, c) || in_table(tables::MARK, c) || in_table(tables::EMOJI, c)))

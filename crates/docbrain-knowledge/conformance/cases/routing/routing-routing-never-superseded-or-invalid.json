@@ -1,0 +1,27 @@
+{
+  "id": "routing-routing-never-superseded-or-invalid",
+  "spec": "Routing: superseded and invalid records never route; cycle members and duplicates do",
+  "note": "No member of a cycle is superseded, so both route. Both records holding a duplicated id route, in path order.",
+  "op": "context",
+  "tree": {
+    "src/a.rs": "x\n",
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 'superseded'\napplies_to: ['**']\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m002'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['docs/**']\nsupersedes: 'k3v9q2x7m001'\n---\nWhy this matters.\n",
+    ".knowledge/records/c.md": "---\nknowledge: 1\nid: 'bad'\n---\nx\n",
+    ".knowledge/records/d.md": "---\nknowledge: 1\nid: 'k3v9q2x7m004'\nkind: 'fact'\ntitle: 'cycle'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m005'\n---\nWhy this matters.\n",
+    ".knowledge/records/e.md": "---\nknowledge: 1\nid: 'k3v9q2x7m005'\nkind: 'fact'\ntitle: 'cycle'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m004'\n---\nWhy this matters.\n",
+    ".knowledge/records/f.md": "---\nknowledge: 1\nid: 'k3v9q2x7m006'\nkind: 'fact'\ntitle: 'twice'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/g.md": "---\nknowledge: 1\nid: 'k3v9q2x7m006'\nkind: 'fact'\ntitle: 'twice'\napplies_to: ['src/**']\n---\nWhy this matters.\n"
+  },
+  "paths": [
+    "src/a.rs"
+  ],
+  "expect": {
+    "order": [
+      "k3v9q2x7m004",
+      "k3v9q2x7m005",
+      "k3v9q2x7m006",
+      "k3v9q2x7m006"
+    ]
+  }
+}

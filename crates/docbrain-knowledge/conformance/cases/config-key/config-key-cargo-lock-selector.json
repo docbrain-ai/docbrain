@@ -1,0 +1,21 @@
+{
+  "id": "config-key-cargo-lock-selector",
+  "spec": "Resolving values: Cargo.lock#package[name=sqlx].version",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'cargo-lock-selector'\nchecks:\n  - config_key: 'Cargo.lock#package[name=sqlx].version'\n    must: '== 0.8.6'\n---\nWhy this value matters.\n",
+    "Cargo.lock": "version = 4\n\n[[package]]\nname = \"serde\"\nversion = \"1.0.0\"\n\n[[package]]\nname = \"sqlx\"\nversion = \"0.8.6\"\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

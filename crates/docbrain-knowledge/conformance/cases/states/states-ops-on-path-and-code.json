@@ -1,0 +1,34 @@
+{
+  "id": "states-ops-on-path-and-code",
+  "spec": "States, three anchors: a known op on path or code is not-comparable, an unknown op or check kind unknown",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'ops'\nchecks:\n  - path: 'a.rs'\n    must: '== 1'\n  - code: 'a.rs'\n    text: 'retry(3, backoff::exponential());'\n    must: '>= 2'\n  - path: 'a.rs'\n    must: '~= 1'\n  - service: 'api'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "a.rs": "retry(3, backoff::exponential());\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "not-comparable"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "not-comparable"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "unknown"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "unknown"
+          }
+        ]
+      }
+    }
+  }
+}

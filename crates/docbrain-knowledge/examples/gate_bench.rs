@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-//! The design's §5.6 scale repository, and what the gate and `context` cost on it. `gate_bench <scratch-dir>`
+//! A repository at scale, and what the gate and `context` cost on it (`SEMANTICS.md` §Cost). `gate_bench <scratch-dir>`
 //! builds, once, a bare repository of 1,020,000 files with `git fast-import`: 40,000 directories five levels
 //! deep, 25 files each, and in every tenth one a `config.yaml` and a folder of five records, each checking
 //! one key of that `config.yaml` (20,000 records). `main` is that tree; `head` changes one key of one
 //! `config.yaml`; `wide` changes 5,500 files, one per directory in 5,000 of them. Then, best of five, each as a CLI run would do it from a fresh process's view (new trees, new
 //! `git cat-file`): the gate on each change (merge base, changed paths, both trees), and `context` for
-//! one path and for 5,000 (§8 item 80). Each prints its time and git's share: the time inside the repository calls and the tree reads,
+//! one path and for 5,000 (edge case 80). Each prints its time and git's share: the time inside the repository calls and the tree reads,
 //! which is git's work and the crate's tree parsing; the rest is the evaluator.
 
 use std::cell::Cell;
@@ -245,7 +245,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     best("gate, one-file change", || gate_run(&git_dir, "refs/heads/head"))?;
     best("gate, 5,500-file change", || gate_run(&git_dir, "refs/heads/wide"))?;
     best("context, one path", || context_run(&git_dir, &[format!("{}/f0_3.txt", dir(0))]))?;
-    // §8 item 80: 5,000 paths across 5,000 directories, 500 of them with a folder of records.
+    // Edge case 80: 5,000 paths across 5,000 directories, 500 of them with a folder of records.
     let many: Vec<String> = (0..5_000).map(|l| format!("{}/f{l}_0.txt", dir(l))).collect();
     best("context, 5,000 paths", || context_run(&git_dir, &many))?;
     Ok(())

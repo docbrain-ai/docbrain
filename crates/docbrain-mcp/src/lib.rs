@@ -275,7 +275,7 @@ pub struct McpServer<B: Backend = HttpBackend> {
 
 /// The protocol versions the stdio connector negotiates in `initialize`. It speaks the legacy,
 /// handshake-based protocol only; a version not listed here gets the first, which is what it
-/// always answered (#601 rev 8 §4.1). 2025-03-26 is not listed: it requires JSON-RPC batches, which
+/// always answered. 2025-03-26 is not listed: it requires JSON-RPC batches, which
 /// this connector does not read (slice A review R8).
 const STDIO_VERSIONS: [&str; 3] = ["2024-11-05", "2025-06-18", "2025-11-25"];
 
@@ -1263,7 +1263,7 @@ impl<B: Backend> McpServer<B> {
                     }]
                 }))
             }
-            // rev 8 §4: a route refusal (role, secret gate, duplicate) is a tool error.
+            // A route refusal (role, secret gate, duplicate) is a tool error.
             Err(msg) => Ok(tool_error(&msg)),
         }
     }
@@ -1573,7 +1573,7 @@ impl<B: Backend> McpServer<B> {
                     }]
                 }))
             }
-            // rev 8 §4: a route refusal (role, secret gate, duplicate) is a tool error.
+            // A route refusal (role, secret gate, duplicate) is a tool error.
             Err(msg) => Ok(tool_error(&msg)),
         }
     }
@@ -1872,14 +1872,14 @@ fn describe_refusal(f: &CaptureFailure, verb: &str) -> String {
         return format!("{verb}: {}{wait} — do not retry now; report this and stop.", f.message);
     }
     match f.kind.as_str() {
-        // A resend of a write that finished after its client left is the common case (#601 rev 8
-        // §4.2, B6): the capture is there, so the line says so first.
+        // A resend of a write that finished after its client left is the common case: the capture
+        // is there, so the line says so first.
         "already_captured" => format!(
             "Already saved: {}. DocBrain already has this capture; use docbrain_revise to change it.",
             f.id.as_deref().unwrap_or("id not given")
         ),
-        // Another capture at the same anchor: its id, so the person can be offered a revise (rev 8
-        // §4.2, B6). Not "Already saved": the text sent may differ from the one already there.
+        // Another capture at the same anchor: its id, so the person can be offered a revise.
+        // Not "Already saved": the text sent may differ from the one already there.
         "duplicate_source" if f.id.is_some() => format!(
             "{verb} ({}): {} (id {}); use docbrain_revise on it to change that capture.",
             f.status,
@@ -2354,7 +2354,7 @@ mod tests {
         assert_eq!(init["protocolVersion"], "2024-11-05", "no version asked: what stdio always answered");
         assert!(init["capabilities"]["tools"].is_object());
         assert_eq!(init["serverInfo"]["name"], "docbrain");
-        // #601 rev 8 §4.1: a legacy version this connector speaks is echoed; any other gets 2024-11-05.
+        // A legacy version this connector speaks is echoed; any other gets 2024-11-05.
         for v in ["2024-11-05", "2025-06-18", "2025-11-25"] {
             assert_eq!(server.handle_initialize(&json!({"protocolVersion": v}))["protocolVersion"], v);
         }

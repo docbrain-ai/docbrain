@@ -1,0 +1,22 @@
+{
+  "id": "edge-resolving-key-below-scalar",
+  "spec": "Resolving values: a key below a scalar is missing",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'key-below-scalar'\nchecks:\n  - config_key: 'values.yaml#a.b'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "values.yaml": "a: 5\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "missing-key"
+          }
+        ]
+      }
+    }
+  }
+}

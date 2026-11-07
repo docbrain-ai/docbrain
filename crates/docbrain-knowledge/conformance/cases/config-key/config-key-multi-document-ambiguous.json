@@ -1,0 +1,22 @@
+{
+  "id": "config-key-multi-document-ambiguous",
+  "spec": "Resolving values; edge case 55: a key in two documents without a root selector",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'multi-document-ambiguous'\nchecks:\n  - config_key: 'apps/api/jobs.yaml#metadata.name'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "apps/api/jobs.yaml": "kind: Job\nmetadata:\n  name: api-migrate\n  annotations:\n    argocd.argoproj.io/sync-wave: '-1'\n---\nkind: Deployment\nmetadata:\n  name: api\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "ambiguous"
+          }
+        ]
+      }
+    }
+  }
+}

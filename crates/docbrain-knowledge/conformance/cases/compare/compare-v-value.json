@@ -1,0 +1,21 @@
+{
+  "id": "compare-v-value",
+  "spec": "Values and comparison, the readings rule: a v value is a version only",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'v-value'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '>= 1.28'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: 'v1.29.3'\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

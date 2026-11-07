@@ -1,0 +1,13 @@
+{
+  "id": "edge-33-crlf-position",
+  "spec": "Edge case 33; a position after a BOM and CRLF",
+  "op": "parse",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-production-api-replicas.md": "﻿---\r\nknowledge: 1\r\nid: 'k3v9q2x7m1ab'\r\nkind: 'decision'\r\ntitle: 'Production API runs at least two replicas'\r\napplies_to: ['charts/api/**', 'envs/prod/**']\r\nchecks:\r\n  - config_key: 'charts/api/values.yaml#replicaCount'\r\n    must: >= 2\r\n  - path: 'docs/runbooks/api-rollout.md'\r\n    must: 'exist'\r\n---\r\nA single replica took the API down for 11 minutes on 2026-09-02 during a node drain:\r\nthe pod disruption budget cannot protect one pod. Two replicas with the PDB at\r\n`minAvailable: 1` survive a drain. Cost was reviewed and accepted; a cost change goes\r\nthrough a new decision that supersedes this one.\r\n"
+  },
+  "expect": {
+    "invalid": "quotes",
+    "line": 9,
+    "col": 11
+  }
+}

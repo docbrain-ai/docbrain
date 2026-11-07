@@ -11,7 +11,7 @@ use crate::value::{MapBuilder, Value};
 /// Reads a TOML document. A key or table defined twice is `defined-twice`; any other parse error is `format`.
 pub fn read_toml(src: &str) -> Result<Value, Unverifiable> {
     let src = src.strip_prefix('\u{feff}').unwrap_or(src);
-    // C21 skips one BOM. toml_edit would skip a second one itself.
+    // One BOM is skipped (`SEMANTICS.md` §Resolving values). toml_edit would skip a second one itself.
     if src.starts_with('\u{feff}') {
         return Err(Unverifiable::Format);
     }

@@ -1,0 +1,22 @@
+{
+  "id": "compare-bool-literal",
+  "spec": "Values and comparison, the value table: a boolean: the literal must be true or false",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'bool-literal'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== yes'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: true\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "not-comparable"
+          }
+        ]
+      }
+    }
+  }
+}

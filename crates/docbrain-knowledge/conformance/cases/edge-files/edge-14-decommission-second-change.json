@@ -1,0 +1,14 @@
+{
+  "id": "edge-14-decommission-second-change",
+  "spec": "Edge case 14: the second change deletes the service: nothing judges it any more",
+  "op": "gate",
+  "base": {
+    "svc/a/main.rs": "fn main() {}\n",
+    "svc/a/conf.yaml": "replicas: 2\n",
+    "README": "x\n"
+  },
+  "tree": {
+    "README": "x\n"
+  },
+  "expect": {}
+}

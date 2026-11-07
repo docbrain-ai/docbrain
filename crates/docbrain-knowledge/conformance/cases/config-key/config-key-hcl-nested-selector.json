@@ -1,0 +1,21 @@
+{
+  "id": "config-key-hcl-nested-selector",
+  "spec": "Resolving values: a nested block that repeats is selected like a list element",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'hcl-nested-selector'\nchecks:\n  - config_key: 'infra/prod/*.tf#resource.aws_security_group.web.ingress[from_port=80].to_port'\n    must: '== 8080'\n---\nWhy this value matters.\n",
+    "infra/prod/sg.tf": "resource \"aws_security_group\" \"web\" {\n  ingress {\n    from_port = 443\n    to_port = 443\n  }\n  ingress {\n    from_port = 80\n    to_port = 8080\n  }\n}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

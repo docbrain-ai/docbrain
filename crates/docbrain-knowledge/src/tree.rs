@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Trees (spec §5.3 "The two trees", §4.3 "Paths"). Paths name entries of a tree, never files on disk.
+//! Trees (`SEMANTICS.md` §The gate, §Paths and globs). Paths name entries of a tree, never files on disk.
 //! An entry is a file, a symbolic link or a submodule entry; a directory is not an entry.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};

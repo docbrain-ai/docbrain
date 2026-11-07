@@ -1,0 +1,21 @@
+{
+  "id": "compare-string-annotation",
+  "spec": "Values and comparison, the readings table: '-1' == -1 holds: the text is equal",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'string-annotation'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== -1'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: '-1'\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

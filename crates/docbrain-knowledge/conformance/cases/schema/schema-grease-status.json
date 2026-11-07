@@ -1,0 +1,42 @@
+{
+  "id": "schema-grease-status",
+  "spec": "The record, GREASE: an unknown key, an x- key, an unknown check kind, an unknown op and a knowledge: 2 record that supersedes a schema-1 record are read, never rejected",
+  "note": "A reader that rejects any extension point fails this case. The known check still holds; the unknown kind and op are unknown; the schema-1 record is superseded by the newer one.",
+  "op": "status",
+  "tree": {
+    "src/a.rs": "x\n",
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'grease'\nowner: 'platform'\nx-tool: 'kept by another tool'\napplies_to: ['src/**']\nchecks:\n  - path: 'src/a.rs'\n    must: 'exist'\n    x-note: 'ignored'\n  - service: 'api'\n    must: 'exist'\n  - path: 'src/a.rs'\n    must: '~= 1'\n---\nWhy this matters.\n",
+    ".knowledge/records/old.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'current, superseded by a newer schema'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    ".knowledge/records/new.md": "---\nknowledge: 2\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'newer'\nsupersedes: 'k3v9q2x7m1ab'\napplies_to: ['src/**']\nreviewed_by: 'a role'\nchecks:\n  - service: 'api'\n    within: '5m'\n---\nWhy.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "holds"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "unknown"
+          },
+          {
+            "state": "unverifiable",
+            "reason": "unknown"
+          }
+        ]
+      },
+      ".knowledge/records/new.md": {
+        "state": "unverifiable",
+        "reason": "newer-schema",
+        "checks": []
+      },
+      ".knowledge/records/old.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ac",
+        "checks": []
+      }
+    }
+  }
+}

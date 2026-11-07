@@ -1,0 +1,21 @@
+{
+  "id": "compare-yaml-hex",
+  "spec": "Edge case 58: 0x1F is 31 in both YAML versions",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'yaml-hex'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== 31'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: 0x1F\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

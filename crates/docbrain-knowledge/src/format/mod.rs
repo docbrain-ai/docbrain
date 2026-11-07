@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Which reader an anchored file gets (clarification C1), and the readers for JSON, TOML and HCL
+//! Which reader an anchored file gets, and the readers for JSON, TOML and HCL
 //! (`SEMANTICS.md` §Resolving values).
 
 mod hcl;
@@ -20,7 +20,7 @@ pub enum Format {
     Hcl,
 }
 
-/// C1: the format of a file, by its last path segment, case-sensitive. `None` is `unverifiable: format`.
+/// the format of a file, by its last path segment, case-sensitive. `None` is `unverifiable: format`.
 pub fn format_of(path: &str) -> Option<Format> {
     let name = path.rsplit('/').next().unwrap_or(path);
     match name {

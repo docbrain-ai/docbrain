@@ -1,0 +1,12 @@
+{
+  "id": "record-yaml-traps-stay-text",
+  "spec": "The record, parsing: NO, 0755, 1e5 and an id that looks like a number stay text; *.tf and [slug] are safe",
+  "op": "parse",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-production-api-replicas.md": "---\nknowledge: 1\nid: '0755abcd1234'\nkind: 'decision'\ntitle: 'NO 0755 1e5'\napplies_to: ['*.tf', 'app/[slug]/page.tsx', 'a,b']\nchecks:\n  - config_key: 'charts/api/values.yaml#replicaCount'\n    must: '>= 2'\n  - path: 'docs/runbooks/api-rollout.md'\n    must: 'exist'\n---\nA single replica took the API down for 11 minutes on 2026-09-02 during a node drain:\nthe pod disruption budget cannot protect one pod. Two replicas with the PDB at\n`minAvailable: 1` survive a drain. Cost was reviewed and accepted; a cost change goes\nthrough a new decision that supersedes this one.\n"
+  },
+  "expect": {
+    "valid": true,
+    "unknown_keys": []
+  }
+}

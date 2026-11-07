@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
-//! Bounds (spec §7.5, §4.3, §4.6). Named constants; an exceeded bound is an `unverifiable` check or an
+//! Bounds (`SEMANTICS.md` §Bounds, §States, §Routing). Named constants; an exceeded bound is an `unverifiable` check or an
 //! `invalid` record naming it (`reason::Bound`), never an error. Each value moved by measurement is
 //! recorded with its measurement in `SEMANTICS.md` §Bounds.
 
 use crate::format::Format;
 
-/// A record file, checked from the tree entry's size before reading (§7.5).
+/// A record file, checked from the tree entry's size before reading (`SEMANTICS.md` §Bounds).
 pub const RECORD_FILE_MAX: u64 = 65_536;
-/// Front matter, in bytes (§7.5).
+/// Front matter, in bytes (`SEMANTICS.md` §Bounds).
 pub const FRONT_MATTER_MAX: usize = 8_192;
-/// Front matter nesting depth (§7.5).
+/// Front matter nesting depth (`SEMANTICS.md` §Bounds).
 pub const FRONT_MATTER_DEPTH: usize = 32;
-/// Checks per record, the declared-premise cap (§4.2, §7.5).
+/// Checks per record, the declared-premise cap (`SEMANTICS.md` §The record, §Bounds).
 pub const CHECKS_MAX: usize = 100;
 const MIB: u64 = 1_048_576;
 
 /// An anchored file a `config_key` check reads, per format, checked from the tree entry's size before reading
-/// and again on the bytes read (§7.5).
+/// and again on the bytes read (`SEMANTICS.md` §Bounds).
 pub const fn anchored_file_max(f: Format) -> u64 {
     match f {
         Format::Json => 64 * MIB,
@@ -24,7 +24,7 @@ pub const fn anchored_file_max(f: Format) -> u64 {
         Format::Toml | Format::Hcl => 16 * MIB,
     }
 }
-/// A file a `code` check reads, whatever its name, as text (§7.5).
+/// A file a `code` check reads, whatever its name, as text (`SEMANTICS.md` §Bounds).
 pub const CODE_FILE_MAX: u64 = 64 * MIB;
 /// The largest of the bounds above: what any anchor reads. A blob is kept to one byte more, to see it is over.
 pub const ANCHORED_READ_MAX: u64 = {
@@ -35,19 +35,19 @@ pub const ANCHORED_READ_MAX: u64 = {
     max(formats, CODE_FILE_MAX)
 };
 /// What one pass over a tree keeps of the anchored files it has read, counted as the memory each holds once
-/// parsed, an estimate (§7.5, `SEMANTICS.md` §Bounds). The least recently used is let go first and read again
+/// parsed, an estimate (`SEMANTICS.md` §Bounds). The least recently used is let go first and read again
 /// when asked for, and a file that holds more than this alone is never kept; this changes time, never an answer.
 pub const FILES_HELD_MAX: u64 = 256 * MIB;
-/// Resolver depth in anchored files (§7.5).
+/// Resolver depth in anchored files (`SEMANTICS.md` §Bounds).
 pub const RESOLVER_DEPTH: usize = 64;
 /// What one anchored YAML file's anchors and aliases may copy: a node counts one and a scalar also its bytes, so
-/// a long text aliased many times is charged for every byte it copies (§7.5, `SEMANTICS.md` §Bounds).
+/// a long text aliased many times is charged for every byte it copies (`SEMANTICS.md` §Bounds).
 pub const ALIAS_EXPANSION_MAX: usize = 1_000_000;
-/// Records read per pass; the excess, in byte order of path, is counted by folder (§7.5).
+/// Records read per pass; the excess, in byte order of path, is counted by folder (`SEMANTICS.md` §Bounds).
 pub const RECORDS_PER_PASS: usize = 100_000;
-/// A `code` text keeps at least this many Unicode scalar values after ASCII whitespace is removed (§4.3).
+/// A `code` text keeps at least this many Unicode scalar values after ASCII whitespace is removed (`SEMANTICS.md` §States).
 pub const CODE_TEXT_MIN_SCALARS: usize = 24;
-/// A `code` text is at most this many bytes as parsed (§4.3).
+/// A `code` text is at most this many bytes as parsed (`SEMANTICS.md` §States).
 pub const CODE_TEXT_MAX_BYTES: usize = 2_048;
 /// A number in an anchored file, in bytes as written: converting a hex or octal number to decimal costs the
 /// square of its length, so a longer one is `unverifiable: bound:number-text` (`SEMANTICS.md` §Bounds).
@@ -56,7 +56,7 @@ pub const NUMBER_TEXT_MAX: usize = 4_096;
 /// against every earlier one, so an object of n items costs the square of n; this count is at least the items of
 /// every object, so one file costs at most its square (`SEMANTICS.md` §Bounds).
 pub const HCL_ASSIGNMENTS_MAX: usize = 20_000;
-/// Records shown by `context` before the overflow line (§4.6).
+/// Records shown by `context` before the overflow line (`SEMANTICS.md` §Routing).
 pub const CONTEXT_CAP: usize = 20;
 
 #[cfg(test)]

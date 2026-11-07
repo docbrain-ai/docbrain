@@ -1,0 +1,8 @@
+{
+  "id": "gate-empty-trees",
+  "spec": "The gate: empty trees give an empty report",
+  "op": "gate",
+  "base": {},
+  "tree": {},
+  "expect": {}
+}

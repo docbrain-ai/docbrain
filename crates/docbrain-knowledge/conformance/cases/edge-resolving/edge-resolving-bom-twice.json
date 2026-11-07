@@ -1,0 +1,22 @@
+{
+  "id": "edge-resolving-bom-twice",
+  "spec": "Resolving values: a second byte-order mark is format",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'bom-twice'\nchecks:\n  - config_key: 'values.yaml#a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "values.yaml": "﻿﻿a: 1\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "format"
+          }
+        ]
+      }
+    }
+  }
+}

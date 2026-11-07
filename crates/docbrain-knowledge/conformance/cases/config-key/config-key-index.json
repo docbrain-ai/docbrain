@@ -1,0 +1,21 @@
+{
+  "id": "config-key-index",
+  "spec": "Resolving values: [n] indexes a list",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'index'\nchecks:\n  - config_key: 'l.yaml#l[1]'\n    must: '== b'\n---\nWhy this value matters.\n",
+    "l.yaml": "l: [a, b]\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

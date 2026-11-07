@@ -1,0 +1,22 @@
+{
+  "id": "config-key-hcl-nested-no-selector",
+  "spec": "Resolving values: a repeated nested block needs a selector",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'hcl-nested-no-selector'\nchecks:\n  - config_key: 'infra/prod/*.tf#resource.aws_security_group.web.ingress.to_port'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "infra/prod/sg.tf": "resource \"aws_security_group\" \"web\" {\n  ingress {\n    from_port = 443\n    to_port = 443\n  }\n  ingress {\n    from_port = 80\n    to_port = 8080\n  }\n}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "ambiguous"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Writing a record (spec §4.2, §5.1): LF line ends, no BOM, every string single-quoted with `'` written
+//! Writing a record (`SEMANTICS.md` §The record; edge case 33): LF line ends, no BOM, every string single-quoted with `'` written
 //! `''`, `applies_to` always written, lists in block style. `render` writes what it is given; the caller
 //! checks a draft first (a title with a line break, hidden text or an empty body do not parse back).
 

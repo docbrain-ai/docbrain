@@ -1,0 +1,37 @@
+{
+  "id": "edge-39-symlink-glob",
+  "spec": "Edge case 39: a path glob holds on any regular match; only link matches give the reason",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'mixed'\nchecks:\n  - path: 'g/*.yaml'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'links only'\nchecks:\n  - path: 'h/*.yaml'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "g/a.yaml": "x\n",
+    "g/b.yaml": {
+      "symlink": "a.yaml"
+    },
+    "h/b.yaml": {
+      "symlink": "../g/a.yaml"
+    }
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "symbolic-link"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,14 +1,13 @@
 # `.knowledge/` semantics, schema 1
 
-**Status:** schema 1 (`knowledge: 1`), complete. Every rule of the design's §4.3, §4.6, §4.7, §5.3, §7 and §8
-is proven by the conformance corpus or names its owner outside this crate (§Conformance).
+**Status:** schema 1 (`knowledge: 1`), complete. Every edge case and every rule that `conformance/coverage.tsv`
+lists is proven by the conformance corpus or names its owner outside this crate (§Conformance).
 
 **Changelog.** 2026-11-07: schema 1, the first complete edition.
 
 This is the published meaning of a `.knowledge/` folder: what a record is, what each check's and record's
-state is in a tree, which records route to a path, and how a change is judged. It states the design's
-§4.3, §4.6 and §5.3 unchanged in meaning, with the clarifications a second reader needs to agree with the
-first. Two readers that implement this document give the same answer on every case of the conformance
+state is in a tree, which records route to a path, and how a change is judged. It is the whole
+meaning: a second reader needs nothing else to agree with the first. Two readers that implement this document give the same answer on every case of the conformance
 corpus (`conformance/`). Where the code of this crate disagrees with this document, the code is the bug.
 
 ## Sections
@@ -25,7 +24,8 @@ corpus (`conformance/`). Where the code of this crate disagrees with this docume
 10. The gate
 11. Cost
 12. Secrets
-13. Conformance
+13. Edge cases
+14. Conformance
 
 ## Reasons
 
@@ -111,9 +111,9 @@ An exceeded bound is an `unverifiable` check (or an `invalid` record) naming it,
 | `number-text` | 4,096 bytes for a number in an anchored file, as written, when either YAML version or the format reads it as a number (converting a hex or octal number costs the square of its length) |
 | `hcl-assignments` | 20,000 `=` and `:` characters in one anchored HCL file, counted before it is parsed (the parser's cost for an object grows with the square of its items; 20,000 items in one object parse in 0.7 s) |
 
-`context` shows at most 20 records before its overflow line (§4.6); that cap is not a reason.
+`context` shows at most 20 records before its overflow line (§Routing); that cap is not a reason.
 
-**Measured** (2026-11-07, release build, one laptop; design §7.5: each moved value is recorded with its
+**Measured** (2026-11-07, release build, one laptop; each moved value is recorded with its
 measurement). The real files are every file of each format in twelve infrastructure repositories (4,437 HCL,
 244 JSON and 9,478 YAML files) and in this repository (431 JSON, 16 TOML, 88 YAML). The time is `status` on a
 tree holding one record whose check reads a generated file of exactly the bound, shaped like that format's
@@ -145,8 +145,6 @@ already admits.
 
 ## Paths and globs
 
-Design §4.3 "Paths" and "Globs", §7.2.
-
 **Paths.** A folder's scope is its parent directory (`""` for the root folder). Every path in a record, in
 `applies_to` and in every anchor, is written relative to the scope and is joined with it before it is looked
 up, so a record applies to and anchors only entries of its own scope. Paths use `/` and are compared byte for
@@ -168,17 +166,17 @@ not an entry.
 
 A path without `*` or `?` is literal and matches only itself.
 
-**`config_key` file globs (C9).** A wildcard may appear only in the last segment of a `config_key` file part
+**`config_key` file globs.** A wildcard may appear only in the last segment of a `config_key` file part
 (`infra/prod/*.tf`); a wildcard in an earlier segment makes the record `invalid: glob-dir`. A glob that
 matches no entry is a layer that defines nothing.
 
-**Default `applies_to` (C15).** A record without `applies_to` applies to each `path` anchor's path (and, when
+**Default `applies_to`.** A record without `applies_to` applies to each `path` anchor's path (and, when
 that path is literal, everything under it, `<path>/**`), each `config_key` layer's file part, and each `code`
 file. `applies_to: []` applies to nothing.
 
 ## Hidden text
 
-Design §7.1. A hidden-text character anywhere in a record file makes the record `invalid: hidden-text`, with
+A hidden-text character anywhere in a record file makes the record `invalid: hidden-text`, with
 the line and column of the first one (lines and columns from 1; a column counts Unicode scalar values; a
 BOM at the very start of the file is not a column). This is a charset rule, not a content scanner: a body in
 any language parses. The set is named against **Unicode 17.0.0**; a later Unicode version changes it only in
@@ -193,12 +191,12 @@ A scalar value is hidden text when it is:
    BOM), except:
    - a BOM (U+FEFF) at the very start of the file;
    - U+200C or U+200D whose left and right neighbours are both non-ASCII scalar values that are letters
-     (`L*`), marks (`M*`) or have `Emoji=Yes` (C22) — Persian, the Indic scripts and emoji sequences need
+     (`L*`), marks (`M*`) or have `Emoji=Yes` — Persian, the Indic scripts and emoji sequences need
      them;
    - the implicit direction marks U+200E, U+200F and U+061C;
 3. a variation selector U+E0100 to U+E01EF;
 4. a variation selector (the `Variation_Selector` property: U+180B to U+180D, U+180F, U+FE00 to U+FE0F,
-   U+E0100 to U+E01EF) immediately after another one (C22); the position reported is the second.
+   U+E0100 to U+E01EF) immediately after another one; the position reported is the second.
 
 The tables are generated by `tools/gen_unicode.py` into `src/charset/tables.rs` from these Unicode 17.0.0
 files, whose sha256 the generated file records:
@@ -211,11 +209,11 @@ files, whose sha256 the generated file records:
 
 ## The record
 
-Design §4.2, §4.4, §4.5, §4.7; C6 to C8, C19 to C21. Conformance cases: `conformance/cases/4.2`, `4.3`, `4.4`,
-`4.7`, `8-writing`, `8-paths`. `schema/knowledge-1.schema.json` describes the front matter's shape only; this
+Conformance cases: `conformance/cases/record`, `checks`, `identity`,
+`schema`, `edge-writing`, `edge-paths`. `schema/knowledge-1.schema.json` describes the front matter's shape only; this
 section is the whole rule.
 
-**Record files (C19).** The first `.knowledge/records/` from the root on a path names a folder; the folder's
+**Record files.** The first `.knowledge/records/` from the root on a path names a folder; the folder's
 scope is its parent directory. A record file is a `*.md` entry anywhere under `records/`; subdirectories carry
 no meaning, and the name `<id>-<slug>.md` is cosmetic (the front matter's `id` is the identity). A
 non-`.md` entry under `records/` is not a record and is reported once.
@@ -224,10 +222,10 @@ non-`.md` entry under `records/` is not a record and is reported once.
 
 | key | required | value |
 |-|-|-|
-| `knowledge` | yes | the schema, a plain integer (C6) |
+| `knowledge` | yes | the schema, a plain integer |
 | `id` | yes | 12 characters of lower-case Crockford base32 (`0-9a-hjkmnp-tv-z`); one that begins `0000` is reserved for documentation and makes the record `invalid: example-id` |
 | `kind` | yes | `decision`, `fact`, `procedure` or `question`, exactly |
-| `title` | yes | not empty, and no line break after folding (C20); spaces alone are a title |
+| `title` | yes | not empty, and no line break after folding; spaces alone are a title |
 | `applies_to` | no | a list of path globs; `[]` routes nowhere |
 | `checks` | no | a list of at most 100 checks |
 | `supersedes` | no | an id, as for `id` (the `0000` reservation applies to `id` only) |
@@ -235,7 +233,7 @@ non-`.md` entry under `records/` is not a record and is reported once.
 A key that starts `x-` is ignored silently. Any other unknown key is reported once, by name, in file order; a
 check's unknown key is named `checks[<i>].<key>`, counting checks from 0.
 
-**A check (C7).** Known keys: `path`, `config_key`, `code`, `text`, `must`, `assumes`.
+**A check.** Known keys: `path`, `config_key`, `code`, `text`, `must`, `assumes`.
 
 - Exactly one verb, `must` or `assumes`, else `invalid: verbs`.
 - At most one anchor (`path`, `config_key`, `code`); two or three are `invalid: anchor`. `code` needs `text`
@@ -252,7 +250,7 @@ check's unknown key is named `checks[<i>].<key>`, counting checks from 0.
 `<`, the longest that matches) followed by a literal, the rest of the value with spaces and tabs trimmed
 from both ends (an empty literal is a literal); an op followed at once by another `=`, `!`, `<` or `>` is
 not an op. Anything else is an unknown op, judged `unverifiable: unknown`; the record stays valid. On `path`
-and `code` the only expectation is `exist` (C8): a known op there is `unverifiable: not-comparable`.
+and `code` the only expectation is `exist`: a known op there is `unverifiable: not-comparable`.
 
 **Key paths.** A key path is segments separated by `.`. A segment is a bare key (any run of characters other
 than `.`, `/`, `[`, `=`, `"`, and inside a selector also `,` and `]`), a quoted key (`"…"`, where only
@@ -268,7 +266,7 @@ the first failure in file order wins.
 2. Not UTF-8: `parse`, at the first byte that is not.
 3. Hidden text anywhere (§Hidden text): `hidden-text`. A CR not followed by LF is hidden text.
 4. A BOM at the start is skipped and CRLF reads as LF. Positions count lines of the text as read.
-5. Conflict markers (C21): a line starting `<<<<<<<` that a later line starting `>>>>>>>` follows:
+5. Conflict markers: a line starting `<<<<<<<` that a later line starting `>>>>>>>` follows:
    `conflict-markers`, at the first. A `=======` line alone is a setext heading, not a marker.
 6. Front matter: the first line is exactly `---`, and the front matter ends at the next line that is exactly
    `---`; else `parse`. Everything after that line is the body.
@@ -282,8 +280,8 @@ the first failure in file order wins.
    `yaml-feature`.
 10. Every value is single-quoted, except the top-level value of `knowledge`; a key is plain or
     single-quoted. Anything else (plain, double-quoted, block): `quotes`.
-11. `knowledge` is a plain scalar `[1-9][0-9]*` (C6), else `schema-integer`. Above 1, the record is of a
-    newer schema and reading stops here (§4.7 below).
+11. `knowledge` is a plain scalar `[1-9][0-9]*`, else `schema-integer`. Above 1, the record is of a
+    newer schema and reading stops here (**A newer schema**, below).
 12. `missing-key:<key>` for the first of `knowledge`, `id`, `kind`, `title` that is absent; then `id`
     (`type:id`, `id`, `example-id`), `kind` (`type:kind`, `kind`) and `title` (`type:title`, `title`).
 13. `applies_to` that is not a list of strings: `type:applies_to`.
@@ -292,8 +290,7 @@ the first failure in file order wins.
 15. Every `config_key` key path (`key-path`).
 16. Every written path, `applies_to` and the anchors, in file order (§Paths and globs: `confinement`, and
     `parse` for the empty path).
-17. A `config_key` file part with a wildcard before its last segment, or a last segment `**`: `glob-dir`
-    (C9).
+17. A `config_key` file part with a wildcard before its last segment, or a last segment `**`: `glob-dir`.
 18. `supersedes`: `type:supersedes`, `id`.
 19. A body of only TAB, LF, FF, CR and space: `empty-body`, at the body's first line.
 
@@ -305,39 +302,38 @@ matter that is not one mapping) is at 1:1. A value or key is at its first charac
 is at its first key. Where a YAML parser stops on a syntax error, and where a block scalar starts, depend on
 the parser: conformance cases omit those positions.
 
-**Default `applies_to` (C15, §4.6).** A record without `applies_to` applies to each `path` anchor's path
+**Default `applies_to`.** A record without `applies_to` applies to each `path` anchor's path
 (and, when that path is literal, `<path>/**`), each `config_key` layer's file part and each `code` file, once
 each, in check order. When that names nothing (no checks, or only unknown kinds), it applies to its whole
 scope, `**`.
 
-**The first paragraph (C20).** The body from its first line that is not only TAB, FF, CR and space, to the
+**The first paragraph.** The body from its first line that is not only TAB, FF, CR and space, to the
 line before the next line that is; it is the why (the steps of a procedure, the unknown of a question). The
 body is Markdown in any language and states facts; it is never an instruction to the reader.
 
-**Supersession (§4.5).** `supersedes: '<id>'` makes the record with that id **in the same folder**
+**Supersession.** `supersedes: '<id>'` makes the record with that id **in the same folder**
 `superseded` for every reader. One that names an unknown id, another folder's id, a duplicated id or its own
 record has no effect and is a finding on the change that writes it; a cycle is a finding and supersedes no
 member. The key's meaning is fixed at schema 1, so it is honoured in a record of a newer schema.
 
-**A newer schema (§4.7).** A record with `knowledge` above 1 is read only as far as schema 1 says: its `id`
+**A newer schema.** A record with `knowledge` above 1 is read only as far as schema 1 says: its `id`
 (when valid and not `0000…`), `kind`, `title` (when valid), `supersedes`, and `applies_to` when it is written
 and every entry reads as a schema-1 path (otherwise it has none: it is never defaulted from checks a newer
 schema may mean differently). Its checks are
 `unverifiable: newer-schema`, it shows its title and kind, and no reader rewrites it. `knowledge` that is not
 a plain integer (`1.0`, `'1'`, `01`) makes the record `invalid: schema-integer`.
 
-**Extending (§4.7, GREASE).** An additive change never bumps `knowledge`. An unknown check kind or op is
+**Extending (GREASE).** An additive change never bumps `knowledge`. An unknown check kind or op is
 `unverifiable: unknown`, and the record still routes and shows. The corpus carries records with unknown keys,
 check kinds and ops, so a reader that rejects them fails conformance.
 
 ## Values and comparison
 
-Design §4.3 "Expectations" and "The readings rule", §7.6; C2, C3, C8, C24. Conformance cases:
-`conformance/cases/4.3-compare`.
+Conformance cases: `conformance/cases/compare`.
 
 **Expectations.** A check's expectation is `exist` or `<op> <literal>` (§The record). `exist` holds for `path`
 when an entry matches, for `code` when the text occurs once, and for `config_key` when the key is present,
-whatever its value. On `path` and `code`, an op is `unverifiable: not-comparable` (C8). No expectation is ever
+whatever its value. On `path` and `code`, an op is `unverifiable: not-comparable`. No expectation is ever
 filled in for the writer.
 
 **Anchored values.** A resolver reads a value as a number, a string, a boolean, `null`, a TOML datetime, a map
@@ -352,14 +348,14 @@ or a list, or as `unverifiable` with a reason (§Resolving values). A map or a l
 | `null` | equal only to the literal `null` | `not-comparable` |
 | a TOML datetime | exact text equality with the literal | `not-comparable` |
 
-**Decimals (C3).** A literal, and a string's decimal reading, is `-?[0-9]+(\.[0-9]+)?`: no exponent, no `+`,
+**Decimals.** A literal, and a string's decimal reading, is `-?[0-9]+(\.[0-9]+)?`: no exponent, no `+`,
 no bare dot, ASCII digits only; leading zeros are allowed (`007` is 7). A number in a file (a YAML 1.2 int or
 float, JSON, TOML, HCL) converts exactly, exponent, hex and octal included. Comparison is exact, arbitrary
 precision: `3.10` equals `3.1`, `-0` equals `0`, `1e5` equals `100000`, and no integer loses digits. A number
 whose exponent does not fit a signed 64-bit integer is `not-comparable`; a number written in more than 4,096
 bytes is `bound:number-text`.
 
-**Versions (C24, owner ruling Q6).** A string is a version when it is an optional `v`, then `N(.N){0,3}` (`N` is `[0-9]+`),
+**Versions.** A string is a version when it is an optional `v`, then `N(.N){0,3}` (`N` is `[0-9]+`),
 then an optional `-<pre>` and an optional `+<build>`, each dot-separated identifiers `[0-9A-Za-z-]+`. The
 grammar is the same for a value and a literal. Versions order by SemVer 2.0 precedence: numeric parts
 numerically, missing parts 0 (`1.2` equals `1.2.0.0`); a version with a prerelease is below the same version
@@ -373,7 +369,7 @@ ordered comparison on a string value that is a range is `unverifiable: range` (a
 
 **The readings rule.** An ordered comparison of a string value has two readings: as decimals (both sides parse
 as decimals) and as versions (both sides parse as versions). A number in the file is never a version, and a
-string with a leading `v`, in the file or in the literal, is a version only (owner ruling Q6, C24). The range test comes first.
+string with a leading `v`, in the file or in the literal, is a version only. The range test comes first.
 
 - No reading applies: `unverifiable: not-comparable`.
 - One applies, or both agree: that is the answer.
@@ -393,7 +389,7 @@ string with a leading `v`, in the file or in the literal, is a version only (own
 | `0.5` | `'>= 0.25'` | holds: a number is a decimal only |
 | `'abc'` | `'> 1.0'` | `unverifiable: not-comparable` |
 
-**YAML plain scalars (C2, §7.6).** A single-quoted, double-quoted or block scalar is a string. A plain scalar is
+**YAML plain scalars.** A single-quoted, double-quoted or block scalar is a string. A plain scalar is
 read under the YAML 1.2 core schema; it is `unverifiable: yaml-1.1` when YAML 1.1 reads it differently (a
 different type, or a different number), or when it is `y`, `n`, `yes`, `no`, `on` or `off` in any case.
 Numbers are compared by exact value, so `00` (0 in both) and `0x1F` (31 in both) are numbers, while `0755`
@@ -428,8 +424,8 @@ differ. `tools/gen_yaml_plain.py` records PyYAML's reading of 6,749 plain scalar
 
 ## Resolving values
 
-Design §4.3 "`config_key`", its key-path grammar and formats, §7.6; C1, C9-C14, C16, C21; §8 items 39, 44,
-45, 54-57, 62. Conformance cases: `conformance/cases/8-resolving`, `conformance/cases/4.3-config-key`.
+Edge cases 39, 44, 45, 54 to 57 and 62. Conformance cases: `conformance/cases/edge-resolving`,
+`conformance/cases/config-key`.
 
 A `config_key` anchor is `<file>#<key path>`, or a list of them read as layers. Resolving it gives one of
 three answers: the value at the key, the key missing (with whether any layer's file exists), or
@@ -442,23 +438,23 @@ does a layer whose file lacks the key. Missing in every layer is a missing key, 
 file at all: then the file is missing.
 
 **Files of a layer.** The file part is a literal path, or a glob with wildcards in the last segment only
-(C9, else `invalid: glob-dir`); a glob that matches nothing is a layer that defines nothing. Each layer is
+(else `invalid: glob-dir`); a glob that matches nothing is a layer that defines nothing. Each layer is
 judged in this order, and the first rule that applies decides:
 
 1. A symbolic-link or submodule entry as any directory above the file, or above the glob's directory, gives
-   `symbolic-link` or `submodule` (C14). So does the literal path itself, or any match of the glob.
-2. Any match that a resolver reads (C1, below) larger than `anchored-file`, or a glob's HCL files larger
+   `symbolic-link` or `submodule`. So does the literal path itself, or any match of the glob.
+2. Any match that a resolver reads (**Formats**, below) larger than `anchored-file`, or a glob's HCL files larger
    together than the HCL bound, is `bound:anchored-file`: from the tree entries' sizes before anything is
    read, and again on the bytes read, before any file's own reason.
 3. A file whose name has no resolver is `format`, whatever its size. It is never read.
-4. A blob under 1,024 bytes starting `version https://git-lfs.github.com/spec/` is `lfs-pointer` (C21).
+4. A blob under 1,024 bytes starting `version https://git-lfs.github.com/spec/` is `lfs-pointer`.
 5. A blob that is not UTF-8 is `encoding`.
-6. One UTF-8 byte-order mark is skipped (C21); a second is `format`. A file that does not parse is
+6. One UTF-8 byte-order mark is skipped; a second is `format`. A file that does not parse is
    `format`.
 
-Conflict markers (C21) are judged in records only. An anchored file holding them is read like any other.
+Conflict markers are judged in records only. An anchored file holding them is read like any other.
 
-**Formats (C1).** By the last path segment, case-sensitive:
+**Formats.** By the last path segment, case-sensitive:
 
 | reader | names |
 |-|-|
@@ -476,16 +472,16 @@ so the first reason in path order wins over one value. With no value and no reas
 files with the same content are still two files.
 
 **YAML.** Aliases are expanded, within the `alias-expansion` budget per file. A plain scalar is read by both YAML
-versions (§Values and comparison), so a value YAML 1.1 reads differently is `yaml-1.1` (§7.6, §8 item 57). A
-quoted or block scalar is a string. A mapping key is its scalar text, whatever its style or type (C10): `on:`
+versions (§Values and comparison), so a value YAML 1.1 reads differently is `yaml-1.1` (edge case 57). A
+quoted or block scalar is a string. A mapping key is its scalar text, whatever its style or type: `on:`
 is the key `on`, and `1:` and `'1':` are one key. A key defined twice by text is `defined-twice`. A
 non-scalar key never matches. A plain `<<` key is a merge key: it is not an entry, and a key absent from its
-mapping is `merge-key`, never missing (§8 item 54), including a selector key. A key present beside `<<` is
+mapping is `merge-key`, never missing (edge case 54), including a selector key. A key present beside `<<` is
 read as written. A node with an explicit tag (`!Ref`, `!!str`, `!vault`) is `tag`, whether the key path ends
-on it or goes through it (C13).
+on it or goes through it.
 
 A file with two or more documents is the list of its documents, and a file with one document is that
-document (C11). A file with no document holds no key. With two or more documents, a leading index or
+document. A file with no document holds no key. With two or more documents, a leading index or
 selector picks among them. Any other key path must be in exactly one document: in two, it is `ambiguous`;
 a document that cannot be read (a tagged one) may hold it, so its reason wins over one value.
 
@@ -493,7 +489,7 @@ a document that cannot be read (a tagged one) may hold it, so its reason wins ov
 written. A JSON key defined twice in one object is `defined-twice`. TOML forbids a key defined twice, so such
 a file is `defined-twice` as a whole. An array of tables is a list.
 
-**HCL (C12).** A value is read only when it is a literal: a number (with a leading `-`), a string, a heredoc
+**HCL.** A value is read only when it is a literal: a number (with a leading `-`), a string, a heredoc
 without interpolation or directives, `true`, `false`, `null`, or an object or tuple literal of them, read like
 a map and a list. Anything else is `expression` (`var.x`, `local.y`, a function call, a string template with
 an interpolation or a directive, an object with a computed key); so is a `dynamic` block. A key path starts at
@@ -520,18 +516,18 @@ its block, and its labels add one each.
 | `[k=v,...]` | the map as a list of one | the one matching element (below) | missing |
 
 A map is a list of one under an index or a selector because a block or a document that occurs once is that
-block or document (C11, C12), so a key path written for the repeated case still reads the single one.
+block or document, so a key path written for the repeated case still reads the single one.
 
 Going into a value that cannot be read is that value's reason (`tag`, `defined-twice`, `expression`, a bound).
 A string containing `{{` or `{%` is a template that may render to anything, in every format: the key path
-ending on it, or going through it, is `template` (§4.3, §8 item 56). A sibling of a templated value resolves
+ending on it, or going through it, is `template` (edge case 56). A sibling of a templated value resolves
 as usual. A plain scalar that is unverifiable as a value (`yaml-1.1`, `bound:number-text`) is still a scalar,
 so a key below it is missing, and the key path ending on it is that reason. These are unverifiable whatever
-the expectation (§7.6). A number no decimal holds (`.inf`, `.nan`, an exponent beyond any decimal) is read the
+the expectation. A number no decimal holds (`.inf`, `.nan`, an exponent beyond any decimal) is read the
 same by both versions: it is a value, so `exist` holds on it, and an op on it is `not-comparable`. A key path ending on a map or a list is a value: `exist` holds on it, and an op on it
 is `not-a-scalar` (§Values and comparison).
 
-**Selectors (C16).** `[k=v,k2.sub=v2]` picks the one element whose keys all equal those values, as `==`
+**Selectors.** `[k=v,k2.sub=v2]` picks the one element whose keys all equal those values, as `==`
 compares (§Values and comparison): the text `443` equals the number 443. Each criterion's key is a dot path
 inside the element. A criterion is false when its key is absent or its value is a map or a list; it is
 unverifiable when its key lies beside a `<<` merge key, goes through a non-empty list or a value that cannot
@@ -555,28 +551,28 @@ them past it.
 
 ## States
 
-A check's state and a record's state are recomputed from one tree, never stored (§4.3).
+A check's state and a record's state are recomputed from one tree, never stored.
 
 ### Three anchors
 
-**Before the tree is read (C8).** A check kind this reader does not know, or an expectation that is neither
+**Before the tree is read.** A check kind this reader does not know, or an expectation that is neither
 `exist` nor an op it knows, is `unknown`. On `path` and `code` the only expectation is `exist`: a known op
 there is `not-comparable`.
 
-**Links and submodules above the anchor (C14).** For every anchor, a symbolic-link or submodule entry at any
+**Links and submodules above the anchor.** For every anchor, a symbolic-link or submodule entry at any
 directory above a literal path, or at a glob's literal directory or any directory above it, gives that reason
 (`symbolic-link`, `submodule`) before any match is looked for. Entries are judged by their mode and never
-followed; the tools never descend into a submodule (§8 items 39, 44).
+followed; the tools never descend into a submodule (edge cases 39, 44).
 
 **`path`** (`exist`):
 
 - A literal path holds when its entry is a regular or executable file, and gives the reason when the entry is
   a link or a submodule. With no entry at that path, it holds while any entry lies under it, because it names
-  a directory (`ansible/roles/vault`, §8 item 42); otherwise it is missing (`missing-file`).
+  a directory (`ansible/roles/vault`, edge case 42); otherwise it is missing (`missing-file`).
 - A glob matches every entry under its literal directory (§Paths and globs: `docs/**` is every file under
   `docs/`, never a file named `docs`; brackets are literal). Any regular-file match holds. With none, the
   first link or submodule match in byte order of path gives its reason; with no match at all, it is missing.
-- A path that is ignored by git or untracked is not in the tree, so it is missing (§8 item 43). The CLI's
+- A path that is ignored by git or untracked is not in the tree, so it is missing (edge case 43). The CLI's
   wording for that case is its own.
 
 **`config_key`**: resolved as §Resolving values says. A scalar that is present holds under `exist`, with its
@@ -588,18 +584,18 @@ shown, and a comparison that cannot be made is its reason. A map or a list holds
 
 1. a link or submodule above the file, then no entry (`missing-file`), then a link or submodule entry;
 2. the text: more than 2,048 bytes as parsed, or fewer than 24 Unicode scalar values once whitespace is
-   removed, is `bound:code-text` (C5);
+   removed, is `bound:code-text`;
 3. the file's entry larger than the anchored-file bound is `bound:anchored-file`, before it is read, and
    again on the bytes read;
 4. an LFS pointer is `lfs-pointer`, a file that is not UTF-8 is `encoding`;
-5. U+0009, U+000A, U+000C, U+000D and U+0020 are removed from the text and from the file (C4). Nothing else
-   is: U+000B and a no-break space are characters like any other (§8 item 62).
-6. The text's occurrences are counted at every start position, overlaps included (C5): none is `false`,
-   shown as `0 occurrences` (the line it guarded is gone, §8 item 48); one holds; two or more are
+5. U+0009, U+000A, U+000C, U+000D and U+0020 are removed from the text and from the file. Nothing else
+   is: U+000B and a no-break space are characters like any other (edge case 62).
+6. The text's occurrences are counted at every start position, overlaps included: none is `false`,
+   shown as `0 occurrences` (the line it guarded is gone, edge case 48); one holds; two or more are
    `ambiguous`.
 
 So a re-wrapped or re-indented text holds, CRLF line ends included, and so does a text left in a comment
-(§8 items 63, 64): `code` proves the text is present, not that it runs.
+(edge cases 63, 64): `code` proves the text is present, not that it runs.
 
 ### States of one check
 
@@ -623,11 +619,11 @@ written, a number in plain decimal notation while that takes at most 64 characte
 `invalid` (§The record), else `superseded` (its checks are not evaluated), else the worst of its checks:
 `broken` over `stale` over `unverifiable` over `holds`. A record without checks holds and is context only.
 
-A record of a newer schema (§4.7) is shown with its id, kind and title as schema 1 reads them, and is
+A record of a newer schema (§The record) is shown with its id, kind and title as schema 1 reads them, and is
 `unverifiable: newer-schema` as a whole; its checks are not read, and it is never rewritten. It can be
 superseded, and its `supersedes` is honoured.
 
-### Folders and record files (C19)
+### Folders and record files
 
 - An entry belongs to the folder named by the first `.knowledge/records/` on its path; the folder's scope is
   the directory above it (`""` at the root). Everything under that `records/`, at any depth, is that
@@ -635,18 +631,18 @@ superseded, and its `supersedes` is honoured.
 - The folders on the way up from a path are the root's, each directory's above it, and the path's own (a
   directory names its own folder).
 - A record file is an entry whose name ends `.md`, case-sensitive, that is not a submodule. Any other entry
-  under `records/` is ignored and reported once (§8 item 29). A binary `.md` file is a record, `invalid:
+  under `records/` is ignored and reported once (edge case 29). A binary `.md` file is a record, `invalid:
   parse`, because it is not UTF-8.
 - A record file is judged from its tree entry before it is read: a symbolic link is `invalid:
   symlink-record` and an entry over 64 KiB is `invalid: bound:record-file`, both at line 1, column 1; the
   size is judged again on the bytes read.
 - One pass reads at most 100,000 records, in byte order of path across every folder; the rest are not read
-  and are counted by folder (§8 item 81).
+  and are counted by folder (edge case 81).
 
-### Identity and supersession (§4.4, §4.5)
+### Identity and supersession
 
-- An id is the front matter's, never the file name's (§8 item 4). Two or more records with one id in one
-  folder are duplicates: each is still read and evaluated (§8 item 20). The same id in two folders is two
+- An id is the front matter's, never the file name's (edge case 4). Two or more records with one id in one
+  folder are duplicates: each is still read and evaluated (edge case 20). The same id in two folders is two
   records.
 - `supersedes` is honoured from a valid record and from a newer schema's record. It has no effect, and is
   reported, when it names its own record (`itself`), an id no record of its folder holds, another folder's
@@ -654,10 +650,10 @@ superseded, and its `supersedes` is honoured.
   supersedes nothing.
 - A superseded record's own `supersedes` still applies, so a chain supersedes every record but its last.
 - A cycle is reported once, from its smallest id, and the cycles in order of that id. No member of a cycle is
-  superseded, even by a record outside it that points in (§8 item 17).
+  superseded, even by a record outside it that points in (edge case 17).
 - A record superseded by several records is superseded; it names the first of them in byte order of path.
 
-### Folder-wide records (§4.6)
+### Folder-wide records
 
 A record whose `applies_to` covers its whole folder is context for every file there: no checks and no
 `applies_to`, or an `applies_to` entry that is `'**'`. A superseded record is context for nothing, so it is
@@ -665,7 +661,7 @@ never folder-wide. A newer schema's record is folder-wide when the `applies_to` 
 
 ## Routing
 
-The records that are context for a set of paths (design §4.6).
+The records that are context for a set of paths.
 
 - **Where.** Only the folders on each path's way up are read (the root, every directory above the path, and
   the path itself), each with its records' front matter in one read. Records past the per-pass bound, in
@@ -673,7 +669,7 @@ The records that are context for a set of paths (design §4.6).
 - **Which.** A record routes when it is valid or of a newer schema, is not superseded, and an `applies_to`
   glob matches one of the paths. Invalid and superseded records never route; the members of a supersession
   cycle and both holders of a duplicated id do. Without `applies_to`, a valid record applies to the files its
-  checks anchor (C15): each `path` anchor's path, and `<path>/**` too when it is literal; each `config_key`
+  checks anchor: each `path` anchor's path, and `<path>/**` too when it is literal; each `config_key`
   layer's file part; each `code` file. A record with neither checks nor `applies_to` applies to `**`. An
   `applies_to` written empty applies to nothing. Only routed records are evaluated, sharing one pass's reads.
 - **Order.** Each key decides only when every key before it ties:
@@ -691,22 +687,22 @@ The records that are context for a set of paths (design §4.6).
 
 ## The gate
 
-How a change is judged (design §5.3): two trees, B before the change and H after it.
+How a change is judged: two trees, B before the change and H after it.
 
 ### The two trees and the change
 
 - **H** is the tree being judged and **B** the tree it is judged against. Which commits they are (a
-  revision's tree, the working-tree view, the merge base under `--base`) is the CLI's, defined in design
-  §5.3 "The two trees"; this document starts from the two trees. Both are read by exact byte path, never
+  revision's tree, the working-tree view, the merge base under `--base`) is the CLI's; this
+  document starts from the two trees. Both are read by exact byte path, never
   from a disk walk.
 - **The changed paths** are every path added, removed, or with another mode or object id between B and H:
   `git diff-tree -r --no-renames` between them. There is no rename detection, and no local git setting
-  changes the set (§8 item 77).
+  changes the set (edge case 77).
 
 ### Live, candidates and the same check
 
 - **Live.** A check is live in a tree when its record there is valid, of schema 1 and not superseded.
-- **Candidates (owner ruling Q5, C23).** The same check is sought only among the records of the folders above a changed
+- **Candidates.** The same check is sought only among the records of the folders above a changed
   path (§Folders and record files), in B and in H. Only those folders are judged: an anchor stays inside its
   folder's parent directory, so no check of another folder can change state.
 - **The same check.** A check of H is the same check as a check of B when their records have the same id,
@@ -716,8 +712,8 @@ How a change is judged (design §5.3): two trees, B before the change and H afte
   matches nothing in H when no entry is at it or under it (a literal path) or matched by it (a glob), links
   and submodules counting: the matching of a `path` anchor (§Three anchors). So a directory anchor follows
   only when nothing is left under the old directory. A check of an unknown kind keeps only its kind's name
-  (§4.7), so two of one kind with equal verbs and expectations are the same check.
-- **Exact pairs first (F2).** A check of H that has a same check in B with every path equal is the same
+  (§The record), so two of one kind with equal verbs and expectations are the same check.
+- **Exact pairs first.** A check of H that has a same check in B with every path equal is the same
   check as those alone; only a check of H with no such pair follows. Without this, a twin elsewhere (same
   id, a path that matches nothing in H) would excuse or condemn a check the change did not touch, and the
   twin's own removal would never reach rule 2. It is stricter than following alone in one case, and fails
@@ -737,8 +733,8 @@ adding a twin never hides a finding.
      `broken`, rule 1, with the H state's reason.
    - `unverifiable` at H: `broken`, rule 1, reason `no-longer-checkable: <code>`, when a same check held at
      B. With no same check in B, it is a new `must` that cannot be judged: listed under knowledge changes with
-     its record, its index among the record's checks (from 0) and its reason, never a finding (§8 item 51).
-     When no same check held at B, nothing: unknown is not an excuse, and not a finding either (§8 item 50).
+     its record, its index among the record's checks (from 0) and its reason, never a finding (edge case 51).
+     When no same check held at B, nothing: unknown is not an excuse, and not a finding either (edge case 50).
 2. **Rule 2, B is not dropped.** A live `must` of B that was not `broken` at B and has no same check live in
    H is evaluated at H as B wrote it:
    - `broken` at H, or `unverifiable` at H after holding at B: `broken`, rule 2.
@@ -754,7 +750,7 @@ adding a twin never hides a finding.
      4. One of the same kind and keys whose path differs where B's still matches something in H:
         `anchor-moved: <B's anchor> -> <H's anchor>`, at the first position that differs.
      5. Else `check-removed`.
-3. **Stale (C17).** A live `assumes` of H that fails at H is `stale` unless it has a same check in B and none
+3. **Stale.** A live `assumes` of H that fails at H is `stale` unless it has a same check in B and none
    held there. One `unverifiable` at H is `stale`, reason `no-longer-checkable: <code>`, only when a same
    check held at B: a new `assumes` that cannot be judged is silent.
 
@@ -764,9 +760,9 @@ at or above a literal input or a glob's literal directory. Never a finding.
 
 **Same content.** A finding whose check is `missing-file` at H names the first path, in byte order, that the
 change added as a regular file with the object id that one of the check's literal input paths had in B,
-where that path was a regular file in B and is absent in H. It is the action "update the anchor" (§8 item 7).
+where that path was a regular file in B and is absent in H. It is the action "update the anchor" (edge case 7).
 
-### Findings on the change (C18)
+### Findings on the change
 
 Only where a record file the change added or edited takes part, in H: a duplicate id in a folder
 (`duplicate-id`, the id and every path holding it); a `supersedes` without effect (`supersedes`, the path and
@@ -805,29 +801,29 @@ followed, deduplicated, in byte order; the new `must` checks that cannot be judg
 ### What the two rules mean in practice
 
 - **A record never excuses its own change.** Removing, relaxing, superseding, invalidating or reclassifying
-  the record that holds a constraint leaves rule 2 judging B's check (§8 items 13, 18, 22, 66). The kind
-  never changes judging (§8 item 69).
+  the record that holds a constraint leaves rule 2 judging B's check (edge cases 13, 18, 22, 66). The kind
+  never changes judging (edge case 69).
 - **A constraint comes down in a change of its own.** Remove or relax it first (`changed`); change the value
-  in the next change (§8 items 11, 12, 14, 67; owner ruling Q2).
-- **A moved file takes its anchor along in the same change**, and nothing fires (§8 items 6, 8, 9, 10). Left
-  behind, rule 1 reports `broken` naming the added file with the same content (§8 item 7).
+  in the next change (edge cases 11, 12, 14, 67).
+- **A moved file takes its anchor along in the same change**, and nothing fires (edge cases 6, 8, 9, 10). Left
+  behind, rule 1 reports `broken` naming the added file with the same content (edge case 7).
 - **A constraint that comes back judges at once.** A record revived by deleting its superseder, or repaired
-  from `invalid`, was not live in B, so rule 1 judges it with no excuse (§8 item 19).
-- **Unknown is not an excuse.** Rule 1 excuses only a check `broken` at B (§8 item 50).
+  from `invalid`, was not live in B, so rule 1 judges it with no excuse (edge case 19).
+- **Unknown is not an excuse.** Rule 1 excuses only a check `broken` at B (edge case 50).
 - **A new check that cannot be judged is not a finding**: a new `must` is listed under knowledge changes.
 
 ## Cost
 
 `gate(B, H, changed)` gives the report of the reference, `gate_full(B, H)`, which lists both trees to find
-the change (R12). A property over random trees and edits (folders moved, files moved with or without
+the change. A property over random trees and edits (folders moved, files moved with or without
 rewritten anchors, records edited, copied, superseded or deleted, directories turned into links) and every
 gate case of the corpus check the two are equal. What the footprint form reads, per tree:
 
 - the folders above a changed path, as the reference does, and their record files, named to the tree
   together (a partial clone fetches them in one call) and read a folder at a time;
-- the checks the change affected (R11): a record file of the check's folder changed, or a changed path is
+- the checks the change affected: a record file of the check's folder changed, or a changed path is
   matched by an input, is under a literal input, is a directory above a literal input, or is at or above a
-  glob's literal directory (C14: a link there makes the check unverifiable while nothing it matches changes);
+  glob's literal directory (a link there makes the check unverifiable while nothing it matches changes);
 - the files those checks read, named to the tree together, so a partial clone fetches them in one call;
   nothing is held ahead, and each is read when evaluation needs it. Best effort: a failed lookup names
   nothing, and evaluation reads what it needs itself.
@@ -839,8 +835,9 @@ paths only for pairs with one id whose paths differ.
 
 An unaffected check yields nothing, so skipping it changes nothing. Its record and inputs are unchanged, so
 its copy in the other tree is live and pairs with it exactly. An exact pair has equal states, because it has
-the same inputs. Under F2 an H check is judged against its exact pairs alone, so rule 1 excuses or ignores
-it, and its B copy is matched, so rule 2 never sees it. More is read in two cases:
+the same inputs. With exact pairs first (§The gate), an H check is judged against its exact pairs alone,
+so rule 1 excuses or ignores it, and its B copy is matched, so rule 2 never sees it. More is read in two
+cases:
 
 - a judged check whose exact twin sits in an untouched folder of B reads that twin's files (the same paths);
 - a pass that leaves a record unread (`RECORDS_PER_PASS`) judges every check, because a record the change
@@ -848,7 +845,7 @@ it, and its B copy is matched, so rule 2 never sees it. More is read in two case
 
 ## Secrets
 
-Design §7.3, owner ruling Q3. The screen reads a whole record file, front matter included, and reports each
+The screen reads a whole record file, front matter included, and reports each
 secret-shaped value: the well-known token shapes below, under the ids and the regular expressions (Rust
 `regex` syntax) of the DocBrain server's catalogue, whose screen stays a superset. The name of a secret
 (`AWS_SECRET_ACCESS_KEY` in a rotation procedure) is never a secret: no row matches a name or a bare prefix,
@@ -872,7 +869,7 @@ and a false finding is a bug. A hit is the rule id and the line and column where
 | `docbrain_app_token` | `db_o[ar]t_[0-9a-z]{64}` | DocBrain app access and refresh token |
 
 A **documented shape** is an example in documentation, not a working credential, and is not reported. Three
-rows have one; the server's screen judges them the same way (owner ruling 2026-11-07), and no other row's
+rows have one; the server's screen judges them the same way, and no other row's
 match is ever a shape:
 
 - `pem_private_key`: the header has no key material after it. What follows the header is read up to the first
@@ -902,25 +899,132 @@ end of the holder is its own hit. A record file past `record-file` is screened o
 bytes only: the record is already `invalid` there, and a partial clone may read a different length past it.
 Bytes that are not UTF-8 read as U+FFFD.
 
-In the gate, each hit in a record file the change added or edited is a `secret-shape` finding on the change
-(C18). It never fails the gate and is never a record state.
+In the gate, each hit in a record file the change added or edited is a `secret-shape` finding on the
+change. It never fails the gate and is never a record state.
+
+## Edge cases
+
+Each is an answer the sections above give, numbered for reference. `conformance/coverage.tsv` names the cases
+that prove each one, or the owner outside this crate that carries it.
+
+1. two branches create records concurrently: different ids, different files, no conflict
+2. two branches edit one record: conflict markers make it invalid until resolved
+3. one branch removes a record, another edits it: the person merging decides
+4. a record file renamed or moved into a subdirectory: identity is the id; the name is cosmetic
+5. squash merges and rebases: identity by id; sync is idempotent
+6. an anchored file moved with its anchor in the same change: the same check at the new path
+7. an anchored file moved, the anchor left behind: `broken` under `must`, naming the added file with the same
+    content; `stale` under `assumes`
+8. a whole directory moves with its folder and records: every anchor follows
+9. a file moves out of its folder's parent directory: the record moves with it in the same change, its anchor
+    rewritten, and it is the same check; left behind, its anchor is missing (edge case 7)
+10. a record moved to another folder with its anchors rewritten: the same check
+11. code moved from a file that remains: not the same check
+12. a guarded key restructured in its file: the old key path no longer names a scalar, `broken` by rule 1 or
+    rule 2; a key path changed in the same change is not the same check
+13. a record deleted: rule 2 judges its `must` checks at H
+14. a service decommissioned in one change is `broken`; in two changes `changed`, then nothing
+15. removing a body for privacy: the next sync drops it
+16. `supersedes` naming an unknown id, another folder's record or its own: a finding, no effect
+17. a supersession cycle: a finding; no member is superseded
+18. a change supersedes a `must` and breaks it: rule 2
+19. the superseding record deleted, or a record repaired from invalid: rule 1 with no excuse
+20. two records with one id in one folder: both evaluate; a finding on the change; the server indexes the first
+21. `knowledge: 2` is `unverifiable: newer-schema`, never rewritten; `1.0` or `'1'` is `invalid`
+22. a record changed to `knowledge: 2`: rule 2 judges B's checks
+23. a schema-2 record that supersedes a schema-1 record: honoured
+24. an unknown key is reported once; an `x-` key is ignored
+25. anchors, aliases, tags, merge keys or duplicate keys in front matter: invalid
+26. a plain or double-quoted string in front matter: `invalid: quotes`; `knowledge: 1` is the one integer
+27. a body above 64 KiB is refused; the context output shows the first paragraph and the path
+28. an empty body: `record` refuses; a hand-written one is invalid
+29. a binary or non-`.md` file under `records/`: ignored, reported once
+30. an id starting `0000` is invalid
+31. a hidden-text character, an ANSI escape or a run of variation selectors: invalid with line and column
+32. a body in any language with the direction marks U+200E, U+200F and U+061C is valid; the bidirectional
+    embeddings, overrides and isolates stay `invalid`
+33. CRLF or a BOM accepted on read; the CLI writes LF without a BOM
+34. two slugs that differ only by case: two ids, two files
+35. an agent writes 500 records in one change: listed under knowledge changes; no cap
+36. an agent pins a value it just chose under `must`: listed for review; the skill's eval suite catches it
+37. a record about another repository's path: no cross-repository anchor in schema 1
+38. a leading `/`, `..`, a drive letter, `~`, a backslash, or under `.git/`: invalid; on Windows `record` writes `/`
+39. a symbolic link as an anchored file or a component of its path: `unverifiable: symbolic-link`; as a record
+    file: `invalid: symlink-record`
+40. `app/[slug]/page.tsx` is literal
+41. `docs/**` is every file under `docs/`, never a file named `docs`
+42. a directory path under `exist` holds while a file lies under it
+43. an anchor on an ignored or untracked file: not in H, so missing: `broken` or `stale` by its verb; `record`
+    refuses it
+44. an anchor inside a git submodule: `unverifiable: submodule`; the tools never descend into it
+45. an anchored file stored in Git LFS: `unverifiable: lfs-pointer`; `record` refuses it
+46. a root record and a nested record both match: both shown, nearest first
+47. `applies_to` matching nothing: context for nothing; `status` says so
+48. the guarded line deleted, or the key missing: `broken` under `must`, `stale` under `assumes`
+49. a guarded value replaced by an expression, a template or a range: rule 1, no longer checkable
+50. `unverifiable` at B then violated at H is `broken`; unverifiable at both is never a finding
+51. a new `must` that is `unverifiable` at H: listed under knowledge changes; `record` refuses it
+52. a layer whose file is missing defines nothing
+53. `terraform {}` in two files: blocks with the same type and labels merge by attribute; an attribute set in
+    both is `unverifiable: defined-twice`
+54. a key absent from a YAML mapping that has a `<<` merge key: `unverifiable: merge-key`
+55. a multi-document YAML file with the key in two documents: `ambiguous`
+56. an Ansible vars file with one Jinja value: that value is `template`; the other keys resolve
+57. `on:` is a string key; `on`, `off`, `yes`, `no`, `y`, `n`, `0755`, `1:30` are unverifiable
+58. TOML datetimes are text under `==`, not comparable when ordered; `.inf`, `.nan` not comparable; `0x1F` is 31
+59. a selector value is compared as `==` compares
+60. an ordered comparison between a version and a non-version: not comparable
+61. a decimal string whose two readings disagree: `unverifiable: number-or-version`, never a silent pass;
+    `record` refuses it
+62. a `code` file not UTF-8: `encoding`; only ASCII whitespace removed; the floor counts scalar values
+63. a formatter re-wraps or re-indents guarded code: holds
+64. the guarded text left in a comment: holds
+65. an anchored file grows past its bound: `unverifiable` with the bound; held at B, so `broken`
+66. a change edits a `must` so the new one passes while the old one is violated: rule 2
+67. a change only removes, loosens or supersedes a `must`: `changed`; the next change may alter the value
+68. a tightened `must`: `changed`, reason `expectation-changed`; the new check is judged by rule 1
+69. a decision turned into a question: the kind never changes judging
+70. a dependency bump that trips an `assumes`: `stale`; one that trips a `must`: `broken`
+71. a shallow CI clone without the base commit: exit 3 with the fetch hint
+72. several merge bases: exit 3, "pass the base commit"; the reference job passes `M^1`
+73. a pull request into a release branch, or a retargeted stacked one: merge commit against its first parent
+74. two changes that pass alone and break together: caught only with up-to-date branches or a merge queue, else by
+    the scheduled status
+75. a change edits the job file or its flags: `pull_request_target`, or `CODEOWNERS` and protected configuration
+76. a proposed record with a workflow-command line: printed between stop-commands tokens
+77. `diff.renames`, `diff.renameLimit` or `merge.renames` set locally: no effect
+78. a sparse checkout or sparse index: H takes paths outside the cone from the index; anchors read from objects
+79. a blobless partial clone: one batch of fetches; offline with a missing object, exit 3
+80. context for 5,000 paths: routing through the cache, then the cap
+81. more than 100,000 records: the excess, in byte order of path, listed in one line by folder
+82. more than 1,000 files in one directory under `records/`: subdirectories carry no meaning, and
+    `.knowledge/README.md` suggests one per year
+83. a subagent edits a file its parent already saw records for: the hook's dedupe is keyed by the receiving context
+84. offline, air-gapped or the server down: everything local works; sync resumes
+85. records on a non-default branch: local tools read H; the server reads the default branch only
+86. the folder inside a Docker context, a Helm package or an npm package ships with it; `.knowledge/README.md`
+    gives the ignore lines
+87. root records filling every edit's context: local and narrow first, the cap announced; `status` names every
+    folder-wide record
 
 ## Conformance
 
-The corpus is `conformance/cases/`: one JSON file per case, each citing the design rule it tests, in the
-format of `conformance/README.md`. A case is a tree (and, for the gate, a second tree) and an op, `parse`,
+The corpus is `conformance/cases/`: one JSON file per case, each naming the section of this document or the edge
+case it tests, in the format of `conformance/README.md`. A case is a tree (and, for the gate, a second tree) and an op, `parse`,
 `status`, `context` or `gate`, with its whole expected answer: states, reason codes, order and counts.
-`conformance/coverage.tsv` maps every rule of the design's §4.3, §4.6, §4.7, §5.3, §7.1, §7.2, §7.5, §7.6 and
-§8 to the cases that prove it. A bound too large for a case (an anchored file past 32 MiB, 100,000 records)
+`conformance/coverage.tsv` maps rules of this document, keyed by section, and every edge case to the cases
+that prove them. A bound too large for a case (an anchored file past 32 MiB, 100,000 records)
 is proven by a named test of this crate; a rule that lives outside the evaluator (the CLI's exit codes and
-output, the reference job, the server's sync, the skill) names its owner.
+output, the reference job, the server's sync, the skill) names its owner, and a test of this crate where its git
+adapter does part of the work. The rows keyed `Surfaces` are such duties, which this document does not state; a row
+keyed by a section is a rule of the evaluator, and a case or a test proves it.
 
 This crate runs the corpus with `cargo test -p docbrain-knowledge --test conformance`, and checks the map
-with `--test coverage`: every token in it names a case, a test or an owner that exists, and every §8 item
-has its line.
+with `--test coverage`: every token in it names a case, a test or an owner that exists, every edge case
+has its line, and that line states it in the words of §Edge cases.
 
 A reader passes when, for each op it implements, every case of that op gives exactly the expected answer;
 the title and first paragraph are a record's own text and are not compared. Cases with unknown keys, `x-`
-keys, unknown check kinds and ops, and a newer schema that supersedes a schema-1 record (`4.7-grease-*`) are
+keys, unknown check kinds and ops, and a newer schema that supersedes a schema-1 record (`schema-grease-*`) are
 part of the corpus on purpose: a reader that rejects an extension point fails. A reader that disagrees with
 a case has found a bug in the reader, the case or this document, and the three are fixed together.

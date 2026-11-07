@@ -1,0 +1,63 @@
+{
+  "id": "routing-routing-cap-hides-broken",
+  "spec": "Routing: the cap of 20 applies after ordering, then N more (K broken or stale)",
+  "note": "13 broken and 10 stale; a broken record carries a must and a stale one does not, so the stale ones follow.",
+  "op": "context",
+  "tree": {
+    "src/a.rs": "x\n",
+    ".knowledge/records/00.md": "---\nknowledge: 1\nid: 'k3v9q2x7m000'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/01.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/02.md": "---\nknowledge: 1\nid: 'k3v9q2x7m002'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/03.md": "---\nknowledge: 1\nid: 'k3v9q2x7m003'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/04.md": "---\nknowledge: 1\nid: 'k3v9q2x7m004'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/05.md": "---\nknowledge: 1\nid: 'k3v9q2x7m005'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/06.md": "---\nknowledge: 1\nid: 'k3v9q2x7m006'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/07.md": "---\nknowledge: 1\nid: 'k3v9q2x7m007'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/08.md": "---\nknowledge: 1\nid: 'k3v9q2x7m008'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/09.md": "---\nknowledge: 1\nid: 'k3v9q2x7m009'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/10.md": "---\nknowledge: 1\nid: 'k3v9q2x7m010'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/11.md": "---\nknowledge: 1\nid: 'k3v9q2x7m011'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/12.md": "---\nknowledge: 1\nid: 'k3v9q2x7m012'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/13.md": "---\nknowledge: 1\nid: 'k3v9q2x7m013'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/14.md": "---\nknowledge: 1\nid: 'k3v9q2x7m014'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/15.md": "---\nknowledge: 1\nid: 'k3v9q2x7m015'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/16.md": "---\nknowledge: 1\nid: 'k3v9q2x7m016'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/17.md": "---\nknowledge: 1\nid: 'k3v9q2x7m017'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/18.md": "---\nknowledge: 1\nid: 'k3v9q2x7m018'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/19.md": "---\nknowledge: 1\nid: 'k3v9q2x7m019'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/20.md": "---\nknowledge: 1\nid: 'k3v9q2x7m020'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/21.md": "---\nknowledge: 1\nid: 'k3v9q2x7m021'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/22.md": "---\nknowledge: 1\nid: 'k3v9q2x7m022'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'gone'\n    assumes: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/23.md": "---\nknowledge: 1\nid: 'k3v9q2x7m023'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'src/a.rs'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/24.md": "---\nknowledge: 1\nid: 'k3v9q2x7m024'\nkind: 'fact'\ntitle: 't'\napplies_to: ['src/**']\nchecks:\n  - path: 'src/a.rs'\n    must: 'exist'\n---\nWhy this matters.\n"
+  },
+  "paths": [
+    "src/a.rs"
+  ],
+  "expect": {
+    "order": [
+      "k3v9q2x7m000",
+      "k3v9q2x7m001",
+      "k3v9q2x7m002",
+      "k3v9q2x7m003",
+      "k3v9q2x7m004",
+      "k3v9q2x7m005",
+      "k3v9q2x7m006",
+      "k3v9q2x7m007",
+      "k3v9q2x7m008",
+      "k3v9q2x7m009",
+      "k3v9q2x7m010",
+      "k3v9q2x7m011",
+      "k3v9q2x7m012",
+      "k3v9q2x7m013",
+      "k3v9q2x7m014",
+      "k3v9q2x7m015",
+      "k3v9q2x7m016",
+      "k3v9q2x7m017",
+      "k3v9q2x7m018",
+      "k3v9q2x7m019"
+    ],
+    "more": 5,
+    "more_broken_or_stale": 3
+  }
+}

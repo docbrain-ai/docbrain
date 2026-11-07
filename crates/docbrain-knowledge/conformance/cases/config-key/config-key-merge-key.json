@@ -1,0 +1,22 @@
+{
+  "id": "config-key-merge-key",
+  "spec": "Resolving values; edge case 54: a key absent beside << is merge key, never missing",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'merge-key'\nchecks:\n  - config_key: 'c.yaml#svc.a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "c.yaml": "base: &b\n  a: 1\nsvc:\n  <<: *b\n  c: 2\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "merge-key"
+          }
+        ]
+      }
+    }
+  }
+}

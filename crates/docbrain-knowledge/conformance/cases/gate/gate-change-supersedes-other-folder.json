@@ -1,0 +1,27 @@
+{
+  "id": "gate-change-supersedes-other-folder",
+  "spec": "The gate, findings on the change: a supersedes naming another folder's record",
+  "op": "gate",
+  "base": {
+    "svc/.knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\n---\nWhy 1.\n"
+  },
+  "tree": {
+    "svc/.knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m001'\nkind: 'fact'\ntitle: 't1'\n---\nWhy 1.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m002'\nkind: 'fact'\ntitle: 't2'\nsupersedes: 'k3v9q2x7m001'\n---\nWhy 2.\n"
+  },
+  "expect": {
+    "change_findings": [
+      {
+        "supersedes": {
+          "path": ".knowledge/records/b.md",
+          "problem": "not-in-folder"
+        }
+      }
+    ],
+    "knowledge": {
+      "added": [
+        ".knowledge/records/b.md"
+      ]
+    }
+  }
+}

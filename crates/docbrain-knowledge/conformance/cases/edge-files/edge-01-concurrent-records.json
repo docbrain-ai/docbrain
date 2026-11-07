@@ -1,0 +1,22 @@
+{
+  "id": "edge-01-concurrent-records",
+  "spec": "Edge case 1: two branches create records concurrently: different ids, different files, no conflict",
+  "note": "The merge of both branches against the target: two records added side by side, each judged on its own; nothing fires.",
+  "op": "gate",
+  "base": {
+    "deploy/values.yaml": "replicas: 2\ntimeout: 5\n"
+  },
+  "tree": {
+    "deploy/values.yaml": "replicas: 2\ntimeout: 5\n",
+    ".knowledge/records/k3v9q2x7m0a1-api-replicas.md": "---\nknowledge: 1\nid: 'k3v9q2x7m0a1'\nkind: 'decision'\ntitle: 'api replicas'\nchecks:\n  - config_key: 'deploy/values.yaml#replicas'\n    must: '>= 2'\n---\nWhy two.\n",
+    ".knowledge/records/k3v9q2x7m0b2-api-timeout.md": "---\nknowledge: 1\nid: 'k3v9q2x7m0b2'\nkind: 'decision'\ntitle: 'api timeout'\nchecks:\n  - config_key: 'deploy/values.yaml#timeout'\n    must: '== 5'\n---\nWhy five.\n"
+  },
+  "expect": {
+    "knowledge": {
+      "added": [
+        ".knowledge/records/k3v9q2x7m0a1-api-replicas.md",
+        ".knowledge/records/k3v9q2x7m0b2-api-timeout.md"
+      ]
+    }
+  }
+}

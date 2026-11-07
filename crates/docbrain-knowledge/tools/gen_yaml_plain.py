@@ -4,9 +4,9 @@
 
 Usage: python3 -I tools/gen_yaml_plain.py > tests/fixtures/yaml-plain.jsonl
 
-The YAML 1.1 reading is PyYAML's own resolver (clarification C2: the deployed 1.1 behaviour), so the fixture
+The YAML 1.1 reading is PyYAML's own resolver (the deployed 1.1 behaviour), so the fixture
 checks the hand-written 1.1 matcher against the real thing. The 1.2 reading is the core schema's regexes as
-SEMANTICS.md §Values and comparison states them. Timestamps are text in both (C2). Each line is
+SEMANTICS.md §Values and comparison states them. Timestamps are text in both. Each line is
 {"text": ..., "expect": "Null" | "Bool:true" | "Bool:false" | "Str" | "NotComparable" | "Yaml11" |
 "Number:<sign><digits>e<exp>"}, the number canonical (no leading or trailing zeros; zero is "Number:e0").
 Needs PyYAML; deterministic for one PyYAML version.

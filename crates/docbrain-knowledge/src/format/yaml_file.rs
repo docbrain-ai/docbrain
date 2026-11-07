@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! An anchored YAML file as values (`SEMANTICS.md` §Resolving values): aliases expanded, plain scalars read by
-//! both YAML versions, keys compared by text (C10), tags marked (C13).
+//! both YAML versions, keys compared by text, tags marked.
 
 use crate::reason::{Bound, Unverifiable};
 use crate::scalar::{Scalar, yaml_plain};
@@ -11,7 +11,7 @@ use crate::yaml::{Mode, Node, NodeKind, Style, YamlErrorKind, read_yaml};
 /// `bound:resolver-depth`; alias expansion beyond its budget is `bound:alias-expansion`.
 pub fn read_yaml_file(src: &str) -> Result<Vec<Value>, Unverifiable> {
     let src = src.strip_prefix('\u{feff}').unwrap_or(src);
-    // C21 skips one BOM.
+    // One BOM is skipped (`SEMANTICS.md` §Resolving values).
     if src.starts_with('\u{feff}') {
         return Err(Unverifiable::Format);
     }
@@ -37,7 +37,7 @@ fn value(n: &Node) -> Value {
             let mut m = MapBuilder::default();
             let mut merge_key = false;
             for (k, v) in entries {
-                // C10: a key is its scalar text, whatever its style or type; a non-scalar key never matches.
+                // a key is its scalar text, whatever its style or type; a non-scalar key never matches.
                 let NodeKind::Scalar { text, style } = &k.kind else { continue };
                 if text == "<<" && *style == Style::Plain {
                     merge_key = true;
@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn keys_by_text() {
-        // C10: `on` is the key `on`, `1` and `'1'` are one key, and a key defined twice is stored once.
+        // `on` is the key `on`, `1` and `'1'` are one key, and a key defined twice is stored once.
         let v = one("on: a\n1: b\n'1': c\nx: d\n");
         assert_eq!(entries(&v), vec![("on", &st("a")), ("1", &Value::Opaque(Unverifiable::DefinedTwice)), ("x", &st("d"))]);
         // A non-scalar key never matches, and is not an entry.
@@ -148,7 +148,7 @@ mod tests {
         for t in ["a: [", "a: 'x", "a: b: c\n", "\u{feff}\u{feff}a: 1\n"] {
             assert_eq!(read_yaml_file(t), Err(Unverifiable::Format), "{t:?}");
         }
-        // C21: one BOM is skipped.
+        // one BOM is skipped.
         assert_eq!(get(&one("\u{feff}a: 1\n"), "a"), &num("1"));
         let deep = format!("{}1{}", "[".repeat(RESOLVER_DEPTH + 1), "]".repeat(RESOLVER_DEPTH + 1));
         assert_eq!(read_yaml_file(&deep), Err(Unverifiable::Bound(Bound::ResolverDepth)));

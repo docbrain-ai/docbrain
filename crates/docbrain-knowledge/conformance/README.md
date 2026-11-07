@@ -1,14 +1,15 @@
 # The `.knowledge/` conformance corpus
 
 Two readers that implement `SEMANTICS.md` give the same answer on every case here. A case is one JSON file
-under `cases/`, in a folder named for the design section it tests. The corpus is MIT, like the crate.
+under `cases/`, in a folder named for what it tests: a topic of `SEMANTICS.md` (`record`, `gate`, …) or a
+group of its edge cases (`edge-files`, …). The corpus is MIT, like the crate.
 
 ## A case
 
 ```json
 {
-  "id": "4.7-unknown-key",
-  "spec": "§4.7 other unknown keys are reported once; §8 item 24",
+  "id": "schema-unknown-key",
+  "spec": "The record, other unknown keys are reported once; edge case 24",
   "note": "optional: why the case is shaped the way it is",
   "op": "parse",
   "tree": { ".knowledge/records/k3v9q2x7m1ab-replicas.md": "---\nknowledge: 1\n…" },
@@ -19,7 +20,7 @@ under `cases/`, in a folder named for the design section it tests. The corpus is
 | field | meaning |
 |-|-|
 | `id` | unique across the corpus; the file is named `<id>.json` |
-| `spec` | the design section, row or item the case proves; it starts with `§` |
+| `spec` | what the case proves; it starts with a section of `SEMANTICS.md`, by its heading, or an edge case (`Edge case 24`) |
 | `note` | optional prose; a reader ignores it |
 | `op` | `parse`, `status`, `context` or `gate` |
 | `tree` | the tree the op reads: path → entry |
@@ -107,16 +108,20 @@ failing id. Another reader walks `cases/**/*.json` in byte order of path and com
 
 ## What covers each rule
 
-`coverage.tsv` has one line per rule of the design's §4.3, §4.6, §4.7, §5.3, §7.1, §7.2, §7.5 and §7.6,
-and one per §8 item (`§8.1` to `§8.87`). Its columns are `ref`, `rule` and `cover`; lines starting `#` are
-comments. `cover` is a space-separated list of tokens:
+`coverage.tsv` has one line per rule it maps, keyed `<section>: <label>` by the section of `SEMANTICS.md`
+that states it, and one per edge case (`Edge case 1` to `Edge case 87`), whose rule is the edge case in the
+words of `SEMANTICS.md` §Edge cases. Lines keyed `Surfaces: <label>` are duties of the tools outside this crate,
+which `SEMANTICS.md` does not state: they name owners, and tests of this crate where its git adapter does part of
+the work, never cases. A line keyed by a section is a rule of the evaluator and names at least one case or test.
+Its columns are `ref`, `rule` and `cover`; lines starting `#` are comments. `cover` is a space-separated list of tokens:
 
 | token | meaning |
 |-|-|
 | a case id | a case under `cases/` proves the rule |
-| `test:<file>::<name>` | a `#[test]` of this crate proves it, for a bound too large for a case |
-| `cli:#<issue>`, `server:#<issue>`, `job:#<issue>`, `skill:#<issue>` | the part outside the evaluator, owned by that issue |
+| `test:<file>::<name>` | a `#[test]` of this crate proves it: a bound too large for a case, or the crate's git adapter |
+| `cli`, `server`, `job`, `skill` | the part outside the evaluator: the CLI, the server, the reference job, the skill |
 | `git` | git's own behaviour; no reader acts |
 
 `cargo test -p docbrain-knowledge --test coverage` fails on a token that names nothing, a line without a
-token, or a §8 item without a line.
+token, a token named twice, a section line no case or test proves, a `Surfaces` line that names a case, an edge
+case without a line, or an edge case's line that does not state it as `SEMANTICS.md` does.

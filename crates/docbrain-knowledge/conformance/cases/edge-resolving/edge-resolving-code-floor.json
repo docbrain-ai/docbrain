@@ -1,0 +1,31 @@
+{
+  "id": "edge-resolving-code-floor",
+  "spec": "Edge case 62: the floor of 24 counts Unicode scalar values after whitespace is removed",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: '23'\nchecks:\n  - code: 'a.rs'\n    text: 'éééééééééééé ééééééééééé'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: '24'\nchecks:\n  - code: 'a.rs'\n    text: 'éééééééééééééééééééééééé'\n    must: 'exist'\n---\nWhy this matters.\n",
+    "a.rs": "xééééééééééééééééééééééééy\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "bound:code-text"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

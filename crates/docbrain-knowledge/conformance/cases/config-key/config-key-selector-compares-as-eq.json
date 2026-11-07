@@ -1,0 +1,21 @@
+{
+  "id": "config-key-selector-compares-as-eq",
+  "spec": "Resolving values: selector values compare as == compares: the text 443 equals 443",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'selector-compares-as-eq'\nchecks:\n  - config_key: 'p.yaml#ports[port=443].x'\n    must: '== 1'\n---\nWhy this value matters.\n",
+    "p.yaml": "ports:\n- {port: '443', x: 1}\n- {port: 80, x: 2}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

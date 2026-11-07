@@ -1,0 +1,24 @@
+{
+  "id": "config-key-layers-later-unreadable",
+  "spec": "Resolving values: a later layer that does not parse may define the key",
+  "note": "An unreadable layer may hold the key, so its reason wins over an earlier layer's value.",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'layers-later-unreadable'\nchecks:\n  - config_key:\n      - 'deploy/base/values.yaml#resources.limits.memory'\n      - 'deploy/prod/values.yaml#resources.limits.memory'\n    must: '== 256Mi'\n---\nWhy this value matters.\n",
+    "deploy/base/values.yaml": "resources:\n  limits:\n    memory: 256Mi\n",
+    "deploy/prod/values.yaml": "resources: [\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "format"
+          }
+        ]
+      }
+    }
+  }
+}

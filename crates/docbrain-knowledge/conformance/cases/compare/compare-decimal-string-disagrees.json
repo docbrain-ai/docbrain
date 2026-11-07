@@ -1,0 +1,22 @@
+{
+  "id": "compare-decimal-string-disagrees",
+  "spec": "Edge case 61: '0.125' against <= 0.25",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'decimal-string-disagrees'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '<= 0.25'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: '0.125'\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "number-or-version"
+          }
+        ]
+      }
+    }
+  }
+}

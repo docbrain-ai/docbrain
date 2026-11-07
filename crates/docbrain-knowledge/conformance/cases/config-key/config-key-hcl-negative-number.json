@@ -1,0 +1,21 @@
+{
+  "id": "config-key-hcl-negative-number",
+  "spec": "Resolving values: - before a number literal is a number",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'hcl-negative-number'\nchecks:\n  - config_key: 'prod.tfvars#offset'\n    must: '== -5'\n---\nWhy this value matters.\n",
+    "prod.tfvars": "offset = -5\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

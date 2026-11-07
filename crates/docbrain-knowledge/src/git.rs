@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Commit trees and changed paths through the repository's own git (spec §5.3, §12).
+//! Commit trees and changed paths through the repository's own git (`SEMANTICS.md` §The gate, §Cost).
 //!
 //! Every object is read through one long-lived `git cat-file --batch` per tree with lazy fetch off. The objects
 //! of one read, or of one prefetch, that a partial clone does not hold are fetched in one call, as git's own lazy

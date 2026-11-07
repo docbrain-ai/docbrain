@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Paths and the glob dialect (spec §4.3 "Paths" and "Globs", §7.2; `SEMANTICS.md` §Paths and globs).
+//! Paths and the glob dialect (`SEMANTICS.md` §Paths and globs).
 //!
 //! A path in a record is relative to its folder's parent directory (the scope) and never leaves it. Globs:
 //! `*` is any run of characters except `/`; `?` is one character except `/`; `**` as a whole segment is zero
@@ -13,7 +13,7 @@ use crate::reason::Invalid;
 pub enum PathError {
     /// The empty string.
     Empty,
-    /// A leading `/`, `~` or drive letter, a `\`, a `..`, `.git` or empty segment (§7.2).
+    /// A leading `/`, `~` or drive letter, a `\`, a `..`, `.git` or empty segment (`SEMANTICS.md` §Paths and globs).
     Confinement,
 }
 
@@ -96,12 +96,12 @@ impl RepoGlob {
         &self.root[..end]
     }
 
-    /// The number of `**` segments (routing: fewer is narrower, §4.6).
+    /// The number of `**` segments (routing: fewer is narrower, `SEMANTICS.md` §Routing).
     pub fn star_count(&self) -> usize {
         self.root.split('/').filter(|s| *s == "**").count()
     }
 
-    /// Bytes of `root` before its first `*` or `?` (routing: longer is narrower, §4.6).
+    /// Bytes of `root` before its first `*` or `?` (routing: longer is narrower, `SEMANTICS.md` §Routing).
     pub fn literal_prefix_len(&self) -> usize {
         self.root.find(['*', '?']).unwrap_or(self.root.len())
     }
@@ -318,7 +318,7 @@ mod tests {
 
         #[test]
         fn every_match_starts_with_the_literal_prefix(scope in scope(), rel in pattern(), paths in paths()) {
-            // Routing tries a glob only on the run of sorted paths that start with its literal prefix (§8 item 80).
+            // Routing tries a glob only on the run of sorted paths that start with its literal prefix (edge case 80).
             let Ok(g) = parse_rel(&scope, &rel) else { return Ok(()) };
             let mut sorted = paths;
             sorted.sort();

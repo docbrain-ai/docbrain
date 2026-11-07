@@ -1,0 +1,23 @@
+{
+  "id": "edge-files-moved-into-subdirectory",
+  "spec": "Edge case 4: identity is the front matter's id; the file name is cosmetic",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/2026/team/zzzzzzzzzzzz-old-name.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'moved'\nchecks:\n  - path: 'src/main.rs'\n    must: 'exist'\n---\nWhy this matters.\n",
+    ".knowledge/records/k3v9q2x7m1ac-newer.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ac'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1aa'\n---\nWhy this matters.\n",
+    "src/main.rs": "fn main() {}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/2026/team/zzzzzzzzzzzz-old-name.md": {
+        "state": "superseded",
+        "by": "k3v9q2x7m1ac",
+        "checks": []
+      },
+      ".knowledge/records/k3v9q2x7m1ac-newer.md": {
+        "state": "holds",
+        "checks": []
+      }
+    }
+  }
+}

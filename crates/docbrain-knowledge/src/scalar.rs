@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Scalars and comparison (spec §4.3 "Expectations", "The readings rule", §7.6; clarifications C2, C3, C24;
-//! `SEMANTICS.md` §Values and comparison): exact decimals, versions, ranges, YAML plain-scalar resolution
+//! Scalars and comparison (`SEMANTICS.md` §Values and comparison, §Resolving values):
+//! exact decimals, versions, ranges, YAML plain-scalar resolution
 //! under 1.2 and 1.1, and `compare`.
 
 use std::cmp::Ordering;
@@ -104,7 +104,7 @@ impl Decimal {
         Some(Decimal { neg, digits: body.into(), exp })
     }
 
-    /// C3: a literal, or a string's decimal reading: `-?[0-9]+(\.[0-9]+)?`.
+    /// a literal, or a string's decimal reading: `-?[0-9]+(\.[0-9]+)?`.
     pub fn parse_plain(s: &str) -> Option<Decimal> {
         let (neg, rest) = s.strip_prefix('-').map_or((false, s), |r| (true, r));
         let (int, frac) = rest.split_once('.').map_or((rest, None), |(i, f)| (i, Some(f)));
@@ -190,7 +190,7 @@ impl PartialOrd for Decimal {
     }
 }
 
-/// A version (C24, the same for a value and a literal): an optional `v`, `N(.N){0,3}`, an optional
+/// A version (the same for a value and a literal): an optional `v`, `N(.N){0,3}`, an optional
 /// `-<pre>` and an optional `+<build>`. Ordered by SemVer 2.0 precedence, the build ignored, missing parts 0.
 #[derive(Debug, Clone)]
 pub struct Version {
@@ -367,7 +367,7 @@ fn exp_1_1(e: &str) -> bool {
     e.is_empty() || (e.len() >= 3 && matches!(e.as_bytes()[0], b'e' | b'E') && matches!(e.as_bytes()[1], b'-' | b'+') && all_digits(&e[2..]))
 }
 
-/// YAML 1.1 as PyYAML resolves it (C2); the regexes are in `SEMANTICS.md` §Values and comparison.
+/// YAML 1.1 as PyYAML resolves it; the regexes are in `SEMANTICS.md` §Values and comparison.
 fn read_1_1(t: &str, long: bool) -> Reading {
     match t {
         "yes" | "Yes" | "YES" | "true" | "True" | "TRUE" | "on" | "On" | "ON" => return Reading::Bool(true),
@@ -431,7 +431,7 @@ fn read_1_1(t: &str, long: bool) -> Reading {
 }
 
 /// A plain YAML scalar: the 1.2 core reading, unless YAML 1.1 reads it differently or it is `y`, `n`,
-/// `yes`, `no`, `on` or `off` in any case (C2: `unverifiable: yaml-1.1`). A number written in more than
+/// `yes`, `no`, `on` or `off` in any case (`unverifiable: yaml-1.1`). A number written in more than
 /// `NUMBER_TEXT_MAX` bytes is `unverifiable: bound:number-text`. Quoted and block scalars are strings and
 /// never come here.
 pub fn yaml_plain(text: &str) -> Scalar {
@@ -464,7 +464,7 @@ fn holds(op: Op, o: Ordering) -> bool {
     }
 }
 
-/// `op literal` against an anchored scalar (§4.3 "Expectations" and its table; the readings rule).
+/// `op literal` against an anchored scalar (`SEMANTICS.md` §Values and comparison and its table; the readings rule).
 pub fn compare(value: &Scalar, op: Op, literal: &str) -> Result<bool, Unverifiable> {
     let ordered = !matches!(op, Op::Eq | Op::Ne);
     let equal = |e: bool| if matches!(op, Op::Ne) { !e } else { e };
@@ -709,7 +709,7 @@ mod tests {
         for t in ["yes", "No", "ON", "y", "yEs", "0755", "010", "08", "1:30", "0b101", "1_000", "0o17", "1e5", "-0x1F", "off", "N", "+.5", "1.5e3", "190:20:30.15", "+0x1F", "1__0"] {
             assert_eq!(yaml_plain(t), Scalar::Opaque(Unverifiable::Yaml11), "{t}");
         }
-        assert_eq!(yaml_plain("0x1F"), Scalar::Number(dec("31"))); // §8 item 58
+        assert_eq!(yaml_plain("0x1F"), Scalar::Number(dec("31"))); // edge case 58
         assert_eq!(yaml_plain("1.2.3"), Scalar::Str("1.2.3".into())); // a plain chart version is text, not yaml-1.1
         assert_eq!(yaml_plain("true"), Scalar::Bool(true));
         assert_eq!(yaml_plain("FALSE"), Scalar::Bool(false));
@@ -743,7 +743,7 @@ mod tests {
         assert_eq!(yaml_plain("1.0e+99999999999999999999"), Scalar::Opaque(Unverifiable::NotComparable));
         assert_eq!(yaml_plain("1e9223372036854775807"), Scalar::Opaque(Unverifiable::Yaml11));
         assert!(matches!(compare(&n("1e9223372036854775807"), Op::Gt, "1"), Ok(true)));
-        // A range rule quirk the spec states literally: a whole component `x`, even in a prerelease.
+        // A range rule quirk `SEMANTICS.md` §Values and comparison states literally: a whole component `x`, even in a prerelease.
         assert!(is_range("1.0.0-alpha.x"));
     }
 

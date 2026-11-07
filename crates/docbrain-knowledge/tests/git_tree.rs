@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Commit trees through git (spec §5.3, §12): the answers a MemTree gives, in a full clone and in a blobless
+//! Commit trees through git (`SEMANTICS.md` §The gate, §Cost): the answers a MemTree gives, in a full clone and in a blobless
 //! partial clone, with the fetches batched.
 
 use std::collections::HashMap;

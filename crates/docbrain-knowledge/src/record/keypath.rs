@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! The `config_key` key path grammar (spec §4.3, clarification C16; `SEMANTICS.md` §The record).
+//! The `config_key` key path grammar (`SEMANTICS.md` §The record).
 //!
 //! Dot-separated segments. A segment containing `.`, `/`, `[`, `=` or `"` is double-quoted, with `\"` and
 //! `\\` the only escapes. `[n]` indexes a list (`0` or `[1-9][0-9]*`); `[k=v,k2.sub=v2]` selects the one

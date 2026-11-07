@@ -1,0 +1,22 @@
+{
+  "id": "edge-resolving-does-not-parse",
+  "spec": "Resolving values: a file that does not parse is format",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'does-not-parse'\nchecks:\n  - config_key: 'values.yaml#a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "values.yaml": "a: [\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "format"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "config-key-selector-unverifiable",
+  "spec": "Resolving values: an element whose comparison is unverifiable",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'selector-unverifiable'\nchecks:\n  - config_key: 'p.yaml#ports[port=443].x'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "p.yaml": "ports:\n- {port: on, x: 1}\n- {port: 80, x: 2}\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "yaml-1.1"
+          }
+        ]
+      }
+    }
+  }
+}

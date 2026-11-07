@@ -11,7 +11,7 @@ const T: &str = "retry(3, backoff::exponential());";
 /// The root folder, one nested, and its sibling.
 const SCOPES: [&str; 3] = ["", "svc/a", "svc/b"];
 /// Anchors, relative to the folder's directory. The last three hold by `v.yaml` with a layer under `d` that never
-/// exists, so a link replacing `d` changes nothing they match (C14 needs the predicate's "above" clauses); the
+/// exists, so a link replacing `d` changes nothing they match (the link rule of `SEMANTICS.md` §States needs the predicate's "above" clauses); the
 /// one before them reaches into a nested folder from the root.
 const ANCHORS: [&str; 13] = [
     "path: 'v.yaml'",

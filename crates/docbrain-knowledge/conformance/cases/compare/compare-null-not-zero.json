@@ -1,0 +1,21 @@
+{
+  "id": "compare-null-not-zero",
+  "spec": "Values and comparison, the value table: null is not 0",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'null-not-zero'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '!= 0'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: ~\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      }
+    }
+  }
+}

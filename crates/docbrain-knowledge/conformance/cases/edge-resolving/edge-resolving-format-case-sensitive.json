@@ -1,0 +1,22 @@
+{
+  "id": "edge-resolving-format-case-sensitive",
+  "spec": "Resolving values: names are case-sensitive",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-resolve.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'format-case-sensitive'\nchecks:\n  - config_key: 'X.YAML#a'\n    must: 'exist'\n---\nWhy this value matters.\n",
+    "X.YAML": "a: 1\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-resolve.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "format"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "id": "supersession-supersedes-other-folder",
+  "spec": "States, edge case 16: a supersedes naming another folder's record has no effect",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'root'\napplies_to: ['src/**']\n---\nWhy this matters.\n",
+    "svc/.knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1aa'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a.md": {
+        "state": "holds",
+        "checks": []
+      },
+      "svc/.knowledge/records/b.md": {
+        "state": "holds",
+        "checks": []
+      }
+    },
+    "problems": {
+      "svc/.knowledge/records/b.md": "not-in-folder"
+    }
+  }
+}

@@ -6563,7 +6563,7 @@ async fn admin_ingest_trigger(
 //
 // A dumb HTTP passthrough: GET the server's answer, print it. No
 // verification, counting or signing logic belongs here — the server already
-// did that and this just relays what it said (spec §8.4).
+// did that and this just relays what it said.
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[derive(serde::Deserialize)]
@@ -6868,8 +6868,8 @@ async fn attest_show(server_url: &str, api_key: &str) -> Result<()> {
 }
 
 /// Writes the signed export blob to `path`. The endpoint 409s when no
-/// snapshot exists yet (spec §7.1c forbids computing one inline with the
-/// request) — that is reported as a plain message, not a crash, matching
+/// snapshot exists yet (one is never computed inline with the request)
+/// — that is reported as a plain message, not a crash, matching
 /// the module-level exit-code note above.
 async fn attest_export(server_url: &str, api_key: &str, path: &std::path::Path) -> Result<()> {
     use anyhow::Context;
@@ -6907,7 +6907,7 @@ async fn attest_export(server_url: &str, api_key: &str, path: &std::path::Path) 
         path.display(),
         format_attest_timestamp(&export.computed_at)
     );
-    // §7.3's anti-splitting story rests on this: an operator running more
+    // Exports stay attributable to one instance: an operator running more
     // than one instance cannot tell their exports apart without it.
     println!("Instance id: {}", export.install_id);
 

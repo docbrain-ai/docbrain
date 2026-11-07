@@ -1,0 +1,22 @@
+{
+  "id": "compare-number-literal-not-decimal",
+  "spec": "Values and comparison, the value table: a literal that is not a decimal is not comparable",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'number-literal-not-decimal'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== 1e5'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: 5\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "not-comparable"
+          }
+        ]
+      }
+    }
+  }
+}

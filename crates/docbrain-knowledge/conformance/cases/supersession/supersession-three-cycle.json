@@ -1,0 +1,33 @@
+{
+  "id": "supersession-three-cycle",
+  "spec": "States, edge case 17: a cycle of three is listed once, from its smallest id",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/x.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1b3'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1b1'\n---\nWhy this matters.\n",
+    ".knowledge/records/y.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1b1'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1b2'\n---\nWhy this matters.\n",
+    ".knowledge/records/z.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1b2'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1b3'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/x.md": {
+        "state": "holds",
+        "checks": []
+      },
+      ".knowledge/records/y.md": {
+        "state": "holds",
+        "checks": []
+      },
+      ".knowledge/records/z.md": {
+        "state": "holds",
+        "checks": []
+      }
+    },
+    "cycles": [
+      [
+        "k3v9q2x7m1b1",
+        "k3v9q2x7m1b2",
+        "k3v9q2x7m1b3"
+      ]
+    ]
+  }
+}

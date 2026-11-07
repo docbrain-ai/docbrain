@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Routing: the records that are context for a set of paths, in the order design §4.6 gives (`SEMANTICS.md`
-//! §Routing; C15).
+//! Routing: the records that are context for a set of paths, in the order `SEMANTICS.md`
+//! §Routing gives.
 
 use std::cmp::{Ordering, Reverse};
 
@@ -23,7 +23,7 @@ pub struct ContextReport {
 }
 
 /// The records from every folder on each path's way up whose `applies_to` matches one of `paths`, evaluated,
-/// ordered (§4.6), the first `cap` kept.
+/// ordered (`SEMANTICS.md` §Routing), the first `cap` kept.
 pub fn context(tree: &dyn Tree, paths: &[String], cap: usize) -> Result<ContextReport, TreeError> {
     context_within(tree, paths, cap, RECORDS_PER_PASS)
 }
@@ -54,7 +54,7 @@ fn context_within(tree: &dyn Tree, paths: &[String], cap: usize, budget: usize) 
     })
 }
 
-/// The keys of §4.6 that come before title and id, each ascending.
+/// The keys of `SEMANTICS.md` §Routing that come before title and id, each ascending.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Rank {
     /// Neither `broken` nor `stale`: one group, after them.
@@ -93,7 +93,7 @@ fn route(r: &RecordFile, sorted: &[String]) -> Option<Rank> {
     Some(Rank { calm: true, depth: Reverse(0), narrow, no_must: !must, kind })
 }
 
-/// §4.6: the rank, then title in byte order, then id, a record without either after those with one; then path,
+/// `SEMANTICS.md` §Routing: the rank, then title in byte order, then id, a record without either after those with one; then path,
 /// so the order is total.
 fn order(a: &Rank, x: &RecordStatus, b: &Rank, y: &RecordStatus) -> Ordering {
     a.cmp(b)
@@ -166,7 +166,7 @@ mod tests {
             .file("other/x.rs", "x\n");
         let s = seen(&t);
         let r = context(&s, &paths(&[P]), CONTEXT_CAP).unwrap();
-        // §8 item 46: both shown, nearest first.
+        // Edge case 46: both shown, nearest first.
         assert_eq!(ids(&r), [id(2), id(1)]);
         let lists = s.lists.borrow();
         assert!(lists.iter().all(|d| !d.is_empty() && !d.starts_with("other")), "{lists:?}");
@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn routing_work_follows_the_paths() {
-        // §8 item 80 at scale: a record's globs are matched only against the paths that start with their literal
+        // Edge case 80 at scale: a record's globs are matched only against the paths that start with their literal
         // part, so the matches grow with records plus paths, never with their product.
         let mut t = MemTree::new();
         let ps: Vec<String> = (0..1_000).map(|n| format!("d{n}/f.rs")).collect();
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn many_paths_read_once() {
-        // §8 item 80: 5,000 paths; the folder's front matter read once, each anchored file once, then the cap.
+        // Edge case 80: 5,000 paths; the folder's front matter read once, each anchored file once, then the cap.
         let mut t = MemTree::new();
         let ps: Vec<String> = (0..5_000).map(|n| format!("src/m{}/f{n}.rs", n % 50)).collect();
         for p in &ps {

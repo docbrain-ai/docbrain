@@ -1,0 +1,45 @@
+{
+  "id": "identity-duplicate-id-both-evaluate",
+  "spec": "States, two records with one id both evaluate; edge case 20: a supersedes naming it has no effect",
+  "op": "status",
+  "tree": {
+    "a.yaml": "x: 1\n",
+    ".knowledge/records/a1.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'one'\nchecks:\n  - config_key: 'a.yaml#x'\n    must: '== 1'\n---\nWhy this matters.\n",
+    ".knowledge/records/a2.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 'two'\nchecks:\n  - config_key: 'a.yaml#x'\n    must: '== 2'\n---\nWhy this matters.\n",
+    ".knowledge/records/b.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'supersedes'\napplies_to: ['src/**']\nsupersedes: 'k3v9q2x7m1aa'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/a1.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      ".knowledge/records/a2.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "false"
+          }
+        ]
+      },
+      ".knowledge/records/b.md": {
+        "state": "holds",
+        "checks": []
+      }
+    },
+    "duplicates": {
+      "k3v9q2x7m1aa": [
+        ".knowledge/records/a1.md",
+        ".knowledge/records/a2.md"
+      ]
+    },
+    "problems": {
+      ".knowledge/records/b.md": "duplicated"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "compare-yaml11-octal",
+  "spec": "Edge case 57: YAML 1.1 and 1.2 read 0755 differently",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/k3v9q2x7m1ab-compare.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1ab'\nkind: 'fact'\ntitle: 'yaml11-octal'\nchecks:\n  - config_key: 'values.yaml#v'\n    must: '== 755'\n---\nWhy this value matters.\n",
+    "values.yaml": "v: 0755\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/k3v9q2x7m1ab-compare.md": {
+        "state": "unverifiable",
+        "checks": [
+          {
+            "state": "unverifiable",
+            "reason": "yaml-1.1"
+          }
+        ]
+      }
+    }
+  }
+}

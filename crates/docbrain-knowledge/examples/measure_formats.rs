@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! The anchored-file readers over real files, to set the bounds from measurement (design §7.5: each value
+//! The anchored-file readers over real files, to set the bounds from measurement (`SEMANTICS.md` §Bounds: each value
 //! is recorded with its measurement). `measure_formats <dir>…` walks the directories, never into `.git` and
 //! never through a symbolic link, and reads every file `format_of` accepts with its format's reader. Per
 //! format it prints the count, the largest size, the read time p50, p95 and max with the size of the slowest

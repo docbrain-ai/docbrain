@@ -1,0 +1,13 @@
+{
+  "id": "edge-38-dot-only",
+  "spec": "Paths and globs: a path of nothing but `.` segments is empty",
+  "op": "parse",
+  "tree": {
+    ".knowledge/records/a.md": "---\nknowledge: 1\nid: 'k3v9q2x7m1aa'\nkind: 'fact'\ntitle: 't'\nchecks:\n  - path: './.'\n    must: 'exist'\n---\nWhy this matters.\n"
+  },
+  "expect": {
+    "invalid": "parse",
+    "line": 7,
+    "col": 11
+  }
+}
