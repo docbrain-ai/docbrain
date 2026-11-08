@@ -892,8 +892,8 @@ rag:
   # -- Verify mechanically-checkable claims (file paths) in an answer against the
   # file listings recorded at ingest, before returning it. Deterministic — no LLM
   # call. Inert until a source records a listing, so enabling it costs nothing on
-  # a deployment with no git sources connected.
-  claimVerification: true
+  # a deployment with no git sources connected. Off by default (#97).
+  claimVerification: false
   cacheTtlHours: 24
   # -- Tool-output caps (the truncation chain). All THREE must rise together —
   # raising one alone has no effect because the smallest still truncates. The
