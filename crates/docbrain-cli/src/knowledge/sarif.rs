@@ -197,13 +197,13 @@ mod tests {
         }
     }
 
-    const R1: &str = "a/.knowledge/records/r1.md";
+    const RECORD: &str = "a/.knowledge/records/r1.md";
 
     /// One result of every kind, in the order SARIF lists them.
     fn every_kind() -> (GateReport, Files) {
         let r = GateReport {
             findings: vec![
-                finding(Class::Broken { rule: 1 }, R1, "a/v.yaml#replicas"),
+                finding(Class::Broken { rule: 1 }, RECORD, "a/v.yaml#replicas"),
                 finding(Class::Changed(ChangeKind::Superseded), "r2.md", "b.md"),
                 finding(Class::Stale, "r3.md", "c.md"),
             ],
@@ -223,7 +223,7 @@ mod tests {
             },
         };
         let mut files = Files::default();
-        files.anchored.insert((R1.into(), "a/v.yaml#replicas".into()), "a/v.yaml".into());
+        files.anchored.insert((RECORD.into(), "a/v.yaml#replicas".into()), "a/v.yaml".into());
         files.of_id.insert("2a3b4c5d6e7f".into(), "c1.md".into());
         files.of_id.insert("3b4c5d6e7f8g".into(), "c2.md".into());
         (r, files)
@@ -300,7 +300,7 @@ mod tests {
         assert_eq!(
             at,
             [
-                one("a/v.yaml", &[R1]),
+                one("a/v.yaml", &[RECORD]),
                 one("b.md", &["r2.md"]),
                 one("c.md", &["r3.md"]),
                 one("d1.md", &["d2.md"]),
