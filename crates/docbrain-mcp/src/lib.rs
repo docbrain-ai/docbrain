@@ -7,7 +7,7 @@ pub mod backend;
 pub mod http;
 use backend::{ApiPath, ApiRequest, Backend, HttpBackend, Method, is_uuid_shaped};
 
-/// DocBrain MCP Server — exposes documentation intelligence as MCP tools.
+/// DocBrain MCP Server — exposes your team's knowledge as MCP tools.
 ///
 /// Communicates via JSON-RPC over stdio (stdin/stdout), following the
 /// Model Context Protocol specification. Calls the DocBrain API server

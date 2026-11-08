@@ -1,13 +1,14 @@
 site_name: DocBrain Docs
 site_url: https://docbrainapi.com/docs
-site_description: The institutional memory layer — capture what your organization learns at the source, keep it accurate, and cite every claim.
+site_description: "Knowledge that compounds: capture what your organization learns at the source, keep it accurate, and cite every claim."
 repo_url: https://github.com/docbrain-ai/docbrain
 repo_name: docbrain-ai/docbrain
 edit_uri: edit/main/docs/
 
 theme:
   name: material
-  custom_dir: docs/overrides
+  logo: assets/images/jot.svg
+  favicon: assets/images/favicon.png
   palette:
     - scheme: slate
       primary: deep purple
@@ -26,7 +27,6 @@ theme:
     code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
-    logo: docbrain/logo
   features:
     - navigation.instant
     - navigation.tracking

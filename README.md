@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/logo.png" alt="DocBrain" width="520" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/jot-dark.png" />
+    <img src="assets/brand/jot-light.png" alt="DocBrain" width="200" />
+  </picture>
 </p>
 
 <p align="center">

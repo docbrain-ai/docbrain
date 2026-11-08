@@ -14,7 +14,7 @@ NC='\033[0m'
 echo ""
 echo -e "${BLUE}╔══════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║           ${BOLD}DocBrain Setup Wizard${NC}${BLUE}              ║${NC}"
-echo -e "${BLUE}║    AI-Powered Documentation Intelligence     ║${NC}"
+echo -e "${BLUE}║           Knowledge that compounds           ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════╝${NC}"
 echo ""
 
