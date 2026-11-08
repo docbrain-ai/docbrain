@@ -308,7 +308,7 @@ dated to the commit it was observed at.
   written just after the retirement commits, so a crash in that instant leaves the retirement
   without a journal record or event.
 - **Answers:** the monitor watches *stored* claims; the answer-time claim verifier
-  (`RAG_CLAIM_VERIFICATION`) independently checks any path an *answer* cites against the
+  (`RAG_CLAIM_VERIFICATION`, off by default), when turned on, independently checks any path an *answer* cites against the
   same listings. An answer that cites a dead path carries its own correction note, whether
   or not the underlying fragment's premise has been swept yet. An answer's path, never seen
   to exist, is reported only when a connected repository holds its first two folders (three

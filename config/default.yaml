@@ -54,9 +54,10 @@ embeddings:
   # model_id: ~   # defaults to provider-appropriate model
 
 rag:
-  claim_verification: true  # Check file paths an answer cites against ingest-recorded
+  claim_verification: false # Check file paths an answer cites against ingest-recorded
                             # listings before returning it. No LLM call; inert until
-                            # a source records a listing.
+                            # a source records a listing. Off by default since
+                            # 2026-11-08 (#97); RAG_CLAIM_VERIFICATION=true turns it on.
   cache_ttl_hours: 24     # Cache max age in hours; 0 turns the answer cache off.
                           # A cached answer is served only to the exact same question.
   # search_min_score: ~   # Min relevance for search results (default: 0.0)
