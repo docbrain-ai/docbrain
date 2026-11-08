@@ -60,7 +60,7 @@ where
 }
 
 #[derive(Parser)]
-#[command(name = "docbrain", about = "AI-powered documentation intelligence", version = env!("CARGO_PKG_VERSION"))]
+#[command(name = "docbrain", about = "Knowledge that compounds: captures what your team works out and brings it to the next person or agent who needs it", version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     /// API key for authentication.
     /// Precedence: --api-key flag > ~/.docbrain/config.json > DOCBRAIN_API_KEY env

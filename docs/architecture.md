@@ -2,7 +2,7 @@
 
 ## System Overview
 
-DocBrain is a Rust-based documentation intelligence platform that combines RAG (Retrieval-Augmented Generation) with a multi-tier memory system, freshness scoring, intent-adaptive responses, and an autonomous Documentation Autopilot that identifies gaps and generates draft content.
+DocBrain is a Rust-based platform for knowledge that compounds. It combines RAG (Retrieval-Augmented Generation) with a multi-tier memory system, freshness scoring, intent-adaptive responses, and an autonomous Documentation Autopilot that identifies gaps and generates draft content.
 
 ```
 ┌─────────────┐     ┌──────────────────────────┐     ┌───────────────┐
