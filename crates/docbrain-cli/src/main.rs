@@ -9,6 +9,7 @@ use std::path::PathBuf;
 #[macro_use]
 mod redact;
 mod instance_check;
+mod knowledge;
 mod repository;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -365,6 +366,12 @@ enum Commands {
     },
     /// Show CLI and server version, and which instance answers at this URL
     Version,
+    /// Write a record of a decision, fact, procedure or question into .knowledge/ and stage it
+    Record(knowledge::RecordArgs),
+    /// Show the .knowledge/ records that apply to files
+    Context(knowledge::ContextArgs),
+    /// List every record's state, or judge a change with --base
+    Status(knowledge::StatusArgs),
 }
 
 #[derive(Subcommand)]
@@ -3375,7 +3382,7 @@ fn exit_without_values(e: clap::Error, argv: &[std::ffi::OsString]) -> ! {
         text.push_str("\nNode reads --env-file itself; the CLI's file option is --docbrain-env.\n");
     }
     eprint!("{text}");
-    std::process::exit(e.exit_code());
+    std::process::exit(knowledge::usage_exit(argv).unwrap_or_else(|| e.exit_code()));
 }
 
 /// Every word of a command line that is not a value: the flags (long and short, with clap's own
@@ -3530,6 +3537,15 @@ fn main() -> Result<()> {
     let argv: Vec<std::ffi::OsString> = std::env::args_os().collect();
     let cli = parse_cli(argv.clone()).unwrap_or_else(|e| exit_without_values(e, &argv));
 
+    // The `.knowledge/` commands are offline: they run before any file, sign-in or server is read.
+    let command = match cli.command {
+        Commands::Record(args) => std::process::exit(knowledge::run_record(args).code()),
+        Commands::Context(args) => std::process::exit(knowledge::run_context(args).code()),
+        Commands::Status(args) => std::process::exit(knowledge::run_status(args).code()),
+        other => other,
+    };
+    let cli = Cli { command, ..cli };
+
     // After the capture above (and the file may not set those three anyway), and before anything
     // else reads the environment: the HTTP clients read the proxy variables when they are built.
     // No `.env` is read unless named here (#603).
@@ -3607,6 +3623,9 @@ async fn run(cli: Cli, shell: &'static ShellIdentityEnv) -> Result<()> {
     };
 
     match cli.command {
+        Commands::Record(_) | Commands::Context(_) | Commands::Status(_) => {
+            anyhow::bail!("the .knowledge/ commands run before the server is resolved")
+        }
         Commands::Login { server, email, github, gitlab, oidc } => {
             let p = profile.as_ref();
             // Held for the whole login, taken before any credential is sent: if the config

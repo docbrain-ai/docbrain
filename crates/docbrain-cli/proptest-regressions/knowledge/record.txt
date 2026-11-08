@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 849f5deda48280c1ca19e3c0f8418d632abc47a33174966ae160cc367a296b80 # shrinks to d = Draft { kind: Decision, title: "'", applies_to: [], checks: [], supersedes: None, body: "'\n" }, nested = false

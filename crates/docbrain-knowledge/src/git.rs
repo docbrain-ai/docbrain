@@ -9,6 +9,7 @@
 
 use std::cell::{OnceCell, RefCell};
 use std::collections::{BTreeMap, HashMap};
+use std::ffi::OsString;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Output, Stdio};
@@ -51,15 +52,44 @@ impl From<GitError> for TreeError {
     }
 }
 
+/// `s` between double quotes, `"` and `\\` escaped and control characters in octal: one string, as git reads a
+/// quoted entry.
+fn c_quoted(s: &str) -> String {
+    let mut q = String::with_capacity(s.len() + 2);
+    q.push('"');
+    for c in s.chars() {
+        match c {
+            '"' | '\\' => {
+                q.push('\\');
+                q.push(c);
+            }
+            c if c.is_ascii_control() => q.push_str(&format!("\\{:03o}", c as u32)),
+            c => q.push(c),
+        }
+    }
+    q.push('"');
+    q
+}
+
 fn failed(args: &[&str], stderr: &[u8]) -> GitError {
     GitError::Git { command: format!("git {}", args.join(" ")), stderr: String::from_utf8_lossy(stderr).trim().to_owned() }
 }
 
 /// A repository, found from a directory as git finds it.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GitRepo {
     git_dir: PathBuf,
     cwd: PathBuf,
+    /// Added to every git command this repository and its trees run (an object overlay).
+    envs: Vec<(OsString, OsString)>,
+}
+
+/// Names the repository and leaves out the environment its commands carry: an environment is where a caller's
+/// secrets travel, so `Debug` never prints one.
+impl std::fmt::Debug for GitRepo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GitRepo").field("git_dir", &self.git_dir).field("cwd", &self.cwd).finish_non_exhaustive()
+    }
 }
 
 impl GitRepo {
@@ -75,14 +105,41 @@ impl GitRepo {
             });
         }
         let dir = String::from_utf8(out.stdout).map_err(|_| failed(&args, b"the git directory is not UTF-8"))?;
-        Ok(GitRepo { git_dir: PathBuf::from(dir.trim_end_matches('\n')), cwd: start.to_owned() })
+        Ok(GitRepo { git_dir: PathBuf::from(dir.trim_end_matches('\n')), cwd: start.to_owned(), envs: Vec::new() })
     }
 
     /// `git` pinned to this repository: messages in English, no pager, no replace objects.
     fn git(&self) -> Command {
         let mut c = Command::new("git");
-        c.current_dir(&self.cwd).env("GIT_DIR", &self.git_dir).env("LC_ALL", "C").args(["--no-pager", "--no-replace-objects"]).stdin(Stdio::null());
+        c.current_dir(&self.cwd).env("GIT_DIR", &self.git_dir).env("LC_ALL", "C").envs(self.envs.iter().map(|(k, v)| (k, v)));
+        c.args(["--no-pager", "--no-replace-objects"]).stdin(Stdio::null());
         c
+    }
+
+    /// This repository with `objects` as the object directory new objects go to, the repository's own objects
+    /// read through it as an alternate: what is written there stays out of the repository.
+    pub fn with_object_overlay(&self, objects: &Path) -> Result<GitRepo, GitError> {
+        let mut repo = self.clone();
+        repo.envs.extend(self.object_overlay_env(objects)?);
+        Ok(repo)
+    }
+
+    /// The variables `with_object_overlay` sets, for a git command run outside this type. git splits the
+    /// alternates at `:` (`;` on Windows) unless an entry is C-quoted, so the repository's own object directory is
+    /// passed quoted.
+    pub fn object_overlay_env(&self, objects: &Path) -> Result<[(OsString, OsString); 2], GitError> {
+        let args = ["rev-parse", "--git-path", "objects"];
+        let out = self.run(&args)?;
+        if !out.status.success() {
+            return Err(failed(&args, &out.stderr));
+        }
+        let own = String::from_utf8(out.stdout).map_err(|_| failed(&args, b"the object directory is not UTF-8"))?;
+        let own = self.cwd.join(own.trim_end_matches('\n'));
+        let alternate = match own.to_str() {
+            Some(path) => c_quoted(path).into(),
+            None => own.into_os_string(),
+        };
+        Ok([("GIT_OBJECT_DIRECTORY".into(), objects.as_os_str().to_owned()), ("GIT_ALTERNATE_OBJECT_DIRECTORIES".into(), alternate)])
     }
 
     fn run(&self, args: &[&str]) -> Result<Output, GitError> {
@@ -124,7 +181,20 @@ impl GitRepo {
     /// The tree of `commit`, read lazily.
     pub fn commit_tree(&self, commit: &Oid) -> Result<CommitTree, GitError> {
         let root = self.peel(&format!("{commit}^{{commit}}^{{tree}}"), commit.as_str())?;
-        Ok(CommitTree {
+        Ok(self.tree_at(root))
+    }
+
+    /// The tree object `tree`, read lazily; `NotFound` when `tree` names no tree (a commit's id included).
+    pub fn tree(&self, tree: &Oid) -> Result<CommitTree, GitError> {
+        let root = self.peel(&format!("{tree}^{{tree}}"), tree.as_str())?;
+        if root != *tree {
+            return Err(GitError::NotFound(tree.as_str().to_owned()));
+        }
+        Ok(self.tree_at(root))
+    }
+
+    fn tree_at(&self, root: Oid) -> CommitTree {
+        CommitTree {
             repo: self.clone(),
             raw_len: root.as_str().len() / 2,
             root,
@@ -132,7 +202,7 @@ impl GitRepo {
             check: RefCell::new(None),
             trees: RefCell::new(HashMap::new()),
             promisors: OnceCell::new(),
-        })
+        }
     }
 
     /// Every path added, deleted, modified or changed in mode between the trees of `b` and `h`; a move is its
@@ -237,47 +307,62 @@ impl CommitTree {
         }
     }
 
+    /// Whether this is a partial clone: one with a promisor remote.
+    fn partial(&self) -> bool {
+        !self.promisors.get_or_init(|| self.repo.promisor_remotes()).is_empty()
+    }
+
     /// Reads every object of `want` the repository holds into `got`, leaving the absent ones in `want`. A broken
-    /// child is dropped, and the next read starts another.
+    /// child is dropped, and the next read starts another. In a partial clone, a child gone before it answers counts
+    /// the object absent: git before 2.4x dies on an object it may not fetch, where later ones answer `missing`.
     fn read_present(&self, want: &mut Vec<Oid>, got: &mut HashMap<Oid, Arc<[u8]>>, kind: &str, cap: u64) -> Result<(), TreeError> {
         let mut slot = self.cat.borrow_mut();
-        if slot.is_none() {
-            *slot = Some(Cat::spawn(&self.repo, "--batch")?);
-        }
-        let Some(cat) = slot.as_mut() else { return Err(cat_error("no child")) };
         let mut absent = Vec::new();
-        let mut read = || {
-            for o in want.drain(..) {
-                match cat.get(&o, cap).map_err(|e| cat_error(&e.to_string()))? {
-                    Some((ty, bytes)) if ty == kind => {
-                        got.insert(o, bytes.into());
-                    }
-                    Some((ty, _)) => return Err(cat_error(&format!("{o} is a {ty}, not a {kind}"))),
-                    None => absent.push(o),
+        for o in std::mem::take(want) {
+            if slot.is_none() {
+                *slot = Some(Cat::spawn(&self.repo, "--batch")?);
+            }
+            let Some(cat) = slot.as_mut() else { return Err(cat_error("no child")) };
+            match cat.get(&o, cap) {
+                Ok(Some((ty, bytes))) if ty == kind => {
+                    got.insert(o, bytes.into());
+                }
+                Ok(Some((ty, _))) => {
+                    *slot = None;
+                    return Err(cat_error(&format!("{o} is a {ty}, not a {kind}")));
+                }
+                Ok(None) => absent.push(o),
+                Err(e) if e.kind() == io::ErrorKind::BrokenPipe && self.partial() => {
+                    *slot = None;
+                    absent.push(o);
+                }
+                Err(e) => {
+                    *slot = None;
+                    return Err(cat_error(&e.to_string()));
                 }
             }
-            Ok(())
-        };
-        let r = read();
-        if r.is_err() {
-            *slot = None;
         }
         *want = absent;
-        r
+        Ok(())
     }
 
     /// Those of `oids` the repository does not hold, asked without reading any. A broken child is dropped.
     fn absent(&self, oids: &[Oid]) -> io::Result<Vec<Oid>> {
         let mut slot = self.check.borrow_mut();
-        if slot.is_none() {
-            *slot = Some(Cat::spawn(&self.repo, "--batch-check").map_err(|e| io::Error::other(e.to_string()))?);
-        }
-        let Some(check) = slot.as_mut() else { return Err(io::Error::other("no child")) };
         let mut absent = Vec::new();
         for o in oids {
+            if slot.is_none() {
+                *slot = Some(Cat::spawn(&self.repo, "--batch-check").map_err(|e| io::Error::other(e.to_string()))?);
+            }
+            let Some(check) = slot.as_mut() else { return Err(io::Error::other("no child")) };
             match check.held(o) {
                 Ok(true) => {}
                 Ok(false) => absent.push(o.clone()),
+                // Started only in a partial clone, where git before 2.4x dies on an object it may not fetch.
+                Err(e) if e.kind() == io::ErrorKind::BrokenPipe => {
+                    *slot = None;
+                    absent.push(o.clone());
+                }
                 Err(e) => {
                     *slot = None;
                     return Err(e);
@@ -410,6 +495,11 @@ impl Tree for CommitTree {
     }
 }
 
+/// The child exited before it answered. `BrokenPipe`, as a write to it would be: either way the child is gone.
+fn gone() -> io::Error {
+    io::Error::new(io::ErrorKind::BrokenPipe, "git cat-file exited")
+}
+
 /// A `git cat-file --batch` (or `--batch-check`) child that never fetches: one request, one answer.
 struct Cat {
     child: Child,
@@ -435,7 +525,7 @@ impl Cat {
         self.stdin.write_all(format!("{oid}\n").as_bytes())?;
         let mut header = String::new();
         if self.stdout.read_line(&mut header)? == 0 {
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "git cat-file exited"));
+            return Err(gone());
         }
         Ok(header.trim_end() != format!("{oid} missing"))
     }
@@ -446,7 +536,7 @@ impl Cat {
         self.stdin.write_all(format!("{oid}\n").as_bytes())?;
         let mut header = String::new();
         if self.stdout.read_line(&mut header)? == 0 {
-            return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "git cat-file exited"));
+            return Err(gone());
         }
         let mut f = header.trim_end_matches('\n').split(' ');
         let (Some(_), Some(ty), size, None) = (f.next(), f.next(), f.next(), f.next()) else { return Err(bad(&header)) };
@@ -530,6 +620,30 @@ mod tests {
         assert!(check.held(&have).unwrap());
         assert!(!check.held(&missing).unwrap());
         assert!(check.held(&have).unwrap(), "one answer per request");
+    }
+
+    /// `Debug` names the repository and never prints the environment its commands carry.
+    #[test]
+    fn debug_names_the_repository_and_never_its_environment() {
+        let (_d, repo) = init();
+        let mut r = repo.clone();
+        r.envs.push(("GIT_HTTP_EXTRA_HEADER".into(), "Authorization: s3cr3t".into()));
+        let text = format!("{r:?}");
+        assert!(text.contains(&format!("{:?}", r.git_dir)), "{text}");
+        assert!(!text.contains("s3cr3t") && !text.contains("GIT_HTTP_EXTRA_HEADER"), "{text}");
+    }
+
+    /// Outside a partial clone, a reader that dies is an error, never an object reported absent.
+    #[test]
+    fn a_dead_reader_outside_a_partial_clone_is_an_error() {
+        let (d, repo) = init();
+        let mut w = Command::new("git").current_dir(d.path()).args(["hash-object", "-w", "--stdin"]).stdin(Stdio::piped()).stdout(Stdio::piped()).spawn().unwrap();
+        w.stdin.take().unwrap().write_all(b"x").unwrap();
+        let have = Oid::from_hex(String::from_utf8(w.wait_with_output().unwrap().stdout).unwrap().trim()).unwrap();
+        let mut gone = repo.clone();
+        gone.envs.push(("GIT_DIR".into(), d.path().join("no-such-dir").into_os_string()));
+        let e = gone.tree_at(have.clone()).read_many(&[have]).expect_err("an error");
+        assert!(matches!(e, TreeError::Git { .. }), "{e:?}");
     }
 
     #[test]

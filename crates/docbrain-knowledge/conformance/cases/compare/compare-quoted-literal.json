@@ -1,0 +1,50 @@
+{
+  "id": "compare-quoted-literal",
+  "spec": "The record, expectations: one pair of the same quote around a literal is quoting; the text between, spaces kept, one pair only",
+  "op": "status",
+  "tree": {
+    ".knowledge/records/q1.md": "---\nknowledge: 1\nid: 'k3v9q2x7mq01'\nkind: 'fact'\ntitle: 'single-quoted'\nchecks:\n  - config_key: 'Cargo.toml#workspace.package.rust-version'\n    must: '== ''1.97'''\n---\nWhy this value matters.\n",
+    ".knowledge/records/q2.md": "---\nknowledge: 1\nid: 'k3v9q2x7mq02'\nkind: 'fact'\ntitle: 'double-quoted keeps spaces'\nchecks:\n  - config_key: 'v.yaml#pad'\n    must: '== \" a \"'\n---\nWhy this value matters.\n",
+    ".knowledge/records/q3.md": "---\nknowledge: 1\nid: 'k3v9q2x7mq03'\nkind: 'fact'\ntitle: 'quotes inside the other kind'\nchecks:\n  - config_key: 'v.yaml#q'\n    must: '== \"''a''\"'\n---\nWhy this value matters.\n",
+    ".knowledge/records/q4.md": "---\nknowledge: 1\nid: 'k3v9q2x7mq04'\nkind: 'fact'\ntitle: 'one pair only'\nchecks:\n  - config_key: 'v.yaml#q'\n    must: '== ''a'''\n---\nWhy this value matters.\n",
+    "Cargo.toml": "[workspace.package]\nrust-version = \"1.97\"\n",
+    "v.yaml": "pad: ' a '\nq: \"'a'\"\n"
+  },
+  "expect": {
+    "records": {
+      ".knowledge/records/q1.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      ".knowledge/records/q2.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      ".knowledge/records/q3.md": {
+        "state": "holds",
+        "checks": [
+          {
+            "state": "holds"
+          }
+        ]
+      },
+      ".knowledge/records/q4.md": {
+        "state": "broken",
+        "checks": [
+          {
+            "state": "broken",
+            "reason": "false"
+          }
+        ]
+      }
+    }
+  }
+}

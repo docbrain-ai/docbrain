@@ -560,3 +560,106 @@ fn gate_on_commits_equals_memtree() {
         assert_eq!(gate_full(&cb, &ch).map_err(|e| e.to_string()), want, "{id}");
     }
 }
+
+/// Every file under `dir`, sorted.
+fn files_under(dir: &Path) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    walk(dir, &mut out);
+    out.sort();
+    out
+}
+
+#[test]
+fn tree_by_id_reads_a_written_tree() {
+    let r = Repo::new();
+    std::fs::write(r.path().join("a.yaml"), "x: 1\n").unwrap();
+    git(r.path(), &["add", "a.yaml"]);
+    let t = Oid::from_hex(git(r.path(), &["write-tree"]).trim()).unwrap();
+    let tree = GitRepo::discover(r.path()).unwrap().tree(&t).unwrap();
+    let e = tree.entry("a.yaml").unwrap().unwrap();
+    assert_eq!(&*tree.read_many(&[e.oid]).unwrap()[0], b"x: 1\n");
+}
+
+#[test]
+fn tree_by_id_refuses_a_commit_id() {
+    let mut t = MemTree::new();
+    t.file("a.yaml", "x: 1\n");
+    let mut r = Repo::new();
+    let c = r.commit(&t, &[]);
+    let o = r.import();
+    match GitRepo::discover(r.path()).unwrap().tree(&o[&c]) {
+        Err(GitError::NotFound(name)) => assert_eq!(name, o[&c].as_str()),
+        other => panic!("{:?}", other.map(|_| ())),
+    }
+}
+
+#[test]
+fn overlay_reads_objects_written_only_there() {
+    let mut t = MemTree::new();
+    t.file("a.yaml", "x: 1\n");
+    let mut r = Repo::new();
+    r.commit(&t, &[]);
+    r.import();
+    let before = files_under(&r.path().join(".git/objects"));
+    let overlay = tempfile::tempdir().unwrap();
+    let objects = r.path().join(".git/objects");
+    let env = [("GIT_OBJECT_DIRECTORY", overlay.path().to_str().unwrap()), ("GIT_ALTERNATE_OBJECT_DIRECTORIES", objects.to_str().unwrap())];
+    let mut w = Command::new("git")
+        .current_dir(r.path())
+        .args(["hash-object", "-w", "--stdin"])
+        .envs(env)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    w.stdin.take().unwrap().write_all(b"only in the overlay\n").unwrap();
+    let blob = String::from_utf8(w.wait_with_output().unwrap().stdout).unwrap().trim().to_owned();
+    let mut m = Command::new("git").current_dir(r.path()).args(["mktree"]).envs(env).stdin(Stdio::piped()).stdout(Stdio::piped()).spawn().unwrap();
+    m.stdin.take().unwrap().write_all(format!("100644 blob {blob}\tnew.txt\n").as_bytes()).unwrap();
+    let tree = Oid::from_hex(String::from_utf8(m.wait_with_output().unwrap().stdout).unwrap().trim()).unwrap();
+
+    let repo = GitRepo::discover(r.path()).unwrap();
+    assert!(matches!(repo.tree(&tree), Err(GitError::NotFound(_) | GitError::MissingObject(_))), "the repository alone does not hold it");
+    let seen = repo.with_object_overlay(overlay.path()).unwrap().tree(&tree).unwrap();
+    let e = seen.entry("new.txt").unwrap().unwrap();
+    assert_eq!(&*seen.read_many(&[e.oid]).unwrap()[0], b"only in the overlay\n");
+    assert_eq!(files_under(&objects), before, "nothing was written to the repository's objects");
+}
+
+#[test]
+fn overlay_still_reads_the_repository() {
+    let mut t = MemTree::new();
+    t.file("a.yaml", "x: 1\n");
+    t.file("d/b.md", "b\n");
+    let mut r = Repo::new();
+    let c = r.commit(&t, &[]);
+    let o = r.import();
+    let repo = GitRepo::discover(r.path()).unwrap();
+    let overlay = tempfile::tempdir().unwrap();
+    let plain = repo.commit_tree(&o[&c]).unwrap();
+    let through = repo.with_object_overlay(overlay.path()).unwrap().commit_tree(&o[&c]).unwrap();
+    assert_eq!(shape(through.list("").unwrap()), shape(plain.list("").unwrap()));
+    let e = through.entry("d/b.md").unwrap().unwrap();
+    assert_eq!(&*through.read_many(&[e.oid]).unwrap()[0], b"b\n");
+    assert!(files_under(overlay.path()).is_empty(), "a read writes nothing to the overlay");
+}
+
+/// `:` separates alternates (`;` on Windows), a leading `"` quotes one: a repository whose path holds them is still
+/// read through the overlay.
+#[cfg(unix)]
+#[test]
+fn overlay_reads_a_repository_whose_path_holds_separators() {
+    let scratch = tempfile::tempdir().unwrap();
+    let dir = scratch.path().join("a:b;c\"d\\e");
+    std::fs::create_dir(&dir).unwrap();
+    git(&dir, &["init", "-q"]);
+    std::fs::write(dir.join("a.yaml"), "x: 1\n").unwrap();
+    git(&dir, &["add", "a.yaml"]);
+    git(&dir, &["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "first"]);
+    let repo = GitRepo::discover(&dir).unwrap();
+    let head = repo.resolve_commit("HEAD").unwrap();
+    let overlay = tempfile::tempdir().unwrap();
+    let through = repo.with_object_overlay(overlay.path()).unwrap().commit_tree(&head).unwrap();
+    let e = through.entry("a.yaml").unwrap().unwrap();
+    assert_eq!(&*through.read_many(&[e.oid]).unwrap()[0], b"x: 1\n");
+}

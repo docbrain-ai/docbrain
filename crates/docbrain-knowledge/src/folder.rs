@@ -66,7 +66,7 @@ const RECORDS: &str = ".knowledge/records";
 
 /// The scope of the folder an entry belongs to: the directory before the first `.knowledge/records/` on
 /// its path, `""` at the root. `None` when the path lies in no folder's records.
-pub(crate) fn scope_of(path: &str) -> Option<&str> {
+pub fn scope_of(path: &str) -> Option<&str> {
     let mut start = 0;
     loop {
         let rest = path.get(start..)?;

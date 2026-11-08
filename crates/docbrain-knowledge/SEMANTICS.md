@@ -249,7 +249,9 @@ check's unknown key is named `checks[<i>].<key>`, counting checks from 0.
 **Expectations.** A verb's value is read as: `exist`, exactly; else an op (`==`, `!=`, `>=`, `>`, `<=`,
 `<`, the longest that matches) followed by a literal, the rest of the value with spaces and tabs trimmed
 from both ends (an empty literal is a literal); an op followed at once by another `=`, `!`, `<` or `>` is
-not an op. Anything else is an unknown op, judged `unverifiable: unknown`; the record stays valid. On `path`
+not an op. A literal that starts and ends with the same quote, `'` or `"`, is the text between that one pair,
+spaces kept and nothing unescaped: `== '1.97'`, `== "1.97"` and `== 1.97` are one expectation, and `== "'a'"`
+is the text `'a'` with its quotes. Anything else is an unknown op, judged `unverifiable: unknown`; the record stays valid. On `path`
 and `code` the only expectation is `exist`: a known op there is `unverifiable: not-comparable`.
 
 **Key paths.** A key path is segments separated by `.`. A segment is a bare key (any run of characters other

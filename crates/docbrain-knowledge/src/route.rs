@@ -25,10 +25,15 @@ pub struct ContextReport {
 /// The records from every folder on each path's way up whose `applies_to` matches one of `paths`, evaluated,
 /// ordered (`SEMANTICS.md` §Routing), the first `cap` kept.
 pub fn context(tree: &dyn Tree, paths: &[String], cap: usize) -> Result<ContextReport, TreeError> {
+    context_with_files(tree, paths, cap).map(|(report, _)| report)
+}
+
+/// [`context`], with the file of each kept record, in the order of `report.records`.
+pub fn context_with_files(tree: &dyn Tree, paths: &[String], cap: usize) -> Result<(ContextReport, Vec<RecordFile>), TreeError> {
     context_within(tree, paths, cap, RECORDS_PER_PASS)
 }
 
-fn context_within(tree: &dyn Tree, paths: &[String], cap: usize, budget: usize) -> Result<ContextReport, TreeError> {
+fn context_within(tree: &dyn Tree, paths: &[String], cap: usize, budget: usize) -> Result<(ContextReport, Vec<RecordFile>), TreeError> {
     let folders = load_folders(tree, &folder_scopes_above(tree, paths)?, budget)?;
     let mut cache = FileCache::default();
     let mut sorted = paths.to_vec();
@@ -42,16 +47,14 @@ fn context_within(tree: &dyn Tree, paths: &[String], cap: usize, budget: usize) 
             let Some(rank) = route(r, &sorted) else { continue };
             let status = record_status(tree, r, &mut cache)?;
             let calm = !matches!(status.state, RecordState::Broken | RecordState::Stale);
-            routed.push((Rank { calm, depth: Reverse(depth), ..rank }, status));
+            routed.push((Rank { calm, depth: Reverse(depth), ..rank }, status, r));
         }
     }
-    routed.sort_by(|(a, x), (b, y)| order(a, x, b, y));
+    routed.sort_by(|(a, x, _), (b, y, _)| order(a, x, b, y));
     let hidden = routed.split_off(cap.min(routed.len()));
-    Ok(ContextReport {
-        records: routed.into_iter().map(|(_, s)| s).collect(),
-        more: hidden.len(),
-        more_broken_or_stale: hidden.iter().filter(|(r, _)| !r.calm).count(),
-    })
+    let (records, files) = routed.into_iter().map(|(_, s, r)| (s, r.clone())).unzip();
+    let report = ContextReport { records, more: hidden.len(), more_broken_or_stale: hidden.iter().filter(|(r, _, _)| !r.calm).count() };
+    Ok((report, files))
 }
 
 /// The keys of `SEMANTICS.md` §Routing that come before title and id, each ascending.
@@ -184,7 +187,7 @@ mod tests {
         for (dir, n) in [("", 1), ("", 2), ("svc/", 3), ("svc/", 4)] {
             t.file(&format!("{dir}{R}{n}.md"), rec(&id(n), "fact", "t", &applies(&["**"])));
         }
-        let r = context_within(&t, &paths(&["svc/x.rs"]), CONTEXT_CAP, 3).unwrap();
+        let (r, _) = context_within(&t, &paths(&["svc/x.rs"]), CONTEXT_CAP, 3).unwrap();
         assert_eq!(ids(&r), [id(3), id(1), id(2)]);
     }
 
@@ -359,5 +362,22 @@ mod tests {
         let r = context(&s, &ps, CONTEXT_CAP).unwrap();
         assert_eq!((r.records.len(), r.more, r.more_broken_or_stale), (20, 10, 0));
         assert_eq!(*s.reads.borrow(), vec![30, 1]);
+    }
+
+    #[test]
+    fn context_with_files_pairs_each_status_with_its_file() {
+        // Records in three folders, routed out of byte order, so a pairing by position in the folder fails.
+        let mut t = MemTree::new();
+        for n in 0..25 {
+            let folder = ["", "svc/", "svc/src/"][n % 3];
+            t.file(&format!("{folder}{R}{n:02}.md"), rec(&id(n), ["fact", "decision"][n % 2], &format!("t{}", 25 - n), &applies(&["**"])));
+        }
+        let (r, files) = context_with_files(&t, &paths(&[P]), CONTEXT_CAP).unwrap();
+        assert_eq!((r.records.len(), files.len(), r.more), (20, 20, 5));
+        for (s, f) in r.records.iter().zip(&files) {
+            assert_eq!(s.path, f.path);
+            assert!(matches!(&f.parsed, Parsed::Valid(rec) if Some(rec.id) == s.id), "{f:?}");
+        }
+        assert_eq!(context(&t, &paths(&[P]), CONTEXT_CAP).unwrap(), r);
     }
 }

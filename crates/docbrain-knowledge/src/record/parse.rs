@@ -182,7 +182,7 @@ fn read(scope: &str, bytes: &[u8]) -> Res<Parsed> {
     }
     let (applies_to, applies_written) = match &applies {
         Some(list) => (list.iter().map(|&(s, p)| rel(scope, s, p)).collect::<Res<_>>()?, true),
-        None => (default_applies(scope, &checks), false),
+        None => (default_applies_to(scope, &checks), false),
     };
     unknown.sort_by_key(|(p, _)| *p);
     Ok(Parsed::Valid(Record {
@@ -397,9 +397,10 @@ fn glob_dir(file: &str) -> bool {
     dirs.contains(['*', '?']) || last == "**"
 }
 
-/// each `path` anchor's path (and `<path>/**` when literal), each `config_key` layer's file, each
-/// `code` file, once each in check order; the whole folder when that names nothing.
-fn default_applies(scope: &str, checks: &[Check]) -> Vec<RepoGlob> {
+/// The default `applies_to` (`SEMANTICS.md` §The record, Default `applies_to`): each `path` anchor's path (and
+/// `<path>/**` when literal), each `config_key` layer's file, each `code` file, once each in check order; the
+/// whole folder when that names nothing.
+pub fn default_applies_to(scope: &str, checks: &[Check]) -> Vec<RepoGlob> {
     let mut out: Vec<RepoGlob> = Vec::new();
     {
         let mut push = |g: RepoGlob| {
@@ -859,6 +860,44 @@ through a new decision that supersedes this one.
         ] {
             let r = valid(&swap("must: '>= 2'", &format!("must: '{e}'")));
             assert_eq!(r.checks[0].expect, want, "{e:?}");
+        }
+    }
+
+    /// `SEMANTICS.md` §The record, expectations: one pair of the same quote around a literal is quoting; the text
+    /// between is the literal, spaces and all, and nothing inside is unescaped.
+    #[test]
+    fn a_quoted_literal_is_the_text_between_one_pair_of_quotes() {
+        for (e, literal) in [
+            ("== '1.97'", "1.97"),
+            ("== \"1.97\"", "1.97"),
+            ("!=  ' a b '  ", " a b "),
+            ("== ''", ""),
+            ("== \"\"", ""),
+            ("== ''a''", "'a'"),
+            ("== \"'a'\"", "'a'"),
+            ("== 'it's'", "it's"),
+            ("== \"a\\\"b\"", "a\\\"b"),
+            ("== '", "'"),
+            ("== 'a\"", "'a\""),
+            ("== a'", "a'"),
+            (">= 'v3.10'", "v3.10"),
+        ] {
+            let r = valid(&swap("must: '>= 2'", &format!("must: '{}'", e.replace('\'', "''"))));
+            let Expectation::Compare { literal: got, .. } = &r.checks[0].expect else { panic!("{e:?}: {:?}", r.checks[0].expect) };
+            assert_eq!(got, literal, "{e:?}");
+        }
+    }
+
+    proptest! {
+        /// What an expectation shows reads back as the same expectation: a literal a bare form would change is
+        /// shown quoted.
+        #[test]
+        fn an_expectation_reads_back_from_what_it_shows(
+            op in prop::sample::select(vec![Op::Eq, Op::Ne, Op::Ge, Op::Le, Op::Gt, Op::Lt]),
+            literal in "[ \t'\"a=<.]{0,6}",
+        ) {
+            let e = Expectation::Compare { op, literal };
+            prop_assert_eq!(Expectation::parse(&e.to_string()), e);
         }
     }
 

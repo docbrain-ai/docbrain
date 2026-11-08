@@ -1,0 +1,43 @@
+# cli-coverage.tsv: for every line of docbrain-knowledge's conformance/coverage.tsv whose cover names `cli`, the
+# tests of this crate that prove the CLI's part. Columns: ref (as coverage.tsv keys it), cover. A cover token is
+# `<file>::<fn>`, a test of this crate (file from the crate root), or `later:<plan>`, a duty a later part of the CLI
+# carries: `hook` (the per-edit hook), `mcp` (the MCP tools), `job` (the CI job). tests/knowledge_coverage.rs keeps
+# this map honest.
+ref	cover
+Surfaces: README	tests/knowledge_record.rs::the_readme_is_created_once_at_the_root tests/knowledge_record.rs::first_use_with_a_nested_folder_still_writes_the_root_readme tests/knowledge_record.rs::a_root_folder_without_a_readme_is_left_so
+Surfaces: record stages	tests/knowledge_record.rs::record_stages_the_file_it_writes tests/knowledge_record.rs::unrelated_unstaged_changes_stay_unstaged tests/knowledge_record.rs::a_locked_index_says_written_not_staged
+The record: newer schema	tests/knowledge_status.rs::newer_schema_record_shows_title_and_kind tests/knowledge_gate.rs::c18_a_record_moved_to_a_newer_schema_is_changed
+Surfaces: H	src/knowledge/worktree.rs::matches_git_itself src/knowledge/worktree.rs::the_repository_is_unchanged src/knowledge/trees.rs::rev_form_reads_that_commit src/knowledge/trees.rs::worktree_changed_paths_include_unstaged_and_exclude_untracked
+Surfaces: B	src/knowledge/trees.rs::base_is_the_merge_base_with_rev src/knowledge/trees.rs::several_merge_bases_exit_3 tests/knowledge_gate.rs::c25_several_merge_bases_exit_3
+The gate: in practice, new unverifiable	tests/knowledge_gate.rs::c14_a_new_must_that_cannot_be_judged_is_a_knowledge_change src/knowledge/record.rs::a_new_must_that_cannot_be_judged_is_refused
+Surfaces: output	src/knowledge/gate.rs::ten_findings_are_shown_and_every_knowledge_change tests/knowledge_status.rs::json_shape tests/knowledge_context.rs::json_shape src/knowledge/sarif.rs::rule_ids_and_levels tests/knowledge_gate.rs::sarif_two_runs_are_byte_identical
+Surfaces: exit	tests/knowledge_status.rs::fail_on_broken_without_base_exits_2 tests/knowledge_gate.rs::c27_a_pathspec_limits_what_fails tests/knowledge_cli.rs::usage_errors_exit_3 src/knowledge/trees.rs::blobless_clone_offline_exits_3 tests/knowledge_gate.rs::c25_several_merge_bases_exit_3 tests/knowledge_gate.rs::c26_a_shallow_clone_without_the_base_exits_3_with_the_fetch_hint tests/knowledge_status.rs::an_exceeded_bound_is_never_an_exit_code
+Surfaces: framing	src/knowledge/frame.rs::token_is_16_hex_and_new_each_time src/knowledge/frame.rs::no_quoted_line_starts_at_column_zero src/knowledge/frame.rs::a_body_cannot_close_the_frame src/knowledge/frame.rs::controls_are_escaped tests/knowledge_context.rs::the_text_and_its_frame tests/knowledge_gate.rs::c22_prompt_injection_in_a_proposed_record_stays_quoted
+Surfaces: record refuses	src/knowledge/record.rs::hidden_text_in_title_or_body_is_refused_with_position
+Surfaces: not reviewed	tests/knowledge_context.rs::not_reviewed_and_unknown_labels src/knowledge/trees.rs::review_marks_records_added_since_origin_head src/knowledge/trees.rs::a_base_alone_names_the_reviewed_base later:job
+Surfaces: writes	src/knowledge/record.rs::paths_the_format_forbids_are_refused src/knowledge/record.rs::folder_must_be_an_ancestor src/knowledge/paths.rs::under_dot_git_is_refused tests/knowledge_record.rs::a_symbolic_link_on_the_way_is_never_written_through
+Bounds: records per pass	src/knowledge/status.rs::over_bound_is_one_line_per_folder
+Surfaces: hook	src/knowledge/context.rs::brief_never_exceeds_4096_bytes later:hook
+Edge case 21	tests/knowledge_status.rs::newer_schema_record_shows_title_and_kind tests/knowledge_gate.rs::c18_a_record_moved_to_a_newer_schema_is_changed
+Edge case 26	src/knowledge/record.rs::round_trip src/knowledge/record.rs::a_draft_that_reads_back_differently_is_caught
+Edge case 27	src/knowledge/record.rs::a_body_over_64_kib_is_refused tests/knowledge_context.rs::a_large_body_shows_its_first_paragraph_and_path
+Edge case 28	src/knowledge/record.rs::an_empty_body_is_refused tests/knowledge_record.rs::an_empty_editor_result_is_refused
+Edge case 31	src/knowledge/record.rs::hidden_text_in_title_or_body_is_refused_with_position src/knowledge/frame.rs::controls_are_escaped
+Edge case 33	src/knowledge/record.rs::crlf_and_bom_become_lf tests/knowledge_record.rs::the_bytes_are_lf_without_bom
+Edge case 35	tests/knowledge_gate.rs::c29_five_hundred_records_added_are_all_listed
+Edge case 38	src/knowledge/record.rs::paths_the_format_forbids_are_refused src/knowledge/paths.rs::under_dot_git_is_refused src/knowledge/paths.rs::dotdot_escaping_is_outside src/knowledge/record.rs::applies_to_is_written_out
+Edge case 43	src/knowledge/record.rs::untracked_anchor_is_refused_as_not_tracked tests/knowledge_status.rs::untracked_anchor_reads_not_tracked
+Edge case 45	src/knowledge/record.rs::lfs_pointer_anchor_is_refused src/knowledge/worktree.rs::no_lfs_needed
+Edge case 51	tests/knowledge_gate.rs::c14_a_new_must_that_cannot_be_judged_is_a_knowledge_change src/knowledge/record.rs::a_new_must_that_cannot_be_judged_is_refused
+Edge case 61	src/knowledge/record.rs::number_or_version_carries_its_hint
+Edge case 71	tests/knowledge_gate.rs::c26_a_shallow_clone_without_the_base_exits_3_with_the_fetch_hint src/knowledge/trees.rs::base_missing_from_a_shallow_clone_exits_3
+Edge case 72	tests/knowledge_gate.rs::c25_several_merge_bases_exit_3 tests/knowledge_gate.rs::c30_the_merge_commit_form_judges_what_the_branch_did later:job
+Edge case 78	src/knowledge/worktree.rs::matches_git_itself src/knowledge/worktree.rs::reads_go_through_the_view
+Edge case 79	src/knowledge/trees.rs::blobless_clone_offline_exits_3
+Edge case 80	tests/knowledge_context.rs::five_thousand_paths
+Edge case 81	src/knowledge/status.rs::over_bound_is_one_line_per_folder
+Edge case 82	tests/knowledge_status.rs::a_record_in_a_subdirectory_of_records_is_read src/knowledge/readme.rs::the_readme_says_how_to_split_a_folder_and_keep_records_out_of_packages
+Edge case 83	later:hook
+Edge case 84	tests/knowledge_cli.rs::never_opens_a_socket tests/knowledge_gate.rs::c24_a_fork_with_no_secrets_and_no_network_gets_the_same_result
+Edge case 86	src/knowledge/readme.rs::the_readme_says_how_to_split_a_folder_and_keep_records_out_of_packages
+Edge case 87	src/knowledge/status.rs::folder_wide_records_are_named src/knowledge/context.rs::overflow_counts_hidden_broken_or_stale tests/knowledge_context.rs::all_lifts_the_cap

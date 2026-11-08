@@ -35,6 +35,18 @@ docbrain-evidence = { path = "../docbrain-evidence", version = "1.5" }
 # computed CLI-side rather than pulled from the crate's hash module.
 sha2 = "0.10"
 hex = "0.4"
+# `record`, `context` and `status` (the `.knowledge/` folder): every meaning, from parsing a record to the
+# two-rule gate, is this crate's; the CLI adds the trees judged, the output and the exit codes.
+docbrain-knowledge = { path = "../docbrain-knowledge", version = "1.6" }
+# The working-tree view's copy of the index and its object directory; also the scratch HOME and checkouts of the
+# binary tests.
+tempfile = "3"
+# The frame's token: 16 hex characters from the operating system's random source.
+getrandom = "0.3"
+# `record` warns on an email address or a handle in a record's title or body.
+regex = "1"
+# `record` ignores Ctrl-C while the editor runs, as git does, so the editor decides what an interrupt means.
+libc = "0.2"
 
 # The auditor-facing offline verifier — thin: read file → `verify_bundle` →
 # print human/JSON report → exit 0/1/2/3. No server, no network, no config.
@@ -44,7 +56,7 @@ path = "src/bin/docbrain_verify.rs"
 
 
 [dev-dependencies]
-# Scratch HOME and checkouts for the check-claims binary tests.
-tempfile = "3"
 # The TLS stub of the CA-file sentinel (#603); already in the build through reqwest.
 native-tls = "0.2"
+# The frame's property test: no record text reaches column 0 between the frame lines.
+proptest = "1"

@@ -10,7 +10,7 @@ use std::fmt;
 
 pub use id::Id;
 pub use keypath::{KeyPath, Seg, parse_key_path};
-pub use parse::parse_record;
+pub use parse::{default_applies_to, parse_record};
 pub use render::{Draft, DraftAnchor, DraftCheck, render};
 
 use crate::path::RepoGlob;
@@ -119,7 +119,8 @@ pub enum Expectation {
 
 impl Expectation {
     /// `exist` exactly; else an op at the start, not followed by another of `=`, `!`, `<`, `>`, with the
-    /// rest, spaces and tabs around it removed, as the literal; else unknown.
+    /// rest, spaces and tabs around it removed, as the literal, and one pair of the same quote around that
+    /// removed too; else unknown.
     pub fn parse(s: &str) -> Expectation {
         if s == "exist" {
             return Expectation::Exist;
@@ -129,10 +130,19 @@ impl Expectation {
                 if rest.starts_with(['=', '!', '<', '>']) {
                     break;
                 }
-                return Expectation::Compare { op, literal: rest.trim_matches([' ', '\t']).to_owned() };
+                return Expectation::Compare { op, literal: unquote(rest.trim_matches([' ', '\t'])).to_owned() };
             }
         }
         Expectation::Unknown(s.to_owned())
+    }
+}
+
+/// `s` without one pair of the same quote, `'` or `"`, around it; nothing inside is unescaped (`SEMANTICS.md`
+/// §The record, expectations).
+fn unquote(s: &str) -> &str {
+    match s.as_bytes() {
+        [q @ (b'\'' | b'"'), .., last] if last == q => &s[1..s.len() - 1],
+        _ => s,
     }
 }
 
@@ -140,6 +150,12 @@ impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expectation::Exist => f.write_str("exist"),
+            // Quoted when the bare text would read back as another literal: spaces at an end, or a pair of quotes.
+            Expectation::Compare { op, literal }
+                if literal.trim_matches([' ', '\t']) != literal.as_str() || unquote(literal) != literal.as_str() =>
+            {
+                write!(f, "{op} '{literal}'")
+            }
             Expectation::Compare { op, literal } => write!(f, "{op} {literal}"),
             Expectation::Unknown(s) => f.write_str(s),
         }
