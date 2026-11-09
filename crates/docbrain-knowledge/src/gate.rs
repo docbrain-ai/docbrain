@@ -51,6 +51,21 @@ pub struct Finding {
     pub reasons: Vec<String>,
     /// For a check whose file is missing at H: the file the change added with the same content.
     pub same_content: Option<String>,
+    /// Which record file at H each part of the finding's text was read from, so a reader can withhold each part
+    /// read from one that holds a secret shape (`SEMANTICS.md` §Secrets). Not part of the report.
+    #[serde(skip)]
+    pub read_at_head: ReadAtHead,
+}
+
+/// The record files at H a finding's text was read from (`SEMANTICS.md` §Output). The title and first paragraph are
+/// the judging record's: H's, at the finding's `record_path`, under rule 1 and for `stale`; else B's.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ReadAtHead {
+    /// For each reason, in order, the H record file whose text it holds: its own record under rule 1 and for a stale
+    /// note, the record a `changed` detail reads its new value from; `None` for text of B's record alone.
+    pub reasons: Vec<Option<String>>,
+    /// For a `changed` class with an expectation or an anchor, the H record file its new value was read from.
+    pub class: Option<String>,
 }
 
 /// A finding on the change itself, never a record state.
@@ -310,10 +325,14 @@ struct Member<'a> {
     check: &'a Check,
     reason: String,
     missing_file: bool,
+    /// The record file at H whose text the reason holds, if any.
+    quoted: Option<String>,
 }
 
+/// Rule 1's members and the stale notes are H's records and quote them; rule 2's quote B's (`SEMANTICS.md` §Output).
 fn member<'a>(class: Class, l: &Live<'a>, reason: String) -> Member<'a> {
-    Member { class, file: l.file, rec: l.rec, check: l.check(), reason, missing_file: false }
+    let quoted = matches!(class, Class::Broken { rule: 1 } | Class::Stale).then(|| l.file.path.clone());
+    Member { class, file: l.file, rec: l.rec, check: l.check(), reason, missing_file: false, quoted }
 }
 
 /// Both trees, what changed between them, and the folders above the changed paths in each.
@@ -477,9 +496,9 @@ fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: boo
             (CheckState::Holds(_), CheckState::Unverifiable(u)) => member(Class::Broken { rule: 2 }, b, no_longer_checkable(u)),
             (CheckState::Unverifiable(_), CheckState::Unverifiable(_)) => continue,
             _ => {
-                let kind = change_kind(b, pass)?;
+                let (kind, quoted) = change_kind(b, pass)?;
                 let reason = kind.reason();
-                member(Class::Changed(kind), b, reason)
+                Member { quoted, ..member(Class::Changed(kind), b, reason) }
             }
         };
         rule_2.push(x);
@@ -495,44 +514,47 @@ fn judge(pass: &Pass<'_>, in_base: &[Live<'_>], in_head: &[Live<'_>], every: boo
 }
 
 /// What happened to B's record, found by id among H's records that have one (the first live by path,
-/// else the first by path), else at B's path when the record there has no readable id.
-fn change_kind(b: &Live<'_>, pass: &Pass<'_>) -> Result<ChangeKind, TreeError> {
+/// else the first by path), else at B's path when the record there has no readable id; and, for a kind with a
+/// detail, the H record file it reads the new value from.
+fn change_kind(b: &Live<'_>, pass: &Pass<'_>) -> Result<(ChangeKind, Option<String>), TreeError> {
     let all = || pass.head_folders.iter().flat_map(|f| &f.records);
     let mut with_id: Vec<&RecordFile> = all().filter(|r| id_of(&r.parsed) == Some(b.rec.id)).collect();
     with_id.sort_by(|x, y| x.path.cmp(&y.path));
     let live = |r: &&&RecordFile| matches!(r.parsed, Parsed::Valid(_)) && r.superseded_by.is_none();
+    let code = |k: ChangeKind| Ok((k, None));
     let Some(r) = with_id.iter().find(live).or_else(|| with_id.first()) else {
-        return Ok(match all().find(|r| r.path == b.file.path).map(|r| &r.parsed) {
+        return code(match all().find(|r| r.path == b.file.path).map(|r| &r.parsed) {
             Some(Parsed::Invalid { .. }) => ChangeKind::Invalid,
             Some(Parsed::Newer { id: None, .. }) => ChangeKind::NewerSchema,
             _ => ChangeKind::RecordRemoved,
         });
     };
     if r.superseded_by.is_some() {
-        return Ok(ChangeKind::Superseded);
+        return code(ChangeKind::Superseded);
     }
     let rec = match &r.parsed {
         Parsed::Valid(rec) => rec,
-        Parsed::Newer { .. } => return Ok(ChangeKind::NewerSchema),
-        Parsed::Invalid { .. } => return Ok(ChangeKind::Invalid),
+        Parsed::Newer { .. } => return code(ChangeKind::NewerSchema),
+        Parsed::Invalid { .. } => return code(ChangeKind::Invalid),
     };
+    let detail = |k: ChangeKind| Ok((k, Some(r.path.clone())));
     let was = b.check();
     for c in &rec.checks {
         if c.verb != was.verb && same_anchor(c, was, pass.head)? {
-            return Ok(ChangeKind::VerbChanged);
+            return code(ChangeKind::VerbChanged);
         }
     }
     for c in &rec.checks {
         if c.expect != was.expect && same_anchor(c, was, pass.head)? {
-            return Ok(ChangeKind::ExpectationChanged { from: was.expect.to_string(), to: c.expect.to_string() });
+            return detail(ChangeKind::ExpectationChanged { from: was.expect.to_string(), to: c.expect.to_string() });
         }
     }
     for c in &rec.checks {
         if let Some(at) = positions(c, was).and_then(|pairs| pairs.iter().position(|(x, y)| x.root != y.root)) {
-            return Ok(ChangeKind::AnchorMoved { from: place(was, at), to: place(c, at) });
+            return detail(ChangeKind::AnchorMoved { from: place(was, at), to: place(c, at) });
         }
     }
-    Ok(ChangeKind::CheckRemoved)
+    code(ChangeKind::CheckRemoved)
 }
 
 /// The regular files the change added, with their oids, in byte order of path.
@@ -579,13 +601,16 @@ fn group<'a>(pass: &Pass<'_>, members: impl Iterator<Item = Member<'a>>, added: 
         if let Some(&i) = at.get(&k) {
             let f = &mut findings[i];
             if m.class.rank() < f.class.rank() {
+                f.read_at_head.class = class_read(&m);
                 (f.class, f.title, f.first_paragraph) = (m.class, m.rec.title.clone(), m.rec.first_paragraph().to_owned());
             }
             f.reasons.push(m.reason);
+            f.read_at_head.reasons.push(m.quoted);
             f.same_content = f.same_content.take().or(same);
             continue;
         }
         at.insert(k, findings.len());
+        let class = class_read(&m);
         findings.push(Finding {
             class: m.class,
             id: m.rec.id,
@@ -595,12 +620,18 @@ fn group<'a>(pass: &Pass<'_>, members: impl Iterator<Item = Member<'a>>, added: 
             first_paragraph: m.rec.first_paragraph().to_owned(),
             reasons: vec![m.reason],
             same_content: same,
+            read_at_head: ReadAtHead { reasons: vec![m.quoted], class },
         });
     }
     findings.sort_by(|x, y| {
         (x.class.rank(), &x.record_path, &x.anchor, x.id).cmp(&(y.class.rank(), &y.record_path, &y.anchor, y.id))
     });
     Ok(findings)
+}
+
+/// The H record file a member's class reads its new value from: a `changed` detail's.
+fn class_read(m: &Member<'_>) -> Option<String> {
+    if matches!(m.class, Class::Changed(_)) { m.quoted.clone() } else { None }
 }
 
 /// Record files added, edited and removed by the change; anchors that followed; new unverifiable musts.
@@ -1219,6 +1250,61 @@ mod tests {
         assert_eq!(run(&b, &h).change_findings, []);
         h.file(&a("c1.md"), c1.replace("More.", "Edited."));
         assert_eq!(run(&b, &h).change_findings, [ChangeFinding::Cycle { ids: vec![id(6), id(7)] }]);
+    }
+
+    #[test]
+    fn a_finding_names_the_head_records_each_part_of_its_text_comes_from() {
+        // `SEMANTICS.md` §Output: rule 1's and the stale notes' text is H's record's, rule 2's is B's, and a
+        // `changed` detail's new value is read from H's record with B's id, wherever it now is.
+        let read = |b: &MemTree, h: &MemTree| -> Vec<(Class, ReadAtHead)> {
+            let r = run(b, h);
+            assert!(r.findings.iter().all(|f| f.read_at_head.reasons.len() == f.reasons.len()), "one per reason");
+            r.findings.into_iter().map(|f| (f.class, f.read_at_head)).collect()
+        };
+        let at = |path: &str, v: &str, cs: &[String]| {
+            tree(&[(path, &rec(1, "decision", &checks(cs))), ("v.yaml", &format!("replicas: {v}\n")), ("w.yaml", "replicas: 3\n")])
+        };
+        let must = |e: &str| key("v.yaml#replicas", "must", e);
+        let assumes = |e: &str| key("v.yaml#replicas", "assumes", e);
+        let from = |reasons: &[Option<&str>], class: Option<&str>| ReadAtHead {
+            reasons: reasons.iter().map(|p| p.map(a)).collect(),
+            class: class.map(a),
+        };
+        let b = at(&a("a.md"), "3", &[must(">= 2")]);
+        let lowered = at(&a("a.md"), "1", &[must(">= 1")]);
+        assert_eq!(read(&b, &lowered), [(Class::Broken { rule: 2 }, from(&[None], None))], "B's text only");
+        let added = at(&a("a.md"), "1", &[must(">= 4")]);
+        assert_eq!(read(&tree(&[("v.yaml", "replicas: 1\n")]), &added), [(Class::Broken { rule: 1 }, from(&[Some("a.md")], None))]);
+        let tightened = read(&b, &at(&a("a.md"), "3", &[must(">= 4")]));
+        let both = from(&[Some("a.md"), Some("a.md")], None);
+        assert_eq!(tightened, [(Class::Broken { rule: 1 }, both)], "rule 1 grouped with B's changed note: H's, both");
+        let held = at(&a("a.md"), "3", &[assumes(">= 3")]);
+        assert_eq!(read(&held, &at(&a("a.md"), "1", &[assumes(">= 3")])), [(Class::Stale, from(&[Some("a.md")], None))]);
+        // B's dropped must and H's stale note on the same record and anchor are one finding, B's by class: each
+        // reason names its own source.
+        let r = run(&b, &at(&a("a.md"), "1", &[must(">= 1"), assumes(">= 3")]));
+        assert_eq!(found(&r), [(Class::Broken { rule: 2 }, a("a.md").as_str(), "v.yaml#replicas")]);
+        assert_eq!(r.findings[0].reasons, ["false: 1, expected >= 2", "false: 1, expected >= 3"]);
+        assert_eq!(r.findings[0].read_at_head, from(&[None, Some("a.md")], None), "the stale note is H's text");
+        // `changed`: a detail is H's text, read from the record wherever it now is; a bare code is not.
+        let kind = ChangeKind::ExpectationChanged { from: ">= 2".into(), to: ">= 1".into() };
+        let relaxed = from(&[Some("a.md")], Some("a.md"));
+        assert_eq!(read(&b, &at(&a("a.md"), "3", &[must(">= 1")])), [(Class::Changed(kind.clone()), relaxed)]);
+        let renamed = from(&[Some("z.md")], Some("z.md"));
+        assert_eq!(read(&b, &at(&a("z.md"), "3", &[must(">= 1")])), [(Class::Changed(kind), renamed)]);
+        let kind = ChangeKind::AnchorMoved { from: "v.yaml#replicas".into(), to: "w.yaml#replicas".into() };
+        let moved = at(&a("a.md"), "3", &[key("w.yaml#replicas", "must", ">= 2")]);
+        assert_eq!(read(&b, &moved), [(Class::Changed(kind), from(&[Some("a.md")], Some("a.md")))]);
+        let verb = at(&a("a.md"), "3", &[assumes(">= 2")]);
+        assert_eq!(read(&b, &verb), [(Class::Changed(ChangeKind::VerbChanged), from(&[None], None))]);
+        let removed = tree(&[("v.yaml", "replicas: 3\n")]);
+        assert_eq!(read(&b, &removed), [(Class::Changed(ChangeKind::RecordRemoved), from(&[None], None))]);
+        // A `changed` note, then a broken one that takes the class: the class keeps no source of the note's.
+        let two = at(&a("a.md"), "3", &[must(">= 1"), must("<= 5")]);
+        let r = run(&two, &at(&a("a.md"), "6", &[must(">= 0")]));
+        assert_eq!(found(&r), [(Class::Broken { rule: 2 }, a("a.md").as_str(), "v.yaml#replicas")]);
+        assert_eq!(r.findings[0].reasons, ["expectation-changed: >= 1 -> >= 0", "false: 6, expected <= 5"]);
+        assert_eq!(r.findings[0].read_at_head, from(&[Some("a.md"), None], None));
     }
 
     #[test]

@@ -342,6 +342,27 @@ fn a_secret_is_never_printed() {
 }
 
 #[test]
+fn a_secret_shaped_anchor_names_only_its_file() {
+    let r = Repo::new();
+    let checks = format!("checks:\n  - config_key: 'app/values.yaml#tokens.{SECRET}'\n    must: 'exist'\n");
+    let path = format!("{ROOT}7k2m9q4r8t1v-every-token-is-listed.md");
+    let main = r
+        .write("app/values.yaml", "db:\n  host: db\n")
+        .write(&path, rec("7k2m9q4r8t1v", "fact", "Every token is listed", &checks, "Why.\n"))
+        .commit("tokens");
+    r.git(&["update-ref", "refs/remotes/origin/HEAD", &main]);
+    for args in [&["app/values.yaml"][..], &["--brief", "app/values.yaml"], &["--json", "app/values.yaml"]] {
+        let out = ok(&r, args);
+        assert!(!out.contains(SECRET), "{args:?}: {out}");
+        assert!(out.contains("Every token is listed"), "{args:?}: {out}");
+    }
+    let full = ok(&r, &["app/values.yaml"]);
+    assert!(full.contains("must app/values.yaml#(withheld: secret-shape) exist  broken  missing-key"), "{full}");
+    let v = json_of(&r, &["app/values.yaml"]);
+    assert_eq!(v["records"][0]["checks"][0]["anchor"], "app/values.yaml#(withheld: secret-shape)", "{v}");
+}
+
+#[test]
 fn a_directory_is_refused() {
     let r = charts();
     let refused = |dir: &str, args: &[&str], named: &str| {

@@ -150,6 +150,34 @@ fn a_secret_value_is_never_printed() {
     }
 }
 
+/// An anchor that holds a secret shape names only the file before it, in text and JSON.
+#[test]
+fn a_secret_shaped_anchor_names_only_its_file() {
+    let key = "AKIAQ7ZK3M9W2X4V8B6N";
+    let r = Repo::new();
+    r.write("app/values.yaml", "db:\n  host: db\n");
+    let checks = format!(
+        "checks:\n  - config_key: 'app/values.yaml#tokens.{key}'\n    must: 'exist'\n  - path: 'keys/{key}'\n    must: 'exist'\n"
+    );
+    r.write(&format!("{ROOT}7k2m9q4r8t1v-every-token-is-listed.md"), rec("7k2m9q4r8t1v", "fact", "Every token is listed", &checks));
+    r.commit("tokens");
+    let out = r.run(&["status"]);
+    assert_eq!(out.code, 0, "{out:?}");
+    for line in [
+        "must app/values.yaml#(withheld: secret-shape) exist  broken  missing-key",
+        "must (withheld: secret-shape) exist  broken  missing-file",
+    ] {
+        assert!(out.stdout.contains(line), "{line}: {}", out.stdout);
+    }
+    let json = r.run(&["status", "--json"]);
+    let v: Value = serde_json::from_str(&json.stdout).unwrap();
+    let anchors: Vec<&Value> = v["records"][0]["checks"].as_array().unwrap().iter().map(|c| &c["anchor"]).collect();
+    assert_eq!(anchors, [&json!("app/values.yaml#(withheld: secret-shape)"), &json!("(withheld: secret-shape)")]);
+    for out in [&out, &json] {
+        assert!(!out.stdout.contains(key) && !out.stderr.contains(key), "{out:?}");
+    }
+}
+
 #[test]
 fn fail_on_broken_without_base_exits_2() {
     let r = replicas("must", 1);

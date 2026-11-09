@@ -481,23 +481,105 @@ fn c21_a_secret_shape_is_located_and_never_printed() {
     assert_eq!((&f["title"], &f["first_paragraph"]), (&json!(""), &json!("")));
     assert!(!g.json.to_string().contains(SECRET));
     exits(&g, 2);
-    // A record committed before this change holds the secret: no change finding names it, and its finding is
-    // withheld all the same.
+    // A record committed before this change holds the secret in its paragraph: no change finding names it, and the
+    // paragraph is withheld all the same; its title and reason hold none and are shown.
     let r = Repo::new();
     r.write(VALUES, replicas(2)).write(REC, rec("7k2m9q4r8t1v", TITLE, &must(">= 2"), &body)).commit("base");
     r.git(&["checkout", "-q", "-b", "change"]);
     r.write(VALUES, replicas(1)).commit("one replica");
     let g = gate(&r);
-    assert_eq!(findings(&g), one("broken rule 1", ANCHOR, "withheld: secret-shape"));
+    assert_eq!(findings(&g), one("broken rule 1", ANCHOR, LOWERED));
+    let f = &g.json["report"]["findings"][0];
+    assert_eq!((&f["title"], &f["first_paragraph"]), (&json!(TITLE), &json!("")));
     assert_eq!(g.json["report"]["change_findings"], json!([]));
     exits(&g, 2);
-    // The expectation changed to hold the secret: the finding's class carries it in JSON and is withheld too.
+    // The expectation changed to hold the secret: the finding's class carries it in JSON and is withheld too, not B's.
     let r = guarded(2);
     r.write(REC, rec("7k2m9q4r8t1v", TITLE, &must(&format!("== {SECRET}")), BODY)).commit("pin the key");
     let g = gate(&r);
     let class = &g.json["report"]["findings"][0]["class"];
-    let withheld = json!({"changed": {"expectation-changed": {"from": "(withheld: secret-shape)", "to": "(withheld: secret-shape)"}}});
+    let withheld = json!({"changed": {"expectation-changed": {"from": ">= 2", "to": "(withheld: secret-shape)"}}});
     assert_eq!(class, &withheld);
+    exits(&g, 0);
+}
+
+#[test]
+fn c41_an_anchor_with_a_secret_shape_names_only_its_file() {
+    let new = "charts/.knowledge/records/2a3b4c5d6e7f-every-token-is-listed.md";
+    let added = |check: &str| {
+        let r = guarded(2);
+        r.write(new, rec("2a3b4c5d6e7f", "Every token is listed", check, "Why.\n")).commit("tokens");
+        r
+    };
+    let uri = |g: &Gate| rule_results(g, "knowledge/broken")[0]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"].clone();
+    // The key path holds the secret: the file stays named, and locates the result.
+    let g = gate(&added(&format!("checks:\n  - config_key: 'api/values.yaml#tokens.{SECRET}'\n    must: 'exist'\n")));
+    let anchor = "charts/api/values.yaml#(withheld: secret-shape)";
+    assert_eq!(findings(&g), one("broken rule 1", anchor, "withheld: secret-shape"));
+    assert!(g.text.stdout.contains(&format!("  {anchor} (rule 1)\n")), "{}", g.text.stdout);
+    assert_eq!(uri(&g), json!(VALUES));
+    exits(&g, 2);
+    // The path holds it: withheld whole, located at the record, and the pathspec still judges the path as written.
+    let r = added(&format!("checks:\n  - path: 'keys/{SECRET}'\n    must: 'exist'\n"));
+    let g = judge(&r, &["--base", "main"], &["--", "charts/keys/"]);
+    assert_eq!(findings(&g), one("broken rule 1", "(withheld: secret-shape)", "withheld: secret-shape"));
+    assert_eq!(g.json["gate"], json!({"fail_on": false, "failing": 1, "outside_pathspec": 0}));
+    assert_eq!(uri(&g), json!(new));
+    exits(&g, 2);
+    // A file named with the secret moved, its record following: the followed path is withheld.
+    let r = Repo::new();
+    let old = format!("charts/keys/{SECRET}.yaml");
+    let check = |file: &str| format!("checks:\n  - config_key: 'keys/{file}#owner'\n    must: 'exist'\n");
+    r.write(&old, "owner: billing\n").write(REC, rec("7k2m9q4r8t1v", TITLE, &check(&format!("{SECRET}.yaml")), BODY));
+    r.commit("base");
+    r.git(&["checkout", "-q", "-b", "change"]);
+    r.git(&["mv", &old, "charts/keys/current.yaml"]);
+    r.write(REC, rec("7k2m9q4r8t1v", TITLE, &check("current.yaml"), BODY)).commit("rotate");
+    let g = gate(&r);
+    assert_eq!(findings(&g), []);
+    assert_eq!(knowledge(&g, "followed"), &json!([["(withheld: secret-shape)", "charts/keys/current.yaml"]]));
+    let line = "  knowledge  followed  (withheld: secret-shape) -> charts/keys/current.yaml\n";
+    assert!(g.text.stdout.contains(line), "{}", g.text.stdout);
+    exits(&g, 0);
+    // Two anchors withheld alike on one record are two alerts to a code scanner.
+    let other = "AKIAZ9Y8X7W6V5U4T3S2";
+    let two = format!("checks:\n  - path: 'keys/{SECRET}'\n    must: 'exist'\n  - path: 'keys/{other}'\n    must: 'exist'\n");
+    let g = gate(&added(&two));
+    let broken = rule_results(&g, "knowledge/broken");
+    assert_eq!(broken.len(), 2, "{:#}", g.sarif);
+    assert_ne!(broken[0]["partialFingerprints"], broken[1]["partialFingerprints"]);
+    for out in [&g.text.stdout, &g.json.to_string(), &g.sarif.to_string()] {
+        assert!(!out.contains(other), "{out}");
+    }
+    exits(&g, 2);
+}
+
+#[test]
+fn c42_an_anchor_moved_to_a_secret_shaped_name_keeps_the_base_text() {
+    // Both files are in both trees; the record now names the secret-shaped one. B's copy is clean, H's holds it.
+    let r = Repo::new();
+    let check = |file: &str| format!("checks:\n  - config_key: 'keys/{file}#owner'\n    must: 'exist'\n");
+    r.write("charts/keys/current.yaml", "owner: billing\n").write(&format!("charts/keys/{SECRET}.yaml"), "owner: billing\n");
+    r.write(REC, rec("7k2m9q4r8t1v", TITLE, &check("current.yaml"), BODY)).commit("base");
+    r.git(&["checkout", "-q", "-b", "change"]);
+    r.write(REC, rec("7k2m9q4r8t1v", TITLE, &check(&format!("{SECRET}.yaml")), BODY)).commit("move");
+    let g = gate(&r);
+    let anchor = "charts/keys/current.yaml#owner";
+    assert_eq!(findings(&g), one("changed anchor-moved", anchor, "withheld: secret-shape"));
+    let f = &g.json["report"]["findings"][0];
+    let moved = json!({"anchor-moved": {"from": anchor, "to": "(withheld: secret-shape)"}});
+    assert_eq!((&f["class"]["changed"], &f["title"]), (&moved, &json!(TITLE)));
+    assert!(f["first_paragraph"].as_str().unwrap().starts_with("A single replica"), "{f}");
+    let block = [
+        format!("\n  changed  {anchor}"),
+        format!("           decision: {TITLE}"),
+        format!("           {REC}"),
+        "           reason: withheld: secret-shape".to_owned(),
+        "           > A single replica".to_owned(),
+    ]
+    .join("\n");
+    assert!(g.text.stdout.contains(&block), "B's title and why:\n{}", g.text.stdout);
+    assert!(g.text.stdout.contains(&format!("\n  on the change  secret-shape {REC} ")), "{}", g.text.stdout);
     exits(&g, 0);
 }
 
@@ -959,4 +1041,70 @@ fn sarif_a_cycle_is_located_at_its_records() {
     at.extend(hits[0]["relatedLocations"].as_array().map(|v| v.iter().map(uri).collect::<Vec<_>>()).unwrap_or_default());
     at.sort();
     assert_eq!(at, [a, b], "{:#}", hits[0]);
+}
+
+
+/// The record relaxed on the branch with a secret-shaped value in its text: the finding quotes B's copy, so B's text
+/// is shown; only text read from H's copy is withheld.
+fn relaxed_with_a_key(r: &Repo, path: &str, checks: &str) {
+    let body = format!("Cost.\n\nThe key is {SECRET}.\n");
+    r.write(path, rec("7k2m9q4r8t1v", "Production API runs at least one replica", checks, &body));
+}
+
+#[test]
+fn c38_a_finding_quoting_the_base_keeps_its_text_when_the_change_adds_a_secret_to_the_record() {
+    let r = guarded(2);
+    relaxed_with_a_key(&r, REC, &must(">= 1"));
+    r.write(VALUES, replicas(1)).commit("relax, add a key, lower");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("broken rule 2", ANCHOR, LOWERED));
+    let f = &g.json["report"]["findings"][0];
+    assert_eq!(f["title"], TITLE);
+    assert!(f["first_paragraph"].as_str().unwrap().starts_with("A single replica"), "{f}");
+    let block = [
+        format!("\n  broken   {ANCHOR} (rule 2)"),
+        format!("           decision: {TITLE}"),
+        format!("           {REC}"),
+        format!("           reason: {LOWERED}"),
+        "           > A single replica".to_owned(),
+    ]
+    .join("\n");
+    assert!(g.text.stdout.contains(&block), "B's title, reason and why:\n{}", g.text.stdout);
+    assert!(g.text.stdout.contains(&format!("\n  on the change  secret-shape {REC} ")), "{}", g.text.stdout);
+    let message = &rule_results(&g, "knowledge/broken")[0]["message"]["text"];
+    assert!(message.as_str().is_some_and(|m| m.contains(TITLE) && m.contains(LOWERED)), "{message}");
+    exits(&g, 2);
+}
+
+#[test]
+fn c39_a_stale_note_of_the_secret_shaped_record_is_withheld_beside_the_reason_it_joins() {
+    // H's assumes on the same anchor is grouped into B's finding: its literal is H's text, B's reason is not.
+    let r = guarded(2);
+    let assumes = "  - config_key: 'api/values.yaml#replicaCount'\n    assumes: '>= 3'\n";
+    relaxed_with_a_key(&r, REC, &format!("{}{assumes}", must(">= 1")));
+    r.write(VALUES, replicas(1)).commit("relax, assume, add a key, lower");
+    let g = gate(&r);
+    let reasons = vec![LOWERED.to_owned(), "withheld: secret-shape".to_owned()];
+    assert_eq!(findings(&g), [("broken rule 2".to_owned(), ANCHOR.to_owned(), reasons)]);
+    assert_eq!(g.json["report"]["findings"][0]["title"], TITLE, "B's text is shown");
+    assert!(!g.text.stdout.contains(">= 3") && !g.json.to_string().contains(">= 3"), "{}", g.text.stdout);
+    exits(&g, 2);
+}
+
+#[test]
+fn c40_a_renamed_record_with_a_secret_withholds_the_new_value_it_gives() {
+    // The changed detail's new value is read from the renamed copy, which holds the secret; B's path does not.
+    let moved = "charts/.knowledge/records/7k2m9q4r8t1v-api-replicas.md";
+    let r = guarded(2);
+    r.git(&["mv", REC, moved]);
+    relaxed_with_a_key(&r, moved, &must(">= 1"));
+    r.commit("rename, relax, add a key");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("changed expectation-changed", ANCHOR, "withheld: secret-shape"));
+    let f = &g.json["report"]["findings"][0];
+    let withheld = json!({"expectation-changed": {"from": ">= 2", "to": "(withheld: secret-shape)"}});
+    assert_eq!((&f["class"]["changed"], &f["title"], &f["record_path"]), (&withheld, &json!(TITLE), &json!(REC)));
+    assert!(!g.text.stdout.contains("-> >= 1") && !g.text.stdout.contains("at least one replica"), "{}", g.text.stdout);
+    assert!(g.text.stdout.contains(&format!("\n  on the change  secret-shape {moved} ")), "{}", g.text.stdout);
+    exits(&g, 0);
 }

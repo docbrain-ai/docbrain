@@ -20,7 +20,7 @@ use super::exit::Exit;
 use super::frame::{Frame, NOTICE, emit, esc};
 use super::gate::run_gate;
 use super::paths::Session;
-use super::show::{anchor_path, anchored_files, check_line, check_word, clean, shown, state_word};
+use super::show::{anchor_path, anchored_files, check_line, check_word, clean, shown, shown_anchor, state_word};
 use super::trees::{Review, open_trees, review, tree_error_line};
 
 /// Said once after the summary when no reviewed base is known: no record is shown as reviewed.
@@ -403,7 +403,7 @@ pub(crate) fn record_json(rs: &RecordStatus, file: Option<&RecordFile>, review: 
 }
 
 fn check_json(c: &Check, st: &CheckState) -> Value {
-    let mut o = json!({"verb": c.verb.as_str(), "anchor": anchor_path(c), "expect": clean(&c.expect.to_string()), "state": check_word(st)});
+    let mut o = json!({"verb": c.verb.as_str(), "anchor": shown_anchor(&anchor_path(c)), "expect": clean(&c.expect.to_string()), "state": check_word(st)});
     match st {
         CheckState::Holds(Some(v)) => o["shown"] = json!(shown(v)),
         CheckState::Holds(None) => {}

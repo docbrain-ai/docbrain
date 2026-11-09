@@ -16,7 +16,7 @@ use super::exit::Exit;
 use super::frame::{Frame, NOTICE, emit, esc, quote};
 use super::paths::Session;
 use super::sarif::{Files, sarif};
-use super::show::{WITHHELD_VALUE, anchor_path, anchored_files};
+use super::show::{WITHHELD_VALUE, anchor_path, anchored_files, shown_anchor};
 use super::status::{Pathspec, verdict};
 use super::trees::{open_trees, tree_error_line};
 
@@ -53,8 +53,9 @@ pub(crate) fn run_gate(s: &Session, args: &StatusArgs, base: &str, spec: &Pathsp
         return Err(format!("no merge base with {base}"));
     };
     let mut report = docbrain_knowledge::gate::gate(b, &j.h, changed).map_err(|e| tree_error_line(&e))?;
-    withhold_secrets(&mut report);
+    // The pathspec judges each anchor as written: one withheld below still lies where it lay.
     let out = outcome(&report, args.fail_on.is_some(), spec);
+    withhold_secrets(&mut report);
     let text = if args.json {
         let head = match (&args.rev, &j.h_commit) {
             (Some(_), Some(c)) => c.as_str().to_owned(),
@@ -89,9 +90,15 @@ pub(crate) fn outcome(r: &GateReport, fail_on: bool, ps: &Pathspec) -> GateOutco
     GateOutcome { fail_on, failing, outside }
 }
 
-/// A finding keeps no text in any output when its record is one the change added or edited with a secret shape in
-/// it, or when its own text holds one (a record from before the change, a value read for a reason): no title, no
-/// first paragraph, one reason and no expectation or anchor in its class, so a log never holds the secret.
+/// No output holds text read from a record file the change added or edited with a secret shape in it, so a log never
+/// holds the secret. Each part of a finding is withheld on its own, by its own screen and by the record it was read
+/// from (`SEMANTICS.md` §Output): the title and first paragraph are the judging record's, H's only under rule 1 and
+/// for `stale`; each reason, and the new expectation or anchor of a `changed` class, holds text of the H record
+/// `Finding::read_at_head` names, if any; the old one is B's. A withheld title or paragraph is empty, a withheld
+/// reason reads `withheld: secret-shape` (two in a row read once), a withheld expectation or anchor
+/// `(withheld: secret-shape)`. Text that holds a secret shape itself (a record from before the change, a value read
+/// for a reason) is withheld whoever wrote it. An anchor, a finding's, a moved one or a followed one, is shown without
+/// its secret-shaped part (`shown_anchor`).
 pub(crate) fn withhold_secrets(r: &mut GateReport) {
     let secret: BTreeSet<String> = r
         .change_findings
@@ -101,20 +108,47 @@ pub(crate) fn withhold_secrets(r: &mut GateReport) {
             _ => None,
         })
         .collect();
-    let leaks = |f: &Finding| {
-        secret.contains(&f.record_path)
-            || [&f.title, &f.first_paragraph].into_iter().chain(&f.reasons).any(|t| !screen(t).is_empty())
-    };
-    for f in r.findings.iter_mut().filter(|f| leaks(f)) {
-        f.title.clear();
-        f.first_paragraph.clear();
-        f.reasons = vec![WITHHELD.to_owned()];
-        if let Class::Changed(ChangeKind::AnchorMoved { from, to } | ChangeKind::ExpectationChanged { from, to }) =
-            &mut f.class
-        {
-            (*from, *to) = (WITHHELD_VALUE.to_owned(), WITHHELD_VALUE.to_owned());
+    let read_at_secret = |p: Option<&String>| p.is_some_and(|p| secret.contains(p));
+    for f in &mut r.findings {
+        let head = judged_at_head(&f.class) && secret.contains(&f.record_path);
+        for text in [&mut f.title, &mut f.first_paragraph] {
+            if head || !screen(text).is_empty() {
+                text.clear();
+            }
         }
+        let mut reasons: Vec<String> = Vec::with_capacity(f.reasons.len());
+        for (i, reason) in std::mem::take(&mut f.reasons).into_iter().enumerate() {
+            if !read_at_secret(f.read_at_head.reasons.get(i).and_then(Option::as_ref)) && screen(&reason).is_empty() {
+                reasons.push(reason);
+            } else if reasons.last().map(String::as_str) != Some(WITHHELD) {
+                reasons.push(WITHHELD.to_owned());
+            }
+        }
+        f.reasons = reasons;
+        let new_at_secret = read_at_secret(f.read_at_head.class.as_ref());
+        match &mut f.class {
+            Class::Changed(ChangeKind::AnchorMoved { from, to }) => {
+                *from = shown_anchor(from).into_owned();
+                *to = if new_at_secret { WITHHELD_VALUE.to_owned() } else { shown_anchor(to).into_owned() };
+            }
+            Class::Changed(ChangeKind::ExpectationChanged { from, to }) => {
+                for (value, withheld) in [(from, false), (to, new_at_secret)] {
+                    if withheld || !screen(value).is_empty() {
+                        *value = WITHHELD_VALUE.to_owned();
+                    }
+                }
+            }
+            _ => {}
+        }
+        f.anchor = shown_anchor(&f.anchor).into_owned();
     }
+    // Two pairs that read the same once withheld are one line.
+    let mut shown = BTreeSet::new();
+    r.knowledge.followed = std::mem::take(&mut r.knowledge.followed)
+        .into_iter()
+        .map(|(from, to)| (shown_anchor(&from).into_owned(), shown_anchor(&to).into_owned()))
+        .filter(|pair| shown.insert(pair.clone()))
+        .collect();
 }
 
 /// Whether H's record judged a finding, so its title and paragraph are H's text: rule 1 and `stale`. Rule 2 and
@@ -307,9 +341,12 @@ pub(crate) fn gate_json(r: &GateReport, base: &Oid, head: &str, gate: &GateOutco
 mod tests {
     use super::*;
     use crate::knowledge::testrepo::Repo;
+    use docbrain_knowledge::gate::ReadAtHead;
     use docbrain_knowledge::record::Id;
 
     fn finding(class: Class, path: &str, anchor: &str) -> Finding {
+        // As the evaluator reads it: rule 1's and a stale note's reason is the text of H's record, the others B's.
+        let at_head = matches!(class, Class::Broken { rule: 1 } | Class::Stale).then(|| path.to_owned());
         Finding {
             class,
             id: Id::parse("7k2m9q4r8t1v").unwrap(),
@@ -319,7 +356,13 @@ mod tests {
             first_paragraph: "Why.".to_owned(),
             reasons: vec!["missing-file".to_owned()],
             same_content: None,
+            read_at_head: ReadAtHead { reasons: vec![at_head], class: None },
         }
+    }
+
+    /// A finding's title, first paragraph and reasons.
+    fn parts(f: &Finding) -> (&str, &str, Vec<&str>) {
+        (&f.title, &f.first_paragraph, f.reasons.iter().map(String::as_str).collect())
     }
 
     fn render(r: &GateReport) -> String {
@@ -437,7 +480,72 @@ mod tests {
     }
 
     #[test]
-    fn text_holding_a_secret_is_withheld_whoever_wrote_it() {
+    fn only_text_read_from_a_secret_shaped_record_is_withheld() {
+        // a.md, at H, holds a secret shape; c.md does not. Each part is withheld by the record it was read from.
+        let key = "AKIAQ7ZK3M9W2X4V8B6N";
+        let reading = |class: Class, path: &str, reasons: &[(&str, Option<&str>)], new: Option<&str>| Finding {
+            reasons: reasons.iter().map(|(t, _)| (*t).to_owned()).collect(),
+            read_at_head: ReadAtHead {
+                reasons: reasons.iter().map(|(_, p)| p.map(str::to_owned)).collect(),
+                class: new.map(str::to_owned),
+            },
+            ..finding(class, path, "v.yaml#replicas")
+        };
+        let (b2, b3, relaxed_reason) = ("false: 1, expected >= 2", "false: 1, expected >= 3", "expectation-changed: >= 2 -> >= 1");
+        let relaxed = || Class::Changed(ChangeKind::ExpectationChanged { from: ">= 2".to_owned(), to: ">= 1".to_owned() });
+        let moved = ChangeKind::AnchorMoved { from: "keys/current.yaml#owner".to_owned(), to: format!("keys/{key}.yaml#owner") };
+        let moved_reason = format!("anchor-moved: keys/current.yaml#owner -> keys/{key}.yaml#owner");
+        let clean_move = || ChangeKind::AnchorMoved { from: "v.yaml#replicas".to_owned(), to: "w.yaml#replicas".to_owned() };
+        let a = Some("a.md");
+        let mut r = GateReport {
+            findings: vec![
+                reading(Class::Broken { rule: 2 }, "a.md", &[(b2, None)], None),
+                reading(Class::Broken { rule: 2 }, "a.md", &[(b2, None), (b3, a)], None),
+                reading(Class::Broken { rule: 2 }, "a.md", &[(b3, a), (b2, None), (b3, a), (b3, a)], None),
+                reading(relaxed(), "a.md", &[(relaxed_reason, a)], a),
+                reading(relaxed(), "b.md", &[(relaxed_reason, a)], a),
+                reading(Class::Changed(moved), "a.md", &[(moved_reason.as_str(), a)], a),
+                reading(Class::Broken { rule: 1 }, "c.md", &[(b2, Some("c.md"))], None),
+                reading(Class::Stale, "a.md", &[(b3, a)], None),
+                reading(Class::Changed(clean_move()), "a.md", &[("anchor-moved: v.yaml#replicas -> w.yaml#replicas", a)], a),
+            ],
+            change_findings: vec![ChangeFinding::SecretShape {
+                path: "a.md".to_owned(),
+                rule: "aws_access_key_id",
+                line: 8,
+                col: 19,
+            }],
+            ..Default::default()
+        };
+        let before = r.findings.clone();
+        withhold_secrets(&mut r);
+        let got: Vec<_> = r.findings.iter().map(parts).collect();
+        assert_eq!(
+            got,
+            [
+                ("Title", "Why.", vec![b2]),
+                ("Title", "Why.", vec![b2, WITHHELD]),
+                ("Title", "Why.", vec![WITHHELD, b2, WITHHELD]),
+                ("Title", "Why.", vec![WITHHELD]),
+                ("Title", "Why.", vec![WITHHELD]),
+                ("Title", "Why.", vec![WITHHELD]),
+                ("Title", "Why.", vec![b2]),
+                ("", "", vec![WITHHELD]),
+                ("Title", "Why.", vec![WITHHELD]),
+            ]
+        );
+        let relaxed = Class::Changed(ChangeKind::ExpectationChanged { from: ">= 2".to_owned(), to: WITHHELD_VALUE.to_owned() });
+        assert_eq!((&r.findings[3].class, &r.findings[4].class), (&relaxed, &relaxed), "B's expectation, H's withheld");
+        let moved = ChangeKind::AnchorMoved { from: "keys/current.yaml#owner".to_owned(), to: WITHHELD_VALUE.to_owned() };
+        assert_eq!(r.findings[5].class, Class::Changed(moved), "B's anchor, H's withheld");
+        let moved = ChangeKind::AnchorMoved { from: "v.yaml#replicas".to_owned(), to: WITHHELD_VALUE.to_owned() };
+        assert_eq!(r.findings[8].class, Class::Changed(moved), "H's anchor is withheld with its record, shape or not");
+        assert_eq!((&r.findings[0], &r.findings[6]), (&before[0], &before[6]));
+        assert!(!serde_json::to_string(&r).unwrap().contains(key));
+    }
+
+    #[test]
+    fn a_part_holding_a_secret_is_withheld_whoever_wrote_it() {
         let key = "AKIAQ7ZK3M9W2X4V8B6N";
         let mut paragraph = finding(Class::Broken { rule: 1 }, "a.md", "x");
         paragraph.first_paragraph = format!("Rotate {key} yearly.");
@@ -446,21 +554,71 @@ mod tests {
         let mut title = finding(Class::Stale, "c.md", "z");
         title.title = format!("Key {key}");
         let changed = ChangeKind::ExpectationChanged { from: ">= 2".to_owned(), to: format!("== {key}") };
-        let mut class = finding(Class::Changed(changed), "e.md", "v");
-        class.reasons = vec![format!("expectation-changed: >= 2 -> == {key}")];
+        let mut new = finding(Class::Changed(changed), "e.md", "v");
+        new.reasons = vec![format!("expectation-changed: >= 2 -> == {key}")];
+        let changed = ChangeKind::ExpectationChanged { from: format!("== {key}"), to: ">= 2".to_owned() };
+        let mut old = finding(Class::Changed(changed), "f.md", "u");
+        old.reasons = vec![format!("expectation-changed: == {key} -> >= 2")];
         let mut documented = finding(Class::Stale, "d.md", "w");
         documented.first_paragraph = "postgres://app:changeme@db/app".to_owned();
-        let mut r =
-            GateReport { findings: vec![paragraph, reason, title, class, documented.clone()], ..Default::default() };
+        let findings = vec![paragraph, reason, title, new, old, documented.clone()];
+        let mut r = GateReport { findings, ..Default::default() };
         withhold_secrets(&mut r);
-        for f in &r.findings[..4] {
-            assert_eq!((f.title.as_str(), f.first_paragraph.as_str()), ("", ""), "{f:?}");
-            assert_eq!(f.reasons, [WITHHELD], "{f:?}");
-        }
-        let withheld =
-            ChangeKind::ExpectationChanged { from: WITHHELD_VALUE.to_owned(), to: WITHHELD_VALUE.to_owned() };
-        assert_eq!(r.findings[3].class, Class::Changed(withheld), "the class carries the expectation too");
-        assert_eq!(r.findings[4], documented, "a documented shape is text like any other");
+        let got: Vec<_> = r.findings[..5].iter().map(parts).collect();
+        assert_eq!(
+            got,
+            [
+                ("Title", "", vec!["missing-file"]),
+                ("Title", "Why.", vec![WITHHELD]),
+                ("", "Why.", vec!["missing-file"]),
+                ("Title", "Why.", vec![WITHHELD]),
+                ("Title", "Why.", vec![WITHHELD]),
+            ]
+        );
+        let new = ChangeKind::ExpectationChanged { from: ">= 2".to_owned(), to: WITHHELD_VALUE.to_owned() };
+        let old = ChangeKind::ExpectationChanged { from: WITHHELD_VALUE.to_owned(), to: ">= 2".to_owned() };
+        assert_eq!((&r.findings[3].class, &r.findings[4].class), (&Class::Changed(new), &Class::Changed(old)));
+        assert_eq!(r.findings[5], documented, "a documented shape is text like any other");
+        assert!(!serde_json::to_string(&r).unwrap().contains(key));
+    }
+
+    #[test]
+    fn an_anchor_is_shown_without_its_secret_shaped_part() {
+        let key = "AKIAQ7ZK3M9W2X4V8B6N";
+        let moved = ChangeKind::AnchorMoved { from: format!("keys/{key}.yaml#a"), to: format!("v.yaml#tokens.{key}") };
+        let mut changed = finding(Class::Changed(moved), "c.md", &format!("keys/{key}.yaml#a"));
+        changed.reasons = vec![format!("anchor-moved: keys/{key}.yaml#a -> v.yaml#tokens.{key}")];
+        let mut r = GateReport {
+            findings: vec![
+                finding(Class::Broken { rule: 1 }, "a.md", &format!("v.yaml#tokens.{key}")),
+                finding(Class::Broken { rule: 2 }, "b.md", &format!("keys/{key}")),
+                finding(Class::Stale, "d.md", "v.yaml#replicas"),
+                changed,
+            ],
+            ..Default::default()
+        };
+        r.knowledge.followed = vec![
+            (format!("keys/{key}.yaml"), "keys/current.yaml".to_owned()),
+            ("keys/old.yaml".to_owned(), format!("keys/{key}.yaml")),
+            (format!("keys/{key}.yml"), "keys/current.yaml".to_owned()),
+        ];
+        let before = r.findings[2].clone();
+        withhold_secrets(&mut r);
+        let anchors: Vec<&str> = r.findings.iter().map(|f| f.anchor.as_str()).collect();
+        assert_eq!(anchors, ["v.yaml#(withheld: secret-shape)", WITHHELD_VALUE, "v.yaml#replicas", WITHHELD_VALUE]);
+        // The anchor alone holds the shape: the rest of the finding is shown.
+        assert_eq!((r.findings[0].title.as_str(), r.findings[0].reasons.as_slice()), ("Title", ["missing-file".to_owned()].as_slice()));
+        assert_eq!(r.findings[2], before);
+        // A moved anchor is shown as any anchor; the reason quoting it is withheld, not the title.
+        let moved = ChangeKind::AnchorMoved { from: WITHHELD_VALUE.to_owned(), to: "v.yaml#(withheld: secret-shape)".to_owned() };
+        assert_eq!((&r.findings[3].class, r.findings[3].reasons.as_slice()), (&Class::Changed(moved), [WITHHELD.to_owned()].as_slice()));
+        assert_eq!(r.findings[3].title, "Title");
+        // Two pairs that read the same once withheld are one line.
+        let followed = [
+            (WITHHELD_VALUE.to_owned(), "keys/current.yaml".to_owned()),
+            ("keys/old.yaml".to_owned(), WITHHELD_VALUE.to_owned()),
+        ];
+        assert_eq!(r.knowledge.followed, followed);
         assert!(!serde_json::to_string(&r).unwrap().contains(key));
     }
 

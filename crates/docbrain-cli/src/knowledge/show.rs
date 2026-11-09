@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! The words every command shares: an anchor, a check line, a record's state, the hint that names the fix.
 
+use std::borrow::Cow;
+
 use docbrain_knowledge::check::{CheckState, RecordState};
 use docbrain_knowledge::record::{Anchor, Check};
 use docbrain_knowledge::secret;
@@ -8,25 +10,45 @@ use docbrain_knowledge::{Fail, Shown};
 
 use super::frame::esc;
 
-/// A check's anchor in one string: a `path`'s root glob; a `config_key`'s first file and key path, with how many
-/// layers follow; a `code` check's file.
+/// A check's anchor in one string, as a command prints it (`shown_anchor`): a `path`'s root glob; a `config_key`'s
+/// first file and key path, with how many layers follow; a `code` check's file.
 pub(crate) fn anchor_text(c: &Check) -> String {
+    let at = esc(&shown_anchor(&anchor_path(c))).into_owned();
     match &c.anchor {
-        Anchor::Path(g) => esc(&g.root).into_owned(),
-        Anchor::ConfigKey(layers) => match layers.split_first() {
-            Some((first, rest)) => {
-                let more = match rest.len() {
-                    0 => String::new(),
-                    1 => " (+1 layer)".to_owned(),
-                    n => format!(" (+{n} layers)"),
-                };
-                format!("{}#{}{more}", esc(&first.file.root), esc(&first.key.text))
-            }
-            None => String::new(),
+        Anchor::Path(_) => at,
+        Anchor::ConfigKey(layers) => match layers.len() {
+            0 | 1 => at,
+            2 => format!("{at} (+1 layer)"),
+            n => format!("{at} (+{} layers)", n - 1),
         },
-        Anchor::Code { file, .. } => format!("{} (code)", esc(&file.root)),
-        Anchor::Unknown(kind) => format!("{} (unknown)", esc(kind)),
+        Anchor::Code { .. } => format!("{at} (code)"),
+        Anchor::Unknown(_) => format!("{at} (unknown)"),
     }
+}
+
+/// An anchor in one string (`anchor_path`, a finding's anchor, a followed path) as a command prints it: as written;
+/// when each secret shape in it starts after its first `#`, the file before it and the rest withheld
+/// (`api/values.yaml#(withheld: secret-shape)`), so the reader still knows which file to open; else withheld whole.
+pub(crate) fn shown_anchor(a: &str) -> Cow<'_, str> {
+    let hits = secret::screen(a);
+    if hits.is_empty() {
+        return Cow::Borrowed(a);
+    }
+    if let Some((file, _)) = a.split_once('#') {
+        // Where the `#` stands, counted as the screen counts a hit's line and column.
+        let (mut line, mut col) = (1u32, 1u32);
+        for (j, c) in file.char_indices() {
+            if c == '\n' {
+                (line, col) = (line.saturating_add(1), 1);
+            } else if !(j == 0 && c == '\u{FEFF}') {
+                col = col.saturating_add(1);
+            }
+        }
+        if hits.iter().all(|h| (h.line, h.col) > (line, col)) {
+            return Cow::Owned(format!("{file}#{WITHHELD_VALUE}"));
+        }
+    }
+    Cow::Borrowed(WITHHELD_VALUE)
 }
 
 /// A check's anchor as JSON and the pathspec read it, unescaped: a `path`'s or a `code` check's root path, a
@@ -48,8 +70,6 @@ pub(crate) fn anchored_files(c: &Check) -> Vec<&str> {
     }
 }
 
-/// `<verb> <anchor> <expectation as written>  <state>[  <reason or shown value>]`. `untracked` says whether a file
-/// (or glob) the check names is in the working tree without being tracked: a missing file then says to add it.
 /// What a command prints in place of text read from the repository that holds a secret shape (`SEMANTICS.md`
 /// §Secrets: a hit is named, never its text).
 pub(crate) const WITHHELD_VALUE: &str = "(withheld: secret-shape)";
@@ -63,6 +83,8 @@ pub(crate) fn shown(v: &Shown) -> &str {
     clean(v.as_str())
 }
 
+/// `<verb> <anchor> <expectation as written>  <state>[  <reason or shown value>]`. `untracked` says whether a file
+/// (or glob) the check names is in the working tree without being tracked: a missing file then says to add it.
 pub(crate) fn check_line(c: &Check, st: &CheckState, untracked: &dyn Fn(&str) -> bool) -> String {
     let expect = c.expect.to_string();
     let expect = clean(&expect);
@@ -240,6 +262,41 @@ mod tests {
             line: 1,
         };
         assert_eq!(anchor_text(&c), "a\\x{1b}]8;;x\\x{7}b");
+    }
+
+    #[test]
+    fn an_anchor_shows_only_what_precedes_a_secret_shape() {
+        const KEY: &str = "AKIAQ7ZK3M9W2X4V8B6N";
+        let shown = |a: &str| shown_anchor(a).into_owned();
+        assert_eq!(shown("v.yaml#db.password"), "v.yaml#db.password");
+        assert_eq!(shown(""), "");
+        // Every shape after the first `#`: the file stays named.
+        assert_eq!(shown(&format!("api/values.yaml#{KEY}")), "api/values.yaml#(withheld: secret-shape)");
+        assert_eq!(shown(&format!("v.yaml#tokens.{KEY}.owner")), "v.yaml#(withheld: secret-shape)");
+        assert_eq!(shown(&format!("v.yaml#a#{KEY}")), "v.yaml#(withheld: secret-shape)", "the key path's own `#`");
+        assert_eq!(shown(&format!("a\nb.yaml#{KEY}")), "a\nb.yaml#(withheld: secret-shape)", "a line break before the `#`");
+        let bom = format!("\u{FEFF}v.yaml#{KEY}");
+        assert_eq!(shown(&bom), "\u{FEFF}v.yaml#(withheld: secret-shape)", "a leading byte order mark takes no column");
+        // A shape that starts in the file part, or spans the `#`: withheld whole.
+        assert_eq!(shown(&format!("keys/{KEY}.yaml#a")), WITHHELD_VALUE);
+        assert_eq!(shown(&format!("keys/{KEY}")), WITHHELD_VALUE);
+        assert_eq!(shown(&format!("keys/{KEY}#{KEY}")), WITHHELD_VALUE);
+        assert_eq!(shown(&format!("a\nkeys/{KEY}.yaml#x")), WITHHELD_VALUE, "on the `#`'s own line, before it");
+        let across = "s://user:pa#ss@host/v.yaml";
+        assert!(secret::screen("s://user:pa").is_empty() && !secret::screen(across).is_empty(), "the shape spans the `#`");
+        assert_eq!(shown(across), WITHHELD_VALUE);
+    }
+
+    #[test]
+    fn a_secret_shaped_anchor_is_printed_withheld_and_read_as_written() {
+        let c = |scope: &str, check: &str| record(scope, check).checks[0].clone();
+        let key = c("svc", "  - config_key:\n      - 'v.yaml#tokens.AKIAQ7ZK3M9W2X4V8B6N'\n      - 'c.json#a'\n    must: 'exist'\n");
+        assert_eq!(anchor_text(&key), "svc/v.yaml#(withheld: secret-shape) (+1 layer)");
+        assert_eq!(anchor_path(&key), "svc/v.yaml#tokens.AKIAQ7ZK3M9W2X4V8B6N", "the anchor a command reads by");
+        let code = c("", "  - code: 'AKIAQ7ZK3M9W2X4V8B6N.rs'\n    text: 'x'\n    must: 'exist'\n");
+        assert_eq!(anchor_text(&code), "(withheld: secret-shape) (code)");
+        let path = c("", "  - path: 'keys/AKIAQ7ZK3M9W2X4V8B6N'\n    must: 'exist'\n");
+        assert_eq!(check_line(&path, &CheckState::Broken(Fail::MissingFile), &|_| false), "must (withheld: secret-shape) exist  broken  missing-file");
     }
 
     #[test]

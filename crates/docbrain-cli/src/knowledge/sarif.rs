@@ -11,6 +11,7 @@ use sha2::{Digest, Sha256};
 
 use super::frame::esc;
 use super::gate::{ON_PURPOSE, change_text};
+use super::show::WITHHELD_VALUE;
 
 const SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const SRCROOT: &str = "%SRCROOT%";
@@ -52,9 +53,14 @@ pub(crate) fn sarif(r: &GateReport, files: &Files, version: &str) -> Value {
             Class::Changed(_) => (1, "changed", String::new()),
             Class::Stale => (2, "stale", String::new()),
         };
-        let file = match files.anchored.get(&(f.record_path.clone(), f.anchor.clone())) {
-            Some(file) => file.as_str(),
-            None => f.anchor.split_once('#').map_or(f.anchor.as_str(), |(file, _)| file),
+        let file = if let Some(shown) = f.anchor.strip_suffix(WITHHELD_VALUE) {
+            // A withheld anchor is located at the file it still names, else at its record: never at the secret.
+            shown.strip_suffix('#').unwrap_or(&f.record_path)
+        } else {
+            match files.anchored.get(&(f.record_path.clone(), f.anchor.clone())) {
+                Some(file) => file.as_str(),
+                None => f.anchor.split_once('#').map_or(f.anchor.as_str(), |(file, _)| file),
+            }
         };
         let mut lines = vec![format!("{word} {}{number}", esc(&f.anchor))];
         if !f.title.is_empty() {
@@ -92,11 +98,25 @@ pub(crate) fn sarif(r: &GateReport, files: &Files, version: &str) -> Value {
     }
     for (from, to) in &k.followed {
         let text = format!("knowledge followed {} -> {}", esc(from), esc(to));
-        results.push(result(3, text, Place::of([to.as_str()]), "", to));
+        let at = Place::of(Some(to.as_str()).filter(|to| !to.ends_with(WITHHELD_VALUE)));
+        results.push(result(3, text, at, "", to));
     }
     for (p, i, code) in &k.new_unverifiable {
         let text = format!("knowledge not judged {} check {}: {}", esc(p), i + 1, esc(code));
         results.push(result(3, text, Place::of([p.as_str()]), "", &format!("{p}\0{}", i + 1)));
+    }
+    // Two results with one fingerprint would be one alert to a code scanner (two withheld anchors on one record, two
+    // secret shapes in one file): the n-th, from the second on, hashes `<the fingerprint>\0<n>` instead. Never the
+    // anchor as written: a hash of a short secret can be reversed.
+    let mut seen: BTreeMap<String, usize> = BTreeMap::new();
+    for v in &mut results {
+        let fingerprint = &mut v["partialFingerprints"][FINGERPRINT];
+        let first = fingerprint.as_str().unwrap_or_default().to_owned();
+        let n = seen.entry(first.clone()).or_default();
+        *n += 1;
+        if *n > 1 {
+            *fingerprint = json!(hex::encode(Sha256::digest(format!("{first}\0{n}"))));
+        }
     }
     let rules: Vec<Value> = RULES
         .iter()
@@ -199,6 +219,7 @@ mod tests {
             first_paragraph: "Why.".to_owned(),
             reasons: vec!["missing-file".to_owned()],
             same_content: None,
+            read_at_head: Default::default(),
         }
     }
 
@@ -330,6 +351,30 @@ mod tests {
     }
 
     #[test]
+    fn a_withheld_anchor_is_located_at_the_file_it_still_names() {
+        let r = GateReport {
+            findings: vec![
+                finding(Class::Broken { rule: 1 }, RECORD, "a/v.yaml#(withheld: secret-shape)"),
+                finding(Class::Broken { rule: 1 }, RECORD, "(withheld: secret-shape)"),
+            ],
+            knowledge: KnowledgeChanges {
+                followed: vec![("(withheld: secret-shape)".into(), "(withheld: secret-shape)".into())],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut files = Files::default();
+        for anchor in ["a/v.yaml#(withheld: secret-shape)", "(withheld: secret-shape)"] {
+            files.anchored.insert((RECORD.into(), anchor.into()), "keys/AKIAQ7ZK3M9W2X4V8B6N".into());
+        }
+        let v = sarif(&r, &files, "1");
+        let at = |i: usize| results(&v)[i]["locations"][0]["physicalLocation"]["artifactLocation"]["uri"].clone();
+        assert_eq!((at(0), at(1)), (json!("a/v.yaml"), json!(uri(RECORD))), "never a file the anchor withholds");
+        assert_eq!(results(&v)[2].get("locations"), None, "a withheld followed path is no location");
+        assert!(!v.to_string().contains("AKIA"));
+    }
+
+    #[test]
     fn an_anchor_whose_file_is_not_known_is_cut_at_its_first_hash() {
         let r = GateReport { findings: vec![finding(Class::Stale, "r.md", "v.yaml#a.b")], ..Default::default() };
         let v = sarif(&r, &Files::default(), "1");
@@ -357,6 +402,29 @@ mod tests {
         assert_eq!(fp[7], sha("knowledge/knowledge-change\u{0}\u{0}n.md"));
         assert_eq!(fp[11], sha("knowledge/knowledge-change\u{0}\u{0}n.md\u{0}2"), "a check not judged keeps its own");
         assert_eq!(fp.iter().collect::<std::collections::BTreeSet<_>>().len(), fp.len(), "{fp:?}");
+    }
+
+    #[test]
+    fn results_alike_but_for_what_is_withheld_keep_fingerprints_apart() {
+        // Two anchors withheld alike on one record, two secret shapes in one file: an alert each, from the second on
+        // by its occurrence.
+        let withheld = "a/v.yaml#(withheld: secret-shape)";
+        let shape = |line| ChangeFinding::SecretShape { path: "k.md".into(), rule: "aws_access_key_id", line, col: 19 };
+        let broken = || finding(Class::Broken { rule: 1 }, RECORD, withheld);
+        let r = GateReport {
+            findings: vec![broken(), broken(), broken()],
+            change_findings: vec![shape(8), shape(9)],
+            ..Default::default()
+        };
+        let v = sarif(&r, &Files::default(), "1");
+        let fp: Vec<&str> =
+            results(&v).iter().map(|x| x["partialFingerprints"]["docbrainKnowledge/v1"].as_str().unwrap()).collect();
+        let sha = |s: &str| hex::encode(Sha256::digest(s));
+        let first = sha(&format!("knowledge/broken\u{0}7k2m9q4r8t1v\u{0}{withheld}"));
+        let nth = |n: usize| sha(&format!("{first}\u{0}{n}"));
+        assert_eq!(fp[..3], [first.clone(), nth(2), nth(3)]);
+        let first = sha("knowledge/secret-shape\u{0}\u{0}k.md");
+        assert_eq!(fp[3..], [first.clone(), sha(&format!("{first}\u{0}2"))]);
     }
 
     #[test]
