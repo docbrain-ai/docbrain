@@ -389,7 +389,16 @@ fn ctrl_c_in_the_editor_writes_nothing() {
     let before = left(&r);
     let index = std::fs::read(r.dir().join(".git/index")).unwrap();
     let mark = r.home().join("editor-started");
-    let editor = script(&r, "sleeps", &format!("#!/bin/sh\ntouch {}\nexec sleep 30\n", sh_quoted(&mark)));
+    // The mark is written by the process Ctrl-C reaches, never by a child of a shell: a `/bin/sh` that sees its
+    // child exit 0 after Ctrl-C goes on to its next line.
+    let editor = script(
+        &r,
+        "sleeps",
+        &format!(
+            "#!/bin/sh\nexec perl -e 'open my $f, \">\", $ARGV[0] or die; close $f; sleep 30' {}\n",
+            sh_quoted(&mark)
+        ),
+    );
     let out = run_tty(&r, &[("GIT_EDITOR", &editor.display().to_string())], b"", &QUESTION, |pid| {
         wait_for(&mark);
         // SAFETY: a signal to the process group the binary leads.
