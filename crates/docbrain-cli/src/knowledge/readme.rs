@@ -275,6 +275,14 @@ mod tests {
     }
 
     #[test]
+    fn the_readme_says_how_to_change_a_guarded_value_on_purpose() {
+        let flat = README.split_whitespace().collect::<Vec<_>>().join(" ");
+        let on_purpose = crate::knowledge::gate::ON_PURPOSE;
+        assert!(flat.contains(on_purpose), "{on_purpose}");
+        assert!(flat.contains(&format!("`assumes` marks the record stale instead. {on_purpose}")), "beside `must`");
+    }
+
+    #[test]
     fn the_pointer_is_the_one_the_readme_and_the_design_give() {
         assert_eq!(POINTER.lines().count(), 5);
         assert!(README.starts_with("# Repository knowledge\n\n"));

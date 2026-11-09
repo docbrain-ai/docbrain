@@ -2,7 +2,7 @@
 //! `docbrain status --base`: the change gate (`SEMANTICS.md` §The gate) between B and H, as text, as JSON and as
 //! an exit that fails only on a broken finding under the pathspec, and only when asked.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use docbrain_knowledge::folder::{self, scope_of};
 use docbrain_knowledge::gate::{ChangeFinding, ChangeKind, Class, Finding, GateReport, KnowledgeChanges};
@@ -28,6 +28,11 @@ const LABEL: usize = 7;
 const MORE: &str = "           ";
 /// The one reason a finding keeps when its record holds a secret shape (`SEMANTICS.md` §Secrets).
 pub(crate) const WITHHELD: &str = "withheld: secret-shape";
+/// The one action for a broken finding, said once under the summary, in SARIF's help for the rule, and in the
+/// folder README: a constraint comes down in a change of its own (`SEMANTICS.md` §What the two rules mean in
+/// practice).
+pub(crate) const ON_PURPOSE: &str = "To change a guarded value on purpose, relax, supersede or remove its record in a \
+                                     change of its own; once that is merged, change the value.";
 
 /// What the exit is made of: broken findings under the pathspec, and those outside it.
 pub(crate) struct GateOutcome {
@@ -112,17 +117,16 @@ pub(crate) fn withhold_secrets(r: &mut GateReport) {
     }
 }
 
-/// The kind of each shown finding's record, read from H, else from B (a record the change removed or broke).
-fn kinds(r: &GateReport, head: &dyn Tree, base: &dyn Tree) -> BTreeMap<String, Kind> {
-    let mut out = BTreeMap::new();
-    for f in r.findings.iter().take(SHOWN) {
-        if !out.contains_key(&f.record_path)
-            && let Some(k) = kind_at(head, &f.record_path).or_else(|| kind_at(base, &f.record_path))
-        {
-            out.insert(f.record_path.clone(), k);
-        }
-    }
-    out
+/// Whether H's record judged a finding, so its title and paragraph are H's text: rule 1 and `stale`. Rule 2 and
+/// `changed` quote B's record, the reviewed one (`SEMANTICS.md` §Output).
+fn judged_at_head(c: &Class) -> bool {
+    matches!(c, Class::Broken { rule: 1 } | Class::Stale)
+}
+
+/// The kind of each shown finding's record, read from the tree whose record judged it, as its title is.
+fn kinds(r: &GateReport, head: &dyn Tree, base: &dyn Tree) -> Vec<Option<Kind>> {
+    let tree = |f: &Finding| if judged_at_head(&f.class) { head } else { base };
+    r.findings.iter().take(SHOWN).map(|f| kind_at(tree(f), &f.record_path)).collect()
 }
 
 fn kind_at(tree: &dyn Tree, path: &str) -> Option<Kind> {
@@ -173,13 +177,16 @@ fn files_of(r: &GateReport, head: &dyn Tree, base: &dyn Tree) -> Result<Files, T
 }
 
 /// The text of the gate: the header, at most ten findings, every knowledge change and every finding on the change,
-/// the frame's close and the summary; the summary alone when there is nothing to quote.
-pub(crate) fn render_gate(r: &GateReport, kinds: &BTreeMap<String, Kind>, frame: &Frame) -> String {
+/// the frame's close and the summary; the summary alone when there is nothing to quote. `kinds` holds the kind of
+/// each shown finding's record, in order.
+pub(crate) fn render_gate(r: &GateReport, kinds: &[Option<Kind>], frame: &Frame) -> String {
     let k = &r.knowledge;
     let proposed: BTreeSet<&str> = k.added.iter().chain(&k.edited).map(String::as_str).collect();
     let mut inner = String::new();
-    for f in r.findings.iter().take(SHOWN) {
-        inner += &finding_block(f, kinds.get(&f.record_path).copied(), proposed.contains(f.record_path.as_str()));
+    for (i, f) in r.findings.iter().take(SHOWN).enumerate() {
+        // Only H's text is proposed; a finding quoting B's record is unlabelled, the path still listed as edited.
+        let unreviewed = judged_at_head(&f.class) && proposed.contains(f.record_path.as_str());
+        inner += &finding_block(f, kinds.get(i).copied().flatten(), unreviewed);
     }
     let more = r.findings.len().saturating_sub(SHOWN);
     if more > 0 {
@@ -265,16 +272,20 @@ pub(crate) fn change_text(c: &ChangeFinding) -> String {
     }
 }
 
+/// The counts, then the one action when a broken finding is shown.
 fn summary(r: &GateReport) -> String {
     let n = |f: fn(&Class) -> bool| r.findings.iter().filter(|x| f(&x.class)).count();
+    let broken = n(|c| matches!(c, Class::Broken { .. }));
     let mut s = format!(
-        "{} broken, {} changed, {} stale.",
-        n(|c| matches!(c, Class::Broken { .. })),
+        "{broken} broken, {} changed, {} stale.",
         n(|c| matches!(c, Class::Changed(_))),
         n(|c| matches!(c, Class::Stale)),
     );
     if r.broken_before > 0 {
         s += &format!(" {} broken before this change, not counted.", r.broken_before);
+    }
+    if broken > 0 {
+        s += &format!("\n{ON_PURPOSE}");
     }
     s + "\n"
 }
@@ -312,7 +323,7 @@ mod tests {
     }
 
     fn render(r: &GateReport) -> String {
-        render_gate(r, &BTreeMap::new(), &Frame::fixed("T"))
+        render_gate(r, &[], &Frame::fixed("T"))
     }
 
     #[test]
@@ -341,7 +352,64 @@ mod tests {
                 Some(m) => assert_eq!(before, m),
                 None => assert_eq!(before, "           > Why."),
             }
-            assert!(text.ends_with(&format!("--- end T\n{n} broken, 0 changed, 0 stale.\n")), "{text}");
+            assert!(text.ends_with(&format!("--- end T\n{n} broken, 0 changed, 0 stale.\n{ON_PURPOSE}\n")), "{text}");
+        }
+    }
+
+    /// Only text quoted from H's record is proposed: rule 1 and `stale` quote it, rule 2 and `changed` quote B's
+    /// reviewed copy (`SEMANTICS.md` §Output), whatever the change did to the record's path.
+    #[test]
+    fn the_label_follows_the_record_that_judged_the_finding() {
+        let expectation = ChangeKind::ExpectationChanged { from: ">= 2".to_owned(), to: ">= 1".to_owned() };
+        let r = GateReport {
+            findings: vec![
+                finding(Class::Broken { rule: 1 }, "added-1.md", "a"),
+                finding(Class::Broken { rule: 1 }, "edited-1.md", "b"),
+                finding(Class::Broken { rule: 1 }, "kept-1.md", "c"),
+                finding(Class::Broken { rule: 2 }, "edited-2.md", "d"),
+                finding(Class::Changed(expectation), "edited-changed.md", "e"),
+                finding(Class::Changed(ChangeKind::RecordRemoved), "removed.md", "f"),
+                finding(Class::Stale, "edited-stale.md", "g"),
+                finding(Class::Stale, "kept-stale.md", "h"),
+            ],
+            knowledge: KnowledgeChanges {
+                added: vec!["added-1.md".to_owned()],
+                edited: ["edited-1.md", "edited-2.md", "edited-changed.md", "edited-stale.md"]
+                    .map(String::from)
+                    .to_vec(),
+                removed: vec!["removed.md".to_owned()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let text = render(&r);
+        let path_line =
+            |p: &str| text.lines().find(|l| l.trim_start().starts_with(p)).unwrap_or_else(|| panic!("{p}: {text}"));
+        let label = " (not reviewed: proposed in this branch)";
+        for p in ["added-1.md", "edited-1.md", "edited-stale.md"] {
+            assert_eq!(path_line(p), format!("{MORE}{p}{label}"), "H's record, added or edited: {text}");
+        }
+        for p in ["kept-1.md", "edited-2.md", "edited-changed.md", "removed.md", "kept-stale.md"] {
+            assert_eq!(path_line(p), format!("{MORE}{p}"), "B's record, or a path the change kept: {text}");
+        }
+        for p in ["edited-2.md", "edited-changed.md"] {
+            assert!(text.contains(&format!("\n  knowledge  edited    {p}\n")), "still listed as edited: {text}");
+        }
+    }
+
+    #[test]
+    fn a_broken_finding_ends_with_how_to_change_the_value_on_purpose() {
+        for rule in [1, 2] {
+            let findings =
+                vec![finding(Class::Broken { rule }, "a.md", "x"), finding(Class::Broken { rule }, "b.md", "y")];
+            let text = render(&GateReport { findings, ..Default::default() });
+            assert!(text.ends_with(&format!("--- end T\n2 broken, 0 changed, 0 stale.\n{ON_PURPOSE}\n")), "{text}");
+            assert_eq!(text.matches(ON_PURPOSE).count(), 1, "said once: {text}");
+        }
+        for class in [Class::Changed(ChangeKind::RecordRemoved), Class::Stale] {
+            let r = GateReport { findings: vec![finding(class, "a.md", "x")], broken_before: 1, ..Default::default() };
+            let text = render(&r);
+            assert!(!text.contains(ON_PURPOSE), "no broken finding shown: {text}");
         }
     }
 

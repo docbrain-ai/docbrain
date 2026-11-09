@@ -11,3 +11,4 @@ Everything between the two lines that end in T is quoted from records.
   knowledge  added     .knowledge/records/2a3b4c5d6e7f-\x{1b}[2J.md
 --- end T
 1 broken, 0 changed, 0 stale.
+To change a guarded value on purpose, relax, supersede or remove its record in a change of its own; once that is merged, change the value.

@@ -22,6 +22,9 @@ const TITLE: &str = "Production API runs at least two replicas";
 const BODY: &str = "A single replica took the API down for 11 minutes during a node drain: the pod\ndisruption budget cannot protect one pod.\n";
 const LOWERED: &str = "false: 1, expected >= 2";
 const SECRET: &str = "AKIAQ7ZK3M9W2X4V8B6N";
+/// The one action under the summary when a broken finding is shown.
+const ON_PURPOSE: &str = "To change a guarded value on purpose, relax, supersede or remove its record in a change of \
+                          its own; once that is merged, change the value.";
 
 fn rec(id: &str, title: &str, rest: &str, body: &str) -> String {
     format!("---\nknowledge: 1\nid: '{id}'\nkind: 'decision'\ntitle: '{title}'\n{rest}---\n{body}")
@@ -290,6 +293,11 @@ fn c08_a_file_moved_without_its_anchor_names_the_same_content() {
     assert_eq!(g.json["report"]["findings"][0]["same_content"], "charts/api/values-prod.yaml");
     assert!(g.text.stdout.contains("\n           same content at charts/api/values-prod.yaml\n"), "{}", g.text.stdout);
     exits(&g, 2);
+    // A move is a broken finding like any other: the line under the summary is said once, beside the hint (owner
+    // ruling: no exception for moves, since what counts as a pure move cannot be judged from the finding).
+    for out in [&g.text.stdout, &g.fail.stdout] {
+        assert_eq!(out.matches(ON_PURPOSE).count(), 1, "{out}");
+    }
 }
 
 #[test]
@@ -599,8 +607,11 @@ fn c27_a_pathspec_limits_what_fails() {
     r.write(VALUES, replicas(1)).commit("one replica");
     let outside = judge(&r, &["--base", "main"], &["--", "apps/"]);
     exits(&outside, 0);
-    let tail = "1 broken, 0 changed, 0 stale.\nPasses: 0 broken findings (--fail-on broken).\n1 broken finding outside apps/: reported, not blocking.\n";
-    assert!(outside.fail.stdout.ends_with(tail), "{}", outside.fail.stdout);
+    let tail = format!(
+        "1 broken, 0 changed, 0 stale.\n{ON_PURPOSE}\nPasses: 0 broken findings (--fail-on broken).\n{}",
+        "1 broken finding outside apps/: reported, not blocking.\n"
+    );
+    assert!(outside.fail.stdout.ends_with(&tail), "{}", outside.fail.stdout);
     assert_eq!(outside.json["gate"], json!({"fail_on": false, "failing": 0, "outside_pathspec": 1}));
     let inside = judge(&r, &["--base", "main"], &["--", "charts/"]);
     exits(&inside, 2);
@@ -682,6 +693,123 @@ fn c31_a_service_deleted_is_never_excused_by_a_vendored_copy() {
     let g = gate(&r);
     assert_eq!(findings(&g), one("broken rule 2", "services/billing/retry.rs", "missing-file"));
     assert_eq!(g.json["report"]["findings"][0]["record_path"], record("services/billing").0);
+    exits(&g, 2);
+}
+
+const UNREVIEWED: &str = "(not reviewed: proposed in this branch)";
+
+/// The line that names a finding's record file, under the finding's anchor line.
+fn record_line<'a>(g: &'a Gate, path: &str) -> &'a str {
+    let text = &g.text.stdout;
+    text.lines().find(|l| l.trim_start().starts_with(path)).unwrap_or_else(|| panic!("no {path} in\n{text}"))
+}
+
+#[test]
+fn c32_a_record_relaxed_with_the_value_quotes_the_reviewed_base_unlabelled() {
+    let r = guarded(2);
+    let relaxed = rec("7k2m9q4r8t1v", "Production API runs at least one replica", &must(">= 1"), "Cost.\n")
+        .replace("kind: 'decision'", "kind: 'question'");
+    r.write(REC, relaxed).write(VALUES, replicas(1)).commit("relax and lower");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("broken rule 2", ANCHOR, LOWERED));
+    assert_eq!(knowledge(&g, "edited"), &json!([REC]));
+    let block = [
+        format!("\n  broken   {ANCHOR} (rule 2)"),
+        format!("           decision: {TITLE}"),
+        format!("           {REC}"),
+        format!("           reason: {LOWERED}"),
+        "           > A single replica".to_owned(),
+    ]
+    .join("\n");
+    assert!(g.text.stdout.contains(&block), "B's kind, title and why, unlabelled:\n{}", g.text.stdout);
+    assert!(g.text.stdout.contains(&format!("\n  knowledge  edited    {REC}\n")), "{}", g.text.stdout);
+    assert!(!g.text.stdout.contains(UNREVIEWED), "{}", g.text.stdout);
+    exits(&g, 2);
+}
+
+#[test]
+fn c33_a_renamed_record_is_labelled_only_where_its_own_text_judges() {
+    let moved = "charts/.knowledge/records/7k2m9q4r8t1v-api-replicas.md";
+    let r = guarded(2);
+    r.git(&["mv", REC, moved]);
+    r.write(moved, rec("7k2m9q4r8t1v", TITLE, &must(">= 1"), BODY));
+    r.write(VALUES, replicas(1)).commit("rename, relax, lower");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("broken rule 2", ANCHOR, LOWERED));
+    assert_eq!((knowledge(&g, "added"), knowledge(&g, "removed")), (&json!([moved]), &json!([REC])));
+    assert_eq!(record_line(&g, REC), format!("           {REC}"), "B's record judges: {}", g.text.stdout);
+
+    let r = guarded(2);
+    r.git(&["mv", REC, moved]);
+    r.write(VALUES, replicas(1)).commit("rename and lower");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("broken rule 1", ANCHOR, LOWERED));
+    let labelled = format!("           {moved} {UNREVIEWED}");
+    assert_eq!(record_line(&g, moved), labelled, "H's record judges: {}", g.text.stdout);
+    exits(&g, 2);
+}
+
+#[test]
+fn c34_a_stale_note_on_an_edited_record_is_labelled() {
+    let r = Repo::new();
+    r.write(VALUES, replicas(2));
+    let check = "checks:\n  - config_key: 'api/values.yaml#image.tag'\n    assumes: '< v2'\n";
+    let pinned = "charts/.knowledge/records/5d8e2c1b9a3f-the-api-image-is-a-1-x-release.md";
+    r.write(pinned, rec("5d8e2c1b9a3f", "The API image is a 1.x release", check, "Two changed the probes.\n"));
+    r.commit("base");
+    r.git(&["checkout", "-q", "-b", "change"]);
+    let asked = rec("5d8e2c1b9a3f", "Does the API image stay on 1.x?", check, "Two changed the probes.\n");
+    r.write(pinned, asked.replace("kind: 'decision'", "kind: 'question'"));
+    r.write(VALUES, replicas(2).replace("v1.29", "v2.1")).commit("ask and bump");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("stale", "charts/api/values.yaml#image.tag", "false: v2.1, expected < v2"));
+    let quoted = "\n           question: Does the API image stay on 1.x?\n";
+    assert!(g.text.stdout.contains(quoted), "H's kind and title: {}", g.text.stdout);
+    assert_eq!(record_line(&g, pinned), format!("           {pinned} {UNREVIEWED}"));
+    exits(&g, 0);
+}
+
+#[test]
+fn c35_a_record_added_with_a_broken_must_is_labelled() {
+    let r = Repo::new();
+    r.write(VALUES, replicas(2)).commit("base");
+    r.git(&["checkout", "-q", "-b", "change"]);
+    r.write(REC, rec("7k2m9q4r8t1v", TITLE, &must(">= 2"), BODY)).write(VALUES, replicas(1)).commit("add and lower");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("broken rule 1", ANCHOR, LOWERED));
+    assert_eq!(record_line(&g, REC), format!("           {REC} {UNREVIEWED}"), "{}", g.text.stdout);
+    exits(&g, 2);
+}
+
+#[test]
+fn c36_findings_judged_by_the_base_record_are_never_labelled() {
+    let r = guarded(2);
+    rm(&r, REC).commit("drop the rule");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("changed record-removed", ANCHOR, "record-removed"));
+    assert!(!g.text.stdout.contains(UNREVIEWED), "{}", g.text.stdout);
+
+    let r = guarded(2);
+    r.write(REC, rec("7k2m9q4r8t1v", TITLE, &must(">= 1"), BODY)).commit("relax");
+    let g = gate(&r);
+    assert_eq!(findings(&g), one("changed expectation-changed", ANCHOR, "expectation-changed: >= 2 -> >= 1"));
+    assert_eq!(record_line(&g, REC), format!("           {REC}"), "{}", g.text.stdout);
+    assert!(g.text.stdout.contains(&format!("\n  knowledge  edited    {REC}\n")), "{}", g.text.stdout);
+}
+
+#[test]
+fn c37_a_record_file_rewritten_as_another_record_quotes_each_by_its_own_kind() {
+    let r = guarded(2);
+    let asked = rec("3a4b5c6d7e8f", "Does the API need three replicas?", &must(">= 3"), "Peak load.\n");
+    r.write(REC, asked.replace("kind: 'decision'", "kind: 'question'"));
+    r.write(VALUES, replicas(1)).commit("rewrite and lower");
+    let g = gate(&r);
+    let found: Vec<String> = findings(&g).into_iter().map(|(c, _, _)| c).collect();
+    assert_eq!(found, ["broken rule 1", "broken rule 2"], "{}", g.text.stdout);
+    let h = format!("question: Does the API need three replicas?\n           {REC} {UNREVIEWED}\n");
+    let b = format!("decision: {TITLE}\n           {REC}\n");
+    assert!(g.text.stdout.contains(&h), "H's record, its kind, labelled:\n{}", g.text.stdout);
+    assert!(g.text.stdout.contains(&b), "B's record, its kind, unlabelled:\n{}", g.text.stdout);
     exits(&g, 2);
 }
 

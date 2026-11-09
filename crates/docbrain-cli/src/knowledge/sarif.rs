@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use super::frame::esc;
-use super::gate::change_text;
+use super::gate::{ON_PURPOSE, change_text};
 
 const SCHEMA: &str = "https://json.schemastore.org/sarif-2.1.0.json";
 const SRCROOT: &str = "%SRCROOT%";
@@ -101,7 +101,12 @@ pub(crate) fn sarif(r: &GateReport, files: &Files, version: &str) -> Value {
     let rules: Vec<Value> = RULES
         .iter()
         .map(|(id, level, text)| {
-            json!({"id": id, "shortDescription": {"text": text}, "defaultConfiguration": {"level": level}})
+            let mut rule =
+                json!({"id": id, "shortDescription": {"text": text}, "defaultConfiguration": {"level": level}});
+            if *id == "knowledge/broken" {
+                rule["help"] = json!({"text": ON_PURPOSE});
+            }
+            rule
         })
         .collect();
     json!({
@@ -379,5 +384,14 @@ mod tests {
             results(&sarif(&withheld, &files, "1"))[0]["message"]["text"].as_str().unwrap().lines().nth(1),
             Some("reason: missing-file")
         );
+    }
+
+    #[test]
+    fn the_broken_rule_says_how_to_change_the_value_on_purpose() {
+        let v = sarif(&GateReport::default(), &Files::default(), "9.9.9");
+        for rule in v["runs"][0]["tool"]["driver"]["rules"].as_array().unwrap() {
+            let help = if rule["id"] == "knowledge/broken" { json!({"text": ON_PURPOSE}) } else { Value::Null };
+            assert_eq!(rule["help"], help, "{rule}");
+        }
     }
 }

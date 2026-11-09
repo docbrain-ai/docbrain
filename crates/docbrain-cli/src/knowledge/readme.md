@@ -62,8 +62,10 @@ A text in code (`code`: the smallest text that carries the decision, at least 24
     ---
     A retried payment was charged twice before the idempotency check was added.
 
-`must` fails a change that breaks it; `assumes` marks the record stale instead. An expectation is `exist` or
-one of `==`, `!=`, `>=`, `>`, `<=`, `<` and a value; write a version with a leading `v` (`v1.29`).
+`must` fails a change that breaks it; `assumes` marks the record stale instead. To change a guarded value on
+purpose, relax, supersede or remove its record in a change of its own; once that is merged, change the value.
+An expectation is `exist` or one of `==`, `!=`, `>=`, `>`, `<=`, `<` and a value; write a version with a
+leading `v` (`v1.29`).
 
 Before moving, renaming or deleting a file, run `docbrain context` on its old path and move its anchors in the
 same change. The body is never read by the checks: a procedure step that runs a file goes out of date
