@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>What one engineer works out, the whole company keeps.</strong><br/>
+  <strong>What one person learns, the whole company keeps.</strong><br/>
   Someone on your team figures out why a deploy keeps breaking. Months later, someone on another team runs into the same problem. They have no way to know it was already solved, and neither does their coding agent, so it suggests the fix that was already tried and dropped. DocBrain saves those decisions where they happen (in your agent sessions, pull requests, chat threads, incidents and deploys) and shows them to the next person or agent who works on that code, before they change it. Every answer links to its source, gets flagged when the source changes, and can be exported as a file anyone can check offline. Self-hosted, and read-only against your systems.
 </p>
 
