@@ -4,7 +4,9 @@
 #[path = "common/knowledge_repo.rs"]
 mod knowledge_repo;
 
-use std::time::{Duration, Instant};
+use std::io::Read;
+use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use knowledge_repo::{Out, Repo};
 use serde_json::{Value, json};
@@ -216,6 +218,33 @@ fn a_large_body_shows_its_first_paragraph_and_path() {
     );
 }
 
+/// The binary run as `Repo::run` runs it, with the CPU time the run used: user and system, its own and that of the
+/// git processes it waited for, read by `wait4` on its pid. That is the run's work alone. The wall clock also counts
+/// the wait for a free CPU on a loaded machine, and `RUSAGE_CHILDREN` sums every child this test process reaped,
+/// the sibling tests' runs included.
+fn run_cpu(r: &Repo, args: &[&str]) -> (Out, Duration) {
+    let mut c = Command::new(knowledge_repo::binary());
+    knowledge_repo::hermetic(&mut c, r.home());
+    c.current_dir(r.dir()).args(args).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    #[allow(clippy::zombie_processes)] // `wait4` below reaps it.
+    let mut child = c.spawn().unwrap();
+    drop(child.stdin.take());
+    let mut pipe = child.stderr.take().unwrap();
+    let err = std::thread::spawn(move || {
+        let mut s = String::new();
+        pipe.read_to_string(&mut s).map(|_| s)
+    });
+    let mut stdout = String::new();
+    child.stdout.take().unwrap().read_to_string(&mut stdout).unwrap();
+    let stderr = err.join().unwrap().unwrap();
+    let pid = libc::pid_t::try_from(child.id()).unwrap();
+    let (mut status, mut usage) = (0, unsafe { std::mem::zeroed::<libc::rusage>() });
+    assert_eq!(unsafe { libc::wait4(pid, &mut status, 0, &mut usage) }, pid, "{}", std::io::Error::last_os_error());
+    let time = |t: libc::timeval| Duration::new(t.tv_sec as u64, t.tv_usec as u32 * 1_000);
+    let code = if libc::WIFEXITED(status) { libc::WEXITSTATUS(status) } else { -1 };
+    (Out { code, stdout, stderr }, time(usage.ru_utime) + time(usage.ru_stime))
+}
+
 #[test]
 fn five_thousand_paths() {
     let r = Repo::new();
@@ -225,13 +254,11 @@ fn five_thousand_paths() {
     let args: Vec<&str> = ["context"].into_iter().chain(paths.iter().map(String::as_str)).collect();
     // The first run loads the binary from disk; the time measured is the paths', not that load's.
     ok(&r, &["src/lib.rs"]);
-    let start = Instant::now();
-    let out = r.run(&args);
-    let took = start.elapsed();
-    eprintln!("five_thousand_paths: {took:?}");
+    let (out, cpu) = run_cpu(&r, &args);
+    eprintln!("five_thousand_paths: {cpu:?} of CPU");
     assert_eq!((out.code, out.stderr.as_str()), (0, ""), "{out:?}");
     assert_eq!(heads(&out.stdout), ["  holds  fact: Sources build with one toolchain"]);
-    assert!(took < Duration::from_secs(2), "{took:?}");
+    assert!(cpu < Duration::from_secs(2), "{cpu:?} of CPU");
 }
 
 #[test]
