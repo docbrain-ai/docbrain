@@ -5,12 +5,16 @@ The DocBrain connector is mocked under `mocks/docbrain/`, so the suite needs no 
 answers the same way every run, and can gate a change in CI. Each case is a realistic conversation;
 its graders check which connector tools were called and with what, and what the reply said.
 
-Run from the repository root:
+The suite lives beside the plugin, not inside it, so the plugin folder holds no scripts. A run needs
+the two in one folder. From the repository root:
 
-    claude plugin eval plugins/docbrain --scaffold --trust-plugin --ablation none
+    run=$(mktemp -d) && cp -R plugins/docbrain/. plugin-evals/docbrain/. "$run"
+    claude plugin eval "$run" --scaffold --trust-plugin --ablation none
 
-`--scaffold` lets the cases that need a repository build one first. Add `--json results.json
---threshold 1.0` in CI. The live end-to-end proofs against a real stack are separate:
+The copy also brings `.mcp.json`, which stands in for the connection a person adds with
+`claude mcp add`: it names the `docbrain` server so the mocks have a server to answer for, and no run
+ever calls its address. `--scaffold` lets the cases that need a repository build one first. Add
+`--json results.json --threshold 1.0` in CI. The live end-to-end proofs against a real stack are separate:
 `scripts/capture-skill-proof.sh` and `scripts/capture-skill-proof-b.mjs`.
 
 `mocks/docbrain/_tools.json` is the real server's `tools/list` answer for the six tools the skill

@@ -12,6 +12,8 @@ node_modules/
 .vscode/
 .cursor/
 .mcp.json
+# The plugin eval suite's stand-in connection: a fixed local address, no key (plugin-evals/docbrain/evals/README.md).
+!plugin-evals/docbrain/.mcp.json
 
 # Rust build artifacts
 target/
