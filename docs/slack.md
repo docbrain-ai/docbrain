@@ -104,7 +104,7 @@ https://<your-domain>/slack/events
 | `commands` | Handle `/docbrain` slash commands |
 | `chat:write` | Post answers and notifications |
 | `users:read` | Decide whether the asker is a workspace member or a guest (required: without it every asker is treated as a guest) |
-| `users:read.email` | Look up doc authors by email for stale-doc DMs |
+| `users:read.email` | Look up doc authors by email for stale-doc DMs. With `ACL_MODE=enforce`, match each asker to what their email can read at the source (without this scope, askers read public content only) |
 | `app_mentions:read` | Handle `@DocBrain capture` mentions in threads |
 | `channels:history` | Read thread messages for auto-listen / capture in public channels |
 | `groups:history` | Read thread messages for auto-listen / capture in private channels |
@@ -175,6 +175,8 @@ Slack blocks slash commands in threads, so `/docbrain capture` only works as a t
 ```
 
 Returns a sourced answer with confidence rating, freshness indicators on each source, and thumbs up/down buttons.
+
+With `ACL_MODE=enforce`, the answer draws only on what the asker can read at the source, matched by the email on their Slack profile, and is posted privately. If DocBrain cannot look the asker up, the answer draws on no documents at all, never on everything.
 
 ### Incident triage at 2am
 

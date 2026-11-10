@@ -299,7 +299,7 @@ doc from a subset.
 - `sources` — primary material. `kind` is `file`, `stdin`, or `url`. For `kind: "url"`, the URL goes in `label` and `raw` is `""` — the server fetches it via the connected MCP connector (Confluence page, Jira issue, Slack thread, GitHub PR or file).
 - `target` — augment an existing doc rather than write from scratch.
 - `template` — the raw template **file content** (not a path); shapes section structure, block shape (table columns, checklists, code-block language, header fields) and tone only — filled from your sources, gaps marked `NEEDS INPUT`, example rows/commands never copied. Can never disable a safety or quality rule.
-- `space` — applies that Confluence space's quality rules; `no_enrich: true` disables live-MCP enrichment.
+- `space` — applies that Confluence space's quality rules. A key limited to some spaces may name only one of them (another space is `403`); without `space`, its draft draws only on its own spaces. `no_enrich: true` disables live-MCP enrichment.
 
 **Response (`GeneratedArtifact`):**
 ```json
@@ -334,7 +334,7 @@ doc from a subset.
 | Status | Meaning |
 |---|---|
 | `400` | Validation failure / unknown source kind / unsupported or unrecognized URL (incl. a smuggled rule directive in a template). Also returned when `target` is a fetchable source URL (a Slack thread, GitHub PR/file, Jira issue, or Confluence page) and no other sources are given — `target` is the existing doc to *augment*, not source material, so this almost always means you meant to pass it as a source instead. |
-| `403` | Caller is not an `editor` |
+| `403` | Caller is not an `editor`, or the key cannot write to the named `space` |
 | `413` | Source material over the per-source or aggregate size budget (inline or after fetching links) |
 | `502` | A named URL source could not be fetched (connector not connected/configured, or fetch error) |
 | `503` | Generation not configured |

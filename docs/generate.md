@@ -62,7 +62,7 @@ of the document you want written.
 | `--target` | `<REF\|URL>` | Existing doc to **augment** (not replace). See [Augmenting an existing doc](#augmenting-an-existing-doc). |
 | `--template` | `<FILE>` | Team template file that shapes section structure, block shape (table columns, checklists, code blocks, header fields) and tone. Filled from your sources; gaps become `NEEDS INPUT`. **Cannot** affect safety. See [Templates](#templates). |
 | `--type` | `<TYPE>` | Doc-type hint: `runbook` \| `guide` \| `troubleshooting` \| `faq` \| `reference`. Inferred if omitted. |
-| `--space` | `<SPACE>` | Confluence space whose quality rules apply. Falls back to the global floor if omitted. |
+| `--space` | `<SPACE>` | Confluence space whose quality rules apply. Falls back to the global floor if omitted. A key limited to some spaces may name only one of them; any other space is refused with `403`. Without `--space`, such a key's draft draws only on its own spaces. |
 | `--out` | `<FILE>` | Write markdown to a file instead of stdout. |
 | `--force` | — | Overwrite the `--out` file if it already exists. Interactive runs refuse to clobber an existing file without this; CI/non-interactive runs overwrite automatically. See [I/O contract](#io-contract). |
 | `--no-enrich` | — | Disable live-MCP tool enrichment (corpus/seed only). |
@@ -272,6 +272,9 @@ docbrain generate "runbook for cert rotation" \
 than rewrite it from scratch. The existing content is the baseline; the run adds
 to it.
 
+A `--target` page the key cannot read is not fetched: the draft is written as a
+new doc, exactly as for a page that could not be fetched.
+
 ```bash
 # Extend an existing runbook with what a new PR changed
 docbrain generate "add the new rollback path" \
@@ -351,7 +354,7 @@ Editor role; same auth as `/ask`. Returns `200` with a `GeneratedArtifact`.
 | Code | Meaning |
 |-|-|
 | `400` | Bad request / unknown kind / unsupported URL (incl. a smuggled rule directive in a template). |
-| `403` | Caller is not an editor. |
+| `403` | Caller is not an editor, or the key cannot write to the named space. |
 | `413` | Source material is over the size budget. |
 | `502` | A named URL source could not be fetched (connector not connected, not configured, or fetch error). |
 | `503` | Generation is not configured. |
