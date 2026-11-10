@@ -87,6 +87,7 @@ Engineer annotates in their IDE  → DocBrain links knowledge to the exact code 
 | [Ingestion](ingestion.md) | Connecting 13+ knowledge sources |
 | [External Connectors](connectors.md) | Build custom connectors for any knowledge source |
 | [Governance](governance.md) | Space ownership, SLAs, breach detection, dashboards |
+| [Data Retention](data-retention.md) | Remove old tickets and pull requests by age, per source type |
 | [Review Workflows](reviews.md) | Multi-stage approval pipelines for documentation |
 | [Knowledge Intelligence](knowledge-intelligence.md) | Graph, analytics, predictive intelligence |
 | [Autopilot](autopilot.md) | Gap detection and draft generation |

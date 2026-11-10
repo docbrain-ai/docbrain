@@ -54,6 +54,7 @@ nav:
     - Autopilot: autopilot.md
     - Generate (Grounded Docs): generate.md
     - Governance: governance.md
+    - Data Retention: data-retention.md
     - How DocBrain Earns Trust: trust.md
     - Offline Evidence Bundles: evidence.md
     - Premise Monitors (Living Claims): premises.md
