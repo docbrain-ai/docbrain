@@ -110,9 +110,10 @@ From the repository you work in:
 ```bash
 claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
+claude mcp add --transport http --scope project docbrain http://localhost:3001/api/v1/mcp
 ```
 
-Needs Claude Code 2.1.186 or later. When it asks for your DocBrain MCP address, enter `http://localhost:3001/api/v1/mcp`. Then run `/mcp` in Claude Code, choose `plugin:docbrain:docbrain` and sign in: DocBrain opens in your browser, you sign in and click **Allow**. No API key. Say "capture this" the next time you and your agent work something out.
+Needs Claude Code 2.1.186 or later. The first two commands add the capture skill; the third connects DocBrain. Then run `/mcp` in Claude Code, choose `docbrain` and sign in: DocBrain opens in your browser, you sign in and click **Allow**. No API key. Say "capture this" the next time you and your agent work something out.
 
 Cursor, VS Code, CI and everything else: [Coding Agents](./agents.md#setup).
 

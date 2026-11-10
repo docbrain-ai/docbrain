@@ -408,8 +408,9 @@ fi
 echo "    $step. Open ${DOCBRAIN_URL} and sign in"; step=$((step + 1))
 echo "    $step. Connect Claude Code (2.1.186 or later), from the repository you work in:"; step=$((step + 1))
 echo "         claude plugin marketplace add docbrain-ai/docbrain --scope project"
-echo "         claude plugin install docbrain@docbrain --scope project --config mcp_url=${DOCBRAIN_URL}/api/v1/mcp"
-echo "       then run /mcp in Claude Code, choose plugin:docbrain:docbrain and sign in"
+echo "         claude plugin install docbrain@docbrain --scope project"
+echo "         claude mcp add --transport http --scope project docbrain ${DOCBRAIN_URL}/api/v1/mcp"
+echo "       then run /mcp in Claude Code, choose docbrain and sign in"
 echo "    $step. Ask a question to verify everything works"
 echo ""
 echo "  To connect a document source, edit config/local.yaml (gitignored):"

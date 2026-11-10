@@ -106,9 +106,10 @@ Docker Compose serves the web app and the API together at http://localhost:3001,
 ```bash
 claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
+claude mcp add --transport http --scope project docbrain http://localhost:3001/api/v1/mcp
 ```
 
-It asks for your DocBrain MCP address: `http://localhost:3001/api/v1/mcp` with Docker Compose. Then run `/mcp` in Claude Code, choose `docbrain` (`plugin:docbrain:docbrain` when it came with the plugin) and sign in: DocBrain opens in your browser, you sign in with your DocBrain account and click **Allow**. No API key. (Approving needs your account from step 1, not the admin API key.) Using Cursor or VS Code? See [Using DocBrain with your coding agent](#using-docbrain-with-your-coding-agent).
+The first two add the capture skill; the third connects your DocBrain (`http://localhost:3001/api/v1/mcp` is its address with Docker Compose). Then run `/mcp` in Claude Code, choose `docbrain` and sign in: DocBrain opens in your browser, you sign in with your DocBrain account and click **Allow**. No API key. (Approving needs your account from step 1, not the admin API key.) Using Cursor or VS Code? See [Using DocBrain with your coding agent](#using-docbrain-with-your-coding-agent).
 
 **3. Capture something, then ask for it.** Next time you and your agent work something out, say "capture this". You'll see a draft, and it's saved once you say yes. Then open a new session, or have a teammate open one, and ask about that file or topic. The answer comes back with your capture cited.
 
@@ -135,7 +136,7 @@ with their repo-relative paths and read what comes back first.
 
 DocBrain serves MCP at your DocBrain address followed by `/api/v1/mcp` (`http://localhost:3001/api/v1/mcp` with Docker Compose). While Sign-in for apps is on, your account menu › **Connected apps** shows it with a Copy button.
 
-**Claude Code.** The plugin install in the [Quickstart](#quickstart) adds the capture skill and connects the server; you sign in once with `/mcp`. Both commands write to `.claude/settings.json`, so commit that file and your whole team gets it, each person signing in as themselves. To skip the prompt, add `--config mcp_url=…`. Without the plugin: `claude mcp add --transport http docbrain http://localhost:3001/api/v1/mcp`, then `/mcp`.
+**Claude Code.** The three commands in the [Quickstart](#quickstart) add the capture skill and connect the server; you sign in once with `/mcp`. They write to `.claude/settings.json` and `.mcp.json`, and neither holds a secret, so commit both and your whole team gets the skill and the connection, each person signing in as themselves. Without the plugin, run the `claude mcp add` line alone, then `/mcp`.
 
 **Cursor, VS Code and other editors.** Point them at the same address with an API key read from your environment, so no key is written in the file:
 

@@ -32,19 +32,17 @@ DocBrain serves MCP at one address: your DocBrain address followed by `/api/v1/m
 trailing slash. With Docker Compose that is `http://localhost:3001/api/v1/mcp`. While Sign-in for apps
 is on, your account menu › **Connected apps** in DocBrain shows it with a Copy button.
 
-**Claude Code** (2.1.186 or later). Install the [plugin](#install-it): it connects the server and adds the
-capture skill. Or connect the server alone:
+**Claude Code** (2.1.186 or later). Connect the server, then add the capture skill with the
+[plugin](#install-it):
 
 ```bash
 claude mcp add --transport http --scope project docbrain https://docbrain.your-org.internal/api/v1/mcp
 ```
 
-Then sign in once: run `/mcp`, choose `docbrain` (`plugin:docbrain:docbrain` when it came with the
-plugin) and sign in. Your browser opens DocBrain; sign in
+Then sign in once: run `/mcp`, choose `docbrain` and sign in. Your browser opens DocBrain; sign in
 (approving an app needs a sign-in from the last 10 minutes) and click **Allow**. There is no API key
 and nothing secret in any file, so the `.mcp.json` that `--scope project` writes can be committed for
-the whole team. Over SSH or without a browser, run `claude mcp login docbrain --no-browser`
-(`claude mcp login plugin:docbrain:docbrain --no-browser` if you installed the plugin).
+the whole team. Over SSH or without a browser, run `claude mcp login docbrain --no-browser`.
 
 The agent acts as you, with your role and never more: a `viewer` can read and ask, captures need
 `editor`. The connection ends after 30 days unused or 90 days after you allowed it (an admin can
@@ -187,8 +185,8 @@ claude plugin marketplace add docbrain-ai/docbrain --scope project
 claude plugin install docbrain@docbrain --scope project
 ```
 
-The install asks for your DocBrain MCP address (see [Setup](#setup)); then run `/mcp`, choose
-`docbrain` and sign in. Pass `--config mcp_url=…` to answer without a prompt. Both commands write to
+The plugin adds the skill. The connection is the `claude mcp add` command in [Setup](#setup); until
+it is there, the skill says how to add it. Both commands write to
 `.claude/settings.json` — the marketplace under `extraKnownMarketplaces`, the plugin under
 `enabledPlugins`; commit that file and everyone who trusts the project has the skill, and each person
 signs in as themselves. Invoke it as `/docbrain:docbrain-capture`, or say
