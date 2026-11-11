@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::path::PathBuf;
@@ -11,6 +10,7 @@ mod redact;
 mod instance_check;
 mod knowledge;
 mod repository;
+mod stream_text;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CLI structure
@@ -4722,15 +4722,14 @@ async fn handle_sse_stream(
     verbose: bool,
     style: ProgressStyle,
 ) -> Result<()> {
-    let mut stream = response.bytes_stream();
+    let mut stream = stream_text::TextStream::new(response.bytes_stream());
     let mut buffer = String::new();
     let mut phase_count = 0u32;
     let mut tokens_streamed = false;
     let mut tail_buf = String::new();
 
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk?;
-        buffer.push_str(&String::from_utf8_lossy(&chunk));
+    while let Some(piece) = stream.next().await {
+        buffer.push_str(&piece.context("the server's answer stream failed while it was being read")?);
 
         while let Some(pos) = buffer.find("
 
