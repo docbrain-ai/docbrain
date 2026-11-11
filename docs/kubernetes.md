@@ -56,7 +56,7 @@ DocBrain supports Anthropic, OpenAI, AWS Bedrock, and Ollama. Pass the provider 
 ```bash
 helm install docbrain ./helm/docbrain \
   --set llm.provider=anthropic \
-  --set llm.modelId=claude-sonnet-4-5-20250929 \
+  --set llm.modelId=claude-sonnet-5-5 \
   --set llm.anthropicApiKey=sk-ant-... \
   --set embedding.provider=openai \
   --set embedding.modelId=text-embedding-3-small \
@@ -296,7 +296,7 @@ Instead of many `--set` flags, use a `values.yaml` override file:
 # my-values.yaml
 llm:
   provider: anthropic
-  modelId: claude-sonnet-4-5-20250929
+  modelId: claude-sonnet-5-5
   anthropicApiKey: sk-ant-...
 
 embedding:

@@ -103,7 +103,7 @@ llm_choice=${llm_choice:-1}
 case $llm_choice in
     1)
         sed -i.bak 's/^LLM_PROVIDER=.*/LLM_PROVIDER=anthropic/' .env
-        sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=claude-sonnet-4-5-20250929/' .env
+        sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=claude-sonnet-5-5/' .env
         echo ""
         read -rp "  Anthropic API key: " api_key
         sed -i.bak "s/^# ANTHROPIC_API_KEY=.*/ANTHROPIC_API_KEY=${api_key}/" .env

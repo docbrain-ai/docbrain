@@ -3,7 +3,7 @@
 # -- LLM provider: bedrock | anthropic | openai | ollama | groq | openrouter | together | deepseek | mistral | xai | gemini | azure_openai | cohere
 llm:
   provider: anthropic
-  modelId: claude-sonnet-4-5-20250929
+  modelId: claude-sonnet-5-5
   # fastModelId: ""        # fast/cheap model for side-calls (intent classify, query rewrite, entity extraction)
   #                        # Bedrock: us.anthropic.claude-haiku-4-5-20251001-v1:0
   #                        # Anthropic: claude-haiku-4-5-20251001
@@ -17,17 +17,18 @@ llm:
   #                        # IMPORTANT: set this to a cheaper model when using Opus 4 + thinkingBudget
   #                        # otherwise image extraction will trigger throttling errors on every page
   #                        # Falls back to modelId if not set
-  # thinkingBudget: 0      # extended thinking token budget (Anthropic/Bedrock only, 0 = disabled)
+  # thinkingBudget: 0      # deep thinking for modelId: tokens set aside for it (Anthropic/Bedrock only, 0 = off)
   #                        # does NOT apply to fastModelId or ingestModelId
-  #                        # NOTE: ignored by NEWER Bedrock Claude (Opus 4.7+/4.8) — those use
-  #                        # adaptive thinking; tune `effort` below instead. Still applies to
-  #                        # older models (Sonnet/Haiku) that use the classic budget.
-  # effort: high           # reasoning effort for NEWER Bedrock Claude (Opus 4.7+/4.8) on the
-  #                        # draft/critic/answer paths: low|medium|high|xhigh|max (default high).
+  #                        # Models that take a budget (Claude 4.6 and earlier, Haiku 4.5) get it.
+  #                        # Current Claude models (Opus 4.7 and later, the 5 generation, Fable)
+  #                        # reject a budget: they get adaptive thinking at `effort` below instead.
+  # effort: high           # reasoning effort for deep thinking on current Claude models (anthropic
+  #                        # and bedrock): low|medium|high|xhigh|max (default high). Sent only on
+  #                        # calls for modelId, and only when thinkingBudget is set.
   #                        # Higher = deeper reasoning but more latency+cost. 'high' is the
   #                        # product default — for grounded docs, source coverage (not raw
   #                        # reasoning depth) is the quality ceiling. (DOCBRAIN_LLM_EFFORT)
-  #                        # No effect on classic-thinking models (Sonnet/Haiku).
+  #                        # No effect on models that take a budget.
   # draftModelId: ""       # model for autopilot draft generation (two-phase reasoning + writing)
   #                        # Falls back to modelId if not set. Use a high-capability model here.
   # draftProvider: ""      # provider for draft generation. Falls back to llm.provider if not set.

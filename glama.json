@@ -45,7 +45,7 @@
         },
         "LLM_MODEL_ID": {
           "type": "string",
-          "description": "Model ID for the LLM provider (e.g. claude-sonnet-4-5-20250929)"
+          "description": "Model ID for the LLM provider (e.g. claude-sonnet-5-5)"
         },
         "ANTHROPIC_API_KEY": {
           "type": "string",

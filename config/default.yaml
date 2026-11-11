@@ -41,7 +41,7 @@ llm:
   # model_id: ~          # defaults to provider-appropriate model
   # fast_model_id: ~    # optional fast/cheap model for side-calls (Bedrock: claude-haiku, OpenAI: gpt-4o-mini)
   # ingest_model_id: ~   # cheaper model for ingest image extraction (falls back to model_id)
-  # thinking_budget: ~   # extended thinking tokens, 0 = disabled
+  # thinking_budget: ~   # deep thinking for model_id, tokens set aside for it; 0 = off. Current Claude models get adaptive thinking at DOCBRAIN_LLM_EFFORT instead of a budget
   ollama_base_url: "http://localhost:11434"
   # ollama_timeout_secs: 120   # HTTP timeout for Ollama (seconds). Increase to 300+ for large models (70B). Env: OLLAMA_TIMEOUT_SECS
   # timeout_secs: 120    # HTTP timeout (seconds) for anthropic/openai (+ compatible)/azure_openai/cohere. Ollama uses ollama_timeout_secs instead, unaffected by this. Env: LLM_TIMEOUT_SECS

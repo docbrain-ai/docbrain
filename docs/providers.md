@@ -11,10 +11,10 @@ Best quality for documentation Q&A. Supports extended thinking for complex queri
 ```env
 LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
-LLM_MODEL_ID=claude-sonnet-4-5-20250929
+LLM_MODEL_ID=claude-sonnet-5-5
 ```
 
-**Models**: `claude-sonnet-4-5-20250929` (recommended), `claude-opus-4-20250514`
+**Models**: `claude-sonnet-5-5` (recommended), `claude-opus-4-20250514`
 
 ### OpenAI
 
@@ -351,7 +351,7 @@ Based on testing across DocBrain's core workloads — RAG retrieval, intent clas
 
 | Priority | LLM | Embeddings | Notes |
 |----------|-----|------------|-------|
-| **Best quality** | `claude-sonnet-4-5-20250929` (Anthropic) | `text-embedding-3-small` (OpenAI) | Top answer accuracy and citation quality |
+| **Best quality** | `claude-sonnet-5-5` (Anthropic) | `text-embedding-3-small` (OpenAI) | Top answer accuracy and citation quality |
 | **Best fully local** | `command-r:35b` (Ollama) | `mxbai-embed-large` (Ollama) | No data leaves your machine; 24GB+ RAM. Purpose-built for RAG. |
 | **Local / mid-range** | `qwen2.5:32b` or `mistral-small:22b` (Ollama) | `mxbai-embed-large` (Ollama) | 16-26GB RAM; good quality for most queries |
 | **Local / low resource** | Cloud LLM (Anthropic/OpenAI) | `nomic-embed-text` (Ollama) | Use cloud for Q&A, Ollama for embeddings only. 8B models produce unreliable answers. |
@@ -376,7 +376,7 @@ For most teams getting started:
 # LLM — best quality
 LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
-LLM_MODEL_ID=claude-sonnet-4-5-20250929
+LLM_MODEL_ID=claude-sonnet-5-5
 
 # Embeddings — fast and accurate
 EMBED_PROVIDER=openai
