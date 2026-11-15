@@ -656,6 +656,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -2792,6 +2820,7 @@
 <li><strong>Open protocol.</strong> DocBrain speaks <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> (MCP) 2024-11-05 Streamable HTTP. Any MCP-compliant server works.</li>
 <li><strong>Off by default.</strong> When <code>MCP_TOOLS_ENABLED=false</code> (the default), the synthesis path is byte-identical to the pre-MCP path: no orchestrator, no fast-LLM dispatch, no measurable overhead.</li>
 <li><strong>Every surface.</strong> Tools dispatch uniformly wherever you ask — the web UI, Slack, the <code>docbrain ask "..."</code> CLI and MCP hosts calling <code>docbrain_ask</code> all run the same orchestrator. (CLI and MCP questions previously skipped tool dispatch; they no longer do.)</li>
+<li><strong>Tools off for one question.</strong> Every surface can turn tools off: <strong>Tools off</strong> on the console's Ask page, <code>docbrain ask --tools off</code>, or <code>tools_enabled: false</code> on <code>docbrain_ask</code> and <code>POST /api/v1/ask</code>. The answer still draws on everything DocBrain holds (documents, captures, claims, ownership); only the connected tools are skipped.</li>
 <li><strong>Intent-based, not keyword-based.</strong> The tool picker infers intent from the <em>meaning</em> of the question, not from keywords. "Any active incidents?" will search the relevant connected tools without the user ever naming "Jira" or "Confluence".</li>
 </ul>
 <div class="admonition info">

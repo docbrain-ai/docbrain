@@ -656,6 +656,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -2023,16 +2051,14 @@ created, and it is the thing asking for it at the moment of the next change.</p>
 <p>DocBrain serves MCP at one address: your DocBrain address followed by <code>/api/v1/mcp</code>, exactly, with no
 trailing slash. With Docker Compose that is <code>http://localhost:3001/api/v1/mcp</code>. While Sign-in for apps
 is on, your account menu › <strong>Connected apps</strong> in DocBrain shows it with a Copy button.</p>
-<p><strong>Claude Code</strong> (2.1.186 or later). Install the <a href="#install-it">plugin</a>: it connects the server and adds the
-capture skill. Or connect the server alone:</p>
+<p><strong>Claude Code</strong> (2.1.186 or later). Connect the server, then add the capture skill with the
+<a href="#install-it">plugin</a>:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>--transport<span class="w"> </span>http<span class="w"> </span>--scope<span class="w"> </span>project<span class="w"> </span>docbrain<span class="w"> </span>https://docbrain.your-org.internal/api/v1/mcp
 </span></code></pre></div>
-<p>Then sign in once: run <code>/mcp</code>, choose <code>docbrain</code> (<code>plugin:docbrain:docbrain</code> when it came with the
-plugin) and sign in. Your browser opens DocBrain; sign in
+<p>Then sign in once: run <code>/mcp</code>, choose <code>docbrain</code> and sign in. Your browser opens DocBrain; sign in
 (approving an app needs a sign-in from the last 10 minutes) and click <strong>Allow</strong>. There is no API key
 and nothing secret in any file, so the <code>.mcp.json</code> that <code>--scope project</code> writes can be committed for
-the whole team. Over SSH or without a browser, run <code>claude mcp login docbrain --no-browser</code>
-(<code>claude mcp login plugin:docbrain:docbrain --no-browser</code> if you installed the plugin).</p>
+the whole team. Over SSH or without a browser, run <code>claude mcp login docbrain --no-browser</code>.</p>
 <p>The agent acts as you, with your role and never more: a <code>viewer</code> can read and ask, captures need
 <code>editor</code>. The connection ends after 30 days unused or 90 days after you allowed it (an admin can
 change the 90 with <code>MAX_PAT_DAYS</code>), and you can revoke it any time under <strong>Connected apps</strong>.</p>
@@ -2114,9 +2140,11 @@ problems from the last 7 days. It also holds:</p>
 <p><strong>Premise Types (v1):</strong></p>
 <ul>
 <li><code>path</code> — A file path that must exist in a connected source. DocBrain monitors this path against your git sources' file listings (see <code>PREMISE_MONITOR_ENABLED</code>). If the path is verified at capture and later disappears, the annotation fires a <code>premise.broken</code> event. Paths never found at capture remain <code>dormant</code> — they do not alert.</li>
+<li><code>code</code> — Two lines of code a statement rests on, one per line of the expression, each <code>&lt;repository&gt;:&lt;path&gt;#&lt;text&gt;</code> with the same repository on both (<code>github:owner/name</code> or <code>gitlab:group/name</code>, read from <code>git remote get-url origin</code>, without <code>.git</code>). Copy each <code>&lt;text&gt;</code> exactly from the file, the smallest piece of the line that would have to change for your statement to stop being true: a name and its value, not a whole call. Pick two lines that would both have to change for your statement to stop being true; DocBrain warns readers only when both are gone, so a line that would outlive your statement keeps a wrong note quiet. If you cannot find two such lines, declare none, and take none too if your statement is that something is absent or rests on behaviour spread over many lines: say so in the capture instead. Exactly two lines, from one repository, are stored; anything else comes back as <code>premise not stored: a code premise names exactly two different lines from one repository</code>. The capture reads <em>Cited code still there</em> while the lines are there, <em>A cited line is gone</em> when one has gone, and <em>Code it rests on changed</em> when both have.</li>
 </ul>
+<p><code>code_snippet</code> is kept as a hash and is not re-checked; the <code>code</code> premise is what DocBrain checks.</p>
 <p><strong>Other Premise Types:</strong></p>
-<p>Other <code>premise_type</code> values are accepted and recorded but not currently validated. They remain in <code>dormant</code> state and never trigger alerts. This allows agents to encode additional premise types for future validation.</p>
+<p>Other <code>premise_type</code> values (those that are not <code>path</code>, <code>version</code>, <code>config_key</code> or <code>code</code>) are accepted and recorded but not currently validated. They remain in <code>dormant</code> state and never trigger alerts. This allows agents to encode additional premise types for future validation.</p>
 <p><strong>Malformed Premises:</strong></p>
 <p>If an array item is missing required fields (<code>premise_type</code>, <code>expression</code>) or has invalid types, it is skipped silently — the capture does not fail. This allows robust agent capture even if premise formatting is incorrect.</p>
 <p><strong>Commit captures declare theirs by listing the files:</strong></p>
@@ -2143,8 +2171,8 @@ personal names, logs or chatter.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>claude<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>docbrain-ai/docbrain<span class="w"> </span>--scope<span class="w"> </span>project
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>claude<span class="w"> </span>plugin<span class="w"> </span>install<span class="w"> </span>docbrain@docbrain<span class="w"> </span>--scope<span class="w"> </span>project
 </span></code></pre></div>
-<p>The install asks for your DocBrain MCP address (see <a href="#setup">Setup</a>); then run <code>/mcp</code>, choose
-<code>docbrain</code> and sign in. Pass <code>--config mcp_url=…</code> to answer without a prompt. Both commands write to
+<p>The plugin adds the skill. The connection is the <code>claude mcp add</code> command in <a href="#setup">Setup</a>; until
+it is there, the skill says how to add it. Both commands write to
 <code>.claude/settings.json</code> — the marketplace under <code>extraKnownMarketplaces</code>, the plugin under
 <code>enabledPlugins</code>; commit that file and everyone who trusts the project has the skill, and each person
 signs in as themselves. Invoke it as <code>/docbrain:docbrain-capture</code>, or say
@@ -2198,7 +2226,7 @@ root, not at an org that has recorded nothing.</p>
 <li>You and your agent fix something real.</li>
 <li>The agent asks DocBrain whether that knowledge already exists (<code>docbrain_context</code> for the files involved — a lookup in the record, not a guess).</li>
 <li>If the org doesn't have it, the agent drafts a capture and <strong>asks you first</strong>. You see exactly what leaves the machine.</li>
-<li>A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One whose declared premises all hold reads <em>Checked against code</em>: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One with a claim that does not hold names why: <em>Not found in any connected repository</em> (a path no repository has, say) or <em>Does not match the connected repository</em> (a version that differs), and the save-time reply says which. One where no claim fails but some cannot be checked now (their repository is disconnected, say) reads <em>Cannot be checked now</em>, even when its other claims hold. One anchored to nothing checkable is served too, labelled <em>Not checked against code</em>, so every reader knows.</li>
+<li>A capture you approve is served at once, anchored to the file and line range it came from, and labelled with who wrote it and what checks it. One whose declared premises all hold reads <em>Cited code still there</em>: DocBrain re-verifies it against your codebase, flags it the moment it stops being true, and tells you once. One with a claim that does not hold names why: <em>Not found in any connected repository</em> (a path no repository has, say) or <em>Does not match the connected repository</em> (a version that differs), and the save-time reply says which. One where no claim fails but some cannot be checked now (their repository is disconnected, say) reads <em>Cannot be checked now</em>, even when its other claims hold. One anchored to nothing checkable is served too, labelled <em>Not checked against code</em>, so every reader knows.</li>
 </ol>
 <p>A capture is refused when a premise it declares names a file a connected repository was recorded
 holding and none holds now: the reply is <code>422 premise_removed</code> naming the path, and the agent corrects

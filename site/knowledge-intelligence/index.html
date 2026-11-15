@@ -699,17 +699,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#example-use-cases_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -760,7 +749,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_2" class="md-nav__link">
+  <a href="#configuration_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -821,7 +810,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_3" class="md-nav__link">
+  <a href="#configuration_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -882,7 +871,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_4" class="md-nav__link">
+  <a href="#configuration_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -988,6 +977,34 @@
     
   
     Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
   
 
     
@@ -1906,17 +1923,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#example-use-cases_1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1967,7 +1973,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_2" class="md-nav__link">
+  <a href="#configuration_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -2028,7 +2034,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_3" class="md-nav__link">
+  <a href="#configuration_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -2089,7 +2095,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configuration_4" class="md-nav__link">
+  <a href="#configuration_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Configuration
@@ -2188,12 +2194,11 @@
 <h2 id="documentation-analytics">Documentation Analytics<a class="headerlink" href="#documentation-analytics" title="Permanent link">&para;</a></h2>
 <p>Documentation Analytics measures the health of your organization's documentation over time. Not a static score — a trend. It answers: is your team's collective knowledge getting more accessible or less? Are you accumulating tribal knowledge faster than you're documenting it?</p>
 <h3 id="what-it-does_1">What It Does<a class="headerlink" href="#what-it-does_1" title="Permanent link">&para;</a></h3>
-<p><strong>Daily snapshots:</strong> A daily snapshot of documentation health is recorded automatically. Each snapshot captures gap resolution rate, knowledge half-life, tribal knowledge percentage, and ROI. Snapshots are taken during the memory consolidation cycle.</p>
+<p><strong>Daily snapshots:</strong> A daily snapshot of documentation health is recorded automatically. Each snapshot captures gap resolution rate, knowledge half-life and tribal knowledge percentage. Snapshots are taken during the memory consolidation cycle.</p>
 <p><strong>Velocity computation:</strong> Given a lookback window, computes:
 - <code>gap_resolution_rate</code>: gaps resolved / gaps opened in the period
 - <code>knowledge_half_life_days</code>: median time for a answered question to become a gap again
-- <code>tribal_knowledge_pct</code>: percentage of answerable questions where only 1-2 people could have answered
-- <code>roi_usd</code>: estimated dollar value of engineer time saved (configurable via <code>minutesSavedPerQuery</code> and <code>hourlyRate</code>)</p>
+- <code>tribal_knowledge_pct</code>: percentage of answerable questions where only 1-2 people could have answered</p>
 <p><strong>Tribal Knowledge %:</strong> Derived from expertise routing data. When a question can only be answered by documents that a single person authored and no one else has engaged with, it's flagged as tribal knowledge. High tribal knowledge % is a risk indicator for bus-factor issues.</p>
 <p><strong>Team Velocity Comparison:</strong> Per-team breakdowns show which teams are improving documentation quality versus which are accumulating debt. Useful for engineering managers tracking documentation culture over time.</p>
 <h3 id="api-endpoints_1">API Endpoints<a class="headerlink" href="#api-endpoints_1" title="Permanent link">&para;</a></h3>
@@ -2218,11 +2223,6 @@
 <p>Query parameters:
 - <code>?days=30</code> — lookback window (default 30, max 365)
 - <code>?team=platform-eng</code> — filter to a specific team (teams endpoint only)</p>
-<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># In values.yaml or env vars:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">VELOCITY_MINUTES_SAVED_PER_QUERY</span><span class="o">=</span><span class="m">15</span><span class="w">   </span><span class="c1"># Assumed time saved per answered query (minutes)</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">VELOCITY_HOURLY_RATE</span><span class="o">=</span><span class="m">75</span><span class="w">               </span><span class="c1"># Hourly engineer cost in USD for ROI calculation</span>
-</span></code></pre></div>
 <h3 id="example-use-cases_1">Example Use Cases<a class="headerlink" href="#example-use-cases_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Quarterly review:</strong> Pull 90-day velocity trend to present to engineering leadership as a documentation health KPI.</li>
@@ -2264,13 +2264,13 @@
 </tr>
 </tbody>
 </table>
-<h3 id="configuration_2">Configuration<a class="headerlink" href="#configuration_2" title="Permanent link">&para;</a></h3>
+<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
 <p>Predictive analysis runs during the memory consolidation cycle (default: every 6 hours). The code-change endpoint can be called from a CI/CD pipeline webhook to trigger immediate analysis on merge.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Trigger from CI/CD (e.g. GitHub Actions on merge):</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://docbrain.internal/api/v1/predictive/code-change<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"X-API-Key: db_sk_..."</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"pr_url": "https://github.com/acme/platform/pull/1234", "diff_summary": "Updated Redis eviction config"}'</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Trigger from CI/CD (e.g. GitHub Actions on merge):</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://docbrain.internal/api/v1/predictive/code-change<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"X-API-Key: db_sk_..."</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"pr_url": "https://github.com/acme/platform/pull/1234", "diff_summary": "Updated Redis eviction config"}'</span>
 </span></code></pre></div>
 <h3 id="example-use-cases_2">Example Use Cases<a class="headerlink" href="#example-use-cases_2" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2318,15 +2318,15 @@
 - <code>?type=contradiction|link|version</code> — filter by fix type
 - <code>?status=pending|applied|rejected</code> — filter by status
 - <code>?severity=high|medium|low</code> — filter by severity</p>
-<h3 id="configuration_3">Configuration<a class="headerlink" href="#configuration_3" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># How many contradiction checks per freshness pass (higher = more LLM cost):</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">FRESHNESS_CONTRADICTION_CHECKS_PER_PASS</span><span class="o">=</span><span class="m">10</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Include recently ingested event docs (Slack, PRs) in contradiction checks:</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nv">FRESHNESS_CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Max age for event docs to be included in contradiction checks:</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nv">FRESHNESS_CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS</span><span class="o">=</span><span class="m">90</span>
+<h3 id="configuration_2">Configuration<a class="headerlink" href="#configuration_2" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># How many contradiction checks per freshness pass (higher = more LLM cost):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">FRESHNESS_CONTRADICTION_CHECKS_PER_PASS</span><span class="o">=</span><span class="m">10</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Include recently ingested event docs (Slack, PRs) in contradiction checks:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nv">FRESHNESS_CONTRADICTION_INCLUDE_RECENT_EVENT_DOCS</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Max age for event docs to be included in contradiction checks:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nv">FRESHNESS_CONTRADICTION_EVENT_DOC_MAX_AGE_DAYS</span><span class="o">=</span><span class="m">90</span>
 </span></code></pre></div>
 <h3 id="example-use-cases_3">Example Use Cases<a class="headerlink" href="#example-use-cases_3" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2368,21 +2368,19 @@
 </tr>
 </tbody>
 </table>
-<h3 id="configuration_4">Configuration<a class="headerlink" href="#configuration_4" title="Permanent link">&para;</a></h3>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># values.yaml</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">stream</span><span class="p">:</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                 </span><span class="c1"># Opt-in; set true to enable proactive alerting</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">intervalMinutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">            </span><span class="c1"># Scan frequency</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">incidentWarningMinUsers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">     </span><span class="c1"># Min unique users within 2h for incident warning</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">expertiseGapDays</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span><span class="w">           </span><span class="c1"># Days of expert inactivity before gap alert</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="c1"># alertChannel: ""             # Optional Slack channel for critical alerts</span>
+<h3 id="configuration_3">Configuration<a class="headerlink" href="#configuration_3" title="Permanent link">&para;</a></h3>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># values.yaml</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">stream</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">                 </span><span class="c1"># Opt-in; set true to enable proactive alerting</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">intervalMinutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span><span class="w">            </span><span class="c1"># Scan frequency</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">incidentWarningMinUsers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">     </span><span class="c1"># Min unique users within 2h for incident warning</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">expertiseGapDays</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span><span class="w">           </span><span class="c1"># Days of expert inactivity before gap alert</span>
 </span></code></pre></div>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Equivalent env vars:</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">STREAM_ENABLED</span><span class="o">=</span><span class="nb">true</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">STREAM_INTERVAL_MINUTES</span><span class="o">=</span><span class="m">30</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">STREAM_INCIDENT_WARNING_MIN_USERS</span><span class="o">=</span><span class="m">2</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nv">STREAM_EXPERTISE_GAP_DAYS</span><span class="o">=</span><span class="m">90</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nv">STREAM_ALERT_CHANNEL</span><span class="o">=</span><span class="c1">#docbrain-alerts</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Equivalent env vars:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">STREAM_ENABLED</span><span class="o">=</span><span class="nb">true</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">STREAM_INTERVAL_MINUTES</span><span class="o">=</span><span class="m">30</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">STREAM_INCIDENT_WARNING_MIN_USERS</span><span class="o">=</span><span class="m">2</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">STREAM_EXPERTISE_GAP_DAYS</span><span class="o">=</span><span class="m">90</span>
 </span></code></pre></div>
 <h3 id="example-use-cases_4">Example Use Cases<a class="headerlink" href="#example-use-cases_4" title="Permanent link">&para;</a></h3>
 <ul>

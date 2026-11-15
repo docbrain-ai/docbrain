@@ -1209,20 +1209,12 @@ DocBrain's episodic memory grows with every user query. Without retention, the `
 
 ## Documentation Analytics
 
-The Documentation Analytics module tracks organizational documentation health over time — how fast gaps are being resolved, knowledge half-life, tribal knowledge percentage, and ROI of documentation investment. Snapshots are taken daily during memory consolidation.
+The Documentation Analytics module tracks organizational documentation health over time — how fast gaps are being resolved, knowledge half-life and tribal knowledge percentage. Snapshots are taken daily during memory consolidation.
 
 | Variable | Default | Description |
 |---|---|---|
-| `VELOCITY_MINUTES_SAVED` | `15` | Estimated minutes of engineer time saved per successfully answered query. Used for ROI calculation. |
-| `VELOCITY_HOURLY_RATE` | `75` | Hourly engineer cost in USD for ROI calculation. |
 | `VELOCITY_BULK_UPDATE_MULTIPLE` | `10.0` | Bulk re-ingest guard for net knowledge velocity. A week whose `docs_updated` count exceeds this multiple of the rolling weekly-update norm is treated as a bulk sweep (e.g. a full re-ingest) and capped to the norm, so it cannot inflate the velocity headline or flip the maintenance trend to "accelerating". Lower it on a corpus with very steady authoring to catch smaller sweeps; raise it if legitimate maintenance bursts are being mistaken for sweeps. **Must be finite and `>= 1.0`** — a value of 0, negative, or NaN collapses the bulk-sweep threshold to 0 (every week misclassified as a sweep) and is rejected at startup with a clear error. |
 | `VELOCITY_SUBSTANTIVE_UPDATE_CEILING` | `2000` | Absolute ceiling on a single week's substantive (bulk-excluded) update contribution. Applied after the rolling-norm cap to guard the case where the entire history is inflated and the median itself is poisoned. A genuine week of hand-authored doc updates does not exceed this. **Must be `>= 1`** — a negative value or 0 silently zeroes all substantive updates and is rejected at startup with a clear error. |
-| `VELOCITY_ROI_V2_ENABLED` | `true` | Use the current return-on-documentation method: needs enough distinct users, leaves out admins, caps each user's votes and recomputes from live data. `false` goes back to the older raw-count formula, which is not suited to executive reporting. |
-| `VELOCITY_ROI_MIN_MINUTES_LOW` | `5` | Low end, in minutes, of the time saved per helpful answer. Together with the high end it sets the range the ROI figure is shown in. |
-| `VELOCITY_ROI_MIN_MINUTES_HIGH` | `25` | High end, in minutes, of the time saved per helpful answer. |
-| `VELOCITY_ROI_MIN_DISTINCT_USERS` | `3` | Fewest distinct non-admin users with positive feedback in the window before any ROI is shown. Below it the page reads insufficient signal. |
-| `VELOCITY_ROI_EXCLUDE_ADMIN` | `true` | Leave admins' votes out of the ROI count, because the people who run the product rate it differently. Set `false` only with a reason. |
-| `VELOCITY_ROI_MAX_VOTES_PER_USER` | `10` | Most votes from one user counted in the window, so a single enthusiastic user cannot dominate the figure. |
 | `VELOCITY_TRIBAL_V2_ENABLED` | `true` | Use the current tribal-knowledge method: a percentage over real domains, with a signal check. `false` goes back to the older fixed rule of two experts and no check. |
 | `VELOCITY_TRIBAL_MAX_EXPERTS` | `2` | A domain with this many experts or fewer counts as tribal. A five-person team might use `1`; a large organisation might use `5`. |
 | `VELOCITY_TRIBAL_MIN_DOMAINS` | `3` | Fewest domains with feedback signal before the tribal percentage is shown. Below it the page reads insufficient signal. |
@@ -1230,8 +1222,6 @@ The Documentation Analytics module tracks organizational documentation health ov
 
 ```yaml
 velocity:
-  minutes_saved_per_query: 15
-  hourly_rate: 75
   bulk_update_multiple: 10.0
   substantive_update_abs_ceiling: 2000
 ```
@@ -1585,7 +1575,7 @@ enable live tool fan-out at answer time.
 | `MCP_REGISTRY_CACHE_PATH` | `/var/lib/docbrain/registry-cache/index.json` | Disk path for the cached registry index. Acts as the Tier 2 fallback when the network fetch fails. |
 | `DOCBRAIN_K8S_SECRET_NAME` | — | Kubernetes Secret name embedded in the kubectl command rendered by `/api/v1/admin/mcp/secrets/audit/{id}`. Optional — when unset the rendered command shows a `<set DOCBRAIN_K8S_SECRET_NAME>` placeholder. |
 | `DOCBRAIN_K8S_NAMESPACE` | — | Kubernetes namespace for the same audit endpoint. Optional — placeholder when unset. |
-| `DOCBRAIN_PUBLIC_BASE_URL` | `http://localhost:3000` | Origin that MCP sign-in (OAuth) uses to build its callback address. Set it to the address clients reach DocBrain at. `DOCBRAIN_WEB_BASE_URL` falls back to this value when it is unset. |
+| `DOCBRAIN_PUBLIC_BASE_URL` | the console's origin (`DOCBRAIN_WEB_BASE_URL`) | Where a tool sign-in (MCP OAuth) returns: the callback address registered with the tool is `{this}/api/v1/oauth/mcp/callback/{manifest}`. Set it only to the console's own origin, for example with a path prefix the API is served under. On another origin, starting a tool connection answers: "Tool sign-in cannot finish on this DocBrain because its return address is on a different origin than the console; an admin can remove DOCBRAIN_PUBLIC_BASE_URL, or set it to the console's address." |
 | `MCP_OAUTH_ENCRYPTION_KEY` | — | Base64 key of exactly 32 bytes that encrypts stored per-user tool sign-in tokens. Without it MCP sign-in is disabled and its endpoints answer `503`. Generate one with `openssl rand -base64 32`. |
 | `MCP_MANIFEST_DIR` | `/etc/docbrain/manifests` | Directory the tool manifests are read from. If it does not exist, MCP sign-in is disabled and the server logs a warning. The Helm chart sets `/etc/docbrain/mcp-manifests`. |
 | `DOCBRAIN_MCP_SECRET_KEY` | — | Base64 key of 32 bytes that encrypts secrets typed into a manifest in the console. Unset, those inline secrets are refused, while secrets taken from the environment keep working. |
@@ -1683,7 +1673,7 @@ See **[docs/sso.md](sso.md)** for full setup instructions and a provider compari
 | `OIDC_WEB_UI_URL` | `DOCBRAIN_WEB_BASE_URL`, else `http://localhost:3001` | Where to redirect the browser after a successful login; most deployments leave it unset |
 | `DOCBRAIN_OAUTH_SERVER` | `off` (Docker Compose: `on`) | `on` lets apps such as Claude Code connect to the MCP endpoint by signing in and being allowed, instead of a pasted API key. Needs `DOCBRAIN_WEB_BASE_URL` as the one address of console and API (https, or `http://localhost` for development); otherwise it stays off and the log and **Settings › Sign-in for apps** say why. |
 | `DOCBRAIN_OAUTH_DOCUMENT_PROXY` | — | Fetch apps' metadata documents through this proxy, which then decides which addresses may be reached. Unset, DocBrain fetches them directly and only from public addresses. |
-| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin. With Sign-in for apps on (`DOCBRAIN_OAUTH_SERVER`), the console and the API must both be served at this one origin. Also builds the **Open this answer** link on Slack answers and the **Answer page:** line in IDE answers. Unset → no link is offered (never guessed or hardcoded; the console's own Copy link still works). Trailing slash trimmed. |
+| `DOCBRAIN_WEB_BASE_URL` | — | Public origin of the DocBrain **web UI**. Drives the MCP-OAuth landing redirect AND the **"view in browser"** deep link the CLI prints after a `generate` (plus the shareable per-document link). Set to the user-facing web origin. With Sign-in for apps on (`DOCBRAIN_OAUTH_SERVER`), the console and the API must both be served at this one origin. Also builds the **Open this answer** link on Slack answers and the **Answer page:** line in IDE answers. Unset → no link is offered (never guessed or hardcoded; the console's own Copy link still works). Trailing slash trimmed. Needed for tool sign-in: unset, starting a tool connection answers "Tool sign-in cannot finish on this DocBrain because it has no console address; an admin can set DOCBRAIN_WEB_BASE_URL (webBaseUrl in Helm) to the address people open the console at." A tool connection finishes on the console's **My integrations**, in the browser that came back from the tool, signed in as the person who started it. |
 | `OIDC_ACCEPT_INVALID_CERTS` | `false` | Set to `true` to skip TLS verification for OIDC discovery. Use for corporate/self-signed CAs. |
 
 ### GitHub OAuth 2.0

@@ -46,13 +46,12 @@ Documentation Analytics measures the health of your organization's documentation
 
 ### What It Does
 
-**Daily snapshots:** A daily snapshot of documentation health is recorded automatically. Each snapshot captures gap resolution rate, knowledge half-life, tribal knowledge percentage, and ROI. Snapshots are taken during the memory consolidation cycle.
+**Daily snapshots:** A daily snapshot of documentation health is recorded automatically. Each snapshot captures gap resolution rate, knowledge half-life and tribal knowledge percentage. Snapshots are taken during the memory consolidation cycle.
 
 **Velocity computation:** Given a lookback window, computes:
 - `gap_resolution_rate`: gaps resolved / gaps opened in the period
 - `knowledge_half_life_days`: median time for a answered question to become a gap again
 - `tribal_knowledge_pct`: percentage of answerable questions where only 1-2 people could have answered
-- `roi_usd`: estimated dollar value of engineer time saved (configurable via `minutesSavedPerQuery` and `hourlyRate`)
 
 **Tribal Knowledge %:** Derived from expertise routing data. When a question can only be answered by documents that a single person authored and no one else has engaged with, it's flagged as tribal knowledge. High tribal knowledge % is a risk indicator for bus-factor issues.
 
@@ -68,14 +67,6 @@ Documentation Analytics measures the health of your organization's documentation
 Query parameters:
 - `?days=30` — lookback window (default 30, max 365)
 - `?team=platform-eng` — filter to a specific team (teams endpoint only)
-
-### Configuration
-
-```bash
-# In values.yaml or env vars:
-VELOCITY_MINUTES_SAVED_PER_QUERY=15   # Assumed time saved per answered query (minutes)
-VELOCITY_HOURLY_RATE=75               # Hourly engineer cost in USD for ROI calculation
-```
 
 ### Example Use Cases
 

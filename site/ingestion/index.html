@@ -656,6 +656,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -1720,6 +1748,17 @@
     <span class="md-ellipsis">
       
         Updating Documents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scheduled-ingestion-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scheduled Ingestion (docker compose)
       
     </span>
   </a>
@@ -3119,6 +3158,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#scheduled-ingestion-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scheduled Ingestion (docker compose)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#scheduled-ingestion-kubernetes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3304,6 +3354,7 @@ enabled simply by being present in YAML — there is <strong>no separate
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>cp<span class="w"> </span>-r<span class="w"> </span>~/my-docs/*<span class="w"> </span>examples/sample-docs/
 </span></code></pre></div>
 <h3 id="run-ingestion">Run Ingestion<a class="headerlink" href="#run-ingestion" title="Permanent link">&para;</a></h3>
+<p>With docker compose the <code>ingest</code> service runs a pass when the stack starts and every hour after (<code>INGEST_INTERVAL_SECS</code> in <code>.env</code>); <code>docker compose logs -f ingest</code> follows it. To run a pass now:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <h3 id="supported-file-types">Supported File Types<a class="headerlink" href="#supported-file-types" title="Permanent link">&para;</a></h3>
@@ -3346,10 +3397,10 @@ enabled simply by being present in YAML — there is <strong>no separate
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">page_limit</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span><span class="w">   </span><span class="c1"># 0 = unlimited (default)</span>
 </span></code></pre></div>
 <h3 id="step-4-run-ingestion">Step 4: Run Ingestion<a class="headerlink" href="#step-4-run-ingestion" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restart the server to pick up the new config</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Restart so the new config is read</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server<span class="w"> </span>ingest
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Run ingestion</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Run a pass now (the ingest service also runs one every hour)</span>
 </span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <p>You'll see output like:</p>
@@ -3477,8 +3528,8 @@ non-empty — an empty list is a startup error.</p>
 <li>Copy the token and either export it as <code>GITHUB_TOKEN</code> or put it directly in <code>sources.github.token</code></li>
 </ol>
 <h3 id="run-ingestion_1">Run Ingestion<a class="headerlink" href="#run-ingestion_1" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server<span class="w"> </span>ingest<span class="w">   </span><span class="c1"># read the new config</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest<span class="w">   </span><span class="c1"># run a pass now, or wait for the next scheduled one</span>
 </span></code></pre></div>
 <h3 id="what-gets-ingested">What Gets Ingested<a class="headerlink" href="#what-gets-ingested" title="Permanent link">&para;</a></h3>
 <p>DocBrain ingests all <code>.md</code> and <code>.txt</code> files in the repository. It respects directory structure and uses file paths as metadata for source citations.</p>
@@ -3572,7 +3623,7 @@ non-empty — an empty list is a startup error.</p>
 <p>Image descriptions use the <code>HAIKU_MODEL_ID</code> model if set (recommended for cost efficiency), otherwise falls back to <code>LLM_MODEL_ID</code>. With Claude Haiku, expect ~$0.001 per image. A full ingestion of 1000 pages with ~3 images each costs roughly $3.</p>
 <hr />
 <h2 id="real-time-sync-confluence-webhooks">Real-Time Sync: Confluence Webhooks<a class="headerlink" href="#real-time-sync-confluence-webhooks" title="Permanent link">&para;</a></h2>
-<p>By default, DocBrain ingests documents when you run <code>docbrain-ingest</code> manually or on a cron schedule. But if you want pages to sync <strong>automatically</strong> the moment they're created, updated, or deleted in Confluence, enable webhook integration.</p>
+<p>By default, DocBrain ingests documents on a schedule (the compose <code>ingest</code> service, the chart's ingest CronJob, or <code>docbrain-ingest</code> run by hand). But if you want pages to sync <strong>automatically</strong> the moment they're created, updated, or deleted in Confluence, enable webhook integration.</p>
 <h3 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -3694,7 +3745,7 @@ non-empty — an empty list is a startup error.</p>
 <tr>
 <td><strong>Latency</strong></td>
 <td>Seconds after page edit</td>
-<td>Hours (depends on cron interval)</td>
+<td>Up to one interval: <code>INGEST_INTERVAL_SECS</code> with compose (an hour by default), the CronJob schedule on Kubernetes</td>
 </tr>
 <tr>
 <td><strong>Scope</strong></td>
@@ -3888,7 +3939,8 @@ its words and what checks it, and the console's <strong>Captures</strong> page s
 <li><strong>Two writers.</strong> A person (from the IDE through the skill, the CLI, the API or a <code>/capture</code> command):
   <em>Recorded by <name></em>. DocBrain itself, summarising a thread, a pull request or a CI run:
   <em>Summarised by DocBrain from <source></em>, with the person who asked for it credited as its capturer.</li>
-<li><strong>Three labels</strong>, computed when it is read: <em>Checked against code</em> (a premise it declares holds),
+<li><strong>Four labels</strong>, computed when it is read: <em>Cited code still there</em> (a premise it declares holds),
+  <em>A cited line is gone</em> (a two-line <code>code</code> premise has lost one of its lines: a quiet grey mark, no alert),
   <em>Code it rests on changed</em> (a premise is broken: answers that cite it carry a warning and its author
   is told once), <em>Not checked against code</em> (nothing checks it, and every reader can see that).</li>
 <li><strong>Its author manages it.</strong> Edit (a person-written capture, while it is served), Withdraw (at any
@@ -3944,10 +3996,12 @@ its words and what checks it, and the console's <strong>Captures</strong> page s
 <hr />
 <h2 id="re-ingestion-and-updates">Re-Ingestion and Updates<a class="headerlink" href="#re-ingestion-and-updates" title="Permanent link">&para;</a></h2>
 <h3 id="updating-documents">Updating Documents<a class="headerlink" href="#updating-documents" title="Permanent link">&para;</a></h3>
-<p>Run ingestion again to pick up changes:</p>
+<p>The scheduled pass picks up changes (every hour with compose); to pick them up now:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <p>DocBrain uses upsert logic — new and changed documents are updated, unchanged documents are skipped. This is safe to run repeatedly.</p>
+<h3 id="scheduled-ingestion-docker-compose">Scheduled Ingestion (docker compose)<a class="headerlink" href="#scheduled-ingestion-docker-compose" title="Permanent link">&para;</a></h3>
+<p>The <code>ingest</code> service in <code>docker-compose.yml</code> runs a pass when the stack starts and every <code>INGEST_INTERVAL_SECS</code> seconds after (3600 by default; <code>0</code> runs once). A pass that fails before the first success is retried after 60 s. <code>docker compose logs -f ingest</code> follows it.</p>
 <h3 id="scheduled-ingestion-kubernetes">Scheduled Ingestion (Kubernetes)<a class="headerlink" href="#scheduled-ingestion-kubernetes" title="Permanent link">&para;</a></h3>
 <p>The Helm chart includes a CronJob that runs ingestion on a schedule:</p>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># In values.yaml</span>

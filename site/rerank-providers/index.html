@@ -952,6 +952,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -2230,7 +2258,7 @@
 </tr>
 <tr>
 <td><code>RAG_RERANK_TOP_N</code></td>
-<td>Bounds how many candidates are sent to the provider, enforced for every provider. <strong>Matters most for <code>ollama</code></strong>: that dialect is a bi-encoder approximation over the embeddings API and issues <strong>one embedding round-trip per candidate</strong>, sequentially, so cost is linear in this value and a 200-candidate pool is 200 round-trips on every query. Hosted cross-encoders batch, so they feel the value far less. Start well below <code>rag.candidate_pool_size</code> on the local provider and raise it only if recall at the top actually suffers.</td>
+<td>Bounds how many documents are sent to the provider, enforced for every provider; captures are scored on top of it, up to half as many again, and on a question that names a compound identifier (<code>max_pool_size</code>, <code>spring.datasource.url</code>) so are chunks that write it inside a longer name, up to half as many again, so documents keep their places. <strong>Matters most for <code>ollama</code></strong>: that dialect is a bi-encoder approximation over the embeddings API and issues <strong>one embedding round-trip per candidate</strong>, sequentially, so cost is linear in this value and a 200-candidate pool is 200 round-trips on every query. Hosted cross-encoders batch, so they feel the value far less. Start well below <code>rag.candidate_pool_size</code> on the local provider and raise it only if recall at the top actually suffers.</td>
 </tr>
 <tr>
 <td><code>RAG_RERANK_TIMEOUT_SECS</code></td>

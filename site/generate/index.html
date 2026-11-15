@@ -997,6 +997,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -2232,7 +2260,7 @@ of the document you want written.</p>
 <tr>
 <td><code>--space</code></td>
 <td><code>&lt;SPACE&gt;</code></td>
-<td>Confluence space whose quality rules apply. Falls back to the global floor if omitted.</td>
+<td>Confluence space whose quality rules apply. Falls back to the global floor if omitted. A key limited to some spaces may name only one of them; any other space is refused with <code>403</code>. Without <code>--space</code>, such a key's draft draws only on its own spaces.</td>
 </tr>
 <tr>
 <td><code>--out</code></td>
@@ -2490,6 +2518,8 @@ overrides/extends these for the run.</p>
 <strong>augment</strong> it — fill gaps, add sections, fold in new source material — rather
 than rewrite it from scratch. The existing content is the baseline; the run adds
 to it.</p>
+<p>A <code>--target</code> page the key cannot read is not fetched: the draft is written as a
+new doc, exactly as for a page that could not be fetched.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Extend an existing runbook with what a new PR changed</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docbrain<span class="w"> </span>generate<span class="w"> </span><span class="s2">"add the new rollback path"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--target<span class="w"> </span>https://acme.atlassian.net/wiki/spaces/OPS/pages/12345<span class="w"> </span><span class="se">\</span>
@@ -2592,7 +2622,7 @@ from nothing. To write a <em>new</em> doc <em>from</em> that link, pass it as <c
 </tr>
 <tr>
 <td><code>403</code></td>
-<td>Caller is not an editor.</td>
+<td>Caller is not an editor, or the key cannot write to the named space.</td>
 </tr>
 <tr>
 <td><code>413</code></td>

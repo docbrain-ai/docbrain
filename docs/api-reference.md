@@ -1728,10 +1728,6 @@ Org-wide documentation analytics metrics over a configurable time window.
   "grade": "B",
   "knowledge_half_life_days": 45,
   "tribal_knowledge_pct": 0.15,
-  "documentation_roi": {
-    "queries_deflected": 340,
-    "estimated_hours_saved": 85
-  },
   "weekly_snapshots": [
     { "week": "2026-03-09", "velocity": 2.3, "docs_created": 4, "gaps_resolved": 2 }
   ],
@@ -1744,22 +1740,6 @@ Org-wide documentation analytics metrics over a configurable time window.
 Per-team velocity breakdown.
 
 **Query params:** `days` (default 30)
-
-### GET /api/v1/analytics/velocity/roi
-
-Org-wide ROI summary: total queries deflected, hours saved, and cost saved in USD over the selected time window.
-
-**Query params:** `days` (default 30)
-
-**Response:**
-```json
-{
-  "queries_deflected": 412,
-  "hours_saved": 103.0,
-  "cost_saved_usd": 7725.0,
-  "days": 30
-}
-```
 
 ---
 

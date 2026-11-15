@@ -15,7 +15,7 @@ The most important decision in DocBrain: "I don't know" is a real answer.
 A confident wrong answer is worse than no answer. It sends someone to the wrong person, or it bakes a fabricated number into a decision. So DocBrain holds back rather than guess:
 
 - **Ownership.** DocBrain only names an owner when the evidence is strong enough (more on that bar in the next section). If it isn't, you get "No confident owner, not enough signal yet," along with the reason. It won't invent a plausible name to fill the gap.
-- **Insights and ROI.** When there isn't enough data to mean anything, you see "Not enough signal yet, observing." Not a made-up percentage. Cost savings show as a range, like "$18 to $93," never a single false-precise figure.
+- **Insights.** When there isn't enough data to mean anything, you see "Not enough signal yet, observing." Not a made-up percentage.
 - **Subject matching.** DocBrain matches your question to a known system by exact identity, not fuzzy guessing. If it can't match cleanly, it steps aside and lets normal search handle it rather than risk attaching the answer to the wrong thing.
 
 One thing you'll notice: a brand-new DocBrain shows mostly "observing" and "no confident owner." That's the system working, not failing. It earns the right to make confident claims as real evidence builds up. A tool that shows confident numbers on day one is the one to worry about.

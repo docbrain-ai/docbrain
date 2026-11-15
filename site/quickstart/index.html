@@ -980,6 +980,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -2156,13 +2184,14 @@ key reopens every restored or declined secret finding. To supply your own instea
 <p>From the repository you work in:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>claude<span class="w"> </span>plugin<span class="w"> </span>marketplace<span class="w"> </span>add<span class="w"> </span>docbrain-ai/docbrain<span class="w"> </span>--scope<span class="w"> </span>project
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>claude<span class="w"> </span>plugin<span class="w"> </span>install<span class="w"> </span>docbrain@docbrain<span class="w"> </span>--scope<span class="w"> </span>project
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>claude<span class="w"> </span>mcp<span class="w"> </span>add<span class="w"> </span>--transport<span class="w"> </span>http<span class="w"> </span>--scope<span class="w"> </span>project<span class="w"> </span>docbrain<span class="w"> </span>http://localhost:3001/api/v1/mcp
 </span></code></pre></div>
-<p>Needs Claude Code 2.1.186 or later. When it asks for your DocBrain MCP address, enter <code>http://localhost:3001/api/v1/mcp</code>. Then run <code>/mcp</code> in Claude Code, choose <code>plugin:docbrain:docbrain</code> and sign in: DocBrain opens in your browser, you sign in and click <strong>Allow</strong>. No API key. Say "capture this" the next time you and your agent work something out.</p>
+<p>Needs Claude Code 2.1.186 or later. The first two commands add the capture skill; the third connects DocBrain. Then run <code>/mcp</code> in Claude Code, choose <code>docbrain</code> and sign in: DocBrain opens in your browser, you sign in and click <strong>Allow</strong>. No API key. Say "capture this" the next time you and your agent work something out.</p>
 <p>Cursor, VS Code, CI and everything else: <a href="../agents/#setup">Coding Agents</a>.</p>
 <h2 id="ingest-your-documents">Ingest Your Documents<a class="headerlink" href="#ingest-your-documents" title="Permanent link">&para;</a></h2>
 <p>DocBrain needs documents to answer questions. <strong>Ingestion</strong> is the process of fetching your docs, converting them to searchable chunks, and indexing them.</p>
 <h3 id="quick-start-use-the-included-sample-docs">Quick start: Use the included sample docs<a class="headerlink" href="#quick-start-use-the-included-sample-docs" title="Permanent link">&para;</a></h3>
-<p>The sample docs are already mounted. Just run:</p>
+<p>The sample docs are already mounted, and the <code>ingest</code> service indexes them when the stack starts and again every hour (<code>INGEST_INTERVAL_SECS</code> in <code>.env</code>). <code>docker compose logs -f ingest</code> follows the first pass. To run a pass right now:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <p>This takes ~30 seconds. Once done, you can ask questions about the sample documentation.</p>
@@ -2230,8 +2259,8 @@ channels, teams) must always be non-empty.</p>
 </span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ENG</span>
 </span><span id="__span-15-20"><a id="__codelineno-15-20" name="__codelineno-15-20" href="#__codelineno-15-20"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PLAT</span>
 </span></code></pre></div></p>
-<p>Then restart and re-ingest:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server
+<p>Then restart so the new sources are read; the next scheduled pass picks them up, or run one now:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>restart<span class="w"> </span>server<span class="w"> </span>ingest
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <p>For the full walkthrough (API token creation, space key finding, troubleshooting): <a href="../ingestion/">Ingestion Guide</a></p>
@@ -2311,7 +2340,7 @@ data stays in the Docker volumes. On Kubernetes, see <a href="../kubernetes/#upg
 </span></code></pre></div>
 <p>If using Ollama, make sure it's running: <code>ollama list</code> should show your models.</p>
 <h3 id="empty-answers-or-no-relevant-documents-found">Empty answers or "no relevant documents found"<a class="headerlink" href="#empty-answers-or-no-relevant-documents-found" title="Permanent link">&para;</a></h3>
-<p>You need to run ingestion first:</p>
+<p>The <code>ingest</code> service runs a pass when the stack starts; <code>docker compose logs ingest</code> shows whether it finished. To run a pass now:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest
 </span></code></pre></div>
 <p>If ingestion completed but answers are still empty, check:
@@ -2336,8 +2365,8 @@ data stays in the Docker volumes. On Kubernetes, see <a href="../kubernetes/#upg
 <h3 id="resetting-everything">Resetting everything<a class="headerlink" href="#resetting-everything" title="Permanent link">&para;</a></h3>
 <p>If you want to start fresh:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v<span class="w">    </span><span class="c1"># stops services and deletes all data</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w">      </span><span class="c1"># start fresh</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>server<span class="w"> </span>docbrain-ingest<span class="w">   </span><span class="c1"># re-ingest</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w">      </span><span class="c1"># start fresh; the ingest service indexes the docs again</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>ingest<span class="w">   </span><span class="c1"># watch that first pass</span>
 </span></code></pre></div>
 <h2 id="explore-the-web-ui">Explore the Web UI<a class="headerlink" href="#explore-the-web-ui" title="Permanent link">&para;</a></h2>
 <p>Open <strong>http://localhost:3001</strong> and sign in with your account. Here's what you'll find:</p>

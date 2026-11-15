@@ -219,29 +219,13 @@ data:
   FRESHNESS_ENGAGEMENT_MIN_VOTERS: {{ .Values.freshness.engagementMinVoters | default 3 | quote }}
   FRESHNESS_ENGAGEMENT_WINDOW_DAYS: {{ .Values.freshness.engagementWindowDays | default 180 | quote }}
   CONSOLIDATION_INTERVAL_HOURS: {{ .Values.consolidation.intervalHours | default 6 | quote }}
-  # Learning Velocity / Documentation ROI
-  #
-  # v1 (legacy): single point estimate (raw_positive_count × 15min × $75/h).
-  # A single user's votes can dominate this number — keep flag off for
-  # executive reporting.
-  #
-  # v2 (recommended): distinct-user gated, admin-excluded, per-user
-  # vote cap, range estimate. See docs/configuration.md §
-  # "Documentation ROI methodology" for the full derivation.
-  VELOCITY_MINUTES_SAVED:           {{ .Values.velocity.minutesSavedPerQuery     | default 15    | quote }}
-  VELOCITY_HOURLY_RATE:             {{ .Values.velocity.hourlyRate               | default 75    | quote }}
+  # Learning Velocity
   # Booleans below use `hasKey` rather than Sprig's `default` because the
   # `default true` filter silently overrides an operator's explicit `false`
   # (Go templates treat `false` as the empty value). The documented
-  # contract — "set roiV2Enabled: false to revert to v1" — requires the
+  # contract — "set tribalV2Enabled: false to revert to v1" — requires the
   # hasKey form to actually honour the override.
-  VELOCITY_ROI_V2_ENABLED:          {{ if hasKey .Values.velocity "roiV2Enabled"   }}{{ .Values.velocity.roiV2Enabled   | quote }}{{ else }}"true"{{ end }}
-  VELOCITY_ROI_MIN_MINUTES_LOW:     {{ .Values.velocity.roiMinutesSavedLow       | default 5     | quote }}
-  VELOCITY_ROI_MIN_MINUTES_HIGH:    {{ .Values.velocity.roiMinutesSavedHigh      | default 25    | quote }}
-  VELOCITY_ROI_MIN_DISTINCT_USERS:  {{ .Values.velocity.roiMinDistinctUsers      | default 3     | quote }}
-  VELOCITY_ROI_EXCLUDE_ADMIN:       {{ if hasKey .Values.velocity "roiExcludeAdmin" }}{{ .Values.velocity.roiExcludeAdmin | quote }}{{ else }}"true"{{ end }}
-  VELOCITY_ROI_MAX_VOTES_PER_USER:  {{ .Values.velocity.roiMaxVotesPerUser       | default 10    | quote }}
-  # Tribal Knowledge v2 — same hasKey pattern for booleans to honor explicit `false`.
+  # Tribal Knowledge v2
   VELOCITY_TRIBAL_V2_ENABLED:       {{ if hasKey .Values.velocity "tribalV2Enabled"    }}{{ .Values.velocity.tribalV2Enabled    | quote }}{{ else }}"true"{{ end }}
   VELOCITY_TRIBAL_MAX_EXPERTS:      {{ .Values.velocity.tribalMaxExpertsPerDomain | default 2 | quote }}
   VELOCITY_TRIBAL_MIN_DOMAINS:      {{ .Values.velocity.tribalMinDomainsWithSignal | default 3 | quote }}

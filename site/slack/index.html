@@ -656,6 +656,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../data-retention/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Retention
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../trust/" class="md-nav__link">
         
   
@@ -2240,7 +2268,7 @@
 </tr>
 <tr>
 <td><code>users:read.email</code></td>
-<td>Look up doc authors by email for stale-doc DMs</td>
+<td>Look up doc authors by email for stale-doc DMs. With <code>ACL_MODE=enforce</code>, match each asker to what their email can read at the source (without this scope, askers read public content only)</td>
 </tr>
 <tr>
 <td><code>app_mentions:read</code></td>
@@ -2304,6 +2332,7 @@
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/docbrain ask what's the runbook for Redis OOM errors?
 </span></code></pre></div>
 <p>Returns a sourced answer with confidence rating, freshness indicators on each source, and thumbs up/down buttons.</p>
+<p>With <code>ACL_MODE=enforce</code>, the answer draws only on what the asker can read at the source, matched by the email on their Slack profile, and is posted privately. If DocBrain cannot look the asker up, the answer draws on no documents at all, never on everything.</p>
 <h3 id="incident-triage-at-2am">Incident triage at 2am<a class="headerlink" href="#incident-triage-at-2am" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/docbrain incident payments service returning 502 after deploy
 </span></code></pre></div>

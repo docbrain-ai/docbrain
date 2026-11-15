@@ -639,7 +639,7 @@ server:
   # ── MCP Tool Platform ──
   #   DOCBRAIN_SSRF_ALLOW_LOOPBACK_FOR_INTERNAL_SHIMS: ""   # Required to load the shipped in-process shim manifests. confluence_rest and jira_rest are served by docbrain-server itself at
   #   MCP_REGISTRY_PUBKEY: ""   # Base64-encoded 32-byte Ed25519 public key used to verify the signed registry index and per-manifest signatures.
-  #   DOCBRAIN_PUBLIC_BASE_URL: "http://localhost:3000"   # Origin that MCP sign-in (OAuth) uses to build its callback address.
+  #   DOCBRAIN_PUBLIC_BASE_URL: ""   # Where a tool sign-in (MCP OAuth) returns: the callback address registered with the tool is {this}/api/v1/oauth/mcp/callback/{manifest}. default: the console's origin (DOCBRAIN_WEB_BASE_URL)
   #   MCP_OAUTH_ENCRYPTION_KEY: ""   # Base64 key of exactly 32 bytes that encrypts stored per-user tool sign-in tokens.
   #   DOCBRAIN_MCP_SECRET_KEY: ""   # Base64 key of 32 bytes that encrypts secrets typed into a manifest in the console.
   #   DOCBRAIN_INTERNAL_MCP_SECRET: ""   # Bearer secret the built-in tool shims require from the orchestrator, which calls them on the loopback address; generated at start when unset (a temporary one
@@ -845,23 +845,10 @@ freshness:
   engagementWindowDays: 180
 
 # -- Learning Velocity — org-level documentation health metrics
-# Tracks gap resolution rate, knowledge half-life, tribal knowledge %, and ROI.
+# Tracks gap resolution rate, knowledge half-life and tribal knowledge %.
 # Snapshots are taken daily during memory consolidation.
 velocity:
-  # v1 inputs (still applied when roiV2Enabled=false)
-  minutesSavedPerQuery: 15   # Estimated engineer time saved per answered query (minutes)
-  hourlyRate: 75             # Hourly engineer cost (USD) for ROI calculation
-
-  # v2 inputs — defensible methodology for executive reporting.
-  # See docs/configuration.md § "Documentation ROI methodology".
-  roiV2Enabled: true         # Switch to v2 formula (distinct-user gated, admin-excluded, vote-capped, range)
-  roiMinutesSavedLow: 5      # Low end of per-query time-saved range (minutes)
-  roiMinutesSavedHigh: 25    # High end of per-query time-saved range (minutes)
-  roiMinDistinctUsers: 3     # Minimum distinct non-admin users with positive feedback before ROI is reported (otherwise "Insufficient signal")
-  roiExcludeAdmin: true      # Exclude admin votes from ROI math (recommended — operators inflate their own number)
-  roiMaxVotesPerUser: 10     # Per-user vote cap inside the window (prevents one power-user from dominating the org-wide number)
-
-  # Tribal Knowledge v2 — same defensive methodology applied to the
+  # Tribal Knowledge v2 — a defensive methodology for the
   # tribal-knowledge percentage. See docs/configuration.md §
   # "Tribal Knowledge methodology".
   tribalV2Enabled: true              # Switch to v2 formula (domain_team_scores substrate, configurable threshold, insufficient-signal gate)
