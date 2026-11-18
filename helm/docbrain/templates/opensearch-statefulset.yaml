@@ -48,6 +48,14 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /usr/share/opensearch/data
+          # A first boot on a fresh volume took up to 138 s on a heavily loaded machine, and the liveness probe below
+          # restarts the pod at about 120 s, so a slow first boot would never finish. The startup probe holds both
+          # probes off until 9200 first answers, for up to 300 s (twice the slowest boot measured, with margin).
+          startupProbe:
+            tcpSocket:
+              port: 9200
+            periodSeconds: 10
+            failureThreshold: 30
           readinessProbe:
             tcpSocket:
               port: 9200
