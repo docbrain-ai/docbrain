@@ -120,6 +120,24 @@ fn run_tty(r: &Repo, env: &[(&str, &str)], typed: &[u8], args: &[&str], during: 
     let mut c = Command::new(knowledge_repo::binary());
     knowledge_repo::hermetic(&mut c, r.home());
     c.current_dir(r.dir()).args(args).envs(env.iter().copied()).process_group(0);
+    // A terminal session starts with Ctrl-C and Ctrl-\ at their defaults. A job started with `&` by a shell without
+    // job control (a floor run in the background) starts with both ignored, an ignored signal stays ignored through
+    // every exec, and a shell cannot trap one it was started ignoring: no editor here could take Ctrl-C (#882). The
+    // binary gets a terminal's defaults, however the tests were launched.
+    // SAFETY: between fork and exec the closure calls only sigaction(2), which is async-signal-safe, with a zeroed
+    // `sigaction` that names `SIG_DFL`; it allocates nothing.
+    unsafe {
+        c.pre_exec(|| {
+            for signal in [libc::SIGINT, libc::SIGQUIT] {
+                let mut default: libc::sigaction = std::mem::zeroed();
+                default.sa_sigaction = libc::SIG_DFL;
+                if libc::sigaction(signal, &default, std::ptr::null_mut()) != 0 {
+                    return Err(std::io::Error::last_os_error());
+                }
+            }
+            Ok(())
+        });
+    }
     c.stdin(Stdio::from(secondary)).stdout(Stdio::piped()).stderr(Stdio::piped());
     let child = c.spawn().unwrap();
     during(child.id());
@@ -130,6 +148,17 @@ fn run_tty(r: &Repo, env: &[(&str, &str)], typed: &[u8], args: &[&str], during: 
         stdout: String::from_utf8(out.stdout).unwrap(),
         stderr: String::from_utf8(out.stderr).unwrap(),
     }
+}
+
+/// The status an editor in these tests exits with when Ctrl-C has not reached it within its 30 s bound (#882).
+const MISSED_CTRL_C: u8 = 97;
+
+/// A Ctrl-C that never reached the editor fails the test, named, within the editor's bound: never a hang (#882).
+fn ctrl_c_reached_the_editor(out: &Out) {
+    assert!(
+        !out.stderr.contains(&format!("the editor exited with status {MISSED_CTRL_C}.")),
+        "Ctrl-C never reached the editor: it ran out its 30 s bound. {out:?}"
+    );
 }
 
 /// Waits up to 20 seconds for `p` to exist.
@@ -395,7 +424,7 @@ fn ctrl_c_in_the_editor_writes_nothing() {
         &r,
         "sleeps",
         &format!(
-            "#!/bin/sh\nexec perl -e 'open my $f, \">\", $ARGV[0] or die; close $f; sleep 30' {}\n",
+            "#!/bin/sh\nexec perl -e 'open my $f, \">\", $ARGV[0] or die; close $f; sleep 30; exit {MISSED_CTRL_C}' {}\n",
             sh_quoted(&mark)
         ),
     );
@@ -404,6 +433,7 @@ fn ctrl_c_in_the_editor_writes_nothing() {
         // SAFETY: a signal to the process group the binary leads.
         assert_eq!(unsafe { libc::kill(-(pid as i32), libc::SIGINT) }, 0);
     });
+    ctrl_c_reached_the_editor(&out);
     assert_eq!((out.code, out.stderr.as_str()), (3, "Not written: the editor was interrupted.\n"), "{out:?}");
     assert_eq!(left(&r), before, "nothing new in the work tree or the index");
     assert_eq!(std::fs::read(r.dir().join(".git/index")).unwrap(), index);
@@ -415,7 +445,7 @@ fn an_editor_that_takes_ctrl_c_keeps_record_alive() {
     let mark = r.home().join("editor-started");
     let text = format!(
         "#!/bin/sh\ntrap 'printf \"Written after Ctrl-C.\\n\" > \"$1\"; exit 0' INT\ntouch {}\n\
-         while :; do sleep 1; done\n",
+         i=0; while [ $i -lt 30 ]; do sleep 1; i=$((i+1)); done; exit {MISSED_CTRL_C}\n",
         sh_quoted(&mark)
     );
     let editor = script(&r, "takes-ctrl-c", &text);
@@ -424,6 +454,7 @@ fn an_editor_that_takes_ctrl_c_keeps_record_alive() {
         // SAFETY: a signal to the process group the binary leads.
         assert_eq!(unsafe { libc::kill(-(pid as i32), libc::SIGINT) }, 0);
     });
+    ctrl_c_reached_the_editor(&out);
     assert_eq!(out.code, 0, "{out:?}");
     assert!(read(&r, &written(&out)).ends_with("---\nWritten after Ctrl-C.\n"));
 }
