@@ -34,6 +34,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      # A first boot's failed checks inside start_period do not count, and the first pass ends it, so a fast boot
+      # is not slowed. Rule for all three services: start_period plus interval x retries covers at least twice the
+      # slowest first boot measured on a heavily loaded machine (postgres: 16 s).
+      start_period: 30s
 
   opensearch:
     image: opensearchproject/opensearch:2.19.0
@@ -53,6 +57,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # First boot on a fresh volume, measured: 33 s on a lightly loaded machine, up to 138 s on a heavily loaded
+      # one. Without a start period `up` failed after about 50 s; the rule is at the postgres check.
+      start_period: 240s
 
   redis:
     image: redis:7-alpine
@@ -64,6 +71,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 10s  # first boot 4 s on a heavily loaded machine; the rule is at the postgres check
 
   # One-shot: writes a random fingerprint key into the docbrain-keys volume on first start,
   # unless you supplied DOCBRAIN_FINGERPRINT_KEY or a key file already exists. Never replaces a
