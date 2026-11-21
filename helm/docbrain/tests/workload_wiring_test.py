@@ -22,7 +22,10 @@ that arrives without the rule fails here instead of on a cluster:
   model      no setting that names a model (a ConfigMap key or container env named *MODEL, *MODEL_ID or
              *MODEL_NAME) renders empty: the reader would take "" as the model instead of the provider's default.
              The "empty-model-ids" value set blanks every model value a template reads (found in the templates, so
-             a new one is covered), and a value set that leaves llm.modelId unset renders no LLM_MODEL_ID.
+             a new one is covered). Every such value defaults to empty in values.yaml (the provider's default),
+             unless MODEL_DEFAULTS lists it with why; and a value set that sets no model value renders no model
+             setting but those defaults, so a provider switched without its model never inherits another
+             provider's id.
   startup    every container that runs the OpenSearch image (found by image, so a renamed label cannot hide
              one; none found is a failure) has a startup probe that outlasts twice its slowest measured first
              boot and probes the port its liveness probe probes.
@@ -87,6 +90,13 @@ THIRD_PARTY_IMAGES = {
 }
 EXPLICIT_TAG = "latest"
 
+# Model values that keep a non-empty default in values.yaml, and why. Every other model value defaults to empty: the
+# reader then uses its provider's own default, so switching the provider never keeps another provider's model id.
+MODEL_DEFAULTS = {
+    "learning.training.baseModelId": "the base model the server and the trainer both fine-tune from; it belongs "
+                                     "to no provider, so there is no provider default to fall back to",
+}
+
 EVERYTHING = [
     "--set", "mcpTools.enabled=true",
     "--set", "trainer.enabled=true",
@@ -102,7 +112,7 @@ VALUE_SETS = {
     "event-spaces-only": ["--set-json", 'freshness.eventBasedSpaces=["slack_thread"]'],
     "sources-only": ["--set-json", 'ingest.sources={"local":{"path":"/data/docs"}}'],
     "bootstrap-key-off": ["--set", "bootstrapKey.enabled=false"],
-    "bedrock": ["--set", "llm.provider=bedrock"],
+    "bedrock": ["--set", "llm.provider=bedrock", "--set", "embedding.provider=bedrock"],
     "existing-secrets": EVERYTHING + ["--set", "existingSecret=my-secret",
                                       "--set", "fingerprintKeySecret.existingSecret=my-fingerprint"],
 }
@@ -342,12 +352,45 @@ def check_models(vs, docs, args):
                 for e in c.get("env") or []:
                     if MODEL_KEY.search(e["name"]) and "value" in e and not str(e["value"] or "").strip():
                         fail("model", f"{vs}: {d['metadata']['name']} container {c['name']} sets {e['name']} empty")
-    if not any(a.startswith("llm.modelId=") for a in args):
-        cfg = next(((d.get("data") or {}) for d in docs if d["kind"] == "ConfigMap"
-                    and d["metadata"]["name"] == f"{FULLNAME}-config"), {})
-        if "LLM_MODEL_ID" in cfg:
-            fail("model", f"{vs}: llm.modelId is not set, yet the server is given LLM_MODEL_ID={cfg['LLM_MODEL_ID']!r} "
-                          f"instead of its provider's default")
+    if any(a.startswith(f"{p}=") for a in args for p in model_values()):
+        return
+    defaults = model_defaults()
+    allowed = {str(defaults[p]) for p in MODEL_DEFAULTS if defaults.get(p) not in ("", None)}
+    for d in docs:
+        if d["kind"] == "ConfigMap":
+            for k, v in (d.get("data") or {}).items():
+                if MODEL_KEY.search(k) and str(v) not in allowed:
+                    fail("model", f"{vs}: no model value is set, yet ConfigMap {d['metadata']['name']} gives "
+                                  f"{k}={v!r} instead of leaving the provider's default")
+        if d["kind"] in POD_KINDS:
+            spec = pod_template(d)["spec"]
+            for c in spec.get("containers", []) + spec.get("initContainers", []):
+                for e in c.get("env") or []:
+                    if MODEL_KEY.search(e["name"]) and "value" in e and str(e["value"]) not in allowed:
+                        fail("model", f"{vs}: no model value is set, yet {d['metadata']['name']} container "
+                                      f"{c['name']} gets {e['name']}={e['value']!r}")
+
+
+def model_defaults():
+    """{model value: its values.yaml default} for every model value a template reads."""
+    values = chart_file("values.yaml")
+    out = {}
+    for p in model_values():
+        node = values
+        for k in p.split("."):
+            node = node.get(k) if isinstance(node, dict) else None
+        out[p] = node
+    return out
+
+
+def check_model_defaults():
+    for p, default in model_defaults().items():
+        if p in MODEL_DEFAULTS:
+            if default in ("", None):
+                fail("model", f"{p} is listed in MODEL_DEFAULTS but defaults to empty; take it off the list")
+        elif default not in ("", None):
+            fail("model", f"{p} defaults to {default!r} in values.yaml; a model setting defaults to empty (its "
+                          f"provider's default), or MODEL_DEFAULTS lists it with why")
 
 
 def check_startup(vs, wl):
@@ -472,6 +515,7 @@ def main():
     if not blanks:
         fail("model", "no template reads a model value, so the census found nothing; MODEL_VALUE is out of date")
     VALUE_SETS["empty-model-ids"] = EVERYTHING + [a for p in blanks for a in ("--set", f"{p}=")]
+    check_model_defaults()
     app_version = str(chart_file("Chart.yaml").get("appVersion") or "")
     tags = image_tag_values()
     if not app_version or not tags:

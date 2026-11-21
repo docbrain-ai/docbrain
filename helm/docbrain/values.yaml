@@ -84,7 +84,9 @@ llm:
 # -- Embedding provider: bedrock | openai | ollama
 embedding:
   provider: openai
-  modelId: text-embedding-3-small   # empty = the provider's default
+  modelId: ""              # empty = the provider's default: openai text-embedding-3-small (the id this chart used
+  #                        # to set), bedrock cohere.embed-v4:0, ollama nomic-embed-text. A model with another
+  #                        # vector size needs a re-index (docs/configuration.md, EMBED_MODEL_ID).
   # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
 
 # -- Ingestion. A source is on when its settings are given: localDocsPath for
