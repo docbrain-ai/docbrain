@@ -137,7 +137,8 @@ This takes ~30 seconds. Once done, you can ask questions about the sample docume
 
 Add your source settings to `config/local.yaml` (gitignored): `setup.sh` writes it, or the `touch` step above
 made it empty. Compose mounts it into the server and the ingest at `/app/config/local.yaml`. This file is never
-committed — it's the right place for tokens and resource lists.
+committed — it's the right place for tokens and resource lists. `setup.sh` keeps its answers between two marked
+lines, and running it again replaces only those; what you add outside them stays as you wrote it.
 
 All ingestion sources live under the top-level `sources:` block. A sub-source
 is enabled when its block is present in YAML. Resource lists (repos, projects,

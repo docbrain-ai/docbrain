@@ -73,6 +73,55 @@ if [ ! -f config/local.yaml ]; then
 LOCALYAML
 fi
 
+# The source settings this wizard writes live in one marked block of config/local.yaml. A re-run replaces the
+# block an earlier run wrote, so no key is ever written twice: the server and the ingest read this file at start
+# and stop on a repeated key. Lines written by hand outside the block are kept as they are.
+WIZARD_BEGIN='# >>> written by scripts/setup.sh; running the wizard again replaces this block >>>'
+WIZARD_END='# <<< end of the block scripts/setup.sh writes <<<'
+
+yaml_quote() {  # $1, trimmed, as a YAML single-quoted string: whatever was typed stays one string
+    local v="$1" q="'"
+    v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
+    printf "'%s'" "${v//$q/$q$q}"
+}
+
+yaml_entry() {  # $1 = indented key, $2 = value: a newline then `key: 'value'`; nothing when the value is blank
+    [[ -z "${2//[[:space:]]/}" ]] || printf '\n%s: %s' "$1" "$(yaml_quote "$2")"
+}
+
+local_yaml_without_wizard_block() {  # the file minus the wizard's block; a start line with no end line is kept
+    awk -v b="$WIZARD_BEGIN" -v e="$WIZARD_END" '
+        index($0, b) == 1 { if (inb) printf "%s", buf; inb = 1; buf = $0 ORS; next }
+        inb && index($0, e) == 1 { inb = 0; buf = ""; next }
+        inb { buf = buf $0 ORS; next }
+        { print }
+        END { if (inb) printf "%s", buf }' config/local.yaml
+}
+
+# $1 = the top-level key the block sets ("" for none), $2 = the block ("" removes the earlier one).
+# Returns 1, leaving the file unchanged, when lines outside the block already set that key.
+write_wizard_block() {
+    local key="$1" block="$2" rest had=false
+    rest=$(local_yaml_without_wizard_block)
+    grep -qF "$WIZARD_BEGIN" config/local.yaml && had=true
+    if [[ -n "$key" ]] && printf '%s\n' "$rest" | grep -Eq "^[\"']?${key}[\"']?[[:space:]]*:"; then
+        echo -e "  ${YELLOW}config/local.yaml already has a ${key}: section of its own; the wizard left the file unchanged.${NC}"
+        echo "  Add these settings to that section:"
+        printf '%s\n' "$block" | sed 's/^/    /'
+        return 1
+    fi
+    {   # written in place, so a running container's bind mount keeps seeing the same file
+        if [[ -n "$rest" ]]; then printf '%s\n' "$rest"; fi
+        if [[ -n "$block" ]]; then
+            if [[ -n "$rest" ]]; then echo ""; fi
+            printf '%s\n%s\n%s\n' "$WIZARD_BEGIN" "$block" "$WIZARD_END"
+        fi
+    } > config/local.yaml
+    if [[ "$had" = true ]]; then
+        echo -e "  ${YELLOW}Replaced the source settings an earlier run of this wizard wrote to config/local.yaml.${NC}"
+    fi
+}
+
 if [ -f .env ]; then
     echo -e "${YELLOW}An .env file already exists.${NC}"
     read -rp "Overwrite? (y/N): " overwrite
@@ -197,11 +246,13 @@ source_choice=${source_choice:-1}
 
 case $source_choice in
     1)
-        # defaults are fine
+        # defaults are fine; a source an earlier run wrote is replaced by this answer
+        write_wizard_block "" ""
         ;;
     2)
         read -rp "  Absolute path to docs directory: " docs_path
         sed -i.bak "s|^LOCAL_DOCS_PATH=.*|LOCAL_DOCS_PATH=${docs_path}|" .env
+        write_wizard_block "" ""
         ;;
     3)
         echo ""
@@ -210,16 +261,12 @@ case $source_choice in
         read -rp "  API token: " conf_token
         read -rp "  Space keys (comma-separated): " conf_spaces
         # Write source credentials to config/local.yaml (gitignored), not .env
-        cat >> config/local.yaml << CONFYAML
-
-confluence:
-  base_url: ${conf_url}
-  user_email: ${conf_email}
-  api_token: ${conf_token}
-  space_keys: ${conf_spaces}
-CONFYAML
+        block="confluence:$(yaml_entry "  base_url" "$conf_url")$(yaml_entry "  user_email" "$conf_email")"
+        block+="$(yaml_entry "  api_token" "$conf_token")$(yaml_entry "  space_keys" "$conf_spaces")"
         echo ""
-        echo -e "  ${GREEN}Confluence settings written to config/local.yaml (gitignored).${NC}"
+        if write_wizard_block confluence "$block"; then
+            echo -e "  ${GREEN}Confluence settings written to config/local.yaml (gitignored).${NC}"
+        fi
         ;;
     4)
         echo ""
@@ -233,17 +280,13 @@ CONFYAML
         else
             gh_selector="${gh_repo}"
         fi
-        cat >> config/local.yaml << GHYAML
-
-sources:
-  github:
-    token: ${gh_token:-<set-GITHUB_TOKEN-env-var>}
-    code:
-      repos:
-        - ${gh_selector}
-GHYAML
+        # No token answer writes no token line: GITHUB_TOKEN from the environment is used, or none (public repos).
+        block="sources:"$'\n'"  github:$(yaml_entry "    token" "$gh_token")"
+        block+=$'\n'"    code:"$'\n'"      repos:"$'\n'"        - $(yaml_quote "$gh_selector")"
         echo ""
-        echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
+        if write_wizard_block sources "$block"; then
+            echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
+        fi
         ;;
 esac
 
