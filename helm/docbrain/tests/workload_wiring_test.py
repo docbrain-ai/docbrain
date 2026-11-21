@@ -42,10 +42,10 @@ that arrives without the rule fails here instead of on a cluster:
   compose    every Compose file the repository ships (a tracked YAML file whose top level has `services:`, found
              with `git ls-files`, so a new one is covered; none found is a failure) runs every image at the chart's
              appVersion when the environment sets nothing, so `git pull` and `docker compose up -d` move the
-             Compose file and its images together, as the chart does. An image written `${VAR:-default}` is read
-             at its default (a set VAR still wins); a variable with no default is a failure. An image the chart
-             does not build is listed in THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart does not
-             run it either, with why.
+             Compose file and its images together, as the chart does. A commented-out `image:` line counts too: an
+             operator uncomments it as it is. An image written `${VAR:-default}` is read at its default (a set VAR
+             still wins); a variable with no default is a failure. An image the chart does not build is listed in
+             THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart does not run it either, with why.
 
 Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
 Needs helm, git (the repository must be a git checkout) and PyYAML. A missing tool is a failure (exit 2), never a
@@ -545,29 +545,34 @@ def check_compose(app_version):
         fail("compose", "no tracked YAML file has a top-level `services:`: the census found no Compose file")
     for rel in files:
         with open(os.path.join(REPO, rel)) as fh:
-            try:
-                doc = yaml.safe_load(fh)
-            except yaml.YAMLError as e:
-                fail("compose", f"{rel} does not parse: {e}")
-                continue
+            text = fh.read()
+        try:
+            doc = yaml.safe_load(text)
+        except yaml.YAMLError as e:
+            fail("compose", f"{rel} does not parse: {e}")
+            continue
         services = doc.get("services") if isinstance(doc, dict) else None
         if not isinstance(services, dict) or not services:
             fail("compose", f"{rel}: `services:` holds no service, so nothing says which images it runs")
             continue
-        for name, svc in services.items():
-            image = svc.get("image") if isinstance(svc, dict) else None
+        images = [(f"service {name}", svc.get("image") if isinstance(svc, dict) else None)
+                  for name, svc in services.items()]
+        # A commented-out service is one an operator uncomments as it is, so its image follows the same rule.
+        images += [(f"the commented-out image on line {text.count(chr(10), 0, m.start()) + 1}", m.group(1))
+                   for m in re.finditer(r"^[ \t]*#[ \t]*image:[ \t]*(\S+)", text, re.M)]
+        for what, image in images:
             if not isinstance(image, str):
-                fail("compose", f"{rel}: service {name} names no image, so nothing says which release it runs")
+                fail("compose", f"{rel}: {what} names no image, so nothing says which release it runs")
                 continue
             default = compose_default(image)
             if default is None:
-                fail("compose", f"{rel}: service {name} runs {image!r}, which has a variable with no default")
+                fail("compose", f"{rel}: {what} runs {image!r}, which has a variable with no default")
                 continue
             repo, tag = split_image(default)
             if repo in THIRD_PARTY_IMAGES or repo in COMPOSE_ONLY_IMAGES:
                 continue
             if tag != app_version:
-                fail("compose", f"{rel}: service {name} runs {default!r} when the environment sets nothing, not tag "
+                fail("compose", f"{rel}: {what} runs {default!r} when the environment sets nothing, not tag "
                                 f"{app_version!r} (the chart's appVersion): `git pull` and `docker compose up` "
                                 f"would not move its image with the file; or list an image the chart does not "
                                 f"build in THIRD_PARTY_IMAGES or COMPOSE_ONLY_IMAGES")

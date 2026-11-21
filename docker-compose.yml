@@ -367,7 +367,7 @@ services:
   # See docs/learning.md for full setup and configuration reference.
   #
   # trainer:
-  #   image: ghcr.io/docbrain-ai/docbrain-trainer:latest
+  #   image: ghcr.io/docbrain-ai/docbrain-trainer:1.6.6   # this release, as the server
   #   pull_policy: always
   #   # Do NOT publish port 8765 externally — the trainer API is internal only.
   #   # Remove the ports block if you don't need local debugging access.
