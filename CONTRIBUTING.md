@@ -76,6 +76,7 @@ To run DocBrain locally for testing documentation or configuration changes:
 git clone https://github.com/docbrain-ai/docbrain.git && cd docbrain
 cp .env.example .env
 # Edit .env with your configuration
+touch config/local.yaml   # your YAML settings (sources); compose mounts it, so it must exist before up
 docker compose up -d
 ```
 
