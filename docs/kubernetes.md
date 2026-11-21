@@ -176,7 +176,7 @@ ingest:
     baseUrl: https://yourcompany.atlassian.net
     email: user@yourcompany.com
     apiToken: ATATT...
-  sources:                    # rendered into a ConfigMap + mounted at /app/config/local.yaml
+  sources:                    # rendered into a ConfigMap, mounted at /app/config/local.yaml in the server and the ingest
     local:
       path: /data/docs
     github:
@@ -226,7 +226,7 @@ kubectl get secret docbrain-initial-admin-secret \
   -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
 
-The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is **never printed to logs** — always retrieve it from the Secret directly as shown above.
+The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is **never printed to logs** — always retrieve it from the Secret directly as shown above. The server is given that Secret's key and registers it on its first boot; its log then says `Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var`.
 
 **Bootstrap key lifecycle:**
 
@@ -505,7 +505,12 @@ helm install docbrain ./helm/docbrain \
 helm upgrade docbrain ./helm/docbrain -f my-values.yaml
 ```
 
-Rolling restarts happen automatically when ConfigMap or Secret values change (via checksum annotations on the pod template).
+The server restarts automatically when a setting it reads changes: the chart's settings ConfigMap, its Secret, or
+its `local.yaml` (`ingest.sources`, `freshness.exclusionRules`, `freshness.eventBasedSpaces`), through checksum
+annotations on its pod template. PostgreSQL, OpenSearch, Redis and the web console read none of these, so a
+settings change does not restart them; the upgrade to the chart version that took those annotations off restarts
+them once. A Secret you supply with `existingSecret` is not the chart's to watch: after changing it, run
+`kubectl rollout restart deployment/<release>-server`.
 
 ---
 
@@ -561,7 +566,10 @@ kubectl logs <pod-name> --previous
 
 ### Config not loading
 
-The server reads config from `/app/config/` inside the container (set via `DOCBRAIN_CONFIG_DIR`). If you see an error about the config directory, ensure `DOCBRAIN_CONFIG_DIR` is in the ConfigMap (it is by default in chart version ≥ 0.2).
+The server and the ingest read the image's settings from `/app/config/` inside the container, and the chart's
+`local.yaml` (from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces`) is mounted at
+`/app/config/local.yaml` in both whenever one of those values is set. To see what the server reads:
+`kubectl exec deploy/<release>-server -- cat /app/config/local.yaml`.
 
 ### OpenSearch StatefulSet patch fails
 

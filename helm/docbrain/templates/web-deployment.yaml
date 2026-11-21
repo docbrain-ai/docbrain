@@ -27,8 +27,8 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: web
-      annotations:
-        {{- include "docbrain.configChecksum" . | nindent 8 }}
+      # No config checksum: this pod reads no chart ConfigMap or Secret, so a settings change must not restart it
+      # (docbrain.configChecksum in _helpers.tpl).
     spec:
       {{- if .Values.serviceAccount.create }}
       serviceAccountName: {{ include "docbrain.serviceAccountName" . }}

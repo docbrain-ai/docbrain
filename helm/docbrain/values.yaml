@@ -90,8 +90,8 @@ embedding:
 # files on a volume, the confluence block for Confluence pages. Every other
 # source (GitHub and GitLab repositories, pull requests, Slack, Jira, ...) is
 # described under `sources`, a map written as the `sources:` block of
-# config/local.yaml into the ingest job; the shape is in docs/configuration.md
-# under "Document Sources".
+# config/local.yaml, mounted into the server and the ingest job; the shape is in
+# docs/configuration.md under "Document Sources".
 ingest:
   sources: {}
   schedule: "0 */6 * * *"   # every 6 hours

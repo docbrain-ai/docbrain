@@ -24,6 +24,7 @@ spec:
           annotations:
             # Issue #10: Restart pods when config changes
             {{- include "docbrain.configChecksum" . | nindent 12 }}
+            {{- include "docbrain.localOverlayChecksum" . | nindent 12 }}
         spec:
           restartPolicy: OnFailure
           {{- if .Values.serviceAccount.create }}
@@ -68,10 +69,7 @@ spec:
               env:
                 - name: DATABASE_URL
                   value: {{ include "docbrain.databaseUrl" . | quote }}
-              {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
-              {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
-              {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
-              {{- $hasLocalOverlay := or $hasSources $hasExclusion $hasEventSpaces }}
+              {{- $hasLocalOverlay := include "docbrain.hasLocalOverlay" . }}
               {{- if or .Values.ingest.localDocsPath $hasLocalOverlay }}
               volumeMounts:
                 {{- if .Values.ingest.localDocsPath }}
@@ -86,10 +84,7 @@ spec:
                   readOnly: true
                 {{- end }}
               {{- end }}
-          {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
-          {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
-          {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
-          {{- $hasLocalOverlay := or $hasSources $hasExclusion $hasEventSpaces }}
+          {{- $hasLocalOverlay := include "docbrain.hasLocalOverlay" . }}
           {{- if or .Values.ingest.localDocsPath $hasLocalOverlay }}
           volumes:
             {{- if .Values.ingest.localDocsPath }}

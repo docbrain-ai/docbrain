@@ -18,8 +18,8 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: opensearch
-      annotations:
-        {{- include "docbrain.configChecksum" . | nindent 8 }}
+      # No config checksum: this pod reads no chart ConfigMap or Secret, so a settings change must not restart it
+      # (docbrain.configChecksum in _helpers.tpl).
     spec:
       # Issue #5: Cloud PVCs are provisioned with root ownership (UID 0).
       # fsGroup: 1000 instructs Kubernetes to chown the volume to GID 1000 at mount time
