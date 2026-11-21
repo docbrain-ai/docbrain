@@ -142,7 +142,7 @@ Set `LLM_PROVIDER` to choose your LLM backend. Supported providers: `anthropic`,
 | Variable | Provider | Description |
 |---|---|---|
 | `LLM_PROVIDER` | All | Which LLM to use (see list above) |
-| `LLM_MODEL_ID` | All | Model identifier (e.g. `claude-sonnet-5-5`, `gpt-4o`). Defaults to a provider-appropriate model if not set. |
+| `LLM_MODEL_ID` | All | Model identifier (e.g. `claude-sonnet-5-5`, `gpt-4o`). Defaults to a provider-appropriate model if not set. On `bedrock` the default is `us.anthropic.claude-sonnet-5-5`, Claude Sonnet 5.5 through its US inference profile: outside the US, name your geography's profile. |
 | `LLM_TIMEOUT_SECS` | All except ollama | HTTP timeout in seconds for the LLM client (default: `120`). Applies to anthropic, openai (and its OpenAI-compatible siblings: groq, openrouter, together, deepseek, mistral, xai, gemini), azure_openai and cohere. Ollama has its own `OLLAMA_TIMEOUT_SECS` below, which takes precedence for that provider. Must be a positive integer — `0` fails config load, since a zero-second timeout would fail every call. |
 | `ANTHROPIC_API_KEY` | anthropic | Your Anthropic API key |
 | `OPENAI_API_KEY` | openai | Your OpenAI API key |
