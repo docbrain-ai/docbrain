@@ -4,7 +4,8 @@ DocBrain uses a layered configuration system. Settings are resolved in this orde
 
 1. `{DOCBRAIN_CONFIG_DIR}/default.yaml` — committed base defaults
 2. `{DOCBRAIN_CONFIG_DIR}/{APP_ENV}.yaml` — environment overrides (`APP_ENV=development|production`)
-3. `{DOCBRAIN_CONFIG_DIR}/local.yaml` — gitignored developer overrides (optional)
+3. `{DOCBRAIN_CONFIG_DIR}/local.yaml` — your settings: sources and anything else only YAML can hold (gitignored; see
+   [Where local.yaml comes from](#where-localyaml-comes-from))
 4. **Environment variables** — always win; all existing env var names work unchanged
 
 ## Config File Location
@@ -15,6 +16,14 @@ DocBrain uses a layered configuration system. Settings are resolved in this orde
 | `APP_ENV` | `development` | Selects `{APP_ENV}.yaml`. Use `production` in production deployments. |
 
 The server also accepts `--config-dir <path>` as a CLI argument (takes precedence over `DOCBRAIN_CONFIG_DIR`).
+
+### Where local.yaml comes from
+
+| Install | The file | Read by |
+|---|---|---|
+| Docker Compose | `config/local.yaml` in the folder you cloned, bind-mounted read-only at `/app/config/local.yaml`. It must exist before the first `docker compose up` (`scripts/setup.sh` writes it; `touch config/local.yaml` makes an empty one), and `up` stops with an error naming it when it is missing. Restart `server` and `ingest` after an edit. | the server and the ingest |
+| Helm | Rendered by the chart from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces` into the `<release>-sources` ConfigMap, mounted at `/app/config/local.yaml` whenever one of them is set. `helm upgrade` restarts the server when it changes. | the server and the ingest job |
+| Binary | `{DOCBRAIN_CONFIG_DIR}/local.yaml`, `config/local.yaml` under the working directory by default. Optional. | the process you start |
 
 **Deployment examples:**
 ```bash
