@@ -235,7 +235,7 @@ The bootstrap admin key lives in its own Secret, separate from operational crede
 | `helm install` | Created with generated key | Key registered on first server boot |
 | `helm upgrade` | Key preserved via `lookup` — never regenerated | No-op |
 | `kubectl delete secret ...-initial-admin-secret` | Gone | Key still active — safe to delete once you have real keys |
-| `bootstrapKey.enabled=false` + `helm upgrade` | Helm deletes the Secret | The server restarts and revokes the key |
+| `bootstrapKey.enabled=false` + `helm upgrade` | Helm deletes the Secret | Key still active: this value alone does not revoke it (step 3 below does) |
 | `helm uninstall` | Deleted | Key record remains in DB (now inactive after revocation, or still active if not) |
 
 **The initial-admin-secret is intentionally separate from the main Secret** (`docbrain-secret` holds DB passwords and API keys). You can delete, inspect, or manage it without touching operational credentials.
@@ -247,13 +247,14 @@ The bootstrap admin key lives in its own Secret, separate from operational crede
 3. Disable the bootstrap key — one command, no manual DB or API calls:
 
 ```bash
-helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false
+helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false \
+  --set-string server.env.BOOTSTRAP_KEY_ENABLED=false
 ```
 
 This simultaneously:
 - Stops rendering `initial-admin-secret` → Helm deletes it on upgrade
-- Sets `BOOTSTRAP_KEY_ENABLED=false` on the server, which restarts and revokes the key from the database (a
-  `BOOTSTRAP_KEY_ENABLED` you set yourself under `server.env` wins)
+- Puts `BOOTSTRAP_KEY_ENABLED=false` in the ConfigMap → the server restarts (its settings changed) and revokes the key
+  from the database. `bootstrapKey.enabled=false` on its own only removes the Secret; the key stays active.
 
 To verify it's gone:
 

@@ -77,12 +77,6 @@ spec:
                   key: BOOTSTRAP_ADMIN_KEY
                   optional: true
             {{- end }}
-            {{- if and (not .Values.bootstrapKey.enabled) (not (hasKey (.Values.server.env | default dict) "BOOTSTRAP_KEY_ENABLED")) }}
-            # bootstrapKey.enabled=false: the server revokes the first-login admin key at start and keeps it revoked
-            # (docs/kubernetes.md, "Bootstrap key lifecycle"). An explicit server.env.BOOTSTRAP_KEY_ENABLED wins.
-            - name: BOOTSTRAP_KEY_ENABLED
-              value: "false"
-            {{- end }}
           readinessProbe:
             httpGet:
               path: /api/v1/health
