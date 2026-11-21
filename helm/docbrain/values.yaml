@@ -139,8 +139,9 @@ confluenceWebhook:
 server:
   image:
     repository: ghcr.io/docbrain-ai/docbrain
-    tag: ""                  # empty = the chart's appVersion (Chart.yaml): the chart and its images move together,
-    #                        # and `helm rollback` restores both. The ingest job runs this image too. Set a tag only
+    tag: ""                  # empty = the chart's appVersion (Chart.yaml): the chart and its images move together.
+    #                        # `helm rollback` restores both, but not a database the newer server migrated: see
+    #                        # docs/kubernetes.md, "Roll back". The ingest job runs this image too. Set a tag only
     #                        # to run another build (docs/kubernetes.md, "Image tags").
     pullPolicy: IfNotPresent
   replicas: 1

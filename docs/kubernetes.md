@@ -524,16 +524,21 @@ helm install docbrain ./helm/docbrain \
 
 ## Upgrade
 
+Back up the database first: going back to the older version may need it ([Roll back](#roll-back)). With the chart's
+PostgreSQL and a release named `docbrain` (the pod is `<release>-docbrain-postgres-0` otherwise):
+
 ```bash
+kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > docbrain-before-upgrade.dump
 helm upgrade docbrain ./helm/docbrain -f my-values.yaml
 ```
 
-A chart deploys the images of its own version: the 1.6.7 chart runs the 1.6.7 server, web and trainer images, and
-`helm rollback` restores the chart and its images together. Two things keep an older image tag across an upgrade:
-a values file that sets `server.image.tag`, `web.image.tag` or `trainer.image.tag` (a copy of an older `values.yaml`
-says `tag: latest`; delete those lines), and `--reuse-values`, which keeps the last release's values, `tag: latest`
-included (use `--reset-then-reuse-values`, Helm 3.14 or later, to take the new chart's defaults and keep your own
-settings).
+With an external database (`postgresql.internal: false`), back it up with that database's own tools.
+
+A chart deploys the images of its own version: the 1.6.7 chart runs the 1.6.7 server, web and trainer images. Two
+things keep an older image tag across an upgrade: a values file that sets `server.image.tag`, `web.image.tag` or
+`trainer.image.tag` (a copy of an older `values.yaml` says `tag: latest`; delete those lines), and `--reuse-values`,
+which keeps the last release's values, `tag: latest` included (use `--reset-then-reuse-values`, Helm 3.14 or later, to
+take the new chart's defaults and keep your own settings).
 
 The server restarts automatically when a setting it reads changes: the chart's settings ConfigMap, its Secret, or
 its `local.yaml` (`ingest.sources`, `freshness.exclusionRules`, `freshness.eventBasedSpaces`), through checksum
@@ -541,6 +546,38 @@ annotations on its pod template. PostgreSQL, OpenSearch, Redis and the web conso
 settings change does not restart them; the upgrade to the chart version that took those annotations off restarts
 them once. A Secret you supply with `existingSecret` is not the chart's to watch: after changing it, run
 `kubectl rollout restart deployment/<release>-server`.
+
+### Roll back
+
+`helm rollback` restores the older chart and its images, but not the database. The server migrates the database when
+it starts, and an older server does not start on a database a newer one has migrated: it stops with
+`migration <N> was previously applied but is missing in the resolved migrations`. So `helm rollback` alone is enough
+only when no migration shipped between the two versions. A row in this list installed at the time of the upgrade is a
+migration the newer server applied:
+
+```bash
+kubectl exec docbrain-postgres-0 -- psql -U docbrain -d docbrain -c \
+  'SELECT version, installed_on FROM _sqlx_migrations ORDER BY version DESC LIMIT 5'
+```
+
+If there is none, `helm rollback docbrain` is all it takes. If there is one, put the backup from before the upgrade
+back before the older server starts. Whatever was written to the database after the backup is lost.
+
+```bash
+# 1. Stop everything that writes to the database
+kubectl scale deployment/docbrain-server --replicas=0
+kubectl scale deployment/docbrain-trainer --replicas=0    # only with trainer.enabled
+kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":true}}'
+kubectl get jobs                                           # wait until no ingest job is running
+# 2. Restore the backup. While anything is still connected, it stops at its first step and changes nothing.
+kubectl exec -i docbrain-postgres-0 -- pg_restore -U docbrain -d postgres --clean --if-exists --create \
+  --exit-on-error < docbrain-before-upgrade.dump
+# 3. Roll back the chart and its images, then start what step 1 stopped
+helm rollback docbrain <revision>                          # `helm history docbrain` lists the revisions
+kubectl scale deployment/docbrain-server --replicas=1      # your server.replicas
+kubectl scale deployment/docbrain-trainer --replicas=1     # only with trainer.enabled; your trainer.replicaCount
+kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":false}}'
+```
 
 ---
 
