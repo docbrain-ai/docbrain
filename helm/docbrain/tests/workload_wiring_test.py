@@ -46,9 +46,13 @@ that arrives without the rule fails here instead of on a cluster:
              operator uncomments it as it is. An image written `${VAR:-default}` is read at its default (a set VAR
              still wins); a variable with no default is a failure. An image the chart does not build is listed in
              THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart does not run it either, with why.
+  release    the chart's appVersion is the release version, `[workspace.package] version` in the repository's
+             Cargo.toml (the version the release is cut and tagged at). The image and compose rules tie every image to
+             appVersion, so this ties them to the release: a cut that moves Cargo.toml and not Chart.yaml (or the
+             reverse) fails here, instead of shipping a chart and a Compose file that install the previous release.
 
 Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
-Needs helm, git (the repository must be a git checkout) and PyYAML. A missing tool is a failure (exit 2), never a
+Needs helm, git (the repository must be a git checkout), PyYAML and Python 3.11 or later (tomllib). A missing tool is a failure (exit 2), never a
 pass. Exit 0: every rule held.
 """
 import hashlib
@@ -579,6 +583,25 @@ def check_compose(app_version):
     return len(files)
 
 
+def release_version():
+    """The version being released: `[workspace.package] version` in the repository's Cargo.toml."""
+    with open(os.path.join(REPO, "Cargo.toml"), "rb") as fh:
+        manifest = tomllib.load(fh)
+    return str(((manifest.get("workspace") or {}).get("package") or {}).get("version") or "")
+
+
+def check_release(app_version):
+    release = release_version()
+    if not release:
+        fail("release", "Cargo.toml has no [workspace.package] version, so nothing says which release this is")
+    elif app_version != release:
+        fail("release", f"Chart.yaml's appVersion is {app_version!r} but the release is {release!r} (Cargo.toml "
+                        f"[workspace.package] version): the chart and the Compose file would install another "
+                        f"release's images. At the cut, Cargo.toml, Chart.yaml's version and appVersion, and every "
+                        f"DocBrain image tag in the Compose files move together")
+    return release
+
+
 def pod_digest(d):
     return hashlib.sha256(json.dumps(pod_template(d), sort_keys=True).encode()).hexdigest()
 
@@ -649,6 +672,7 @@ def main():
                           f"chart's appVersion")
     VALUE_SETS["explicit-tags"] = EVERYTHING + [a for p in tags for a in ("--set", f"{p}={EXPLICIT_TAG}")]
     compose_count = check_compose(app_version)
+    release = check_release(app_version)
     for vs, args in VALUE_SETS.items():
         docs = render(args)
         wl = check_value_set(vs, docs, args)
@@ -662,7 +686,8 @@ def main():
             print("  " + f)
         sys.exit(1)
     print(f"PASS: every wiring rule holds over {len(VALUE_SETS)} value sets, "
-          f"{len(CHANGES) + len(FILE_CHANGES)} content changes and {compose_count} Compose file(s)")
+          f"{len(CHANGES) + len(FILE_CHANGES)} content changes and {compose_count} Compose file(s), at release "
+          f"{release}")
 
 
 if __name__ == "__main__":
@@ -670,5 +695,10 @@ if __name__ == "__main__":
         import yaml
     except ImportError:
         print("CANNOT RUN: PyYAML is not installed (pip install pyyaml)", file=sys.stderr)
+        sys.exit(2)
+    try:
+        import tomllib
+    except ImportError:
+        print("CANNOT RUN: tomllib is missing (Python 3.11 or later reads Cargo.toml)", file=sys.stderr)
         sys.exit(2)
     main()
