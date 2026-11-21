@@ -684,9 +684,10 @@ server:
 # `nil pointer evaluating interface {}.enabled`.
 #
 # `true` matches the template's documented lifecycle (a key is generated on
-# install and preserved across upgrades) and docs/kubernetes.md, which presents
-# `bootstrapKey.enabled=false` as the opt-OUT used to delete the Secret and
-# have the server revoke the key.
+# install and preserved across upgrades). `false` only stops rendering the
+# Secret, so Helm deletes it; the key stays active in the database. To revoke
+# it, also set server.env.BOOTSTRAP_KEY_ENABLED="false" (docs/kubernetes.md,
+# "Recommended first-boot flow", step 3).
 bootstrapKey:
   enabled: true
 
