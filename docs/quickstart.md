@@ -292,16 +292,18 @@ See the **[Generate guide](generate.md)** for source links, templates, and CI pl
 From the folder you cloned:
 
 ```bash
-git pull && touch config/local.yaml && docker compose pull && docker compose up -d && docker compose restart proxy
+git pull && touch config/local.yaml && docker compose up -d && docker compose restart proxy
 ```
 
-`git pull` brings the new Compose and proxy files and `docker compose pull` the new images. `touch` makes an
-empty `config/local.yaml` if your install has none (compose mounts it and stops when it is missing) and leaves an
-existing one unchanged. Read an existing one before you upgrade from 1.6.6 or earlier: nothing read it then, and
-now the server and the ingest do, so the sources in it are ingested, and a file that does not parse stops both at
-start (an earlier `setup.sh` run could write a `confluence:` or `sources:` block twice; keep one). The last step
-loads a changed proxy file: `up -d` keeps a running proxy whenever its image has not changed. Your
-data stays in the Docker volumes. On Kubernetes, see [Upgrade](kubernetes.md#upgrade).
+`git pull` brings the new Compose and proxy files, and the Compose file names the images of its own release, so
+`docker compose up -d` moves the images with it. A `DOCBRAIN_IMAGE` or `DOCBRAIN_WEB_IMAGE` set in `.env` keeps
+that image instead; delete those lines to follow the release. `touch` makes an empty `config/local.yaml` if your
+install has none (compose mounts it and stops when it is missing) and leaves an existing one unchanged. Read an
+existing one before you upgrade from 1.6.6 or earlier: nothing read it then, and now the server and the ingest do,
+so the sources in it are ingested, and a file that does not parse stops both at start (an earlier `setup.sh` run
+could write a `confluence:` or `sources:` block twice; keep one). The last step loads a changed proxy file: `up -d`
+keeps a running proxy whenever its image has not changed. Your data stays in the Docker volumes. On Kubernetes, see
+[Upgrade](kubernetes.md#upgrade).
 
 ## Troubleshooting
 
