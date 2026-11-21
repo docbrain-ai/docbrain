@@ -21,8 +21,9 @@ that arrives without the rule fails here instead of on a cluster:
   bootstrap  when the chart generates the first-login admin key, the server is given it.
   model      no setting that names a model (a ConfigMap key or container env named *MODEL, *MODEL_ID or
              *MODEL_NAME) renders empty: the reader would take "" as the model instead of the provider's default.
-             The "empty-model-ids" value set blanks every model value a template reads (found in the templates, so
-             a new one is covered). Every such value defaults to empty in values.yaml (the provider's default),
+             The "empty-model-ids" and "whitespace-model-ids" value sets blank every model value a template reads
+             (found in the templates, so a new one is covered), the second with spaces and a tab, which the chart
+             must read as empty. Every such value defaults to empty in values.yaml (the provider's default),
              unless MODEL_DEFAULTS lists it with why; and a value set that sets no model value renders no model
              setting but those defaults, so a provider switched without its model never inherits another
              provider's id.
@@ -352,8 +353,8 @@ def check_models(vs, docs, args):
                 for e in c.get("env") or []:
                     if MODEL_KEY.search(e["name"]) and "value" in e and not str(e["value"] or "").strip():
                         fail("model", f"{vs}: {d['metadata']['name']} container {c['name']} sets {e['name']} empty")
-    if any(a.startswith(f"{p}=") for a in args for p in model_values()):
-        return
+    if any(a.startswith(f"{p}=") and a[len(p) + 1:].strip() for a in args for p in model_values()):
+        return  # a value set that names a model; one that sets a model value blank or to whitespace sets none
     defaults = model_defaults()
     allowed = {str(defaults[p]) for p in MODEL_DEFAULTS if defaults.get(p) not in ("", None)}
     for d in docs:
@@ -515,6 +516,7 @@ def main():
     if not blanks:
         fail("model", "no template reads a model value, so the census found nothing; MODEL_VALUE is out of date")
     VALUE_SETS["empty-model-ids"] = EVERYTHING + [a for p in blanks for a in ("--set", f"{p}=")]
+    VALUE_SETS["whitespace-model-ids"] = EVERYTHING + [a for p in blanks for a in ("--set-string", f"{p}= \t ")]
     check_model_defaults()
     app_version = str(chart_file("Chart.yaml").get("appVersion") or "")
     tags = image_tag_values()

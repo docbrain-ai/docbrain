@@ -6,22 +6,23 @@ metadata:
     {{- include "docbrain.labels" . | nindent 4 }}
 data:
   LLM_PROVIDER: {{ .Values.llm.provider | quote }}
-  {{- /* A model id is rendered only when set: an empty one would reach the server as a model named "" instead of
-         the provider's default. tests/workload_wiring_test.py (rule "model") holds this for every model key. */}}
-  {{- if .Values.llm.modelId }}
-  LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}
+  {{- /* A model id is rendered only when set: an empty or whitespace one would reach the server as a model named ""
+         or " " instead of the provider's default ("docbrain.modelId" trims it). tests/workload_wiring_test.py
+         (rule "model") holds this for every model key. */}}
+  {{- with include "docbrain.modelId" .Values.llm.modelId }}
+  LLM_MODEL_ID: {{ . | quote }}
   {{- end }}
-  {{- if .Values.llm.fastModelId }}
-  FAST_MODEL_ID: {{ .Values.llm.fastModelId | quote }}
+  {{- with include "docbrain.modelId" .Values.llm.fastModelId }}
+  FAST_MODEL_ID: {{ . | quote }}
   {{- end }}
   {{- if .Values.llm.fastProvider }}
   FAST_LLM_PROVIDER: {{ .Values.llm.fastProvider | quote }}
   {{- end }}
-  {{- if .Values.llm.ingestModelId }}
-  INGEST_LLM_MODEL_ID: {{ .Values.llm.ingestModelId | quote }}
+  {{- with include "docbrain.modelId" .Values.llm.ingestModelId }}
+  INGEST_LLM_MODEL_ID: {{ . | quote }}
   {{- end }}
-  {{- if .Values.llm.draftModelId }}
-  DRAFT_MODEL_ID: {{ .Values.llm.draftModelId | quote }}
+  {{- with include "docbrain.modelId" .Values.llm.draftModelId }}
+  DRAFT_MODEL_ID: {{ . | quote }}
   {{- end }}
   {{- if .Values.llm.draftProvider }}
   DRAFT_LLM_PROVIDER: {{ .Values.llm.draftProvider | quote }}
@@ -33,8 +34,8 @@ data:
   DOCBRAIN_LLM_EFFORT: {{ .Values.llm.effort | quote }}
   {{- end }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
-  {{- if .Values.embedding.modelId }}
-  EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
+  {{- with include "docbrain.modelId" .Values.embedding.modelId }}
+  EMBED_MODEL_ID: {{ . | quote }}
   {{- end }}
   LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
   OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
@@ -374,8 +375,8 @@ data:
   {{- if .Values.rag.retrievalLadder.judgeTimeoutMs }}
   RAG_RETRIEVAL_LADDER_JUDGE_TIMEOUT_MS: {{ .Values.rag.retrievalLadder.judgeTimeoutMs | quote }}
   {{- end }}
-  {{- if .Values.rag.retrievalLadder.judgeModelId }}
-  RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ .Values.rag.retrievalLadder.judgeModelId | quote }}
+  {{- with include "docbrain.modelId" .Values.rag.retrievalLadder.judgeModelId }}
+  RAG_RETRIEVAL_LADDER_JUDGE_MODEL_ID: {{ . | quote }}
   {{- end }}
   {{- end }}
   {{- if .Values.rag.fusion }}
@@ -399,7 +400,7 @@ data:
   {{- if .Values.learning.enabled }}
   LEARNING_ENABLED: "true"
   LEARNING_TRAINER_URL: {{ .Values.learning.training.trainerUrl | quote }}
-  LEARNING_BASE_MODEL_ID: {{ .Values.learning.training.baseModelId | default "sentence-transformers/all-MiniLM-L6-v2" | quote }}
+  LEARNING_BASE_MODEL_ID: {{ include "docbrain.baseModelId" . | quote }}
   LEARNING_STORAGE_BACKEND: {{ .Values.learning.storage.backend | quote }}
   LEARNING_MIN_TRIPLETS: {{ .Values.learning.training.minTriplets | quote }}
   LEARNING_CIRCUIT_BREAKER_THRESHOLD: {{ .Values.learning.safety.circuitBreakerThreshold | quote }}

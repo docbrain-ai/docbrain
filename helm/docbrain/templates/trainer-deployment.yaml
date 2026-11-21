@@ -52,7 +52,7 @@ spec:
                   name: {{ include "docbrain.secretName" . }}
                   key: TRAINER_API_KEY
                   optional: true
-            {{- with .Values.trainer.baseModelName | default .Values.learning.training.baseModelId }}
+            {{- with include "docbrain.modelId" .Values.trainer.baseModelName | default (include "docbrain.baseModelId" .) }}
             # Empty inherits learning.training.baseModelId (the server's LEARNING_BASE_MODEL_ID, which it must match).
             - name: TRAINER_BASE_MODEL_NAME
               value: {{ . | quote }}

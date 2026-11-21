@@ -118,3 +118,14 @@ checksum/sources: {{ include (print $.Template.BasePath "/sources-configmap.yaml
 {{- "DOCBRAIN_FINGERPRINT_KEY" }}
 {{- end }}
 {{- end }}
+
+{{- /* A model value as its reader must see it: trimmed, and "" when unset, empty or only whitespace. An empty model
+       setting means the provider's default, so a template renders the key only when this is not "". */}}
+{{- define "docbrain.modelId" -}}
+{{- . | default "" | toString | trim -}}
+{{- end }}
+
+{{- /* The base model the server fine-tunes from (LEARNING_BASE_MODEL_ID); the trainer must get the same one. */}}
+{{- define "docbrain.baseModelId" -}}
+{{- include "docbrain.modelId" .Values.learning.training.baseModelId | default "sentence-transformers/all-MiniLM-L6-v2" -}}
+{{- end }}
