@@ -262,9 +262,13 @@ three cases:
 3. Disable the bootstrap key — one command, no manual DB or API calls:
 
 ```bash
-helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false \
+helm upgrade docbrain ./helm/docbrain --reuse-values --set bootstrapKey.enabled=false \
   --set-string server.env.BOOTSTRAP_KEY_ENABLED=false
 ```
+
+`--reuse-values` keeps every setting you installed with (provider, keys, sources); without it, this upgrade would
+put them all back to the chart's defaults. Run it with the chart you installed; to move to a newer chart at the same
+time, see [Upgrade](#upgrade).
 
 This simultaneously:
 - Stops rendering `initial-admin-secret` → Helm deletes it on upgrade
