@@ -245,6 +245,13 @@ if [[ "$llm_choice" != "3" && "$llm_choice" != "4" ]]; then
     echo ""
     read -rp "Select provider [1]: " embed_choice
     embed_choice=${embed_choice:-1}
+    case $embed_choice in
+        1|2) ;;
+        *)  # .env.example's own embedding provider is another one, so the choice is made, not left to the template
+            echo "Invalid choice. Using OpenAI as default."
+            embed_choice=1
+            ;;
+    esac
 
     case $embed_choice in
         1)
@@ -278,6 +285,13 @@ echo "  4) GitHub repository"
 echo ""
 read -rp "Select source [1]: " source_choice
 source_choice=${source_choice:-1}
+case $source_choice in
+    1|2|3|4) ;;
+    *)  # an unknown answer would otherwise leave an earlier run's source in place without a word
+        echo "Invalid choice. Using the sample docs."
+        source_choice=1
+        ;;
+esac
 
 case $source_choice in
     1)

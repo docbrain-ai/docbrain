@@ -8,8 +8,8 @@ asked), and after every run parses the file with a YAML loader that refuses a du
 parser does. It also holds that a run which refuses to write never says "Configuration saved." nor starts the
 stack, that a rewrite first keeps the previous file as a backup of its own (config/local.yaml.bak.<UTC time>) and
 never replaces or writes through one already there, that a backup or a write that fails
-stops the run before it says it kept or saved anything, and that the provider written to .env is the one the wizard
-names.
+stops the run before it says it kept or saved anything, and that the providers and the source the wizard uses for
+an answer that is none of its choices are the ones it names.
 
 Run: python3 scripts/setup_local_yaml_test.py   (from anywhere; nothing starts, nothing is downloaded)
 Needs bash and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every case held.
@@ -374,6 +374,27 @@ def main():
                 fail("write fails", "the run did not say the write failed")
             if s.read() != before:
                 fail("write fails", "config/local.yaml changed although the write failed")
+
+        # 11. Item 9's twin one prompt lower: an embedding answer that is none of the choices. The wizard says it uses
+        #     OpenAI, and .env says so (the template's own embedding provider is another one).
+        out = s.run("invalid embedding", ["y", "1", "sk-ant-x", "9", "sk-emb", "1"])
+        env = s.env()
+        if "Invalid choice. Using OpenAI as default." not in out:
+            fail("invalid embedding", "the wizard did not say which embedding provider it chose")
+        for k, v in {"LLM_PROVIDER": "anthropic", "EMBED_PROVIDER": "openai", "EMBED_MODEL_ID": "text-embedding-3-small",
+                     "OPENAI_API_KEY": "sk-emb"}.items():
+            if env.get(k) != v:
+                fail("invalid embedding", f".env has {k}={env.get(k)!r}, want {v!r}")
+
+        # 12. A source answer that is none of the choices: the wizard says it uses the sample docs, and does what that
+        #     choice does (an earlier run's source block goes, its lines kept in a backup), not leave it in silence.
+        s.run("confluence before an invalid source", ["y", "3", "3", *CONF, "tok-src", "DOCS"])
+        out = s.run("invalid source", ["y", "3", "9"])
+        text, _ = check("invalid source", s, {}, absent=("confluence",))
+        if "Invalid choice. Using the sample docs." not in out:
+            fail("invalid source", "the wizard did not say which source it chose")
+        if blocks(text) != (0, 0):
+            fail("invalid source", f"the earlier run's source block is still there: {blocks(text)}")
         runs = s.runs
 
     if failures:
