@@ -39,9 +39,17 @@ that arrives without the rule fails here instead of on a cluster:
              an image the chart does not build is listed in THIRD_PARTY_IMAGES with why. Every `<x>.image.tag`
              in values.yaml (found there, so a new image is covered) defaults to empty, and the "explicit-tags"
              value set proves a tag set in the values (`latest`) is the tag that runs.
+  compose    every Compose file the repository ships (a tracked YAML file whose top level has `services:`, found
+             with `git ls-files`, so a new one is covered; none found is a failure) runs every image at the chart's
+             appVersion when the environment sets nothing, so `git pull` and `docker compose up -d` move the
+             Compose file and its images together, as the chart does. An image written `${VAR:-default}` is read
+             at its default (a set VAR still wins); a variable with no default is a failure. An image the chart
+             does not build is listed in THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart does not
+             run it either, with why.
 
 Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
-Needs helm and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every rule held.
+Needs helm, git (the repository must be a git checkout) and PyYAML. A missing tool is a failure (exit 2), never a
+pass. Exit 0: every rule held.
 """
 import hashlib
 import json
@@ -54,6 +62,7 @@ import tempfile
 
 CHART = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 DOCS = os.path.normpath(os.path.join(CHART, "..", "..", "docs"))
+REPO = os.path.normpath(os.path.join(CHART, "..", ".."))
 RELEASE = "wiring"
 FULLNAME = "wiring-docbrain"
 POD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob"}
@@ -95,6 +104,13 @@ THIRD_PARTY_IMAGES = {
     "busybox": "the OpenSearch pod's sysctl init step; it runs no DocBrain code",
 }
 EXPLICIT_TAG = "latest"
+# Images a Compose file runs that the chart does not run, by repository, and why their tag does not follow the
+# chart's appVersion.
+COMPOSE_ONLY_IMAGES = {
+    "caddy": "upstream Caddy, the single-origin proxy in front of the console and /api; the chart uses an ingress",
+}
+# `${VAR:-default}` or `${VAR-default}` holding no other variable: Compose runs the default when VAR is not set.
+COMPOSE_VARIABLE = re.compile(r"\$\{\w+:?-([^${}]*)\}")
 ADMIN_KEY = None  # (Secret name ending, data key, logged sentence), read from docs/configuration.md by main()
 
 # Model values that keep a non-empty default in values.yaml, and why. Every other model value defaults to empty: the
@@ -497,6 +513,67 @@ def check_images(vs, wl, args, app_version):
                               "build in THIRD_PARTY_IMAGES")
 
 
+def compose_files():
+    """Every Compose file the repository ships: a tracked YAML file whose top level has `services:`."""
+    out = subprocess.run(["git", "-C", REPO, "ls-files", "-z", "--", "*.yml", "*.yaml"],
+                         capture_output=True, text=True)
+    if out.returncode != 0:
+        print(f"CANNOT RUN: git ls-files in {REPO} failed:\n{out.stderr}", file=sys.stderr)
+        sys.exit(2)
+    found = []
+    for rel in sorted(p for p in out.stdout.split("\0") if p):
+        path = os.path.join(REPO, rel)
+        if os.path.isfile(path):
+            with open(path, errors="replace") as fh:
+                if re.search(r"^services:", fh.read(), re.M):
+                    found.append(rel)
+    return found
+
+
+def compose_default(image):
+    """The image Compose runs when the environment sets nothing; None when a variable in it has no default."""
+    while True:
+        resolved = COMPOSE_VARIABLE.sub(lambda m: m.group(1), image)
+        if resolved == image:
+            return None if "$" in resolved else resolved
+        image = resolved
+
+
+def check_compose(app_version):
+    files = compose_files()
+    if not files:
+        fail("compose", "no tracked YAML file has a top-level `services:`: the census found no Compose file")
+    for rel in files:
+        with open(os.path.join(REPO, rel)) as fh:
+            try:
+                doc = yaml.safe_load(fh)
+            except yaml.YAMLError as e:
+                fail("compose", f"{rel} does not parse: {e}")
+                continue
+        services = doc.get("services") if isinstance(doc, dict) else None
+        if not isinstance(services, dict) or not services:
+            fail("compose", f"{rel}: `services:` holds no service, so nothing says which images it runs")
+            continue
+        for name, svc in services.items():
+            image = svc.get("image") if isinstance(svc, dict) else None
+            if not isinstance(image, str):
+                fail("compose", f"{rel}: service {name} names no image, so nothing says which release it runs")
+                continue
+            default = compose_default(image)
+            if default is None:
+                fail("compose", f"{rel}: service {name} runs {image!r}, which has a variable with no default")
+                continue
+            repo, tag = split_image(default)
+            if repo in THIRD_PARTY_IMAGES or repo in COMPOSE_ONLY_IMAGES:
+                continue
+            if tag != app_version:
+                fail("compose", f"{rel}: service {name} runs {default!r} when the environment sets nothing, not tag "
+                                f"{app_version!r} (the chart's appVersion): `git pull` and `docker compose up` "
+                                f"would not move its image with the file; or list an image the chart does not "
+                                f"build in THIRD_PARTY_IMAGES or COMPOSE_ONLY_IMAGES")
+    return len(files)
+
+
 def pod_digest(d):
     return hashlib.sha256(json.dumps(pod_template(d), sort_keys=True).encode()).hexdigest()
 
@@ -545,7 +622,7 @@ def check_restarts():
 
 
 def main():
-    for tool in ("helm",):
+    for tool in ("helm", "git"):
         if shutil.which(tool) is None:
             print(f"CANNOT RUN: {tool} is not installed", file=sys.stderr)
             sys.exit(2)
@@ -566,6 +643,7 @@ def main():
             fail("image", f"{path} defaults to {default!r} in values.yaml; leave it empty, so the image is the "
                           f"chart's appVersion")
     VALUE_SETS["explicit-tags"] = EVERYTHING + [a for p in tags for a in ("--set", f"{p}={EXPLICIT_TAG}")]
+    compose_count = check_compose(app_version)
     for vs, args in VALUE_SETS.items():
         docs = render(args)
         wl = check_value_set(vs, docs, args)
@@ -578,8 +656,8 @@ def main():
         for f in failures:
             print("  " + f)
         sys.exit(1)
-    print(f"PASS: every wiring rule holds over {len(VALUE_SETS)} value sets and "
-          f"{len(CHANGES) + len(FILE_CHANGES)} content changes")
+    print(f"PASS: every wiring rule holds over {len(VALUE_SETS)} value sets, "
+          f"{len(CHANGES) + len(FILE_CHANGES)} content changes and {compose_count} Compose file(s)")
 
 
 if __name__ == "__main__":
