@@ -3,8 +3,11 @@
 
 The server and the ingest read config/local.yaml at start and stop on a repeated key, so a second run of
 scripts/setup.sh must never write a key twice. This runs the real wizard (scripts/setup.sh) several times in a
-scratch folder, with `docker` and `curl` replaced by stubs that start nothing, and after every run parses the
-file with a YAML loader that refuses a duplicated key, as the server's parser does.
+scratch folder, with `docker` and `curl` replaced by stubs that start nothing (the docker stub logs what it was
+asked), and after every run parses the file with a YAML loader that refuses a duplicated key, as the server's
+parser does. It also holds that a run which refuses to write never says "Configuration saved." nor starts the
+stack, that a rewrite first keeps the previous file as config/local.yaml.bak, and that the provider written to
+.env is the one the wizard names.
 
 Run: python3 scripts/setup_local_yaml_test.py   (from anywhere; nothing starts, nothing is downloaded)
 Needs bash and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every case held.
@@ -83,22 +86,40 @@ class Scratch:
         shutil.copy(os.path.join(REPO, ".env.example"), os.path.join(root, ".env.example"))
         self.stubs = os.path.join(root, "stubs")
         os.makedirs(self.stubs)
+        self.docker_log = os.path.join(root, "docker.log")
         for tool in ("docker", "curl"):
             path = os.path.join(self.stubs, tool)
             with open(path, "w") as f:
-                f.write("#!/bin/sh\nexit 0\n")
+                f.write("#!/bin/sh\n" + (f"echo \"$*\" >> '{self.docker_log}'\n" if tool == "docker" else "")
+                        + "exit 0\n")
             os.chmod(path, 0o755)
         self.local = os.path.join(root, "config", "local.yaml")
+        self.backup = self.local + ".bak"
         self.runs = 0
 
-    def run(self, case, answers):
+    def run(self, case, answers, expect=0):
+        """Run the wizard; `expect` is its exit code. A refused write (1) must not say it saved nor start."""
         self.runs += 1
+        if os.path.exists(self.docker_log):
+            os.remove(self.docker_log)
         env = {"PATH": f"{self.stubs}:/usr/bin:/bin", "HOME": self.root, "LC_ALL": "C"}
         p = subprocess.run(["bash", os.path.join(self.root, "scripts", "setup.sh")], cwd=self.root, env=env,
                            input="\n".join(answers) + "\n", capture_output=True, text=True, timeout=120)
-        if p.returncode != 0:
-            fail(case, f"the wizard exited {p.returncode}: {(p.stderr or p.stdout)[-400:]}")
-        return p.stdout + p.stderr
+        out = p.stdout + p.stderr
+        started = os.path.exists(self.docker_log) and "compose up" in open(self.docker_log).read()
+        if p.returncode != expect:
+            fail(case, f"the wizard exited {p.returncode}, want {expect}: {out[-400:]}")
+        if expect == 0 and not started:
+            fail(case, "the wizard finished without starting the stack (no `docker compose up`)")
+        if expect != 0 and "Configuration saved." in out:
+            fail(case, "the wizard said \"Configuration saved.\" after it refused to write config/local.yaml")
+        if expect != 0 and started:
+            fail(case, "the wizard started the stack after it refused to write config/local.yaml")
+        return out
+
+    def env(self):
+        with open(os.path.join(self.root, ".env")) as f:
+            return dict(line.split("=", 1) for line in f.read().splitlines() if "=" in line and line[0] != "#")
 
     def read(self):
         with open(self.local) as f:
@@ -107,6 +128,11 @@ class Scratch:
     def write(self, text):
         with open(self.local, "w") as f:
             f.write(text)
+
+
+def read_or_none(path):
+    """The file's text, or None when there is no regular file there (a test must fail, not crash)."""
+    return open(path).read() if os.path.isfile(path) and not os.path.islink(path) else None
 
 
 def blocks(text):
@@ -145,20 +171,48 @@ def main():
             fail("first run", f"want one marked block, found {blocks(text)}")
 
         # 2. The same choice again with another token (the mistyped-token re-run): one confluence key, the new token.
-        s.run("second run", ["y", "3", "3", *CONF, "tok-2", "DOCS,ENG"])
+        #    The file it replaced is kept as config/local.yaml.bak, and the run says so.
+        before = s.read()
+        out = s.run("second run", ["y", "3", "3", *CONF, "tok-2", "DOCS,ENG"])
         text, _ = check("second run", s, {"confluence.api_token": "tok-2"})
         if blocks(text) != (1, 1):
             fail("second run", f"want one marked block, found {blocks(text)}")
+        if read_or_none(s.backup) != before:
+            fail("second run", "config/local.yaml.bak is not the file the run replaced")
+        if "Kept the previous config/local.yaml as config/local.yaml.bak" not in out:
+            fail("second run", "the run did not say it kept a backup")
 
         # 2b. Answers with characters YAML would otherwise read as syntax stay the strings typed.
         token = "it's: #not-a-comment &x *y"
         s.run("yaml characters", ["y", "3", "3", *CONF, token, " DOCS "])
         text, _ = check("yaml characters", s, {"confluence.api_token": token, "confluence.space_keys": "DOCS"})
 
-        # 3. The same answers once more: the file is byte for byte the same.
-        s.run("same answers", ["y", "3", "3", *CONF, token, " DOCS "])
+        # 3. The same answers once more: the file is byte for byte the same, and nothing is backed up.
+        backup = read_or_none(s.backup)
+        out = s.run("same answers", ["y", "3", "3", *CONF, token, " DOCS "])
         if s.read() != text:
             fail("same answers", "a run with the same answers changed config/local.yaml")
+        if "config/local.yaml.bak" in out or read_or_none(s.backup) != backup:
+            fail("same answers", "a run that changed nothing wrote a backup")
+
+        # 3b. The backup keeps the file's mode (it holds credentials) over an older, wider one, and a link left at
+        #     the backup's name is replaced, never written through.
+        os.chmod(s.local, 0o600)
+        outside = os.path.join(root, "outside.txt")
+        with open(outside, "w") as f:
+            f.write("not the wizard's\n")
+        if os.path.lexists(s.backup):
+            os.remove(s.backup)
+        os.symlink(outside, s.backup)
+        before = s.read()
+        s.run("backup mode and link", ["y", "3", "3", *CONF, "tok-mode", " DOCS "])
+        if open(outside).read() != "not the wizard's\n":
+            fail("backup mode and link", "the backup was written through a link at config/local.yaml.bak")
+        if read_or_none(s.backup) != before:
+            fail("backup mode and link", "config/local.yaml.bak is not a copy of the file the run replaced")
+        elif os.stat(s.backup).st_mode & 0o777 != 0o600:
+            fail("backup mode and link", f"the backup's mode is {oct(os.stat(s.backup).st_mode & 0o777)}, want 0o600")
+        s.run("token back", ["y", "3", "3", *CONF, token, " DOCS "])
 
         # 4. Another source: GitHub with no token replaces the wizard's Confluence block and writes no token
         #    (a placeholder token would be sent to GitHub and refused).
@@ -181,7 +235,7 @@ def main():
         s.run("sample docs", ["y", "3", "1"])
         s.write(s.read() + "\nsources:\n  jira:\n    base_url: https://jira.example.org\n")
         before = s.read()
-        out = s.run("hand-written sources", ["y", "3", "4", "acme/docs", "", ""])
+        out = s.run("hand-written sources", ["y", "3", "4", "acme/docs", "", ""], expect=1)
         if s.read() != before:
             fail("hand-written sources", "the wizard changed a file whose sources: section was written by hand")
         if "already has a sources: section" not in out:
@@ -201,7 +255,7 @@ def main():
         #    written by hand, and choosing Confluence writes nothing rather than a second key.
         s.write(s.read() + f"\n{BEGIN}\nconfluence:\n  base_url: https://kept.example.org\n")
         before = s.read()
-        s.run("unterminated block", ["y", "3", "3", *CONF, "tok-3", "DOCS"])
+        s.run("unterminated block", ["y", "3", "3", *CONF, "tok-3", "DOCS"], expect=1)
         if s.read() != before:
             fail("unterminated block", "the wizard changed a file whose block has no end line")
         check("unterminated block", s, {"confluence.base_url": "https://kept.example.org"})

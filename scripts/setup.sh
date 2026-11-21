@@ -100,23 +100,33 @@ local_yaml_without_wizard_block() {  # the file minus the wizard's block; a star
 
 # $1 = the top-level key the block sets ("" for none), $2 = the block ("" removes the earlier one).
 # Returns 1, leaving the file unchanged, when lines outside the block already set that key.
+# Before it changes the file it keeps the previous one as config/local.yaml.bak (it holds the same credentials;
+# .gitignore lists it), so an interrupted write never loses the lines written by hand.
 write_wizard_block() {
-    local key="$1" block="$2" rest had=false
+    local key="$1" block="$2" rest had=false new current
     rest=$(local_yaml_without_wizard_block)
     grep -qF "$WIZARD_BEGIN" config/local.yaml && had=true
-    if [[ -n "$key" ]] && printf '%s\n' "$rest" | grep -Eq "^[\"']?${key}[\"']?[[:space:]]*:"; then
+    if [[ -n "$key" ]] && grep -Eq "^[\"']?${key}[\"']?[[:space:]]*:" <<< "$rest"; then
         echo -e "  ${YELLOW}config/local.yaml already has a ${key}: section of its own; the wizard left the file unchanged.${NC}"
         echo "  Add these settings to that section:"
         printf '%s\n' "$block" | sed 's/^/    /'
         return 1
     fi
-    {   # written in place, so a running container's bind mount keeps seeing the same file
-        if [[ -n "$rest" ]]; then printf '%s\n' "$rest"; fi
-        if [[ -n "$block" ]]; then
-            if [[ -n "$rest" ]]; then echo ""; fi
-            printf '%s\n%s\n%s\n' "$WIZARD_BEGIN" "$block" "$WIZARD_END"
-        fi
-    } > config/local.yaml
+    new=""
+    if [[ -n "$rest" ]]; then new+="$rest"$'\n'; fi
+    if [[ -n "$block" ]]; then
+        if [[ -n "$rest" ]]; then new+=$'\n'; fi
+        new+="$WIZARD_BEGIN"$'\n'"$block"$'\n'"$WIZARD_END"$'\n'
+    fi
+    current=$(cat config/local.yaml; printf x)
+    if [[ "$new" == "${current%x}" ]]; then
+        return 0  # already what this run would write: no write, no backup
+    fi
+    rm -f config/local.yaml.bak  # a link left there is removed, never written through
+    cp -p config/local.yaml config/local.yaml.bak
+    echo -e "  Kept the previous config/local.yaml as config/local.yaml.bak."
+    # written in place, so a running container's bind mount keeps seeing the same file
+    printf '%s' "$new" > config/local.yaml
     if [[ "$had" = true ]]; then
         echo -e "  ${YELLOW}Replaced the source settings an earlier run of this wizard wrote to config/local.yaml.${NC}"
     fi
@@ -137,6 +147,7 @@ fi
 if [ "$SKIP_SETUP" = false ]; then
 
 cp .env.example .env
+source_refused=false  # true when config/local.yaml already had the chosen source's key and was left unchanged
 
 # ── LLM Provider ─────────────────────────────────────────────────────────
 
@@ -269,6 +280,8 @@ case $source_choice in
         echo ""
         if write_wizard_block confluence "$block"; then
             echo -e "  ${GREEN}Confluence settings written to config/local.yaml (gitignored).${NC}"
+        else
+            source_refused=true
         fi
         ;;
     4)
@@ -289,12 +302,22 @@ case $source_choice in
         echo ""
         if write_wizard_block sources "$block"; then
             echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
+        else
+            source_refused=true
         fi
         ;;
 esac
 
 # Clean up sed backup files
 rm -f .env.bak
+
+if [[ "$source_refused" = true ]]; then
+    # Starting now would run without the source just chosen, so nothing starts until it is added.
+    echo ""
+    echo -e "${YELLOW}.env is saved, but the source settings above are not: config/local.yaml was left unchanged.${NC}"
+    echo "Add them to config/local.yaml, then start DocBrain with: docker compose up -d"
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}Configuration saved.${NC}"

@@ -2,6 +2,8 @@
 # scripts/setup.sh edits .env with sed -i.bak; the backup holds the same API keys.
 .env.bak
 config/local.yaml
+# scripts/setup.sh keeps the previous config/local.yaml here before it rewrites it; it holds the same credentials.
+config/local.yaml.bak
 *.log
 .DS_Store
 node_modules/
