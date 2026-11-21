@@ -26,6 +26,11 @@ that arrives without the rule fails here instead of on a cluster:
   startup    every container that runs the OpenSearch image (found by image, so a renamed label cannot hide
              one; none found is a failure) has a startup probe that outlasts twice its slowest measured first
              boot and probes the port its liveness probe probes.
+  image      under values that set no image tag, every container (init containers too) runs its image at the
+             chart's appVersion, so `helm upgrade` and `helm rollback` move the chart and its images together;
+             an image the chart does not build is listed in THIRD_PARTY_IMAGES with why. Every `<x>.image.tag`
+             in values.yaml (found there, so a new image is covered) defaults to empty, and the "explicit-tags"
+             value set proves a tag set in the values (`latest`) is the tag that runs.
 
 Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
 Needs helm and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every rule held.
@@ -71,6 +76,16 @@ KEY_READS = {
 
 # The slowest OpenSearch first boot measured on a fresh volume (heavily loaded machine), in seconds.
 OPENSEARCH_SLOWEST_FIRST_BOOT_S = 138
+
+# Images the chart runs but does not build, by repository, and why their tag does not follow the chart's appVersion.
+THIRD_PARTY_IMAGES = {
+    "postgres": "upstream PostgreSQL, pinned by postgresql.image to the major version its data volume was made with",
+    "redis": "upstream Redis, pinned by redis.image",
+    "opensearchproject/opensearch": "upstream OpenSearch, pinned by opensearch.image to the version its index was "
+                                    "made with",
+    "busybox": "the OpenSearch pod's sysctl init step; it runs no DocBrain code",
+}
+EXPLICIT_TAG = "latest"
 
 EVERYTHING = [
     "--set", "mcpTools.enabled=true",
@@ -357,6 +372,50 @@ def check_startup(vs, wl):
                             f"probe will check")
 
 
+def chart_file(name):
+    with open(os.path.join(CHART, name)) as fh:
+        return yaml.safe_load(fh)
+
+
+def image_tag_values():
+    """Every `<path>.image.tag` in values.yaml with its default: an image the chart builds is a map with a tag."""
+    found = {}
+
+    def walk(node, path):
+        if isinstance(node, dict):
+            if isinstance(node.get("image"), dict) and "tag" in node["image"]:
+                found[".".join(path + ["image", "tag"])] = node["image"]["tag"]
+            for k, v in node.items():
+                walk(v, path + [k])
+
+    walk(chart_file("values.yaml"), [])
+    return found
+
+
+def split_image(image):
+    """(repository, tag) of an image reference; the tag is None when it names none (a digest is not a tag)."""
+    name = image.split("@", 1)[0]
+    repo, sep, tag = name.rpartition(":")
+    if not sep or "/" in tag:  # no tag, or the colon is a registry's port
+        return name, None
+    return repo, tag
+
+
+def check_images(vs, wl, args, app_version):
+    want = EXPLICIT_TAG if any(re.match(r"[\w.]+\.image\.tag=", a) for a in args) else app_version
+    for comp, d in wl.items():
+        spec = pod_template(d)["spec"]
+        for c in spec.get("containers", []) + spec.get("initContainers", []):
+            repo, tag = split_image(c.get("image") or "")
+            if repo in THIRD_PARTY_IMAGES:
+                continue
+            if tag != want:
+                fail("image", f"{vs}: {comp} container {c['name']} runs {c.get('image')!r}, not tag {want!r}"
+                              + ("" if want == EXPLICIT_TAG else " (the chart's appVersion): the chart and its "
+                                 "images would not move together") + "; or list an image the chart does not "
+                              "build in THIRD_PARTY_IMAGES")
+
+
 def pod_digest(d):
     return hashlib.sha256(json.dumps(pod_template(d), sort_keys=True).encode()).hexdigest()
 
@@ -413,11 +472,21 @@ def main():
     if not blanks:
         fail("model", "no template reads a model value, so the census found nothing; MODEL_VALUE is out of date")
     VALUE_SETS["empty-model-ids"] = EVERYTHING + [a for p in blanks for a in ("--set", f"{p}=")]
+    app_version = str(chart_file("Chart.yaml").get("appVersion") or "")
+    tags = image_tag_values()
+    if not app_version or not tags:
+        fail("image", f"appVersion {app_version!r} and image tags {tags!r}: the census found nothing to check")
+    for path, default in tags.items():
+        if default not in ("", None):
+            fail("image", f"{path} defaults to {default!r} in values.yaml; leave it empty, so the image is the "
+                          f"chart's appVersion")
+    VALUE_SETS["explicit-tags"] = EVERYTHING + [a for p in tags for a in ("--set", f"{p}={EXPLICIT_TAG}")]
     for vs, args in VALUE_SETS.items():
         docs = render(args)
         wl = check_value_set(vs, docs, args)
         check_startup(vs, wl)
         check_models(vs, docs, args)
+        check_images(vs, wl, args, app_version)
     check_restarts()
     if failures:
         print(f"FAIL: {len(failures)} wiring rule(s) broke")

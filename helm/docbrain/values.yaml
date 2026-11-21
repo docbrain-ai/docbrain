@@ -137,7 +137,9 @@ confluenceWebhook:
 server:
   image:
     repository: ghcr.io/docbrain-ai/docbrain
-    tag: latest
+    tag: ""                  # empty = the chart's appVersion (Chart.yaml): the chart and its images move together,
+    #                        # and `helm rollback` restores both. The ingest job runs this image too. Set a tag only
+    #                        # to run another build (docs/kubernetes.md, "Image tags").
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3000
@@ -708,7 +710,7 @@ web:
   enabled: true
   image:
     repository: ghcr.io/docbrain-ai/docbrain-web
-    tag: latest
+    tag: ""                  # empty = the chart's appVersion, as server.image.tag
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3001
@@ -1393,7 +1395,7 @@ trainer:
   enabled: false
   image:
     repository: ghcr.io/docbrain-ai/docbrain-trainer
-    tag: latest
+    tag: ""                  # empty = the chart's appVersion, as server.image.tag
     pullPolicy: IfNotPresent
   # Base model for fine-tuning — overrides learning.training.baseModelId if set explicitly.
   # Set both to the same value. The chart uses learning.training.baseModelId as the default

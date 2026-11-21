@@ -45,7 +45,7 @@ spec:
       terminationGracePeriodSeconds: 180
       containers:
         - name: server
-          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.server.port }}

@@ -493,10 +493,12 @@ helm upgrade docbrain ./helm/docbrain \
 | Tag | Use case |
 |-----|----------|
 | `edge` | Latest commit from `main`. Unstable — good for local testing. |
-| `latest` | Latest stable release. |
-| `1.2.0` | Pinned release — recommended for production. |
+| `latest` | Latest stable release. It moves with every release, so the chart never uses it by default. |
+| `1.6.7` | One release, pinned — the kind of tag the chart runs by default (its `appVersion`). |
 
-By default the chart uses `appVersion` (`1.2.0`) for all DocBrain images — no explicit tag override needed. Override only when pinning to a different release:
+Every DocBrain image the chart runs (server, web, trainer and the ingest job) defaults to the chart's own `appVersion`
+(`helm/docbrain/Chart.yaml`): `server.image.tag`, `web.image.tag` and `trainer.image.tag` are empty in `values.yaml`.
+The chart and its images move together. Set a tag only to run another build:
 
 ```bash
 # Pin to a specific older release
@@ -519,6 +521,13 @@ helm install docbrain ./helm/docbrain \
 ```bash
 helm upgrade docbrain ./helm/docbrain -f my-values.yaml
 ```
+
+A chart deploys the images of its own version: the 1.6.7 chart runs the 1.6.7 server, web and trainer images, and
+`helm rollback` restores the chart and its images together. Two things keep an older image tag across an upgrade:
+a values file that sets `server.image.tag`, `web.image.tag` or `trainer.image.tag` (a copy of an older `values.yaml`
+says `tag: latest`; delete those lines), and `--reuse-values`, which keeps the last release's values, `tag: latest`
+included (use `--reset-then-reuse-values`, Helm 3.14 or later, to take the new chart's defaults and keep your own
+settings).
 
 The server restarts automatically when a setting it reads changes: the chart's settings ConfigMap, its Secret, or
 its `local.yaml` (`ingest.sources`, `freshness.exclusionRules`, `freshness.eventBasedSpaces`), through checksum
