@@ -259,6 +259,17 @@ def main():
         if s.read() != before:
             fail("unterminated block", "the wizard changed a file whose block has no end line")
         check("unterminated block", s, {"confluence.base_url": "https://kept.example.org"})
+
+        # 9. An answer that is no provider: the wizard says it uses Anthropic, and .env says so too (the template's
+        #    own provider is another one). It then asks for the Anthropic key and the embedding provider.
+        out = s.run("invalid provider", ["y", "9", "sk-ant-x", "1", "sk-x", "1"])
+        env = s.env()
+        if "Using Anthropic as default" not in out:
+            fail("invalid provider", "the wizard did not say which provider it chose")
+        for k, v in {"LLM_PROVIDER": "anthropic", "LLM_MODEL_ID": "claude-sonnet-5-5", "ANTHROPIC_API_KEY": "sk-ant-x",
+                     "EMBED_PROVIDER": "openai", "EMBED_MODEL_ID": "text-embedding-3-small"}.items():
+            if env.get(k) != v:
+                fail("invalid provider", f".env has {k}={env.get(k)!r}, want {v!r}")
         runs = s.runs
 
     if failures:

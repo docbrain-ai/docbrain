@@ -161,6 +161,13 @@ echo "  4) AWS Bedrock               — requires AWS credentials"
 echo ""
 read -rp "Select provider [1]: " llm_choice
 llm_choice=${llm_choice:-1}
+case $llm_choice in
+    1|2|3|4) ;;
+    *)  # .env.example's own provider is another one, so the choice is made, not left to the template
+        echo "Invalid choice. Using Anthropic as default."
+        llm_choice=1
+        ;;
+esac
 
 case $llm_choice in
     1)
@@ -207,9 +214,6 @@ case $llm_choice in
         sed -i.bak "s/^# AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=${aws_secret}/" .env
         sed -i.bak 's/^EMBED_PROVIDER=.*/EMBED_PROVIDER=bedrock/' .env
         sed -i.bak 's/^EMBED_MODEL_ID=.*/EMBED_MODEL_ID=cohere.embed-v4:0/' .env
-        ;;
-    *)
-        echo "Invalid choice. Using Anthropic as default."
         ;;
 esac
 
