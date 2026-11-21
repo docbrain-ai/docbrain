@@ -19,6 +19,10 @@ that arrives without the rule fails here instead of on a cluster:
              reads <fullname>-config whole) mounts it at /app/config/local.yaml, and the file holds exactly the
              subtrees the values set (sources, freshness.exclusion_rules, freshness.event_based_spaces).
   bootstrap  when the chart generates the first-login admin key, the server is given it.
+  model      no setting that names a model (a ConfigMap key or container env named *MODEL, *MODEL_ID or
+             *MODEL_NAME) renders empty: the reader would take "" as the model instead of the provider's default.
+             The "empty-model-ids" value set blanks every model value a template reads (found in the templates, so
+             a new one is covered), and a value set that leaves llm.modelId unset renders no LLM_MODEL_ID.
   startup    every container that runs the OpenSearch image (found by image, so a renamed label cannot hide
              one; none found is a failure) has a startup probe that outlasts twice its slowest measured first
              boot and probes the port its liveness probe probes.
@@ -29,6 +33,7 @@ Needs helm and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -45,6 +50,10 @@ OVERLAY_VALUES = {
     "freshness.exclusionRules": ("freshness", "exclusion_rules"),
     "freshness.eventBasedSpaces": ("freshness", "event_based_spaces"),
 }
+
+# A value a template reads whose name says it holds a model, and a rendered setting that names one.
+MODEL_VALUE = re.compile(r"\.Values\.([A-Za-z0-9_.]*?[mM]odel(?:Id|Name))\b")
+MODEL_KEY = re.compile(r"MODEL(_ID|_NAME)?$")
 
 # Single keys read by reference, and why a change to them needs no restart. (component, object suffix, key).
 KEY_READS = {
@@ -78,6 +87,7 @@ VALUE_SETS = {
     "event-spaces-only": ["--set-json", 'freshness.eventBasedSpaces=["slack_thread"]'],
     "sources-only": ["--set-json", 'ingest.sources={"local":{"path":"/data/docs"}}'],
     "bootstrap-key-off": ["--set", "bootstrapKey.enabled=false"],
+    "bedrock": ["--set", "llm.provider=bedrock"],
     "existing-secrets": EVERYTHING + ["--set", "existingSecret=my-secret",
                                       "--set", "fingerprintKeySecret.existingSecret=my-fingerprint"],
 }
@@ -294,6 +304,37 @@ def probe_port(probe, container):
     return port
 
 
+def model_values():
+    """Every model value (…modelId, …modelName) a template reads, from the template sources."""
+    found = set()
+    tdir = os.path.join(CHART, "templates")
+    for f in sorted(os.listdir(tdir)):
+        with open(os.path.join(tdir, f)) as fh:
+            found |= set(MODEL_VALUE.findall(fh.read()))
+    return sorted(found)
+
+
+def check_models(vs, docs, args):
+    for d in docs:
+        if d["kind"] == "ConfigMap":
+            for k, v in (d.get("data") or {}).items():
+                if MODEL_KEY.search(k) and not str(v).strip():
+                    fail("model", f"{vs}: ConfigMap {d['metadata']['name']} sets {k} empty; the reader takes \"\" "
+                                  f"as the model instead of its default (render it only when set)")
+        if d["kind"] in POD_KINDS:
+            spec = pod_template(d)["spec"]
+            for c in spec.get("containers", []) + spec.get("initContainers", []):
+                for e in c.get("env") or []:
+                    if MODEL_KEY.search(e["name"]) and "value" in e and not str(e["value"] or "").strip():
+                        fail("model", f"{vs}: {d['metadata']['name']} container {c['name']} sets {e['name']} empty")
+    if not any(a.startswith("llm.modelId=") for a in args):
+        cfg = next(((d.get("data") or {}) for d in docs if d["kind"] == "ConfigMap"
+                    and d["metadata"]["name"] == f"{FULLNAME}-config"), {})
+        if "LLM_MODEL_ID" in cfg:
+            fail("model", f"{vs}: llm.modelId is not set, yet the server is given LLM_MODEL_ID={cfg['LLM_MODEL_ID']!r} "
+                          f"instead of its provider's default")
+
+
 def check_startup(vs, wl):
     found = opensearch_containers(wl)
     if not found:
@@ -368,9 +409,15 @@ def main():
         if shutil.which(tool) is None:
             print(f"CANNOT RUN: {tool} is not installed", file=sys.stderr)
             sys.exit(2)
+    blanks = model_values()
+    if not blanks:
+        fail("model", "no template reads a model value, so the census found nothing; MODEL_VALUE is out of date")
+    VALUE_SETS["empty-model-ids"] = EVERYTHING + [a for p in blanks for a in ("--set", f"{p}=")]
     for vs, args in VALUE_SETS.items():
-        wl = check_value_set(vs, render(args), args)
+        docs = render(args)
+        wl = check_value_set(vs, docs, args)
         check_startup(vs, wl)
+        check_models(vs, docs, args)
     check_restarts()
     if failures:
         print(f"FAIL: {len(failures)} wiring rule(s) broke")

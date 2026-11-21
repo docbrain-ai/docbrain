@@ -52,8 +52,11 @@ spec:
                   name: {{ include "docbrain.secretName" . }}
                   key: TRAINER_API_KEY
                   optional: true
+            {{- with .Values.trainer.baseModelName | default .Values.learning.training.baseModelId }}
+            # Empty inherits learning.training.baseModelId (the server's LEARNING_BASE_MODEL_ID, which it must match).
             - name: TRAINER_BASE_MODEL_NAME
-              value: {{ .Values.trainer.baseModelName | quote }}
+              value: {{ . | quote }}
+            {{- end }}
             - name: TRAINER_EPOCHS
               value: {{ .Values.trainer.epochs | quote }}
             - name: TRAINER_BATCH_SIZE

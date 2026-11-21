@@ -50,6 +50,8 @@ fingerprint-key Secret unless `fingerprintKeySecret.existingSecret` is set. See
 ### 2. Choose your LLM provider
 
 DocBrain supports Anthropic, OpenAI, AWS Bedrock, and Ollama. Pass the provider and credentials at install time.
+`llm.modelId` (and every other model setting) left empty means the provider's default model, so the examples below
+can drop it; with `llm.provider=anthropic` that is `claude-sonnet-5-5`, the model the chart named before.
 
 #### Anthropic (Claude)
 

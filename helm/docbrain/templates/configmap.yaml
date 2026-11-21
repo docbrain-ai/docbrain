@@ -6,7 +6,11 @@ metadata:
     {{- include "docbrain.labels" . | nindent 4 }}
 data:
   LLM_PROVIDER: {{ .Values.llm.provider | quote }}
+  {{- /* A model id is rendered only when set: an empty one would reach the server as a model named "" instead of
+         the provider's default. tests/workload_wiring_test.py (rule "model") holds this for every model key. */}}
+  {{- if .Values.llm.modelId }}
   LLM_MODEL_ID: {{ .Values.llm.modelId | quote }}
+  {{- end }}
   {{- if .Values.llm.fastModelId }}
   FAST_MODEL_ID: {{ .Values.llm.fastModelId | quote }}
   {{- end }}
@@ -29,7 +33,9 @@ data:
   DOCBRAIN_LLM_EFFORT: {{ .Values.llm.effort | quote }}
   {{- end }}
   EMBED_PROVIDER: {{ .Values.embedding.provider | quote }}
+  {{- if .Values.embedding.modelId }}
   EMBED_MODEL_ID: {{ .Values.embedding.modelId | quote }}
+  {{- end }}
   LOCAL_DOCS_PATH: {{ .Values.ingest.localDocsPath | quote }}
   OPENSEARCH_URL: {{ include "docbrain.opensearchUrl" . | quote }}
   REDIS_URL: {{ include "docbrain.redisUrl" . | quote }}

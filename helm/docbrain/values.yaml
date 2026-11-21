@@ -3,7 +3,8 @@
 # -- LLM provider: bedrock | anthropic | openai | ollama | groq | openrouter | together | deepseek | mistral | xai | gemini | azure_openai | cohere
 llm:
   provider: anthropic
-  modelId: claude-sonnet-5-5
+  modelId: ""              # empty = the provider's default model (the LLM_MODEL_ID row of docs/configuration.md);
+  #                        # with provider: anthropic that is claude-sonnet-5-5, the id this chart used to set
   # fastModelId: ""        # fast/cheap model for side-calls (intent classify, query rewrite, entity extraction)
   #                        # Bedrock: us.anthropic.claude-haiku-4-5-20251001-v1:0
   #                        # Anthropic: claude-haiku-4-5-20251001
@@ -83,7 +84,7 @@ llm:
 # -- Embedding provider: bedrock | openai | ollama
 embedding:
   provider: openai
-  modelId: text-embedding-3-small
+  modelId: text-embedding-3-small   # empty = the provider's default
   # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
 
 # -- Ingestion. A source is on when its settings are given: localDocsPath for
