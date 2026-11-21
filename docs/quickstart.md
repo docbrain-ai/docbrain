@@ -29,6 +29,7 @@ Or configure manually:
 
 ```bash
 cp .env.example .env
+touch config/local.yaml   # your YAML settings; compose mounts it, so it must exist before the first start
 ```
 
 The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys`
@@ -68,6 +69,7 @@ cd docbrain
 git clone https://github.com/docbrain-ai/docbrain.git
 cd docbrain
 cp .env.example .env
+touch config/local.yaml   # your YAML settings; compose mounts it, so it must exist before the first start
 ```
 
 The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys`
@@ -81,7 +83,7 @@ Edit `.env` — add your LLM API key (infrastructure secret). Then:
 docker compose up -d
 ```
 
-For document sources (Confluence, GitHub, Slack, Jira), create `config/local.yaml` (gitignored) with your source credentials. See [Configuration Reference](./configuration.md) for the config-first architecture.
+For document sources (Confluence, GitHub, Slack, Jira), put your source settings in `config/local.yaml` (gitignored), the file you made above: compose mounts it into the server and the ingest. See [Connect your real docs](#connect-your-real-docs) and the [Configuration Reference](./configuration.md).
 
 ## Verify Installation
 
@@ -133,8 +135,9 @@ This takes ~30 seconds. Once done, you can ask questions about the sample docume
 
 ### Connect your real docs
 
-Create `config/local.yaml` (gitignored) and add your source credentials. This
-file is never committed — it's the right place for tokens and resource lists.
+Add your source settings to `config/local.yaml` (gitignored): `setup.sh` writes it, or the `touch` step above
+made it empty. Compose mounts it into the server and the ingest at `/app/config/local.yaml`. This file is never
+committed — it's the right place for tokens and resource lists.
 
 All ingestion sources live under the top-level `sources:` block. A sub-source
 is enabled when its block is present in YAML. Resource lists (repos, projects,
@@ -288,10 +291,12 @@ See the **[Generate guide](generate.md)** for source links, templates, and CI pl
 From the folder you cloned:
 
 ```bash
-git pull && docker compose pull && docker compose up -d && docker compose restart proxy
+git pull && touch config/local.yaml && docker compose pull && docker compose up -d && docker compose restart proxy
 ```
 
-`git pull` brings the new Compose and proxy files and `docker compose pull` the new images. The last step
+`git pull` brings the new Compose and proxy files and `docker compose pull` the new images. `touch` makes an
+empty `config/local.yaml` if your install has none (compose mounts it and stops when it is missing) and leaves an
+existing one unchanged. The last step
 loads a changed proxy file: `up -d` keeps a running proxy whenever its image has not changed. Your
 data stays in the Docker volumes. On Kubernetes, see [Upgrade](kubernetes.md#upgrade).
 
@@ -310,6 +315,7 @@ docker compose logs opensearch
 
 **Common causes:**
 - **OpenSearch crashes:** Not enough memory. OpenSearch needs ~1GB. Check `docker stats`.
+- **`up` stops with an error naming `config/local.yaml`:** the file does not exist. Compose mounts it into the server and the ingest and will not start them without it: run `touch config/local.yaml` (an empty file is fine) and `docker compose up -d` again.
 - **Server exits immediately:** Usually a missing or malformed `.env`. Re-copy from `.env.example`. If the log names `DOCBRAIN_FINGERPRINT_KEY` or `DOCBRAIN_FINGERPRINT_KEY_FILE`, check `docker compose logs keys` (it generates the key on first start) or the value you set in `.env`.
 
 ### "Connection refused" when asking questions
@@ -333,7 +339,7 @@ docker compose exec server docbrain-ingest
 
 If ingestion completed but answers are still empty, check:
 - Are your documents in a format DocBrain supports? (`.md`, `.txt`, or Confluence/GitHub)
-- Is `sources:` in `config/local.yaml` set correctly for at least one provider?
+- Is `sources:` in `config/local.yaml` set correctly for at least one provider? `docker compose exec server cat /app/config/local.yaml` shows what the server reads; restart `server` and `ingest` after an edit.
 - For Confluence: are the space keys correct? Check the URL of your Confluence space.
 
 ### Ingestion fails with "401 Unauthorized" (Confluence)

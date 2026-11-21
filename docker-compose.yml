@@ -3,6 +3,7 @@
 #
 # Usage:
 #   cp .env.example .env        # add your LLM keys, Confluence token, etc.
+#   touch config/local.yaml     # your YAML settings (sources); it must exist before `up`
 #   (the fingerprint key is generated into the docbrain-keys volume on first start; back it up)
 #   docker compose up -d        # starts all services; the ingest service indexes your
 #                               # sources at start and then every INGEST_INTERVAL_SECS (3600)
@@ -10,9 +11,12 @@
 # Configuration:
 #   YAML defaults are baked into the Docker image (config/default.yaml +
 #   config/production.yaml). You configure via .env for secrets and
-#   deployment-specific values. Environment variables always win over YAML.
+#   deployment-specific values, and via config/local.yaml (mounted into the
+#   server and the ingest) for what only YAML can hold, such as sources.
+#   Environment variables always win over YAML.
 #
-#   To use a custom config directory (e.g. Kubernetes ConfigMap):
+#   To use a custom config directory (e.g. Kubernetes ConfigMap) instead; the
+#   server then reads local.yaml from that directory, not from the mount below:
 #     environment:
 #       DOCBRAIN_CONFIG_DIR: /etc/docbrain
 #     volumes:
@@ -213,6 +217,15 @@ services:
       - docbrain-keys:/keys:ro
       - ./examples/sample-docs:/data/docs:ro
       - ./docs:/app/docs:ro
+      # Your settings file: sources and the other settings only YAML can hold (docs/configuration.md). It must exist
+      # before the first start (`touch config/local.yaml` makes an empty one, and scripts/setup.sh writes it). When it
+      # is missing, `up` stops with an error naming it, instead of mounting an empty folder in its place.
+      - type: bind
+        source: ./config/local.yaml
+        target: /app/config/local.yaml
+        read_only: true
+        bind:
+          create_host_path: false
       # Uncomment when trainer service is enabled (shared model volume):
       # - trainer_models:/data/models
     restart: unless-stopped
@@ -251,6 +264,13 @@ services:
       - docbrain-keys:/keys:ro
       - ./examples/sample-docs:/data/docs:ro
       - ./docs:/app/docs:ro
+      # The same settings file as the server's (see there).
+      - type: bind
+        source: ./config/local.yaml
+        target: /app/config/local.yaml
+        read_only: true
+        bind:
+          create_host_path: false
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

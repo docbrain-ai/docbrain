@@ -36,19 +36,9 @@ cd "$SCRIPT_DIR/.."
 
 SKIP_SETUP=false
 
-if [ -f .env ]; then
-    echo -e "${YELLOW}An .env file already exists.${NC}"
-    read -rp "Overwrite? (y/N): " overwrite
-    if [[ "$overwrite" != "y" && "$overwrite" != "Y" ]]; then
-        echo ""
-        echo "Starting services with existing configuration..."
-        docker compose up -d
-        # Fall through to the startup wait and instructions below
-        SKIP_SETUP=true
-    fi
-fi
-
-# Ensure config/local.yaml exists (gitignored — safe for secrets and overrides)
+# Ensure config/local.yaml exists (gitignored — safe for secrets and overrides).
+# It comes first: docker-compose.yml mounts it into the server and the ingest, and
+# `docker compose up` stops when it is missing, so it must exist before any start below.
 if [ ! -f config/local.yaml ]; then
     mkdir -p config
     cat > config/local.yaml << 'LOCALYAML'
@@ -81,6 +71,18 @@ if [ ! -f config/local.yaml ]; then
 #       - ENG
 #       - PLAT
 LOCALYAML
+fi
+
+if [ -f .env ]; then
+    echo -e "${YELLOW}An .env file already exists.${NC}"
+    read -rp "Overwrite? (y/N): " overwrite
+    if [[ "$overwrite" != "y" && "$overwrite" != "Y" ]]; then
+        echo ""
+        echo "Starting services with existing configuration..."
+        docker compose up -d
+        # Fall through to the startup wait and instructions below
+        SKIP_SETUP=true
+    fi
 fi
 
 if [ "$SKIP_SETUP" = false ]; then
