@@ -101,10 +101,12 @@ local_yaml_without_wizard_block() {  # the file minus the wizard's block; a star
 # $1 = the top-level key the block sets ("" for none), $2 = the block ("" removes the earlier one).
 # Returns 1, leaving the file unchanged, when lines outside the block already set that key, or when the backup or the
 # write fails.
-# Before it changes the file it keeps the previous one as config/local.yaml.bak (it holds the same credentials;
-# .gitignore lists it), so an interrupted write never loses the lines written by hand.
+# Before it changes the file it keeps the previous one as config/local.yaml.bak.<UTC time> (it holds the same
+# credentials; .gitignore lists it), so an interrupted write never loses the lines written by hand. Each change keeps
+# its own backup and never replaces one an earlier run kept: a run after the file was damaged (emptied, say) must not
+# put the damaged file over the last good copy.
 write_wizard_block() {
-    local key="$1" block="$2" rest had=false new current
+    local key="$1" block="$2" rest had=false new current backup stamp n=1
     rest=$(local_yaml_without_wizard_block)
     grep -qF "$WIZARD_BEGIN" config/local.yaml && had=true
     if [[ -n "$key" ]] && grep -Eq "^[\"']?${key}[\"']?[[:space:]]*:" <<< "$rest"; then
@@ -124,16 +126,22 @@ write_wizard_block() {
         return 0  # already what this run would write: no write, no backup
     fi
     # Called as an `if` condition, where `set -e` is off, so every step that can fail is checked: the wizard never
-    # says it kept a backup, or saved, when it did not. A link left at the backup's name is removed, never written
-    # through.
-    if ! rm -f config/local.yaml.bak || ! cp -p config/local.yaml config/local.yaml.bak; then
-        echo -e "  ${YELLOW}Could not keep the previous config/local.yaml as config/local.yaml.bak; the wizard left the file unchanged.${NC}"
+    # says it kept a backup, or saved, when it did not. A file or a link already at the name is never replaced nor
+    # written through: the name takes a -2, -3... suffix instead.
+    stamp=$(date -u +%Y%m%dT%H%M%SZ)
+    backup="config/local.yaml.bak.$stamp"
+    while [[ -e "$backup" || -L "$backup" ]]; do
+        n=$((n + 1))
+        backup="config/local.yaml.bak.$stamp-$n"
+    done
+    if ! cp -p config/local.yaml "$backup"; then
+        echo -e "  ${YELLOW}Could not keep the previous config/local.yaml as $backup; the wizard left the file unchanged.${NC}"
         return 1
     fi
-    echo -e "  Kept the previous config/local.yaml as config/local.yaml.bak."
+    echo -e "  Kept the previous config/local.yaml as $backup."
     # written in place, so a running container's bind mount keeps seeing the same file
     if ! printf '%s' "$new" > config/local.yaml; then
-        echo -e "  ${YELLOW}Could not write config/local.yaml; the previous one is in config/local.yaml.bak.${NC}"
+        echo -e "  ${YELLOW}Could not write config/local.yaml; the previous one is in $backup.${NC}"
         return 1
     fi
     if [[ "$had" = true ]]; then

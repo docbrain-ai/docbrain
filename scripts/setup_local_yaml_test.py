@@ -6,18 +6,22 @@ scripts/setup.sh must never write a key twice. This runs the real wizard (script
 scratch folder, with `docker` and `curl` replaced by stubs that start nothing (the docker stub logs what it was
 asked), and after every run parses the file with a YAML loader that refuses a duplicated key, as the server's
 parser does. It also holds that a run which refuses to write never says "Configuration saved." nor starts the
-stack, that a rewrite first keeps the previous file as config/local.yaml.bak, that a backup or a write that fails
+stack, that a rewrite first keeps the previous file as a backup of its own (config/local.yaml.bak.<UTC time>) and
+never replaces or writes through one already there, that a backup or a write that fails
 stops the run before it says it kept or saved anything, and that the provider written to .env is the one the wizard
 names.
 
 Run: python3 scripts/setup_local_yaml_test.py   (from anywhere; nothing starts, nothing is downloaded)
 Needs bash and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every case held.
 """
+import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 BEGIN = "# >>> written by scripts/setup.sh; running the wizard again replaces this block >>>"
@@ -96,7 +100,6 @@ class Scratch:
             os.chmod(path, 0o755)
         self.cp_log = os.path.join(root, "cp.log")
         self.local = os.path.join(root, "config", "local.yaml")
-        self.backup = self.local + ".bak"
         self.runs = 0
 
     def run(self, case, answers, expect=0):
@@ -134,6 +137,18 @@ class Scratch:
     def env(self):
         with open(os.path.join(self.root, ".env")) as f:
             return dict(line.split("=", 1) for line in f.read().splitlines() if "=" in line and line[0] != "#")
+
+    def backups(self):
+        """{name: text, or None for a link or a non-file} for every config/local.yaml.bak* there."""
+        return {os.path.basename(p): read_or_none(p) for p in glob.glob(self.local + ".bak*")}
+
+    def kept(self, case, out):
+        """The backup the run says it kept, or None (a failure is recorded) when it names none."""
+        m = re.search(r"Kept the previous config/local\.yaml as (config/local\.yaml\.bak\.\S+)\.$", out, re.M)
+        if not m:
+            fail(case, "the run did not say which backup it kept")
+            return None
+        return os.path.join(self.root, m.group(1))
 
     def read(self):
         with open(self.local) as f:
@@ -185,16 +200,15 @@ def main():
             fail("first run", f"want one marked block, found {blocks(text)}")
 
         # 2. The same choice again with another token (the mistyped-token re-run): one confluence key, the new token.
-        #    The file it replaced is kept as config/local.yaml.bak, and the run says so.
+        #    The file it replaced is kept as a backup of its own, and the run names it.
         before = s.read()
         out = s.run("second run", ["y", "3", "3", *CONF, "tok-2", "DOCS,ENG"])
         text, _ = check("second run", s, {"confluence.api_token": "tok-2"})
         if blocks(text) != (1, 1):
             fail("second run", f"want one marked block, found {blocks(text)}")
-        if read_or_none(s.backup) != before:
-            fail("second run", "config/local.yaml.bak is not the file the run replaced")
-        if "Kept the previous config/local.yaml as config/local.yaml.bak" not in out:
-            fail("second run", "the run did not say it kept a backup")
+        kept = s.kept("second run", out)
+        if kept and read_or_none(kept) != before:
+            fail("second run", f"{os.path.basename(kept)} is not the file the run replaced")
 
         # 2b. Answers with characters YAML would otherwise read as syntax stay the strings typed.
         token = "it's: #not-a-comment &x *y"
@@ -202,30 +216,46 @@ def main():
         text, _ = check("yaml characters", s, {"confluence.api_token": token, "confluence.space_keys": "DOCS"})
 
         # 3. The same answers once more: the file is byte for byte the same, and nothing is backed up.
-        backup = read_or_none(s.backup)
+        earlier = s.backups()
         out = s.run("same answers", ["y", "3", "3", *CONF, token, " DOCS "])
         if s.read() != text:
             fail("same answers", "a run with the same answers changed config/local.yaml")
-        if "config/local.yaml.bak" in out or read_or_none(s.backup) != backup:
+        if "config/local.yaml.bak" in out or s.backups() != earlier:
             fail("same answers", "a run that changed nothing wrote a backup")
 
-        # 3b. The backup keeps the file's mode (it holds credentials) over an older, wider one, and a link left at
-        #     the backup's name is replaced, never written through.
+        # 3b. The backup keeps the file's mode (it holds credentials), and a backup or a link already at a backup's
+        #     name is neither replaced nor written through: links sit at every free name the next 30 seconds would
+        #     give, suffixes -2 to -9 included, so whatever second the run lands in, the first names it tries are
+        #     taken by a link or by an earlier backup, and it must go past them all.
         os.chmod(s.local, 0o600)
         outside = os.path.join(root, "outside.txt")
         with open(outside, "w") as f:
             f.write("not the wizard's\n")
-        if os.path.lexists(s.backup):
-            os.remove(s.backup)
-        os.symlink(outside, s.backup)
+        now = time.time()
+        stamps = [f"{s.local}.bak.{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime(now + d))}" for d in range(31)]
+        names = [f"{stamp}{suffix}" for stamp in stamps for suffix in ["", *(f"-{n}" for n in range(2, 10))]]
+        earlier = s.backups()
+        planted = [n for n in names if not os.path.lexists(n)]  # a name an earlier run took keeps its backup
+        for link in planted:
+            os.symlink(outside, link)
         before = s.read()
-        s.run("backup mode and link", ["y", "3", "3", *CONF, "tok-mode", " DOCS "])
+        out = s.run("backup mode and link", ["y", "3", "3", *CONF, "tok-mode", " DOCS "])
+        kept = s.kept("backup mode and link", out)
         if open(outside).read() != "not the wizard's\n":
-            fail("backup mode and link", "the backup was written through a link at config/local.yaml.bak")
-        if read_or_none(s.backup) != before:
-            fail("backup mode and link", "config/local.yaml.bak is not a copy of the file the run replaced")
-        elif os.stat(s.backup).st_mode & 0o777 != 0o600:
-            fail("backup mode and link", f"the backup's mode is {oct(os.stat(s.backup).st_mode & 0o777)}, want 0o600")
+            fail("backup mode and link", "the backup was written through a link at its name")
+        if any(not os.path.islink(link) for link in planted):
+            fail("backup mode and link", "a link at a backup's name was replaced")
+        for name, text in earlier.items():
+            if s.backups().get(name) != text:
+                fail("backup mode and link", f"{name}, kept by an earlier run, was replaced or changed")
+        if kept in planted:
+            fail("backup mode and link", f"the run says it kept {os.path.basename(kept)}, where a link sits")
+        elif kept and read_or_none(kept) != before:
+            fail("backup mode and link", f"{os.path.basename(kept)} is not a copy of the file the run replaced")
+        elif kept and os.stat(kept).st_mode & 0o777 != 0o600:
+            fail("backup mode and link", f"the backup's mode is {oct(os.stat(kept).st_mode & 0o777)}, want 0o600")
+        for link in planted:
+            os.remove(link)
         s.run("token back", ["y", "3", "3", *CONF, token, " DOCS "])
 
         # 4. Another source: GitHub with no token replaces the wizard's Confluence block and writes no token
@@ -243,6 +273,23 @@ def main():
                                                  "freshness.exclusion_rules.archived_title_patterns": ["^Old "]})
         if blocks(text) != (1, 1):
             fail("hand-written kept", f"want one marked block, found {blocks(text)}")
+
+        # 5b. The file is damaged (emptied) and the wizard runs again: the backups earlier runs kept are all still
+        #     there and unchanged, so the hand-written lines survive in one of them, and the damaged file gets a
+        #     backup of its own.
+        earlier, good = s.backups(), s.read()
+        s.write("")
+        out = s.run("after damage", ["y", "3", "4", "acme/docs", "ghp_y", "main"])
+        kept = s.kept("after damage", out)
+        now_there = s.backups()
+        for name, text in earlier.items():
+            if now_there.get(name) != text:
+                fail("after damage", f"{name}, kept by an earlier run, was replaced or changed")
+        if not any(t and "archived_title_patterns" in t for t in now_there.values()):
+            fail("after damage", "no backup holds the hand-written lines any more")
+        if kept and read_or_none(kept) != "":
+            fail("after damage", f"{os.path.basename(kept)} is not the damaged file the run replaced")
+        s.write(good)  # put back from the backup, as the user would; the cases below build on these lines
 
         # 6. A sources: section written by hand: choosing GitHub would write sources: twice, so the wizard writes
         #    nothing and says what to add.
