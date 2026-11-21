@@ -1514,7 +1514,7 @@ provider's signature or shared secret instead.
 | `ADMIN_KEY_FILE` | `/app/admin-bootstrap-key.txt` | Where to write the admin bootstrap key on first boot |
 | `IDLE_TIMEOUT_HOURS` | `0` | Hours without use after which an API key is rejected as if expired, whatever its lifetime. `0` turns it off. |
 | `BOOTSTRAP_KEY_ENABLED` | `true` | `false`, `0`, `no` or `off` revokes the bootstrap admin key at start and keeps it revoked; if the revoke fails the server refuses to start. Set it once you have created your own admin keys. |
-| `BOOTSTRAP_ADMIN_KEY` | — | Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to `ADMIN_KEY_FILE`. |
+| `BOOTSTRAP_ADMIN_KEY` | — | Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to `ADMIN_KEY_FILE`. The key is never logged: when it registers a pre-set key, the server logs `Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var` and where to read it. On the Helm chart that is the Secret `<fullname>-initial-admin-secret`, key `BOOTSTRAP_ADMIN_KEY` (the chart generates it), the `existingSecret` you named, or `server.env.BOOTSTRAP_ADMIN_KEY`; on Docker Compose or the binary, the environment or `.env`. |
 
 ### Access lists at ingest
 

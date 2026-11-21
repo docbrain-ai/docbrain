@@ -18,7 +18,11 @@ that arrives without the rule fails here instead of on a cluster:
   overlay    when the chart's local.yaml renders, every pod that runs DocBrain with the chart's settings (it
              reads <fullname>-config whole) mounts it at /app/config/local.yaml, and the file holds exactly the
              subtrees the values set (sources, freshness.exclusion_rules, freshness.event_based_spaces).
-  bootstrap  when the chart generates the first-login admin key, the server is given it.
+  bootstrap  when the chart generates the first-login admin key, the server is given it. The Secret's name and
+             data key are read from the BOOTSTRAP_ADMIN_KEY row of docs/configuration.md, which the server's
+             first-boot line is tested against too (docbrain-server, PRESET_BOOTSTRAP_KEY_HINT), so a renamed
+             Secret or key fails here until the row changes; the sentence the row says is logged must be the
+             one docs/kubernetes.md quotes.
   model      no setting that names a model (a ConfigMap key or container env named *MODEL, *MODEL_ID or
              *MODEL_NAME) renders empty: the reader would take "" as the model instead of the provider's default.
              The "empty-model-ids" and "whitespace-model-ids" value sets blank every model value a template reads
@@ -49,6 +53,7 @@ import sys
 import tempfile
 
 CHART = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+DOCS = os.path.normpath(os.path.join(CHART, "..", "..", "docs"))
 RELEASE = "wiring"
 FULLNAME = "wiring-docbrain"
 POD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob"}
@@ -90,6 +95,7 @@ THIRD_PARTY_IMAGES = {
     "busybox": "the OpenSearch pod's sysctl init step; it runs no DocBrain code",
 }
 EXPLICIT_TAG = "latest"
+ADMIN_KEY = None  # (Secret name ending, data key, logged sentence), read from docs/configuration.md by main()
 
 # Model values that keep a non-empty default in values.yaml, and why. Every other model value defaults to empty: the
 # reader then uses its provider's own default, so switching the provider never keeps another provider's model id.
@@ -298,18 +304,49 @@ def check_value_set(vs, docs, args):
     elif cm is not None:
         fail("overlay", f"{vs}: the chart renders {overlay[1]} although none of {sorted(OVERLAY_VALUES)} is set")
 
-    # bootstrap: the generated first-login key reaches the server.
-    admin = ("Secret", f"{FULLNAME}-initial-admin-secret")
+    # bootstrap: the generated first-login key reaches the server, in the Secret and key the docs name.
+    if ADMIN_KEY is None:
+        return wl
+    ending, key = ADMIN_KEY[0], ADMIN_KEY[1]
+    admin = ("Secret", f"{FULLNAME}{ending}")
     server = pod_template(wl["server"])
     refs = [r for r in reads(server)[1] if r[4] == "BOOTSTRAP_ADMIN_KEY"]
+    generates = "bootstrapKey.enabled=false" not in args and not any(a.startswith("existingSecret=") for a in args)
+    if generates and admin not in objs:
+        fail("bootstrap", f"{vs}: the chart generates the admin key, but renders no {admin[1]}, the Secret "
+                          f"docs/configuration.md names (<fullname>{ending})")
     if admin in objs:
-        ok = [r for r in refs if r[1] == admin[1] and r[2] == "BOOTSTRAP_ADMIN_KEY" and r[3] is True]
+        ok = [r for r in refs if r[1] == admin[1] and r[2] == key and r[3] is True]
         if len(ok) != 1:
             fail("bootstrap", f"{vs}: the chart renders {admin[1]} but the server's BOOTSTRAP_ADMIN_KEY is {refs} "
-                              f"(want one optional secretKeyRef to it)")
+                              f"(want one optional secretKeyRef to its key {key!r}, as docs/configuration.md says)")
+        data = next(d for d in docs if (d["kind"], d["metadata"]["name"]) == admin)
+        if key not in (data.get("stringData") or {}) and key not in (data.get("data") or {}):
+            fail("bootstrap", f"{vs}: {admin[1]} holds no key {key!r}, the one docs/configuration.md names")
     elif refs:
         fail("bootstrap", f"{vs}: {admin[1]} is not rendered, yet the server references it: {refs}")
     return wl
+
+
+def documented_admin_key():
+    """(Secret name ending, data key, logged sentence) from the BOOTSTRAP_ADMIN_KEY row of docs/configuration.md."""
+    with open(os.path.join(DOCS, "configuration.md")) as fh:
+        rows = [line for line in fh.read().splitlines() if line.startswith("| `BOOTSTRAP_ADMIN_KEY` |")]
+    if len(rows) != 1:
+        fail("bootstrap", f"docs/configuration.md has {len(rows)} BOOTSTRAP_ADMIN_KEY rows, want one")
+        return None
+    secret = re.search(r"`<fullname>(-[^`]+)`", rows[0])
+    key = re.search(r"\bkey `([^`]+)`", rows[0])
+    logged = re.search(r"\blogs `([^`]+)`", rows[0])
+    if not (secret and key and logged):
+        fail("bootstrap", "the BOOTSTRAP_ADMIN_KEY row of docs/configuration.md must name the Secret "
+                          "(`<fullname>-…`), its key (key `…`) and what the server logs (logs `…`): " + rows[0])
+        return None
+    with open(os.path.join(DOCS, "kubernetes.md")) as fh:
+        if f"`{logged.group(1)}`" not in fh.read():
+            fail("bootstrap", f"docs/kubernetes.md does not quote `{logged.group(1)}`, the sentence the "
+                              f"BOOTSTRAP_ADMIN_KEY row of docs/configuration.md says the server logs")
+    return secret.group(1), key.group(1), logged.group(1)
 
 
 def opensearch_containers(wl):
@@ -512,6 +549,8 @@ def main():
         if shutil.which(tool) is None:
             print(f"CANNOT RUN: {tool} is not installed", file=sys.stderr)
             sys.exit(2)
+    global ADMIN_KEY
+    ADMIN_KEY = documented_admin_key()
     blanks = model_values()
     if not blanks:
         fail("model", "no template reads a model value, so the census found nothing; MODEL_VALUE is out of date")
