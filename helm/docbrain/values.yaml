@@ -1075,7 +1075,8 @@ oidc:
 # Drives the MCP-OAuth landing redirect AND the "view in browser" deep link the CLI
 # prints after a generate (and the shareable per-doc link). Set to the user-facing
 # web origin — NOT the API host if they differ. Unset → no link is offered (never
-# guessed/hardcoded). Trailing slash is trimmed server-side.
+# guessed/hardcoded). Trailing slash is trimmed server-side. Tool sign-in (MCP OAuth)
+# needs it: unset, starting a tool connection is refused with one sentence saying so.
 # webBaseUrl: "https://docbrain.mycompany.com"
 
 # -- Sign-in for apps (DOCBRAIN_OAUTH_SERVER): apps such as Claude Code connect to DocBrain's MCP

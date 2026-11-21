@@ -237,7 +237,7 @@ Team, project, and named-person queries (*"what is my team working on"*, *"what 
 
 ### OAuth (per-user)
 
-Each user clicks **Connect** on `/integrations` and grants their own token to the external system. Tokens are stored encrypted at rest (AES-256-GCM with `MCP_OAUTH_ENCRYPTION_KEY`) in the `mcp_oauth_tokens` table and refreshed automatically before expiry.
+Each user clicks **Connect** on `/integrations` and grants their own token to the external system. The connection finishes on **My integrations**, in the browser that came back from the tool, signed in as the person who started it; a sign-in finished in another browser, or by another DocBrain account, connects nothing. Tokens are stored encrypted at rest (AES-256-GCM with `MCP_OAUTH_ENCRYPTION_KEY`) in the `mcp_oauth_tokens` table and refreshed automatically before expiry.
 
 ```yaml
 auth:
@@ -401,14 +401,16 @@ mcpTools:
       clientSecret: ""           # ATLASSIAN_OAUTH_CLIENT_SECRET (from secret)
 ```
 
+Tool sign-in also needs `webBaseUrl`, the address people open the console at. Unset, starting a connection is refused with one sentence that says so. Leave `DOCBRAIN_PUBLIC_BASE_URL` unset, or set it only to that address.
+
 In production, leave the string fields empty in `values.yaml` and inject them via `existingSecret`. See [Configuration → MCP Tool Platform](configuration.md#mcp-tool-platform) for the full env-var table.
 
 ### 3. Register the OAuth client with your IdP
 
-For Atlassian: **Developer Console → OAuth 2.0 (3LO) → Create app**. Set the callback URL to:
+For Atlassian: **Developer Console → OAuth 2.0 (3LO) → Create app**. Set the callback URL to the console's address (`webBaseUrl`) followed by the callback path:
 
 ```
-https://<your-domain>/api/v1/oauth/mcp/callback/jira
+https://<console address>/api/v1/oauth/mcp/callback/jira
 ```
 
 The path segment after `callback/` is the manifest id (`jira`). If you add a manifest with a different id, the callback path changes accordingly.
