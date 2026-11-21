@@ -87,6 +87,7 @@ Or manually:
 
 ```bash
 cp .env.example .env   # set LLM_PROVIDER and API keys
+touch config/local.yaml   # your YAML settings (sources); compose mounts it, so it must exist before up
 docker compose up -d
 docker compose exec server cat /app/admin-bootstrap-key.txt   # your admin API key
 ```
@@ -225,6 +226,7 @@ API keys are hashed with Argon2, every endpoint checks permissions, rate limits 
 
 ```bash
 # Docker Compose — everything behind a single origin at localhost:3001
+touch config/local.yaml   # your YAML settings (sources); it must exist before up
 docker compose up -d
 
 # Kubernetes
