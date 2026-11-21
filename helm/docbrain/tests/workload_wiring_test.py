@@ -15,7 +15,8 @@ that arrives without the rule fails here instead of on a cluster:
   restart    changing one object's content changes the pod template of exactly the pods that read it whole.
   overlay    when the chart's local.yaml renders, every pod that runs DocBrain with the chart's settings (it
              reads <fullname>-config whole) mounts it at /app/config/local.yaml.
-  bootstrap  when the chart generates the first-login admin key, the server is given it.
+  bootstrap  when the chart generates the first-login admin key, the server is given it; when
+             bootstrapKey.enabled=false, the server's settings revoke it (BOOTSTRAP_KEY_ENABLED off), and only then.
   startup    OpenSearch's startup probe outlasts twice its slowest measured first boot.
 
 Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
@@ -68,6 +69,10 @@ VALUE_SETS = {
     "existing-secrets": EVERYTHING + ["--set", "existingSecret=my-secret",
                                       "--set", "fingerprintKeySecret.existingSecret=my-fingerprint"],
 }
+# The value sets that turn the bootstrap key off, so the server must revoke it.
+BOOTSTRAP_OFF = {"bootstrap-key-off"}
+# The spellings the server reads as off (bootstrap_key_enabled in crates/docbrain-server/src/main.rs).
+OFF_SPELLINGS = {"false", "0", "no", "off"}
 # One content change per object, made on top of EVERYTHING: (object suffix, extra helm args).
 CHANGES = [
     ("config", ["--set", "server.env.WIRING_PROBE=changed"]),
@@ -227,6 +232,19 @@ def check_value_set(vs, docs):
                               f"(want one optional secretKeyRef to it)")
     elif refs:
         fail("bootstrap", f"{vs}: {admin[1]} is not rendered, yet the server references it: {refs}")
+    # The value the server sees: a container env entry wins over the chart's settings ConfigMap (envFrom).
+    cfg = next(((d.get("data") or {}) for d in docs if d.get("kind") == "ConfigMap"
+                and d["metadata"]["name"] == f"{FULLNAME}-config"), {})
+    seen = cfg.get("BOOTSTRAP_KEY_ENABLED")
+    for c in server["spec"]["containers"]:
+        for e in c.get("env") or []:
+            if e["name"] == "BOOTSTRAP_KEY_ENABLED":
+                seen = e.get("value")
+    off = str(seen or "").strip().lower() in OFF_SPELLINGS
+    if off != (vs in BOOTSTRAP_OFF):
+        fail("bootstrap", f"{vs}: the server's BOOTSTRAP_KEY_ENABLED is {seen!r}, but "
+                          f"bootstrapKey.enabled is {'false' if vs in BOOTSTRAP_OFF else 'true'} (off must revoke "
+                          f"the key, on must keep it)")
     return wl
 
 
