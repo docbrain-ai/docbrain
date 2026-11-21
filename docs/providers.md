@@ -85,8 +85,11 @@ For AWS-native deployments. Uses the **AWS SDK default credential chain** — no
 ```env
 LLM_PROVIDER=bedrock
 AWS_REGION=us-east-1
-LLM_MODEL_ID=us.anthropic.claude-opus-4-20250514-v1:0
+LLM_MODEL_ID=us.anthropic.claude-sonnet-5-5
 ```
+
+`us.anthropic.claude-sonnet-5-5` (Claude Sonnet 5.5 through its US inference profile) is the default when `LLM_MODEL_ID` is not set.
+Outside the US, name your geography's inference profile.
 
 #### AWS Credential Resolution Order
 

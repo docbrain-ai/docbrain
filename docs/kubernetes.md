@@ -82,7 +82,7 @@ helm install docbrain ./helm/docbrain \
 ```bash
 helm install docbrain ./helm/docbrain \
   --set llm.provider=bedrock \
-  --set llm.modelId=us.anthropic.claude-sonnet-4-20250514-v1:0 \
+  --set llm.modelId=us.anthropic.claude-sonnet-5-5 \
   --set embedding.provider=bedrock \
   --set embedding.modelId=cohere.embed-v4:0
 ```

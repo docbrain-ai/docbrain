@@ -183,6 +183,9 @@ case $llm_choice in
         ;;
     4)
         sed -i.bak 's/^LLM_PROVIDER=.*/LLM_PROVIDER=bedrock/' .env
+        # The Bedrock default (Claude Sonnet 5.5 through its US inference profile); outside the US, set your
+        # geography's profile in .env.
+        sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=us.anthropic.claude-sonnet-5-5/' .env
         echo ""
         read -rp "  AWS Region [us-east-1]: " aws_region
         aws_region=${aws_region:-us-east-1}
