@@ -6,8 +6,9 @@ scripts/setup.sh must never write a key twice. This runs the real wizard (script
 scratch folder, with `docker` and `curl` replaced by stubs that start nothing (the docker stub logs what it was
 asked), and after every run parses the file with a YAML loader that refuses a duplicated key, as the server's
 parser does. It also holds that a run which refuses to write never says "Configuration saved." nor starts the
-stack, that a rewrite first keeps the previous file as config/local.yaml.bak, and that the provider written to
-.env is the one the wizard names.
+stack, that a rewrite first keeps the previous file as config/local.yaml.bak, that a backup or a write that fails
+stops the run before it says it kept or saved anything, and that the provider written to .env is the one the wizard
+names.
 
 Run: python3 scripts/setup_local_yaml_test.py   (from anywhere; nothing starts, nothing is downloaded)
 Needs bash and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every case held.
@@ -93,6 +94,7 @@ class Scratch:
                 f.write("#!/bin/sh\n" + (f"echo \"$*\" >> '{self.docker_log}'\n" if tool == "docker" else "")
                         + "exit 0\n")
             os.chmod(path, 0o755)
+        self.cp_log = os.path.join(root, "cp.log")
         self.local = os.path.join(root, "config", "local.yaml")
         self.backup = self.local + ".bak"
         self.runs = 0
@@ -116,6 +118,18 @@ class Scratch:
         if expect != 0 and started:
             fail(case, "the wizard started the stack after it refused to write config/local.yaml")
         return out
+
+    def failing_backup(self, on):
+        """With `on`, a `cp` stub refuses any copy to the backup's name (and logs that it did); other copies run."""
+        path = os.path.join(self.stubs, "cp")
+        if not on:
+            os.remove(path)
+            return
+        with open(path, "w") as f:
+            f.write("#!/bin/sh\nfor last; do :; done\n"
+                    f"case \"$last\" in *config/local.yaml.bak*) echo \"$*\" >> '{self.cp_log}'; exit 1;; esac\n"
+                    "exec /bin/cp \"$@\"\n")
+        os.chmod(path, 0o755)
 
     def env(self):
         with open(os.path.join(self.root, ".env")) as f:
@@ -270,6 +284,49 @@ def main():
                      "EMBED_PROVIDER": "openai", "EMBED_MODEL_ID": "text-embedding-3-small"}.items():
             if env.get(k) != v:
                 fail("invalid provider", f".env has {k}={env.get(k)!r}, want {v!r}")
+
+        # 10. The backup copy fails: the run says so, never that it kept a backup, leaves the file as it was, and
+        #     neither says it saved nor starts (the copy runs inside an `if`, where `set -e` does not stop it). The
+        #     file starts with no confluence: of its own (case 8 left one), so the run gets as far as the backup.
+        s.write("freshness:\n  exclusion_rules:\n    archived_title_patterns: ['^Old ']\n")
+        before = s.read()
+        s.failing_backup(True)
+        out = s.run("backup fails", ["y", "3", "3", *CONF, "tok-cp", "DOCS"], expect=1)
+        s.failing_backup(False)
+        if not os.path.exists(s.cp_log):
+            fail("backup fails", "the cp stub never refused a copy, so this case tested nothing")
+        if "Kept the previous" in out:
+            fail("backup fails", "the run said it kept a backup when the copy failed")
+        if "Could not keep the previous config/local.yaml" not in out:
+            fail("backup fails", "the run did not say the backup failed")
+        if s.read() != before:
+            fail("backup fails", "the run changed config/local.yaml although it had no backup")
+
+        # 10a. The same for the sample docs, whose call removes the wizard's block: the run ends on the wizard's own
+        #      account of what it did not write, not on `set -e`.
+        s.run("confluence before a failed removal", ["y", "3", "3", *CONF, "tok-ok", "DOCS"])
+        before = s.read()
+        s.failing_backup(True)
+        out = s.run("removal backup fails", ["y", "3", "1"], expect=1)
+        s.failing_backup(False)
+        if ".env is saved, but" not in out:
+            fail("removal backup fails", "the run did not say which settings it left unsaved")
+        if s.read() != before:
+            fail("removal backup fails", "the run changed config/local.yaml although it had no backup")
+
+        # 10b. The write fails (a file the user cannot write): the run says so and neither saves nor starts. Root
+        #      writes a read-only file anyway, so this one needs another user and says when it did not run.
+        write_case = "not run (root writes a read-only file)"
+        if os.geteuid() != 0:
+            write_case = "run"
+            before = s.read()
+            os.chmod(s.local, 0o444)
+            out = s.run("write fails", ["y", "3", "3", *CONF, "tok-ro", "DOCS"], expect=1)
+            os.chmod(s.local, 0o600)
+            if "Could not write config/local.yaml" not in out:
+                fail("write fails", "the run did not say the write failed")
+            if s.read() != before:
+                fail("write fails", "config/local.yaml changed although the write failed")
         runs = s.runs
 
     if failures:
@@ -277,7 +334,8 @@ def main():
         for f in failures:
             print(f"  {f}")
         return 1
-    print(f"PASS: config/local.yaml stays one valid YAML document over {runs} wizard runs")
+    print(f"PASS: config/local.yaml stays one valid YAML document over {runs} wizard runs (write-failure case: "
+          f"{write_case})")
     return 0
 
 

@@ -99,7 +99,8 @@ local_yaml_without_wizard_block() {  # the file minus the wizard's block; a star
 }
 
 # $1 = the top-level key the block sets ("" for none), $2 = the block ("" removes the earlier one).
-# Returns 1, leaving the file unchanged, when lines outside the block already set that key.
+# Returns 1, leaving the file unchanged, when lines outside the block already set that key, or when the backup or the
+# write fails.
 # Before it changes the file it keeps the previous one as config/local.yaml.bak (it holds the same credentials;
 # .gitignore lists it), so an interrupted write never loses the lines written by hand.
 write_wizard_block() {
@@ -122,11 +123,19 @@ write_wizard_block() {
     if [[ "$new" == "${current%x}" ]]; then
         return 0  # already what this run would write: no write, no backup
     fi
-    rm -f config/local.yaml.bak  # a link left there is removed, never written through
-    cp -p config/local.yaml config/local.yaml.bak
+    # Called as an `if` condition, where `set -e` is off, so every step that can fail is checked: the wizard never
+    # says it kept a backup, or saved, when it did not. A link left at the backup's name is removed, never written
+    # through.
+    if ! rm -f config/local.yaml.bak || ! cp -p config/local.yaml config/local.yaml.bak; then
+        echo -e "  ${YELLOW}Could not keep the previous config/local.yaml as config/local.yaml.bak; the wizard left the file unchanged.${NC}"
+        return 1
+    fi
     echo -e "  Kept the previous config/local.yaml as config/local.yaml.bak."
     # written in place, so a running container's bind mount keeps seeing the same file
-    printf '%s' "$new" > config/local.yaml
+    if ! printf '%s' "$new" > config/local.yaml; then
+        echo -e "  ${YELLOW}Could not write config/local.yaml; the previous one is in config/local.yaml.bak.${NC}"
+        return 1
+    fi
     if [[ "$had" = true ]]; then
         echo -e "  ${YELLOW}Replaced the source settings an earlier run of this wizard wrote to config/local.yaml.${NC}"
     fi
@@ -147,7 +156,7 @@ fi
 if [ "$SKIP_SETUP" = false ]; then
 
 cp .env.example .env
-source_refused=false  # true when config/local.yaml already had the chosen source's key and was left unchanged
+source_refused=false  # true when the wizard could not write the chosen source to config/local.yaml (it says why)
 
 # ── LLM Provider ─────────────────────────────────────────────────────────
 
@@ -265,12 +274,12 @@ source_choice=${source_choice:-1}
 case $source_choice in
     1)
         # defaults are fine; a source an earlier run wrote is replaced by this answer
-        write_wizard_block "" ""
+        write_wizard_block "" "" || source_refused=true
         ;;
     2)
         read -rp "  Absolute path to docs directory: " docs_path
         sed -i.bak "s|^LOCAL_DOCS_PATH=.*|LOCAL_DOCS_PATH=${docs_path}|" .env
-        write_wizard_block "" ""
+        write_wizard_block "" "" || source_refused=true
         ;;
     3)
         echo ""
