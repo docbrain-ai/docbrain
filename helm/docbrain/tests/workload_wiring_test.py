@@ -13,10 +13,15 @@ that arrives without the rule fails here instead of on a cluster:
   keys       a single key read by secretKeyRef or configMapKeyRef carries no checksum, so each one is listed in
              KEY_READS with its reason; a new one fails until it is.
   restart    changing one object's content changes the pod template of exactly the pods that read it whole.
+             A census: every object some pod reads whole has a content change in CHANGES (a value) or
+             FILE_CHANGES (a chart file), so a pod whose checksum never moves cannot pass unseen.
   overlay    when the chart's local.yaml renders, every pod that runs DocBrain with the chart's settings (it
-             reads <fullname>-config whole) mounts it at /app/config/local.yaml.
+             reads <fullname>-config whole) mounts it at /app/config/local.yaml, and the file holds exactly the
+             subtrees the values set (sources, freshness.exclusion_rules, freshness.event_based_spaces).
   bootstrap  when the chart generates the first-login admin key, the server is given it.
-  startup    OpenSearch's startup probe outlasts twice its slowest measured first boot.
+  startup    every container that runs the OpenSearch image (found by image, so a renamed label cannot hide
+             one; none found is a failure) has a startup probe that outlasts twice its slowest measured first
+             boot and probes the port its liveness probe probes.
 
 Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
 Needs helm and PyYAML. A missing tool is a failure (exit 2), never a pass. Exit 0: every rule held.
@@ -27,11 +32,19 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 
 CHART = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 RELEASE = "wiring"
 FULLNAME = "wiring-docbrain"
 POD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob"}
+
+# The values that put a subtree into the chart's local.yaml, and where it lands there.
+OVERLAY_VALUES = {
+    "ingest.sources": ("sources",),
+    "freshness.exclusionRules": ("freshness", "exclusion_rules"),
+    "freshness.eventBasedSpaces": ("freshness", "event_based_spaces"),
+}
 
 # Single keys read by reference, and why a change to them needs no restart. (component, object suffix, key).
 KEY_READS = {
@@ -74,6 +87,11 @@ CHANGES = [
     ("secret", ["--set", "llm.anthropicApiKey=wiring-probe"]),
     ("sources", ["--set-json", 'ingest.sources={"local":{"path":"/data/other"}}']),
 ]
+# One content change per object no value can change, made to a copy of the chart: (object suffix, file under
+# the chart, its text). The MCP manifests come from chart files, so a new manifest is the change.
+FILE_CHANGES = [
+    ("mcp-manifests", "files/mcp-manifests/wiring-probe.yaml", "id: wiring-probe\n"),
+]
 
 failures = []
 
@@ -82,8 +100,8 @@ def fail(rule, msg):
     failures.append(f"[{rule}] {msg}")
 
 
-def render(args):
-    out = subprocess.run(["helm", "template", RELEASE, CHART, *args], capture_output=True, text=True)
+def render(args, chart=CHART):
+    out = subprocess.run(["helm", "template", RELEASE, chart, *args], capture_output=True, text=True)
     if out.returncode != 0:
         print(f"CANNOT RUN: helm template {' '.join(args)} failed:\n{out.stderr}", file=sys.stderr)
         sys.exit(2)
@@ -111,7 +129,12 @@ def workloads(docs, vs):
         spec = d.get("spec") or {}
         has_pod = "template" in spec or "jobTemplate" in spec
         if d["kind"] in POD_KINDS:
-            found[component(d)] = d
+            comp = component(d)
+            if comp in found:
+                fail("reads", f"{vs}: {d['kind']} {d['metadata']['name']} and {found[comp]['kind']} "
+                              f"{found[comp]['metadata']['name']} share the component label {comp!r}; the rules "
+                              f"key workloads by it, so one of them would go unchecked")
+            found[comp] = d
         elif has_pod:
             fail("reads", f"{vs}: {d['kind']} {d['metadata']['name']} has a pod template but is not a known "
                           f"workload kind; add it to POD_KINDS so every rule covers it")
@@ -159,7 +182,21 @@ def reads(tmpl):
     return whole, keyed
 
 
-def check_value_set(vs, docs):
+def expected_overlay(args):
+    """The chart's local.yaml the values in args should produce, from their --set-json values."""
+    want = {}
+    for flag, arg in zip(args, args[1:]):
+        key, _, raw = arg.partition("=")
+        if flag == "--set-json" and key in OVERLAY_VALUES:
+            *parents, leaf = OVERLAY_VALUES[key]
+            node = want
+            for p in parents:
+                node = node.setdefault(p, {})
+            node[leaf] = json.loads(raw)
+    return want
+
+
+def check_value_set(vs, docs, args):
     objs = objects(docs)
     wl = workloads(docs, vs)
     if f"{FULLNAME}-server" not in {d["metadata"]["name"] for d in wl.values()}:
@@ -215,6 +252,15 @@ def check_value_set(vs, docs):
                             f"local.yaml at /app/config/local.yaml")
         if overlay not in objs and any(p == "/app/config/local.yaml" for _, p, _ in mounts):
             fail("overlay", f"{vs}: {comp} mounts /app/config/local.yaml but the chart renders no overlay")
+    # ...and holds what the values set, no more and no less.
+    want = expected_overlay(args)
+    cm = next((d for d in docs if d["kind"] == "ConfigMap" and d["metadata"]["name"] == overlay[1]), None)
+    if want:
+        got = yaml.safe_load(((cm or {}).get("data") or {}).get("local.yaml") or "") if cm else None
+        if got != want:
+            fail("overlay", f"{vs}: the chart's local.yaml holds {got!r}, but the values set {want!r}")
+    elif cm is not None:
+        fail("overlay", f"{vs}: the chart renders {overlay[1]} although none of {sorted(OVERLAY_VALUES)} is set")
 
     # bootstrap: the generated first-login key reaches the server.
     admin = ("Secret", f"{FULLNAME}-initial-admin-secret")
@@ -230,42 +276,85 @@ def check_value_set(vs, docs):
     return wl
 
 
+def opensearch_containers(wl):
+    """(component, container) for every container running the OpenSearch image, whatever its labels."""
+    found = []
+    for comp, d in wl.items():
+        for c in pod_template(d)["spec"]["containers"]:
+            if (c.get("image") or "").split("@")[0].rsplit("/", 1)[-1].split(":")[0] == "opensearch":
+                found.append((comp, c))
+    return found
+
+
+def probe_port(probe, container):
+    """The port a probe checks, a named port resolved to its number (None for an exec probe)."""
+    port = (probe.get("tcpSocket") or probe.get("httpGet") or probe.get("grpc") or {}).get("port")
+    if isinstance(port, str):
+        port = next((p["containerPort"] for p in container.get("ports") or [] if p.get("name") == port), port)
+    return port
+
+
 def check_startup(vs, wl):
-    os_ = wl.get("opensearch")
-    if os_ is None:
-        return
-    for c in pod_template(os_)["spec"]["containers"]:
+    found = opensearch_containers(wl)
+    if not found:
+        fail("startup", f"{vs}: no container runs the OpenSearch image, so the rule checked nothing (if a value "
+                        f"set turns OpenSearch off, the test must say so)")
+    for comp, c in found:
         sp = c.get("startupProbe")
         if not sp:
-            fail("startup", f"{vs}: opensearch container {c['name']} has no startupProbe; its liveness probe "
-                            f"restarts a slow first boot")
+            fail("startup", f"{vs}: {comp} container {c['name']} runs OpenSearch with no startupProbe; its "
+                            f"liveness probe restarts a slow first boot")
             continue
         window = sp.get("initialDelaySeconds", 0) + sp.get("periodSeconds", 10) * sp.get("failureThreshold", 3)
         if window < 2 * OPENSEARCH_SLOWEST_FIRST_BOOT_S:
-            fail("startup", f"{vs}: opensearch startupProbe allows {window}s, under twice the slowest first boot "
+            fail("startup", f"{vs}: {comp} startupProbe allows {window}s, under twice the slowest first boot "
                             f"measured ({OPENSEARCH_SLOWEST_FIRST_BOOT_S}s)")
+        live = c.get("livenessProbe")
+        if live and probe_port(sp, c) != probe_port(live, c):
+            fail("startup", f"{vs}: {comp} startupProbe checks port {probe_port(sp, c)!r} but its livenessProbe "
+                            f"checks {probe_port(live, c)!r}; the startup probe must wait for what the liveness "
+                            f"probe will check")
 
 
 def pod_digest(d):
     return hashlib.sha256(json.dumps(pod_template(d), sort_keys=True).encode()).hexdigest()
 
 
+def render_with_file(path, text):
+    """EVERYTHING rendered from a copy of the chart with one file written (symlinks copied as their targets)."""
+    with tempfile.TemporaryDirectory(prefix="wiring-chart-") as tmp:
+        copy = os.path.join(tmp, os.path.basename(CHART))
+        shutil.copytree(CHART, copy, symlinks=False)
+        with open(os.path.join(copy, path), "w") as f:
+            f.write(text)
+        return render(EVERYTHING, chart=copy)
+
+
 def check_restarts():
     base_docs = render(EVERYTHING)
     base = workloads(base_docs, "everything")
-    for obj, extra in CHANGES:
-        name = f"{FULLNAME}-{obj}"
+    objs = objects(base_docs)
+    cases = [(f"{FULLNAME}-{o}", " ".join(extra), lambda extra=extra: render(EVERYTHING + extra))
+             for o, extra in CHANGES]
+    cases += [(f"{FULLNAME}-{o}", f"new chart file {path}", lambda path=path, text=text: render_with_file(path, text))
+              for o, path, text in FILE_CHANGES]
+    # The census: an object read whole with no change case would never prove its readers restart.
+    read_whole = {n for d in base.values() for k, n, _ in reads(pod_template(d))[0] if (k, n) in objs}
+    for name in sorted(read_whole - {n for n, _, _ in cases}):
+        fail("restart", f"{name} is read whole but has no content change in CHANGES or FILE_CHANGES, so nothing "
+                        f"proves a change to it restarts the pods that read it")
+    for name, what, render_changed in cases:
         readers = {comp for comp, d in base.items()
                    if any(n == name for _, n, _ in reads(pod_template(d))[0])}
         if not readers:
             fail("restart", f"change of {name}: no pod reads it whole, so the change proves nothing")
             continue
-        changed_docs = render(EVERYTHING + extra)
+        changed_docs = render_changed()
         before = {(d["kind"], d["metadata"]["name"]): d for d in base_docs if d["kind"] in ("ConfigMap", "Secret")}
         after = {(d["kind"], d["metadata"]["name"]): d for d in changed_docs if d["kind"] in ("ConfigMap", "Secret")}
-        kind = "Secret" if obj == "secret" else "ConfigMap"
+        kind = next((k for k, n in objs if n == name), None)
         if before.get((kind, name)) == after.get((kind, name)):
-            fail("restart", f"change of {name}: {extra} did not change the object, so the change proves nothing")
+            fail("restart", f"change of {name}: {what} did not change the object, so the change proves nothing")
             continue
         now = workloads(changed_docs, "changed")
         restarted = {comp for comp in base if comp in now and pod_digest(base[comp]) != pod_digest(now[comp])}
@@ -280,7 +369,7 @@ def main():
             print(f"CANNOT RUN: {tool} is not installed", file=sys.stderr)
             sys.exit(2)
     for vs, args in VALUE_SETS.items():
-        wl = check_value_set(vs, render(args))
+        wl = check_value_set(vs, render(args), args)
         check_startup(vs, wl)
     check_restarts()
     if failures:
@@ -288,7 +377,8 @@ def main():
         for f in failures:
             print("  " + f)
         sys.exit(1)
-    print(f"PASS: every wiring rule holds over {len(VALUE_SETS)} value sets and {len(CHANGES)} content changes")
+    print(f"PASS: every wiring rule holds over {len(VALUE_SETS)} value sets and "
+          f"{len(CHANGES) + len(FILE_CHANGES)} content changes")
 
 
 if __name__ == "__main__":

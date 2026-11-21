@@ -228,13 +228,24 @@ kubectl get secret docbrain-initial-admin-secret \
 
 The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is **never printed to logs** — always retrieve it from the Secret directly as shown above. The server is given that Secret's key and registers it on its first boot; its log then says `Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var`.
 
+The server registers a bootstrap key only while no admin key exists, so the Secret holds a key that does not work in
+three cases:
+- **An install first made with a chart before 1.6.7.** That chart did not give the server the Secret's key: the
+  server made its own at first boot (written to `/app/admin-bootstrap-key.txt` in its container, gone once the server
+  restarts). An upgrade does not change that. Sign in with that first key or an admin key you created.
+- **The Secret was deleted, then `helm upgrade` ran.** The upgrade renders a new Secret with a new key, which is
+  never registered. Your first key still works.
+- **The chart is rendered offline** (`helm template`, Argo CD): `lookup` returns nothing there, so every render
+  makes a new key and only the one present at the server's first boot is registered. Put `BOOTSTRAP_ADMIN_KEY` in a
+  Secret you manage instead ([Using Existing Secrets](#using-existing-secrets)).
+
 **Bootstrap key lifecycle:**
 
 | Event | Secret | Database |
 |-------|--------|----------|
 | `helm install` | Created with generated key | Key registered on first server boot |
-| `helm upgrade` | Key preserved via `lookup` — never regenerated | No-op |
-| `kubectl delete secret ...-initial-admin-secret` | Gone | Key still active — safe to delete once you have real keys |
+| `helm upgrade` | Key preserved via `lookup` — never regenerated (except offline renders, above) | No-op |
+| `kubectl delete secret ...-initial-admin-secret` | Gone (the next `helm upgrade` makes a new one whose key is never registered) | Key still active — safe to delete once you have real keys |
 | `bootstrapKey.enabled=false` + `helm upgrade` | Helm deletes the Secret | Key still active: this value alone does not revoke it (step 3 below does) |
 | `helm uninstall` | Deleted | Key record remains in DB (now inactive after revocation, or still active if not) |
 
