@@ -71,8 +71,8 @@ pub(crate) fn anchored_files(c: &Check) -> Vec<&str> {
 }
 
 /// What a command prints in place of text read from the repository that holds a secret shape (`SEMANTICS.md`
-/// §Secrets: a hit is named, never its text).
-pub(crate) const WITHHELD_VALUE: &str = "(withheld: secret-shape)";
+/// §Secrets: a hit is named, never its text). A [`Shown`] value holds it already when its whole text did.
+pub(crate) use docbrain_knowledge::secret::WITHHELD_VALUE;
 
 /// Text read from the repository (a value, a title, an expectation as written) as a command prints it.
 pub(crate) fn clean(text: &str) -> &str {
@@ -245,6 +245,22 @@ mod tests {
         let literal = "  - config_key: 'v.yaml#db.url'\n    must: '== AKIAQ7ZK3M9W2X4V8B6N'\n";
         let line = &lines(&t, &[literal], &|_| false)[0];
         assert!(line.starts_with("must v.yaml#db.url (withheld: secret-shape)  ") && !line.contains("AKIA"), "{line}");
+    }
+
+    #[test]
+    fn a_secret_shape_across_the_display_bound_is_withheld() {
+        // A fixed-length token from byte 190: the 200-byte cut keeps 10 of its 20 characters, which match no rule.
+        const TOKEN: &str = "AKIAQ7ZK3M9W2X4V8B6N";
+        assert_eq!(clean(Shown::new(&format!("{}{TOKEN}", "a".repeat(190))).as_str()), WITHHELD_VALUE);
+    }
+
+    #[test]
+    fn a_secret_shape_across_the_display_bound_is_withheld_in_a_url() {
+        // A URL whose password starts before byte 200 and whose `@` comes after it: the cut is no URL with a password.
+        let password = "Zq8vLp2m".repeat(3);
+        let url = format!("{} postgres://app:{password}@db/app", "x".repeat(170));
+        assert!(url.find(&password).is_some_and(|i| i < Shown::MAX_BYTES) && url.find('@').is_some_and(|i| i >= Shown::MAX_BYTES));
+        assert_eq!(clean(Shown::new(&url).as_str()), WITHHELD_VALUE);
     }
 
     #[test]

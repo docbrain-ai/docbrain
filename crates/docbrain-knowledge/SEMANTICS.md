@@ -63,7 +63,7 @@ or the bound's name exactly as written.
 |-|-|
 | `missing-file` | no entry matches the anchored file or path |
 | `missing-key` | no layer defines the key |
-| `false` | the expectation is false; the value is shown, cut at 200 bytes |
+| `false` | the expectation is false; the value is shown, cut at 200 bytes, or as `(withheld: secret-shape)` when the whole value holds a secret shape (§Secrets), wherever it lies |
 
 A missing file or key is never `unverifiable`.
 

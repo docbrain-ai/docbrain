@@ -63,6 +63,9 @@ pub const TEMPLATE_WORDS: &[&str] =
 /// and `token` are deliberately absent: they are working default passwords.
 pub const URL_PASSWORD_WORDS: &[&str] = &["password", "passwd", "pwd", "secret"];
 
+/// What is shown in place of text read from a repository that holds a secret shape: a hit is named, never its text.
+pub const WITHHELD_VALUE: &str = "(withheld: secret-shape)";
+
 fn compiled() -> &'static [(&'static str, Regex)] {
     static RULES: OnceLock<Vec<(&'static str, Regex)>> = OnceLock::new();
     RULES.get_or_init(|| OPEN_RULES.iter().filter_map(|&(id, re)| Regex::new(re).ok().map(|r| (id, r))).collect())

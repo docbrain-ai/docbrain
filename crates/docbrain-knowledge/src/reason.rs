@@ -7,6 +7,8 @@
 
 use std::borrow::Cow;
 
+use crate::secret;
+
 /// A named bound (`SEMANTICS.md` §Bounds). An exceeded bound is an `unverifiable` check or an `invalid` record naming it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Bound {
@@ -113,7 +115,8 @@ impl Unverifiable {
     }
 }
 
-/// A display of a resolved value, cut at 200 bytes on a character boundary.
+/// A display of a resolved value, cut at 200 bytes on a character boundary; [`secret::WITHHELD_VALUE`] when the
+/// whole value holds a secret shape (§Secrets) anywhere, so a cut never shows the part of one that is left.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Shown(String);
 
@@ -122,6 +125,10 @@ impl Shown {
     pub const MAX_BYTES: usize = 200;
 
     pub fn new(text: &str) -> Shown {
+        // Screened whole, before the cut: a shape across byte 200 matches no rule in what the cut leaves.
+        if !secret::spans(text).is_empty() {
+            return Shown(secret::WITHHELD_VALUE.to_owned());
+        }
         let mut end = text.len().min(Self::MAX_BYTES);
         while !text.is_char_boundary(end) {
             end -= 1;
@@ -398,5 +405,39 @@ mod tests {
         assert_eq!(s.as_str().len(), 200);
         let odd = format!("a{}", "é".repeat(150)); // a boundary falls inside a char at 200
         assert_eq!(Shown::new(&odd).as_str().len(), 199);
+    }
+
+    #[test]
+    fn shown_withholds_a_value_with_a_secret_shape_anywhere() {
+        use crate::secret::WITHHELD_VALUE as W;
+        const KEY: &str = "AKIAQ7ZK3M9W2X4V8B6N"; // a fixed-length rule, 20 bytes
+        let a = |n: usize| "a".repeat(n);
+        let shown = |t: &str| Shown::new(t).as_str().to_owned();
+        // The key ending at byte 199, 200 (a value of exactly 200 bytes) and 201; across the cut; starting at the cut;
+        // wholly past it; at the very start.
+        for before in [179, 180, 181, 190, 199, 200, 300, 0] {
+            assert_eq!(shown(&format!("{}{KEY}", a(before))), W, "the key from byte {before}");
+        }
+        assert_eq!(shown(&format!("{}{KEY}{}", a(190), a(500))), W, "text on both sides");
+        // Multibyte text at the cut: 190 bytes of `é`; a cut that falls inside a character, the key after it.
+        assert_eq!(shown(&format!("{}{KEY}", "é".repeat(95))), W);
+        assert_eq!(shown(&format!("a{}{KEY}", "é".repeat(100))), W);
+        // Two keys: one inside the cut and one past it.
+        assert_eq!(shown(&format!("{KEY}{}{KEY}", a(200))), W);
+        // A URL's password before the cut, its `@` after it.
+        let password = "Zq8vLp2m".repeat(3);
+        assert_eq!(shown(&format!("{} postgres://app:{password}@db/app", a(170))), W);
+        // A private-key header before the cut, its key material across it: the cut alone reads as an example.
+        let pem = format!("{}-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n", a(150), "QUJD".repeat(20));
+        assert!(secret::spans(&pem[..Shown::MAX_BYTES]).is_empty());
+        assert_eq!(shown(&pem), W);
+        // No shape: as before, cut at 200 bytes.
+        assert_eq!(shown(""), "");
+        assert_eq!(shown(&a(200)), a(200));
+        assert_eq!(shown(&a(201)), a(200));
+        // A documented shape is no secret: cut like any text.
+        let example = format!("{} postgres://app:changeme@db/app", a(180));
+        assert_eq!(shown(&example), example[..Shown::MAX_BYTES]);
+        assert_eq!(shown(W), W, "the marker is text like any other");
     }
 }

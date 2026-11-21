@@ -2463,8 +2463,9 @@ seen:</p>
 </span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>docbrain<span class="w"> </span>connect<span class="w"> </span>jira
 </span></code></pre></div>
 <p>It prints a URL to open and then waits, confirming in the terminal when the grant lands.
-Ctrl-C is safe — the callback goes to the server, so the link stays valid; it expires ten
-minutes after it is issued.</p>
+The connection finishes on the console's <strong>My integrations</strong>, in the browser you opened the
+link in, signed in to DocBrain as the account this CLI uses. Ctrl-C is safe — the link stays
+valid; it expires ten minutes after it is issued.</p>
 <p>A source that needs reconnecting is also named before an ask, so you learn it there rather
 than half way through an answer:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>⚠ Jira — answers won't include Jira. Fix: docbrain connect jira

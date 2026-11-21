@@ -412,8 +412,9 @@ docbrain connect jira
 ```
 
 It prints a URL to open and then waits, confirming in the terminal when the grant lands.
-Ctrl-C is safe — the callback goes to the server, so the link stays valid; it expires ten
-minutes after it is issued.
+The connection finishes on the console's **My integrations**, in the browser you opened the
+link in, signed in to DocBrain as the account this CLI uses. Ctrl-C is safe — the link stays
+valid; it expires ten minutes after it is issued.
 
 A source that needs reconnecting is also named before an ask, so you learn it there rather
 than half way through an answer:

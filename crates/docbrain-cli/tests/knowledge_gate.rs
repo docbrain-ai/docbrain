@@ -555,6 +555,33 @@ fn c41_an_anchor_with_a_secret_shape_names_only_its_file() {
 }
 
 #[test]
+fn c43_a_value_whose_secret_shape_crosses_the_shown_bound_is_withheld_in_every_output() {
+    // Each value holds a secret shape only whole: the first 200 bytes keep a part of it that matches no rule.
+    let password = "Zq8vLp2m".repeat(3);
+    let values = [
+        (format!("{}{SECRET}", "a".repeat(190)), SECRET[..10].to_owned()),
+        (format!("{} postgres://app:{password}@db/app", "x".repeat(170)), password[..14].to_owned()),
+    ];
+    let check = "checks:\n  - config_key: 'api/values.yaml#token'\n    must: '== x'\n";
+    let reason = "false: (withheld: secret-shape), expected == x";
+    for (value, part) in values {
+        let r = Repo::new();
+        r.write(VALUES, "token: x\n").write(REC, rec("7k2m9q4r8t1v", TITLE, check, BODY)).commit("base");
+        r.git(&["checkout", "-q", "-b", "change"]);
+        r.write(VALUES, format!("token: '{value}'\n")).commit("rotate");
+        let g = gate(&r);
+        assert_eq!(findings(&g), one("broken rule 1", "charts/api/values.yaml#token", reason));
+        assert!(g.text.stdout.contains(&format!("reason: {reason}\n")), "{}", g.text.stdout);
+        let message = &rule_results(&g, "knowledge/broken")[0]["message"]["text"];
+        assert!(message.as_str().is_some_and(|m| m.contains(&format!("reason: {reason}"))), "{message}");
+        for out in [&g.text.stdout, &g.fail.stdout, &g.json.to_string(), &g.sarif.to_string()] {
+            assert!(!out.contains(&part), "the part kept by the cut was printed: {out}");
+        }
+        exits(&g, 2);
+    }
+}
+
+#[test]
 fn c42_an_anchor_moved_to_a_secret_shaped_name_keeps_the_base_text() {
     // Both files are in both trees; the record now names the secret-shaped one. B's copy is clean, H's holds it.
     let r = Repo::new();

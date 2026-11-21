@@ -97,8 +97,9 @@ pub(crate) fn outcome(r: &GateReport, fail_on: bool, ps: &Pathspec) -> GateOutco
 /// `Finding::read_at_head` names, if any; the old one is B's. A withheld title or paragraph is empty, a withheld
 /// reason reads `withheld: secret-shape` (two in a row read once), a withheld expectation or anchor
 /// `(withheld: secret-shape)`. Text that holds a secret shape itself (a record from before the change, a value read
-/// for a reason) is withheld whoever wrote it. An anchor, a finding's, a moved one or a followed one, is shown without
-/// its secret-shaped part (`shown_anchor`).
+/// for a reason) is withheld whoever wrote it; a value read for a reason reaches here already withheld, screened whole
+/// before its cut (`Shown`). An anchor, a finding's, a moved one or a followed one, is shown without its
+/// secret-shaped part (`shown_anchor`).
 pub(crate) fn withhold_secrets(r: &mut GateReport) {
     let secret: BTreeSet<String> = r
         .change_findings
