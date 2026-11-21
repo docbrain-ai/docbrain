@@ -34,18 +34,27 @@ that arrives without the rule fails here instead of on a cluster:
   startup    every container that runs the OpenSearch image (found by image, so a renamed label cannot hide
              one; none found is a failure) has a startup probe that outlasts twice its slowest measured first
              boot and probes the port its liveness probe probes.
+  coverage   every workload a template writes (a `kind:` line at column 0 naming a pod kind, a bare Pod such as a
+             Helm test hook included) renders in some value set, so a workload behind a flag no value set turns on
+             cannot escape every rule; and an object of another kind that carries a pod spec fails until POD_KINDS
+             lists its kind.
   image      under values that set no image tag, every container (init containers too) runs its image at the
              chart's appVersion, so `helm upgrade` and `helm rollback` move the chart and its images together;
              an image the chart does not build is listed in THIRD_PARTY_IMAGES with why. Every `<x>.image.tag`
              in values.yaml (found there, so a new image is covered) defaults to empty, and the "explicit-tags"
              value set proves a tag set in the values (`latest`) is the tag that runs.
-  compose    every Compose file the repository ships (a tracked YAML file whose top level has `services:`, found
-             with `git ls-files`, so a new one is covered; none found is a failure) runs every image at the chart's
+  compose    every Compose file the repository ships (a tracked file whose name says YAML, `.yml` or `.yaml`
+             anywhere in it such as `.yml.example`, or Compose, `compose…` or `docker-compose…`, and whose top level
+             has `services:`; found with `git ls-files`, so a new one is covered; none found is a failure) runs every
+             image at the chart's
              appVersion when the environment sets nothing, so `git pull` and `docker compose up -d` move the
              Compose file and its images together, as the chart does. A commented-out `image:` line counts too: an
              operator uncomments it as it is. An image written `${VAR:-default}` is read at its default (a set VAR
-             still wins); a variable with no default is a failure. An image the chart does not build is listed in
-             THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart does not run it either, with why.
+             still wins); a variable with no default is a failure. An env file template the repository ships
+             (`.env.example` and the like, which the quickstart copies to `.env`, where Compose reads it) that sets an
+             image's variable on an active line is read the same way: what it sets runs at the appVersion too. An
+             image the chart does not build is listed in THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart
+             does not run it either, with why.
   release    the chart's appVersion is the release version, `[workspace.package] version` in the repository's
              Cargo.toml (the version the release is cut and tagged at). The image and compose rules tie every image to
              appVersion, so this ties them to the release: a cut that moves Cargo.toml and not Chart.yaml (or the
@@ -69,7 +78,7 @@ DOCS = os.path.normpath(os.path.join(CHART, "..", "..", "docs"))
 REPO = os.path.normpath(os.path.join(CHART, "..", ".."))
 RELEASE = "wiring"
 FULLNAME = "wiring-docbrain"
-POD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob"}
+POD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob", "Pod"}
 
 # The values that put a subtree into the chart's local.yaml, and where it lands there.
 OVERLAY_VALUES = {
@@ -162,12 +171,23 @@ def fail(rule, msg):
     failures.append(f"[{rule}] {msg}")
 
 
-def render(args, chart=CHART):
+def render(args, chart=CHART, sources=None):
+    """The rendered objects. With `sources`, each workload is added to sources[<template, from the chart>]."""
     out = subprocess.run(["helm", "template", RELEASE, chart, *args], capture_output=True, text=True)
     if out.returncode != 0:
         print(f"CANNOT RUN: helm template {' '.join(args)} failed:\n{out.stderr}", file=sys.stderr)
         sys.exit(2)
-    return [d for d in yaml.safe_load_all(out.stdout) if d]
+    docs = []
+    # helm writes each object as `---`, then `# Source: <chart>/<template>`, then the object.
+    for part in re.split(r"^---[ \t]*\n(?=# Source: )", out.stdout, flags=re.M):
+        source = re.match(r"# Source: [^/\n]+/(\S+)", part)
+        for d in yaml.safe_load_all(part):
+            if not d:
+                continue
+            docs.append(d)
+            if sources is not None and source and d.get("kind") in POD_KINDS:
+                sources.setdefault(source.group(1), set()).add((d["kind"], d["metadata"]["name"]))
+    return docs
 
 
 def suffix(name):
@@ -175,6 +195,8 @@ def suffix(name):
 
 
 def pod_template(doc):
+    if doc["kind"] == "Pod":
+        return doc
     if doc["kind"] == "CronJob":
         return doc["spec"]["jobTemplate"]["spec"]["template"]
     return doc["spec"]["template"]
@@ -189,7 +211,7 @@ def workloads(docs, vs):
     found = {}
     for d in docs:
         spec = d.get("spec") or {}
-        has_pod = "template" in spec or "jobTemplate" in spec
+        has_pod = "template" in spec or "jobTemplate" in spec or "containers" in spec
         if d["kind"] in POD_KINDS:
             comp = component(d)
             if comp in found:
@@ -388,12 +410,12 @@ def probe_port(probe, container):
 
 
 def model_values():
-    """Every model value (…modelId, …modelName) a template reads, from the template sources."""
+    """Every model value (…modelId, …modelName) a template reads, from the template sources (subfolders too)."""
     found = set()
-    tdir = os.path.join(CHART, "templates")
-    for f in sorted(os.listdir(tdir)):
-        with open(os.path.join(tdir, f)) as fh:
-            found |= set(MODEL_VALUE.findall(fh.read()))
+    for dirpath, _, names in os.walk(os.path.join(CHART, "templates")):
+        for name in names:
+            with open(os.path.join(dirpath, name), errors="replace") as fh:
+                found |= set(MODEL_VALUE.findall(fh.read()))
     return sorted(found)
 
 
@@ -502,6 +524,32 @@ def split_image(image):
     return repo, tag
 
 
+def template_workloads():
+    """{template, from the chart: how many workloads it writes}: its `kind:` lines at column 0 naming a pod kind."""
+    found = {}
+    tdir = os.path.join(CHART, "templates")
+    for dirpath, _, names in os.walk(tdir):
+        for name in names:
+            path = os.path.join(dirpath, name)
+            with open(path, errors="replace") as fh:
+                count = sum(1 for k in re.findall(r"^kind:[ \t]*(\w+)", fh.read(), re.M) if k in POD_KINDS)
+            if count:
+                found[os.path.relpath(path, CHART).replace(os.sep, "/")] = count
+    return found
+
+
+def check_coverage(sources):
+    written = template_workloads()
+    if not written:
+        fail("coverage", "no template writes a workload, so the census found nothing; its `kind:` reading is out of "
+                         "date")
+    for path, count in sorted(written.items()):
+        rendered = len(sources.get(path, ()))
+        if rendered < count:
+            fail("coverage", f"{path} writes {count} workload(s), but the value sets render {rendered}: a workload no "
+                             f"value set turns on is checked by no rule; add a value set that turns it on")
+
+
 def check_images(vs, wl, args, app_version):
     want = EXPLICIT_TAG if any(re.match(r"[\w.]+\.image\.tag=", a) for a in args) else app_version
     for comp, d in wl.items():
@@ -517,21 +565,56 @@ def check_images(vs, wl, args, app_version):
                               "build in THIRD_PARTY_IMAGES")
 
 
-def compose_files():
-    """Every Compose file the repository ships: a tracked YAML file whose top level has `services:`."""
-    out = subprocess.run(["git", "-C", REPO, "ls-files", "-z", "--", "*.yml", "*.yaml"],
-                         capture_output=True, text=True)
+def tracked_files():
+    out = subprocess.run(["git", "-C", REPO, "ls-files", "-z"], capture_output=True, text=True)
     if out.returncode != 0:
         print(f"CANNOT RUN: git ls-files in {REPO} failed:\n{out.stderr}", file=sys.stderr)
         sys.exit(2)
+    return sorted(p for p in out.stdout.split("\0") if p)
+
+
+def compose_files():
+    """Every Compose file the repository ships: a tracked file whose name says YAML (`.yml` or `.yaml`, also inside a
+    longer name such as `docker-compose.gpu.yml.example`) or Compose (`compose…`, `docker-compose…`), and whose top
+    level has `services:`."""
     found = []
-    for rel in sorted(p for p in out.stdout.split("\0") if p):
+    for rel in tracked_files():
+        base = os.path.basename(rel)
+        if not (re.search(r"\.ya?ml(\.|$)", base, re.I) or re.match(r"(docker-)?compose\b", base, re.I)):
+            continue
         path = os.path.join(REPO, rel)
         if os.path.isfile(path):
             with open(path, errors="replace") as fh:
                 if re.search(r"^services:", fh.read(), re.M):
                     found.append(rel)
     return found
+
+
+def env_templates():
+    """{path: {variable: value}} for every env file template the repository ships (`.env.example` and the like), from
+    its active lines: the quickstart copies it to `.env`, where Compose reads it, so a variable set there wins over a
+    Compose file's default."""
+    found = {}
+    for rel in tracked_files():
+        base = os.path.basename(rel)
+        if not (re.match(r"\.env(\.|$)", base) or base.endswith(".env")):
+            continue
+        values = {}
+        with open(os.path.join(REPO, rel), errors="replace") as fh:
+            for line in fh:
+                m = re.match(r"\s*(?:export\s+)?([A-Za-z_]\w*)\s*=\s*(.*?)\s*$", line)
+                if not m:
+                    continue
+                value = m.group(2)
+                quoted = re.match(r"(['\"])(.*?)\1", value)
+                values[m.group(1)] = quoted.group(2) if quoted else re.sub(r"\s+#.*$", "", value)
+        found[rel] = values
+    return found
+
+
+def with_env(image, env):
+    """The image with each `${VAR…}` the env file sets (to anything but empty) replaced by its value."""
+    return re.sub(r"\$\{(\w+)(?::?[-?][^${}]*)?\}", lambda m: env.get(m.group(1)) or m.group(0), image)
 
 
 def compose_default(image):
@@ -545,6 +628,7 @@ def compose_default(image):
 
 def check_compose(app_version):
     files = compose_files()
+    envs = env_templates()
     if not files:
         fail("compose", "no tracked YAML file has a top-level `services:`: the census found no Compose file")
     for rel in files:
@@ -568,18 +652,22 @@ def check_compose(app_version):
             if not isinstance(image, str):
                 fail("compose", f"{rel}: {what} names no image, so nothing says which release it runs")
                 continue
-            default = compose_default(image)
-            if default is None:
-                fail("compose", f"{rel}: {what} runs {image!r}, which has a variable with no default")
-                continue
-            repo, tag = split_image(default)
-            if repo in THIRD_PARTY_IMAGES or repo in COMPOSE_ONLY_IMAGES:
-                continue
-            if tag != app_version:
-                fail("compose", f"{rel}: {what} runs {default!r} when the environment sets nothing, not tag "
-                                f"{app_version!r} (the chart's appVersion): `git pull` and `docker compose up` "
-                                f"would not move its image with the file; or list an image the chart does not "
-                                f"build in THIRD_PARTY_IMAGES or COMPOSE_ONLY_IMAGES")
+            runs = [("when the environment sets nothing", image)]
+            runs += [(f"when {env_rel} is copied to .env", with_env(image, env)) for env_rel, env in envs.items()
+                     if with_env(image, env) != image]
+            for when, run in runs:
+                default = compose_default(run)
+                if default is None:
+                    fail("compose", f"{rel}: {what} runs {run!r} {when}, which has a variable with no default")
+                    continue
+                repo, tag = split_image(default)
+                if repo in THIRD_PARTY_IMAGES or repo in COMPOSE_ONLY_IMAGES:
+                    continue
+                if tag != app_version:
+                    fail("compose", f"{rel}: {what} runs {default!r} {when}, not tag {app_version!r} (the chart's "
+                                    f"appVersion): `git pull` and `docker compose up` would not move its image with "
+                                    f"the file; or list an image the chart does not build in THIRD_PARTY_IMAGES or "
+                                    f"COMPOSE_ONLY_IMAGES")
     return len(files)
 
 
@@ -673,12 +761,14 @@ def main():
     VALUE_SETS["explicit-tags"] = EVERYTHING + [a for p in tags for a in ("--set", f"{p}={EXPLICIT_TAG}")]
     compose_count = check_compose(app_version)
     release = check_release(app_version)
+    sources = {}
     for vs, args in VALUE_SETS.items():
-        docs = render(args)
+        docs = render(args, sources=sources)
         wl = check_value_set(vs, docs, args)
         check_startup(vs, wl)
         check_models(vs, docs, args)
         check_images(vs, wl, args, app_version)
+    check_coverage(sources)
     check_restarts()
     if failures:
         print(f"FAIL: {len(failures)} wiring rule(s) broke")
