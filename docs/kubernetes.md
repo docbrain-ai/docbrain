@@ -550,10 +550,10 @@ them once. A Secret you supply with `existingSecret` is not the chart's to watch
 ### Roll back
 
 `helm rollback` restores the older chart and its images, but not the database. The server migrates the database when
-it starts, and an older server does not start on a database a newer one has migrated: it stops with
-`migration <N> was previously applied but is missing in the resolved migrations`. So `helm rollback` alone is enough
-only when no migration shipped between the two versions. A row in this list installed at the time of the upgrade is a
-migration the newer server applied:
+it starts, and an older server does not start on a database a newer one has migrated: it stops, and its log shows
+`Failed to run migrations: VersionMissing(<N>)`, where `<N>` is a migration the newer server applied. So
+`helm rollback` alone is enough only when no migration shipped between the two versions. A row in this list installed
+at the time of the upgrade is a migration the newer server applied:
 
 ```bash
 kubectl exec docbrain-postgres-0 -- psql -U docbrain -d docbrain -c \
