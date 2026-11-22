@@ -322,10 +322,10 @@ keeps a running proxy whenever its image has not changed. Your data stays in the
 Restore the backup taken before the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the name
 sorts by time). The line first stops what writes to the database, the server and the ingest (add `trainer` to it if
 you enabled the trainer): while anything is still connected, the restore stops at its first step and changes nothing.
-With `POSTGRES_USER` or `POSTGRES_DB` set in `.env`, use those names:
+With `POSTGRES_USER` or `POSTGRES_DB` set in `.env`, use those names. Set `backup` to yours:
 
 ```bash
-backup=docbrain-before-upgrade-20261122-101500.dump   # yours: the one from before the first upgrade attempt
+backup=docbrain-before-upgrade-20261122-101500.dump
 docker compose stop server ingest &&
   docker compose exec -T postgres pg_restore -U docbrain -d postgres --clean --if-exists --create \
     --exit-on-error < "$backup"

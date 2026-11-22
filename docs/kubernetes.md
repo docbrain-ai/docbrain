@@ -576,30 +576,40 @@ back before the older server starts. Whatever was written to the database after 
 for a release named `docbrain`: for another, put your `<fullname>` where an object name starts `docbrain-`, and your
 release name in the `helm` commands and the `instance` label ([Upgrade](#upgrade) says how the chart names objects).
 
+First stop everything that writes to the database: the server, the trainer (without `trainer.enabled` its two lines
+say the deployment is not found, which is fine) and the ingest. Scaling to 0 returns before the pods exit, so the
+`wait` holds until the server and trainer pods are gone:
+
 ```bash
-# 1. Stop everything that writes to the database
 kubectl scale deployment/docbrain-server --replicas=0
-kubectl scale deployment/docbrain-trainer --replicas=0    # only with trainer.enabled
+kubectl scale deployment/docbrain-trainer --replicas=0
 kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":true}}'
-kubectl get jobs                                           # wait until no ingest job is running
-# Scaling to 0 returns before the pods exit: this waits until the server and trainer pods are gone
 kubectl wait --for=delete pod --timeout=5m \
   -l 'app.kubernetes.io/instance=docbrain,app.kubernetes.io/component in (server,trainer)'
-# 2. Restore the backup taken before the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the
-#    name sorts by time). While anything is still connected, it stops at its first step and changes nothing.
-backup=docbrain-before-upgrade-20261122-101500.dump       # yours
+kubectl get jobs
+```
+
+When `kubectl get jobs` shows no ingest job running, restore and roll back. Set `backup` to the backup taken before
+the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the name sorts by time), `revision` to the
+revision from before the upgrade (`helm history docbrain` lists them), and the replica counts to your
+`server.replicas` and `trainer.replicaCount`. Only when the restore worked does the rest run: the chart and its images
+roll back, then what was stopped starts again, the trainer last.
+
+```bash
+backup=docbrain-before-upgrade-20261122-101500.dump
+revision=4
 kubectl exec -i docbrain-postgres-0 -- pg_restore -U docbrain -d postgres --clean --if-exists --create \
   --exit-on-error < "$backup" && {
-# 3. Only when the restore worked: roll back the chart and its images, then start what step 1 stopped
-helm rollback docbrain <revision>                          # `helm history docbrain` lists the revisions
-kubectl scale deployment/docbrain-server --replicas=1      # your server.replicas
-kubectl scale deployment/docbrain-trainer --replicas=1     # only with trainer.enabled; your trainer.replicaCount
-kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":false}}'
+  helm rollback docbrain "$revision" &&
+  kubectl scale deployment/docbrain-server --replicas=1 &&
+  kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":false}}' &&
+  kubectl scale deployment/docbrain-trainer --replicas=1
 }
 ```
 
 When the restore stops, nothing after it runs: fix what stopped it (most often something still connected: an ingest
-job, or a pod still exiting) and run steps 2 and 3 again.
+job, or a pod still exiting) and run the second block again. When `helm rollback` fails, the server and the ingest
+stay stopped: fix it and run the rest of the second block.
 
 ---
 
