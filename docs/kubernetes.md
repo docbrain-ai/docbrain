@@ -528,8 +528,10 @@ Back up the database first: going back to the older version may need it ([Roll b
 PostgreSQL and a release named `docbrain` (the pod is `<release>-docbrain-postgres-0` otherwise):
 
 ```bash
-kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > docbrain-before-upgrade.dump
-helm upgrade docbrain ./helm/docbrain -f my-values.yaml
+# The upgrade runs only when the backup worked and is not empty.
+kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > docbrain-before-upgrade.dump &&
+  test -s docbrain-before-upgrade.dump &&
+  helm upgrade docbrain ./helm/docbrain -f my-values.yaml
 ```
 
 With an external database (`postgresql.internal: false`), back it up with that database's own tools.
@@ -569,6 +571,9 @@ kubectl scale deployment/docbrain-server --replicas=0
 kubectl scale deployment/docbrain-trainer --replicas=0    # only with trainer.enabled
 kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":true}}'
 kubectl get jobs                                           # wait until no ingest job is running
+# Scaling to 0 returns before the pods exit: this waits until the server and trainer pods are gone
+kubectl wait --for=delete pod --timeout=5m \
+  -l 'app.kubernetes.io/instance=docbrain,app.kubernetes.io/component in (server,trainer)'
 # 2. Restore the backup. While anything is still connected, it stops at its first step and changes nothing.
 kubectl exec -i docbrain-postgres-0 -- pg_restore -U docbrain -d postgres --clean --if-exists --create \
   --exit-on-error < docbrain-before-upgrade.dump
