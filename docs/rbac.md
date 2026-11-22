@@ -125,7 +125,7 @@ rbac:
 
 ## Access Gate (Allowlist)
 
-By default, **any user who can authenticate** with the configured provider is allowed in. To restrict access to specific groups or domains only.
+By default, **any user who can authenticate** with the configured provider is allowed in. To restrict access to specific groups or domains only, set the values below.
 
 The examples below are Helm `values.yaml`. In a DocBrain config file the keys are snake_case, `allowed_groups` and `allowed_domains` under `rbac:`; as variables they are `OIDC_ALLOWED_GROUPS` and `OIDC_ALLOWED_DOMAINS`.
 
