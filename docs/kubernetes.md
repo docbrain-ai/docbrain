@@ -525,7 +525,7 @@ helm install docbrain ./helm/docbrain \
 ## Upgrade
 
 Back up the database first: going back to the older version may need it ([Roll back](#roll-back)). With the chart's
-PostgreSQL and a release named `docbrain` (the pod is `<release>-docbrain-postgres-0` otherwise):
+PostgreSQL and a release named `docbrain`:
 
 ```bash
 # The upgrade runs only when the backup worked and is not empty.
@@ -535,6 +535,12 @@ kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > docbra
 ```
 
 With an external database (`postgresql.internal: false`), back it up with that database's own tools.
+
+These commands, and those in [Roll back](#roll-back), are for a release named `docbrain`. The chart names each object
+`<fullname>-<component>`, where `<fullname>` is the release name when it contains `docbrain` (release `docbrain-prod`:
+pod `docbrain-prod-postgres-0`, deployment `docbrain-prod-server`) and `<release>-docbrain` otherwise (release `kb`:
+pod `kb-docbrain-postgres-0`, deployment `kb-docbrain-server`); `fullnameOverride` or `nameOverride` changes it. `helm`
+commands and the `app.kubernetes.io/instance` label take the release name itself.
 
 A chart deploys the images of its own version: the 1.6.7 chart runs the 1.6.7 server, web and trainer images. Two
 things keep an older image tag across an upgrade: a values file that sets `server.image.tag`, `web.image.tag` or
@@ -547,7 +553,7 @@ its `local.yaml` (`ingest.sources`, `freshness.exclusionRules`, `freshness.event
 annotations on its pod template. PostgreSQL, OpenSearch, Redis and the web console read none of these, so a
 settings change does not restart them; the upgrade to the chart version that took those annotations off restarts
 them once. A Secret you supply with `existingSecret` is not the chart's to watch: after changing it, run
-`kubectl rollout restart deployment/<release>-server`.
+`kubectl rollout restart deployment/<fullname>-server` (`<fullname>` as above).
 
 ### Roll back
 
@@ -563,7 +569,9 @@ kubectl exec docbrain-postgres-0 -- psql -U docbrain -d docbrain -c \
 ```
 
 If there is none, `helm rollback docbrain` is all it takes. If there is one, put the backup from before the upgrade
-back before the older server starts. Whatever was written to the database after the backup is lost.
+back before the older server starts. Whatever was written to the database after the backup is lost. The commands are
+for a release named `docbrain`: for another, put your `<fullname>` where an object name starts `docbrain-`, and your
+release name in the `helm` commands and the `instance` label ([Upgrade](#upgrade) says how the chart names objects).
 
 ```bash
 # 1. Stop everything that writes to the database
@@ -641,7 +649,8 @@ kubectl logs <pod-name> --previous
 The server and the ingest read the image's settings from `/app/config/` inside the container, and the chart's
 `local.yaml` (from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces`) is mounted at
 `/app/config/local.yaml` in both whenever one of those values is set. To see what the server reads:
-`kubectl exec deploy/<release>-server -- cat /app/config/local.yaml`.
+`kubectl exec deploy/<fullname>-server -- cat /app/config/local.yaml` (`<fullname>` is `docbrain` for a release named
+`docbrain`; [Upgrade](#upgrade) says how the chart names objects).
 
 ### OpenSearch StatefulSet patch fails
 
