@@ -100,13 +100,18 @@ docbrain login --oidc
 
 Role is computed at login time in this priority order (highest wins):
 
-| Priority | Check | Config | Example |
+| Priority | Check | Helm value / variable | Example |
 |----------|-------|--------|---------|
-| 1 | Email in admin list | `rbac.adminEmails` | `alice@acme.com,bob@acme.com` |
-| 2 | Email domain → admin | `rbac.adminDomain` | `acme.com` |
-| 3 | Member of admin group | `rbac.adminGroups` | `platform-team,sre-team` |
-| 4 | Member of editor group | `rbac.editorGroups` | `docs-team` |
-| 5 | Default | `rbac.defaultRole` | `viewer` (default) |
+| 1 | Email in admin list | `rbac.adminEmails` / `OIDC_ADMIN_EMAILS` | `alice@acme.com,bob@acme.com` |
+| 2 | Email domain → admin | `rbac.adminDomain` / `OIDC_ADMIN_DOMAIN` | `acme.com` |
+| 3 | Member of admin group | `rbac.adminGroups` / `OIDC_ADMIN_GROUPS` | `platform-team,sre-team` |
+| 4 | Member of editor group | `rbac.editorGroups` / `OIDC_EDITOR_GROUPS` | `docs-team` |
+| 5 | Default | `rbac.defaultRole` / `OIDC_DEFAULT_ROLE` | `viewer` (default) |
+
+The camelCase names are Helm `values.yaml` values, which the chart turns into the variables. In a DocBrain config
+file the same keys are snake_case under `rbac:` (`admin_emails`, `admin_domain`, `admin_groups`, `editor_groups`,
+`default_role`); a camelCase key there is not read, and DocBrain logs a warning naming it. See
+[Configuration](configuration.md).
 
 **Helm example — auto-promote platform team to admin:**
 ```yaml
@@ -120,10 +125,13 @@ rbac:
 
 ## Access Gate (Allowlist)
 
-By default, **any user who can authenticate** with the configured provider is allowed in. To restrict access to specific groups or domains only:
+By default, **any user who can authenticate** with the configured provider is allowed in. To restrict access to specific groups or domains only.
+
+The examples below are Helm `values.yaml`. In a DocBrain config file the keys are snake_case, `allowed_groups` and `allowed_domains` under `rbac:`; as variables they are `OIDC_ALLOWED_GROUPS` and `OIDC_ALLOWED_DOMAINS`.
 
 ### Allow specific groups only
 
+**Helm values:**
 ```yaml
 rbac:
   allowedGroups: "platform-team,sre-team,docs-team"
@@ -133,6 +141,7 @@ Anyone not in one of those groups gets `403 Forbidden` at the OAuth callback —
 
 ### Allow specific email domains only
 
+**Helm values:**
 ```yaml
 rbac:
   allowedDomains: "acme.com,acme.org"
@@ -142,6 +151,7 @@ Users with `@acme.com` or `@acme.org` email addresses are allowed; all others ar
 
 ### Both together (OR logic)
 
+**Helm values:**
 ```yaml
 rbac:
   allowedGroups: "platform-team"
@@ -152,12 +162,23 @@ A user passes if they satisfy **either** restriction — member of `platform-tea
 
 ### Combining access gate with role assignment
 
+**Helm values:**
 ```yaml
 rbac:
   allowedDomains: "acme.com"        # only @acme.com users may log in
   adminGroups: "platform-team"       # @acme.com members of platform-team get admin
   defaultRole: "viewer"              # everyone else gets viewer
 ```
+
+**The same in a DocBrain config file** (`local.yaml` or `<APP_ENV>.yaml` in the config directory):
+```yaml
+rbac:
+  allowed_domains: "acme.com"
+  admin_groups: "platform-team"
+  default_role: "viewer"
+```
+
+**Or as variables:** `OIDC_ALLOWED_DOMAINS=acme.com`, `OIDC_ADMIN_GROUPS=platform-team`, `OIDC_DEFAULT_ROLE=viewer`.
 
 ---
 

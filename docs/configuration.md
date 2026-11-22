@@ -7,6 +7,23 @@ DocBrain uses a layered configuration system. Settings are resolved in this orde
 3. `{DOCBRAIN_CONFIG_DIR}/local.yaml` — gitignored developer overrides (optional)
 4. **Environment variables** — always win; all existing env var names work unchanged
 
+Config-file keys are snake_case, as in `config/default.yaml`. A key no setting reads is not used, and it is not
+silent: each time DocBrain loads its files (at start, at each ingest run, `docbrain-ingest --dry-run` included, and
+when an admin reloads the configuration) it logs one warning per such key, names the setting it most likely meant,
+and goes on. Keys are read without case, so the warning prints them in lower case:
+
+```text
+config key rbac.defaultrole is not a setting DocBrain reads, and is ignored (keys are read without case; did you mean rbac.default_role?)
+```
+
+A config file that exists but cannot be read is skipped with a warning too.
+
+The Helm chart's `values.yaml` names (`rbac.defaultRole`) are camelCase: they are chart values, which the chart turns
+into the environment variables on this page, not config-file keys. The exception is `ingest.sources`,
+`freshness.exclusionRules` and `freshness.eventBasedSpaces`: the chart copies what is under them as written into the
+ingest job's config file, so the keys under them are config-file keys, in snake_case (`pull_requests`, not
+`pullRequests`).
+
 ## Config File Location
 
 | Variable | Default | Description |
@@ -823,7 +840,7 @@ Three coordinated caps bound how much raw tool output reaches the synthesis prom
 | `DOCBRAIN_REGEN_LOOP_MAX_ROUNDS` | `3` | Hard cap on **CLI/`generate` auto-review** rounds. After the first generation, if claims are still flagged, the loop regenerates up to this many extra rounds, stopping early on a plateau (a round that resolves no previously-flagged claim). Range `1..=20`. |
 | `DOCBRAIN_REGEN_LOOP_MAX_REVISIONS` | `10` | Cap on **UI human-in-loop** revisions per draft. Each "Regenerate" click writes a new revision linked to its parent; this bounds the chain depth so a reviewer can't loop indefinitely. Range `1..=100`. |
 | `DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS` | `20000` | Minimum wall-clock headroom (ms) required to **start** another round. When less remains, the loop exits honestly (ships the latest draft + its unresolved flags) rather than starting a round the budget cliff would kill mid-flight. Set `0` to disable the guard. |
-| `DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT` | `50` | The density threshold for the hollow-doc guard (DELTA #9). The guard refuses with **`422`** ONLY when a draft has **no inline seed, no High-tier authoritative grounding, and no Low-tier live grounding either**, AND at least this percent of its `##` sections are unanswered `NEEDS INPUT:` placeholders. A no-seed/no-High draft that **does** have live/Low grounding ships as **unverified** (flagged + barred from auto-publish) rather than refusing. The guard applies to **short docs too** (the old `…_MIN_SECTIONS` floor was removed; the only floor left is `section_count > 0`). `50` = "at least half the document is placeholders". Tunable `0`–`100`. |
+| `DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT` | `60` | The density threshold for the hollow-doc guard (DELTA #9). The guard refuses with **`422`** ONLY when a draft has **no inline seed, no High-tier authoritative grounding, and no Low-tier live grounding either**, AND at least this percent of its `##` sections are unanswered `NEEDS INPUT:` placeholders. A no-seed/no-High draft that **does** have live/Low grounding ships as **unverified** (flagged + barred from auto-publish) rather than refusing. The guard applies to **short docs too** (the old `…_MIN_SECTIONS` floor was removed; the only floor left is `section_count > 0`). `60` = "at least 60% of the document's sections are placeholders". Tunable `0`–`100`. |
 | `DOCBRAIN_RECONCILE_ENABLED` | `true` | Master kill-switch for **in-place reconcile**. When the reviewer flags a section of an existing page as stale, reconcile replaces **only that section in place** (in storage byte-space) instead of appending a fresh block — so the page never accumulates duplicate-but-newer content. Defaults **ON**: the publish-time version check, the lint floor, and fail-open-to-append make it survivable live. Disable only with `false`/`0`/`no`/`off`. |
 | `DOCBRAIN_RECONCILE_MAX_SECTIONS` | `5` | Max sections reconciled in a single draft, bounding the per-draft LLM + splice cost. Above this, remaining flagged sections route to a human rather than being reconciled in the same pass. Range `1..=50`. |
 | `DOCBRAIN_MERGE_ENABLED` | `true` | Master kill-switch for the **merged-doc update**. When you generate against an existing target document, the output is the **full merged document** — unchanged sections preserved byte-exact, changed sections rewritten, and new sections surfaced — plus a structured per-section change manifest, so the result can replace the whole doc with confidence about what changed. Defaults **ON**: unchanged sections are byte-exact by construction, an edit that can't splice safely bails (the section is left unchanged), and nothing is ever published. Disable only with `false`/`0`/`no`/`off`. |
@@ -1707,6 +1724,10 @@ These settings decide who is allowed to sign in over SSO, not which role they ge
 ### RBAC Role Mapping
 
 Controls what role new SSO users receive. Roles are re-evaluated on every login.
+
+In a config file, the keys under `rbac:` are `default_role`, `admin_domain`, `admin_emails`, `admin_groups`,
+`editor_groups`, `analyst_groups`, and the two sign-in lists above, `allowed_groups` and `allowed_domains`. A variable
+wins over the file. `OIDC_SYNC_ROLE_ON_LOGIN` and `OIDC_ALLOW_EMAIL_LINKING` are read only as variables.
 
 | Variable | Default | Description |
 |---|---|---|

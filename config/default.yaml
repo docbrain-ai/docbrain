@@ -32,9 +32,9 @@ redis:
 
 rbac:
   # Default role for new SSO users: viewer (default) | editor | admin
-  defaultRole: "viewer"
+  default_role: "viewer"
   # Email domain that always gets admin role (e.g. "acme.com")
-  # adminEmails: ~
+  # admin_domain: ~
 
 llm:
   provider: "bedrock"   # bedrock | anthropic | openai | ollama
@@ -188,8 +188,9 @@ rag:
   # Support Critic (grounding): flags claims NO supplied source supports (fabrication)
   # + NEEDS-INPUT markers the sources actually cover (inverted self-flag). ADVISORY,
   # never blocks; fail-open. ON by default.
-  support_critic_enabled: true                  # DOCBRAIN_SUPPORT_CRITIC_ENABLED (disable only with false/0/no/off)
-  support_critic_max_claims: 40                 # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS (hard cap on claims grounding-checked per draft; range 1..=200)
+  # Read only from these variables, never from this file (the value shown is the code's default):
+  # DOCBRAIN_SUPPORT_CRITIC_ENABLED=true        # disable only with false/0/no/off
+  # DOCBRAIN_SUPPORT_CRITIC_MAX_CLAIMS=40       # hard cap on claims grounding-checked per draft; range 1..=200
 
   # Regenerate loop (Reviewer Part 2). Consumes the freshness critic's flags and
   # regenerates a draft until they clear. UI = human-in-loop (per click, capped
@@ -197,10 +198,11 @@ rag:
   # Feedback shapes the WRITING prompt only — it can NEVER clear a contradicted
   # flag (the critic re-derives flags from evidence). The round cap is the hard
   # termination backstop; the loop never runs forever, never silently ships flags.
-  regen_loop_enabled: true                      # DOCBRAIN_REGEN_LOOP_ENABLED (disable only with false/0/no/off)
-  regen_loop_max_rounds: 3                       # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS (CLI/generate auto-review cap; range 1..=20)
-  regen_loop_max_revisions: 10                  # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS (UI human-in-loop cap per draft; range 1..=100)
-  regen_loop_min_budget_ms: 20000               # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS (min wall-clock headroom to START a round; 0 disables the guard)
+  # Read only from these variables, never from this file (the value shown is the code's default):
+  # DOCBRAIN_REGEN_LOOP_ENABLED=true            # disable only with false/0/no/off
+  # DOCBRAIN_REGEN_LOOP_MAX_ROUNDS=3            # CLI/generate auto-review cap; range 1..=20
+  # DOCBRAIN_REGEN_LOOP_MAX_REVISIONS=10        # UI human-in-loop cap per draft; range 1..=100
+  # DOCBRAIN_REGEN_LOOP_MIN_BUDGET_MS=20000     # min wall-clock headroom to START a round; 0 disables the guard
 
   # Generation hollow-doc guard (DELTA #9). Refuses (HTTP 422) a draft ONLY when it
   # has no inline seed, no High-tier authoritative corpus grounding, AND no Low-tier
@@ -209,7 +211,8 @@ rag:
   # grounding ships UNVERIFIED (barred from auto-publish) rather than refusing. The
   # guard now applies to SHORT docs too (the old min-sections floor was removed);
   # the only floor left is `section_count > 0`. Keys on OUTPUT shape + grounding tier.
-  generate_hollow_ratio_pct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT; 50 = half the doc)
+  # Read only from this variable, never from this file (the value shown is the code's default):
+  # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT=60       # refuse when >= this % of sections are NEEDS-INPUT; range 0..=100
 
   # In-place reconcile of an outdated section. When the reviewer flags a section
   # of an existing page as stale, reconcile replaces ONLY that section in place
@@ -571,22 +574,21 @@ slack:
   # notification_space_filter: ~   # optional space filter for notifications
 
 # ── GitHub Real-Time Capture ───────────────────────────────────────────────
-# Enables `@docbrain capture` on GitHub PRs/issues.
-# Both fields are required; if either is missing, the route is not registered.
-github_capture:
-  # webhook_secret: ~   # set GITHUB_WEBHOOK_SECRET env var
-  # bot_token: ~        # set GITHUB_BOT_TOKEN env var (or GITHUB_PR_TOKEN as fallback)
+# Enables `@docbrain capture` on GitHub PRs/issues. Read only from these
+# variables, never from this file. Both are required; if either is missing, the
+# route is not registered.
+# GITHUB_WEBHOOK_SECRET
+# GITHUB_BOT_TOKEN                 # or GITHUB_PR_TOKEN as fallback
 
 # ── GitLab MR Real-Time Capture ───────────────────────────────────────────
 # Enables `@docbrain capture` on GitLab MRs via POST /api/v1/gitlab/events.
-# At least one of webhook_secret or token must be set; if neither is present,
-# the route is not registered.
-gitlab_capture:
-  # webhook_secret: ~        # set GITLAB_CAPTURE_WEBHOOK_SECRET env var (X-Gitlab-Token validation)
-  # token: ~                 # set GITLAB_CAPTURE_TOKEN env var (PAT with api scope — fetch notes + post replies)
-  base_url: "https://gitlab.com"  # override for self-hosted: GITLAB_CAPTURE_BASE_URL
-  # allowed_users: ~         # set GITLAB_CAPTURE_ALLOWED_USERS (comma-separated; empty = all)
-  # allowed_projects: ~      # set GITLAB_CAPTURE_ALLOWED_PROJECTS (comma-separated group/project; empty = all)
+# Read only from these variables, never from this file. At least one of the
+# secret or the token must be set; if neither is, the route is not registered.
+# GITLAB_CAPTURE_WEBHOOK_SECRET    # X-Gitlab-Token validation
+# GITLAB_CAPTURE_TOKEN             # PAT with api scope — fetch notes + post replies
+# GITLAB_CAPTURE_BASE_URL=https://gitlab.com   # the code's default; override for self-hosted
+# GITLAB_CAPTURE_ALLOWED_USERS     # comma-separated; empty = all
+# GITLAB_CAPTURE_ALLOWED_PROJECTS  # comma-separated group/project; empty = all
 
 ingest:
   self_ingest: true

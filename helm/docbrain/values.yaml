@@ -940,7 +940,7 @@ rag:
   # AND is mostly NEEDS-INPUT placeholders (>= this % of `##` sections). A no-seed/
   # no-High draft WITH live/Low grounding ships unverified (barred from auto-publish).
   # Applies to short docs too (min-sections floor removed). Keys on output shape + tier.
-  # generateHollowRatioPct: 50                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
+  # generateHollowRatioPct: 60                 # DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT (refuse when >= this % of sections are NEEDS-INPUT)
   # In-place reconcile: when a section of an existing page is flagged stale, replace
   # ONLY that section in place instead of appending — no duplicate-but-newer content.
   # Kill-switch defaults ON (publish version-check + lint floor + fail-open-to-append).
