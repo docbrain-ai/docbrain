@@ -225,7 +225,8 @@ kubectl rollout status deployment/docbrain-server
 kubectl logs deployment/docbrain-server -f
 
 # Get the bootstrap admin key from the Helm-managed Secret
-# The secret name is <release-name>-initial-admin-secret (e.g. "docbrain" if you used the default release name)
+# The secret name is <fullname>-initial-admin-secret: docbrain-initial-admin-secret for a release named docbrain
+# ("Upgrade" below says how the chart names objects for another release name)
 kubectl get secret docbrain-initial-admin-secret \
   -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
@@ -528,9 +529,11 @@ Back up the database first: going back to the older version may need it ([Roll b
 PostgreSQL and a release named `docbrain`:
 
 ```bash
-# The upgrade runs only when the backup worked and is not empty.
-kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > docbrain-before-upgrade.dump &&
-  test -s docbrain-before-upgrade.dump &&
+# The upgrade runs only when the backup worked and is not empty. Each run writes a new file named for the time it
+# started, so running it again after a failed attempt never replaces the backup from before the first one.
+f=docbrain-before-upgrade-$(date +%Y%m%d-%H%M%S).dump &&
+  kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > "$f" &&
+  test -s "$f" &&
   helm upgrade docbrain ./helm/docbrain -f my-values.yaml
 ```
 
@@ -582,15 +585,21 @@ kubectl get jobs                                           # wait until no inges
 # Scaling to 0 returns before the pods exit: this waits until the server and trainer pods are gone
 kubectl wait --for=delete pod --timeout=5m \
   -l 'app.kubernetes.io/instance=docbrain,app.kubernetes.io/component in (server,trainer)'
-# 2. Restore the backup. While anything is still connected, it stops at its first step and changes nothing.
+# 2. Restore the backup taken before the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the
+#    name sorts by time). While anything is still connected, it stops at its first step and changes nothing.
+backup=docbrain-before-upgrade-20261122-101500.dump       # yours
 kubectl exec -i docbrain-postgres-0 -- pg_restore -U docbrain -d postgres --clean --if-exists --create \
-  --exit-on-error < docbrain-before-upgrade.dump
-# 3. Roll back the chart and its images, then start what step 1 stopped
+  --exit-on-error < "$backup" && {
+# 3. Only when the restore worked: roll back the chart and its images, then start what step 1 stopped
 helm rollback docbrain <revision>                          # `helm history docbrain` lists the revisions
 kubectl scale deployment/docbrain-server --replicas=1      # your server.replicas
 kubectl scale deployment/docbrain-trainer --replicas=1     # only with trainer.enabled; your trainer.replicaCount
 kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":false}}'
+}
 ```
+
+When the restore stops, nothing after it runs: fix what stopped it (most often something still connected: an ingest
+job, or a pod still exiting) and run steps 2 and 3 again.
 
 ---
 

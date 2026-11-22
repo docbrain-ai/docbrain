@@ -22,7 +22,7 @@ The server also accepts `--config-dir <path>` as a CLI argument (takes precedenc
 | Install | The file | Read by |
 |---|---|---|
 | Docker Compose | `config/local.yaml` in the folder you cloned, bind-mounted read-only at `/app/config/local.yaml`. It must exist before the first `docker compose up` (`scripts/setup.sh` writes it; `touch config/local.yaml` makes an empty one), and `up` stops with an error naming it when it is missing. Restart `server` and `ingest` after an edit. | the server and the ingest |
-| Helm | Rendered by the chart from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces` into the `<release>-sources` ConfigMap, mounted at `/app/config/local.yaml` whenever one of them is set. `helm upgrade` restarts the server when it changes. | the server and the ingest job |
+| Helm | Rendered by the chart from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces` into the `<fullname>-sources` ConfigMap (`docbrain-sources` for a release named `docbrain`), mounted at `/app/config/local.yaml` whenever one of them is set. `helm upgrade` restarts the server when it changes. | the server and the ingest job |
 | Binary | `{DOCBRAIN_CONFIG_DIR}/local.yaml`, `config/local.yaml` under the working directory by default. Optional. | the process you start |
 
 **Deployment examples:**
@@ -76,7 +76,7 @@ fingerprint cannot be, without the key. That is also why the key is never stored
 | Deployment | Where the key comes from | Where it lives |
 |---|---|---|
 | Docker Compose | The one-shot `keys` service writes 32 random bytes (base64, mode 600) on first start, unless you supplied a key or one exists. It never replaces a key and never prints one; a key file that exists but is empty or not a key stops the start with a message (restore it from backup, or delete it to generate a new one). | The `docbrain-keys` volume, file `fingerprint.key`, mounted read-only into the server (`DOCBRAIN_FINGERPRINT_KEY_FILE=/keys/fingerprint.key`). |
-| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade and reinstall, so it is never rotated (a rollback reapplies a stored manifest that carries the same value). | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (`<release>-docbrain-fingerprint-key` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
+| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade and reinstall, so it is never rotated (a rollback reapplies a stored manifest that carries the same value). | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (otherwise `<fullname>-fingerprint-key`, where `<fullname>` is the release name when it contains `docbrain` and `<release>-docbrain` when it does not), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
 | Anything else (bare metal, your own manifests) | You: `openssl rand -base64 32`. | `DOCBRAIN_FINGERPRINT_KEY`, or a file named by `DOCBRAIN_FINGERPRINT_KEY_FILE`. |
 
 `helm template`, and GitOps tools that render charts offline (Argo CD, Flux with offline rendering), cannot look up

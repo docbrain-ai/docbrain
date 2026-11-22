@@ -292,15 +292,18 @@ See the **[Generate guide](generate.md)** for source links, templates, and CI pl
 Back up the database first: going back to the older version may need it. The server migrates the database when it
 starts, and an older server does not start on a database a newer one has migrated (it stops with
 `Failed to run migrations: VersionMissing(<N>)`). So going back across a release that added a migration means putting
-this backup back before the older server starts, as [Roll back](kubernetes.md#roll-back) does on Kubernetes; whatever
-was written to the database after the backup is lost.
+this backup back before the older server starts ([Go back](#go-back)); whatever was written to the database after the
+backup is lost.
 
-From the folder you cloned (the upgrade runs only when the backup worked and is not empty; with `POSTGRES_USER` or
-`POSTGRES_DB` set in `.env`, use those names):
+Run it from the folder you cloned. The backup reads the running database: with the stack stopped, run
+`docker compose up -d --wait postgres` first. The upgrade runs only when the backup worked and is not empty. Each run
+writes a new file named for the time it started, so running the line again after a failed attempt never replaces the
+backup from before the first one. With `POSTGRES_USER` or `POSTGRES_DB` set in `.env`, use those names:
 
 ```bash
-docker compose exec -T postgres pg_dump -U docbrain -d docbrain -Fc > docbrain-before-upgrade.dump &&
-  test -s docbrain-before-upgrade.dump &&
+f=docbrain-before-upgrade-$(date +%Y%m%d-%H%M%S).dump &&
+  docker compose exec -T postgres pg_dump -U docbrain -d docbrain -Fc > "$f" &&
+  test -s "$f" &&
   git pull && touch config/local.yaml && docker compose up -d && docker compose restart proxy
 ```
 
@@ -313,6 +316,25 @@ so the sources in it are ingested, and a file that does not parse stops both at 
 could write a `confluence:` or `sources:` block twice; keep one). The last step loads a changed proxy file: `up -d`
 keeps a running proxy whenever its image has not changed. Your data stays in the Docker volumes. On Kubernetes, see
 [Upgrade](kubernetes.md#upgrade).
+
+### Go back
+
+Restore the backup taken before the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the name
+sorts by time). The line first stops what writes to the database, the server and the ingest (add `trainer` to it if
+you enabled the trainer): while anything is still connected, the restore stops at its first step and changes nothing.
+With `POSTGRES_USER` or `POSTGRES_DB` set in `.env`, use those names:
+
+```bash
+backup=docbrain-before-upgrade-20261122-101500.dump   # yours: the one from before the first upgrade attempt
+docker compose stop server ingest &&
+  docker compose exec -T postgres pg_restore -U docbrain -d postgres --clean --if-exists --create \
+    --exit-on-error < "$backup"
+```
+
+When it worked, set `DOCBRAIN_IMAGE` and `DOCBRAIN_WEB_IMAGE` in `.env` to the release you go back to (for 1.6.6:
+`DOCBRAIN_IMAGE=ghcr.io/docbrain-ai/docbrain:1.6.6` and `DOCBRAIN_WEB_IMAGE=ghcr.io/docbrain-ai/docbrain-web:1.6.6`;
+with the trainer enabled, its `image:` line too), then run `docker compose up -d`. Checking out an older tree does not
+do it: the Compose file of 1.6.6 and earlier runs `latest`. Delete those two lines from `.env` when you upgrade again.
 
 ## Troubleshooting
 
