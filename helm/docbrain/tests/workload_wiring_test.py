@@ -55,15 +55,21 @@ that arrives without the rule fails here instead of on a cluster:
              image's variable on an active line is read the same way: what it sets runs at the appVersion too. An
              image the chart does not build is listed in THIRD_PARTY_IMAGES, or in COMPOSE_ONLY_IMAGES when the chart
              does not run it either, with why.
-  release    the chart's appVersion is the release version, `[workspace.package] version` in the repository's
-             Cargo.toml (the version the release is cut and tagged at). The image and compose rules tie every image to
-             appVersion, so this ties them to the release: a cut that moves Cargo.toml and not Chart.yaml (or the
-             reverse) fails here, instead of shipping a chart and a Compose file that install the previous release.
+  release    the release is one version everywhere it is written: Chart.yaml's version and appVersion,
+             `[workspace.package] version` in the repository's Cargo.toml and in each Cargo.toml given with
+             --cargo-toml (another checkout that builds the release's images), and, with --tag, the version the tag
+             names (`v1.6.7`, or `lts-v1.6.7` for a backport, names 1.6.7). The image and compose rules tie every image
+             to appVersion, so this ties them to the release: a cut that moves one of these and not the others fails
+             here, instead of shipping a chart and a Compose file that install the previous release. No CI workflow
+             runs this test, and a check in the tag build would run after the tag exists: run it before tagging, with
+             the tag and every other checkout's Cargo.toml. release_version_test.py tests this rule.
 
-Run: python3 helm/docbrain/tests/workload_wiring_test.py   (from anywhere; renders only, no cluster)
+Run: python3 helm/docbrain/tests/workload_wiring_test.py [--tag TAG] [--cargo-toml PATH]...
+     (from anywhere; renders only, no cluster)
 Needs helm, git (the repository must be a git checkout), PyYAML and Python 3.11 or later (tomllib). A missing tool is a failure (exit 2), never a
 pass. Exit 0: every rule held.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -671,23 +677,52 @@ def check_compose(app_version):
     return len(files)
 
 
-def release_version():
-    """The version being released: `[workspace.package] version` in the repository's Cargo.toml."""
-    with open(os.path.join(REPO, "Cargo.toml"), "rb") as fh:
-        manifest = tomllib.load(fh)
-    return str(((manifest.get("workspace") or {}).get("package") or {}).get("version") or "")
+# A release tag: `v<version>`, or `lts-v<version>` for a backport. Either names <version>.
+RELEASE_TAG = re.compile(r"(?:lts-)?v(.+)")
 
 
-def check_release(app_version):
-    release = release_version()
-    if not release:
-        fail("release", "Cargo.toml has no [workspace.package] version, so nothing says which release this is")
-    elif app_version != release:
-        fail("release", f"Chart.yaml's appVersion is {app_version!r} but the release is {release!r} (Cargo.toml "
-                        f"[workspace.package] version): the chart and the Compose file would install another "
-                        f"release's images. At the cut, Cargo.toml, Chart.yaml's version and appVersion, and every "
-                        f"DocBrain image tag in the Compose files move together")
-    return release
+def release_versions(chart_yaml, cargo_tomls, tag=None):
+    """The release rule over the files it names. Returns ([(where, version)], [failure]): Chart.yaml's version and
+    appVersion, each Cargo.toml's `[workspace.package] version` ("" when it has none), and the tag's version when a
+    tag is given. Every one must be the same, non-empty version."""
+    import tomllib  # main and release_version_test.py check both modules first: a missing one is CANNOT RUN
+    import yaml
+    with open(chart_yaml) as fh:
+        chart = yaml.safe_load(fh) or {}
+    found = [("Chart.yaml version", str(chart.get("version") or "")),
+             ("Chart.yaml appVersion", str(chart.get("appVersion") or ""))]
+    problems = []
+    for path in cargo_tomls:
+        where = os.path.relpath(path, REPO)
+        where = f"{path if where.startswith('..') else where} [workspace.package] version"
+        try:
+            with open(path, "rb") as fh:
+                manifest = tomllib.load(fh)
+        except (OSError, tomllib.TOMLDecodeError) as e:
+            problems.append(f"cannot read {path}: {e}")
+            continue
+        found.append((where, str(((manifest.get("workspace") or {}).get("package") or {}).get("version") or "")))
+    if tag is not None:
+        named = RELEASE_TAG.fullmatch(tag)
+        if named:
+            found.append((f"tag {tag}", named.group(1)))
+        else:
+            problems.append(f"tag {tag!r} is not a release tag: v<version>, or lts-v<version> for a backport")
+    problems += [f"{where} is empty, so nothing says which release this is" for where, v in found if not v]
+    if len({v for _, v in found if v}) > 1:
+        problems.append("the release versions differ: " + ", ".join(f"{where} {v!r}" for where, v in found) +
+                        ". The chart and the Compose file would install another release's images. At the cut, "
+                        "Chart.yaml's version and appVersion, every Cargo.toml's [workspace.package] version and every "
+                        "DocBrain image tag in the Compose files move together, and the tag names that version")
+    return found, problems
+
+
+def check_release(tag, other_cargo_tomls):
+    found, problems = release_versions(os.path.join(CHART, "Chart.yaml"),
+                                       [os.path.join(REPO, "Cargo.toml"), *other_cargo_tomls], tag)
+    for problem in problems:
+        fail("release", problem)
+    return dict(found).get("Cargo.toml [workspace.package] version", "")
 
 
 def pod_digest(d):
@@ -738,6 +773,11 @@ def check_restarts():
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Wiring rules over every workload the chart renders.")
+    parser.add_argument("--tag", help="the tag about to be pushed (v1.6.7, or lts-v1.6.7): it must name the release")
+    parser.add_argument("--cargo-toml", action="append", default=[], metavar="PATH",
+                        help="another checkout's Cargo.toml, whose [workspace.package] version must be the release too")
+    opts = parser.parse_args()
     for tool in ("helm", "git"):
         if shutil.which(tool) is None:
             print(f"CANNOT RUN: {tool} is not installed", file=sys.stderr)
@@ -760,7 +800,7 @@ def main():
                           f"chart's appVersion")
     VALUE_SETS["explicit-tags"] = EVERYTHING + [a for p in tags for a in ("--set", f"{p}={EXPLICIT_TAG}")]
     compose_count = check_compose(app_version)
-    release = check_release(app_version)
+    release = check_release(opts.tag, opts.cargo_toml)
     sources = {}
     for vs, args in VALUE_SETS.items():
         docs = render(args, sources=sources)
@@ -775,9 +815,10 @@ def main():
         for f in failures:
             print("  " + f)
         sys.exit(1)
+    named = [f"Chart.yaml, {1 + len(opts.cargo_toml)} Cargo.toml file(s)"] + ([f"tag {opts.tag}"] if opts.tag else [])
     print(f"PASS: every wiring rule holds over {len(VALUE_SETS)} value sets, "
           f"{len(CHANGES) + len(FILE_CHANGES)} content changes and {compose_count} Compose file(s), at release "
-          f"{release}")
+          f"{release} ({', '.join(named)})")
 
 
 if __name__ == "__main__":
