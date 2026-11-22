@@ -289,10 +289,19 @@ See the **[Generate guide](generate.md)** for source links, templates, and CI pl
 
 ## Upgrade
 
-From the folder you cloned:
+Back up the database first: going back to the older version may need it. The server migrates the database when it
+starts, and an older server does not start on a database a newer one has migrated (it stops with
+`Failed to run migrations: VersionMissing(<N>)`). So going back across a release that added a migration means putting
+this backup back before the older server starts, as [Roll back](kubernetes.md#roll-back) does on Kubernetes; whatever
+was written to the database after the backup is lost.
+
+From the folder you cloned (the upgrade runs only when the backup worked and is not empty; with `POSTGRES_USER` or
+`POSTGRES_DB` set in `.env`, use those names):
 
 ```bash
-git pull && touch config/local.yaml && docker compose up -d && docker compose restart proxy
+docker compose exec -T postgres pg_dump -U docbrain -d docbrain -Fc > docbrain-before-upgrade.dump &&
+  test -s docbrain-before-upgrade.dump &&
+  git pull && touch config/local.yaml && docker compose up -d && docker compose restart proxy
 ```
 
 `git pull` brings the new Compose and proxy files, and the Compose file names the images of its own release, so
