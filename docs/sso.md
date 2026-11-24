@@ -236,6 +236,7 @@ GET /api/v1/auth/providers
 
 - **PKCE** (S256) is enforced on all OIDC flows (generic and GitLab). State tokens are stored in Redis with a 5-minute TTL and deleted on use.
 - **Signature verification** is required on all OIDC ID tokens. The insecure fallback (`insecure_disable_signature_check`) is not available.
+- **Signing algorithms:** an ID token is accepted only when it is signed with an algorithm the provider lists in its discovery document (`id_token_signing_alg_values_supported`; a listed HS256 is checked with the client secret), and never with `alg: none`, even when the provider lists it.
 - **CSRF protection** on GitHub OAuth uses a random UUID state token stored in Redis (same TTL/delete pattern).
 - **OTP exchange:** After any SSO callback, the server redirects to `OIDC_WEB_UI_URL?code=otp_<uuid>` instead of embedding the session key in the URL. The frontend exchanges this OTP via `POST /api/v1/auth/exchange` to receive the actual token in the response body — keeping raw API keys out of browser history, server access logs, and referrer headers. The OTP is single-use and expires after 60 seconds.
 - **CLI OAuth** uses the same OTP pattern: the CLI starts a local HTTP server on a random port and the browser redirects to `http://127.0.0.1:{port}?code=otp_...`. The CLI exchanges the OTP to obtain and save the session key.
@@ -254,6 +255,9 @@ The server cannot reach the `OIDC_ISSUER_URL`. Check network access from your Do
 The provider returned a token that failed signature verification. Common causes:
 - Clock skew > 5 minutes between DocBrain host and IdP
 - Misconfigured `OIDC_ISSUER_URL` (must match the `iss` claim exactly)
+
+### "Authentication failed (ref: …)" and the log reads "No matching key found"
+The server log line for that reference ends `Signature verification failed: No matching key found`. None of the keys the provider publishes at its `jwks_uri` fits the ID token. Since 1.6.7, DocBrain reads the `alg` a key is marked with: a key marked with an algorithm other than the one the ID token is signed with (the token's `alg` header), or with one DocBrain does not know, is not used. Fix it at the provider: mark the signing key with the algorithm its ID tokens use, or remove `alg` from the key. A key with no `alg` fits any algorithm of its key type.
 
 ### "Invalid or expired OIDC state"
 The user took more than 5 minutes to complete the IdP login, or the state was already consumed. Ask them to try again.

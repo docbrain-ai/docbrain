@@ -579,7 +579,9 @@ followed; the tools never descend into a submodule (edge cases 39, 44).
 
 **`config_key`**: resolved as §Resolving values says. A scalar that is present holds under `exist`, with its
 value shown; under an op it is compared (§Values and comparison): true holds, false is `false` with the value
-shown, and a comparison that cannot be made is its reason. A map or a list holds under `exist` and is
+shown, and a comparison that cannot be made is its reason. A value is shown cut at 200 bytes, or as
+`(withheld: secret-shape)` when the whole value holds a secret shape (§Secrets), wherever it lies: it is
+screened whole before it is cut, so no cut shows a part of a secret. A map or a list holds under `exist` and is
 `not-a-scalar` under an op. A missing file or key is `missing-file` or `missing-key`.
 
 **`code`.** The file is a literal path (a glob there makes the record invalid). In order:
@@ -793,7 +795,7 @@ followed, deduplicated, in byte order; the new `must` checks that cannot be judg
 
 | code | when | detail |
 |-|-|-|
-| `false` | the check is false at the tree that judges it | `<value shown>`, then `, expected <op> <literal>` unless the expectation is `exist` |
+| `false` | the check is false at the tree that judges it | `<value shown>` (as §States shows a value: cut at 200 bytes, or `(withheld: secret-shape)`), then `, expected <op> <literal>` unless the expectation is `exist` |
 | `missing-file`, `missing-key` | as in §Reasons | none |
 | an `unverifiable` code | as in §Reasons | as there |
 | `no-longer-checkable` | rule 1 or 2 (or a stale note): `unverifiable` at H after holding at B | the `unverifiable` code |

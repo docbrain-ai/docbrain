@@ -17,6 +17,7 @@ Surfaces: record refuses	src/knowledge/record.rs::hidden_text_in_title_or_body_i
 Surfaces: not reviewed	tests/knowledge_context.rs::not_reviewed_and_unknown_labels src/knowledge/trees.rs::review_marks_records_added_since_origin_head src/knowledge/trees.rs::a_base_alone_names_the_reviewed_base later:job
 Surfaces: writes	src/knowledge/record.rs::paths_the_format_forbids_are_refused src/knowledge/record.rs::folder_must_be_an_ancestor src/knowledge/paths.rs::under_dot_git_is_refused tests/knowledge_record.rs::a_symbolic_link_on_the_way_is_never_written_through
 Bounds: records per pass	src/knowledge/status.rs::over_bound_is_one_line_per_folder
+States: shown value	tests/knowledge_status.rs::a_secret_value_is_never_printed tests/knowledge_context.rs::a_secret_is_never_printed tests/knowledge_gate.rs::c43_a_value_whose_secret_shape_crosses_the_shown_bound_is_withheld_in_every_output
 Surfaces: hook	src/knowledge/context.rs::brief_never_exceeds_4096_bytes later:hook
 Edge case 21	tests/knowledge_status.rs::newer_schema_record_shows_title_and_kind tests/knowledge_gate.rs::c18_a_record_moved_to_a_newer_schema_is_changed
 Edge case 26	src/knowledge/record.rs::round_trip src/knowledge/record.rs::a_draft_that_reads_back_differently_is_caught

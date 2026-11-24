@@ -366,6 +366,43 @@ fn a_secret_is_never_printed() {
         assert!(!out.contains(SECRET), "{args:?}: {out}");
         assert!(out.contains("withheld: secret-shape"), "{args:?}: {out}");
     }
+    // Across the display bound: the value shown under `exist` and under `false`, in text and JSON.
+    let checks = "checks:\n  - config_key: 'app/values.yaml#token'\n    must: 'exist'\n  - config_key: 'app/values.yaml#token'\n    must: '== x'\n";
+    let lines = [
+        "must app/values.yaml#token exist  holds  (withheld: secret-shape)\n",
+        "must app/values.yaml#token == x  broken  false: (withheld: secret-shape), expected == x\n",
+    ];
+    for (value, part) in across_the_cut() {
+        let r = Repo::new();
+        let main = r
+            .write("app/values.yaml", format!("token: '{value}'\n"))
+            .write(&format!("{ROOT}7k2m9q4r8t1v-the-token-is-set.md"), rec("7k2m9q4r8t1v", "fact", "The token is set", checks, "Why.\n"))
+            .commit("token");
+        r.git(&["update-ref", "refs/remotes/origin/HEAD", &main]);
+        let text = ok(&r, &["app/values.yaml"]);
+        for line in lines {
+            assert!(text.contains(line), "{line}: {text}");
+        }
+        let v = json_of(&r, &["app/values.yaml"]);
+        let shown: Vec<&Value> = v["records"][0]["checks"].as_array().unwrap().iter().map(|c| &c["shown"]).collect();
+        assert_eq!(shown, [&json!("(withheld: secret-shape)"), &json!("(withheld: secret-shape)")], "{v}");
+        for out in [text, v.to_string()] {
+            assert!(!out.contains(&part), "the part a cut keeps was printed: {out}");
+        }
+    }
+}
+
+/// Values that hold a secret shape only whole (`Shown` cuts a value at 200 bytes), each with the secret's text a
+/// 200-byte cut would print: a key across byte 200 (10 of its 20 characters), a URL whose password starts before
+/// byte 200 and whose `@` comes after it, and a key wholly past the cut (the cut prints none of it, yet the value is
+/// withheld, not cut).
+fn across_the_cut() -> [(String, String); 3] {
+    let password = "Zq8vLp2m".repeat(3);
+    [
+        (format!("{}{SECRET}", "a".repeat(190)), SECRET[..10].to_owned()),
+        (format!("{} postgres://app:{password}@db/app", "x".repeat(170)), password[..14].to_owned()),
+        (format!("{}{SECRET}", "a".repeat(300)), SECRET.to_owned()),
+    ]
 }
 
 #[test]

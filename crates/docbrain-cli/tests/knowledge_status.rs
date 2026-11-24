@@ -129,7 +129,22 @@ fn json_shape() {
     assert!(all.is_superset(&["record_path", "anchor", "expect"].into_iter().map(str::to_owned).collect()));
 }
 
-/// A value read from the repository that holds a secret shape is never printed, in text or JSON.
+/// Values that hold a secret shape only whole (`Shown` cuts a value at 200 bytes), each with the secret's text a
+/// 200-byte cut would print: a key across byte 200 (10 of its 20 characters), a URL whose password starts before
+/// byte 200 and whose `@` comes after it, and a key wholly past the cut (the cut prints none of it, yet the value is
+/// withheld, not cut).
+fn across_the_cut() -> [(String, String); 3] {
+    const KEY: &str = "AKIAQ7ZK3M9W2X4V8B6N";
+    let password = "Zq8vLp2m".repeat(3);
+    [
+        (format!("{}{KEY}", "a".repeat(190)), KEY[..10].to_owned()),
+        (format!("{} postgres://app:{password}@db/app", "x".repeat(170)), password[..14].to_owned()),
+        (format!("{}{KEY}", "a".repeat(300)), KEY.to_owned()),
+    ]
+}
+
+/// A value read from the repository that holds a secret shape is never printed, in text, JSON or SARIF: a value
+/// whose shape crosses the 200-byte display bound, or lies past it, is withheld whole, never cut.
 #[test]
 fn a_secret_value_is_never_printed() {
     let key = "AKIAQ7ZK3M9W2X4V8B6N";
@@ -147,6 +162,39 @@ fn a_secret_value_is_never_printed() {
         assert_eq!(out.code, 0, "{out:?}");
         assert!(out.stdout.contains("(withheld: secret-shape)"), "{}", out.stdout);
         assert!(!out.stdout.contains(key) && !out.stderr.contains(key), "{out:?}");
+    }
+    // Across the display bound: the value shown under `exist` and under `false`, in text and JSON, and in the
+    // gate's reason in SARIF (the value changed on a branch).
+    let checks = "checks:\n  - config_key: 'app/values.yaml#token'\n    must: 'exist'\n  - config_key: 'app/values.yaml#token'\n    must: '== x'\n";
+    let lines = [
+        "must app/values.yaml#token exist  holds  (withheld: secret-shape)\n",
+        "must app/values.yaml#token == x  broken  false: (withheld: secret-shape), expected == x\n",
+    ];
+    for (value, part) in across_the_cut() {
+        let r = Repo::new();
+        r.write("app/values.yaml", "token: x\n");
+        r.write(&format!("{ROOT}7k2m9q4r8t1v-the-token-is-set.md"), rec("7k2m9q4r8t1v", "fact", "The token is set", checks));
+        r.commit("base");
+        r.git(&["checkout", "-q", "-b", "change"]);
+        r.write("app/values.yaml", format!("token: '{value}'\n")).commit("rotate");
+        let text = r.run(&["status"]);
+        for line in lines {
+            assert!(text.stdout.contains(line), "{line}: {}", text.stdout);
+        }
+        let json = r.run(&["status", "--json"]);
+        let v: Value = serde_json::from_str(&json.stdout).unwrap_or_else(|e| panic!("{e}: {}", json.stdout));
+        let shown: Vec<&Value> = v["records"][0]["checks"].as_array().unwrap().iter().map(|c| &c["shown"]).collect();
+        assert_eq!(shown, [&json!("(withheld: secret-shape)"), &json!("(withheld: secret-shape)")], "{v}");
+        let sarif = r.run(&["status", "--base", "main", "--sarif"]);
+        let s: Value = serde_json::from_str(&sarif.stdout).unwrap_or_else(|e| panic!("{e}: {}", sarif.stdout));
+        let messages: Vec<&str> =
+            s["runs"][0]["results"].as_array().unwrap().iter().filter_map(|x| x["message"]["text"].as_str()).collect();
+        let reason = "reason: false: (withheld: secret-shape), expected == x";
+        assert!(messages.iter().any(|m| m.contains(reason)), "{messages:?}");
+        for out in [&text, &json, &sarif] {
+            assert_eq!(out.code, 0, "{out:?}");
+            assert!(!out.stdout.contains(&part) && !out.stderr.contains(&part), "the part a cut keeps was printed: {out:?}");
+        }
     }
 }
 

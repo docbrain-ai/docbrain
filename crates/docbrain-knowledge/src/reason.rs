@@ -440,4 +440,61 @@ mod tests {
         assert_eq!(shown(&example), example[..Shown::MAX_BYTES]);
         assert_eq!(shown(W), W, "the marker is text like any other");
     }
+
+    #[test]
+    fn shown_screens_a_scalar_at_the_json_bound_in_linear_time() {
+        // `Shown::new` screens a value whole, and a JSON scalar may be almost as large as the anchored-file bound for
+        // JSON: the largest text here is the scalar of a one-key file `{"a":"…"}` exactly at that bound.
+        // The text is the near-miss prefixes of every rule (as `secret::tests::hostile_input_is_fast`) with a
+        // documented URL in each, so the work done per match (one per 130 bytes) is timed too; and every 9 KiB a
+        // documented private-key header and a sample token. The header comes before 9 KiB without a token, so no key
+        // material is inside its window and it stays documented.
+        // The limit is on growth, not on wall-clock time: this build is unoptimised and the machine's speed is
+        // unknown, so a budget wide enough never to fail on a slow machine (minutes) would catch nothing, while growth
+        // is the same on any machine. The limit allows 8 times linear growth, for one long run against the best of six
+        // short ones on a busy or throttled core, with memory past the caches. A screen that does quadratic work per
+        // match fails it, but slowly: nothing here stops a run early, so the failure comes when the 64 MiB run ends.
+        // The last bytes of the largest text are the only secret shape in it, so it is withheld: a screen bounded to a
+        // prefix would show the cut and pass the timing.
+        let unit = "AKIA ghp_ gho_ github_pat_ glpat- xoxb- -----BEGIN eyJa.eyJb. https://a: sk-ant- sk-proj- db_sk_ db_oat_ ";
+        let dense = format!("{unit}https://u:changeme@h ");
+        let block = format!(
+            "-----BEGIN {} KEY----- {}{} ",
+            "PRIVATE",
+            dense.repeat(9 * 1024 / dense.len() + 1),
+            crate::secret::SAMPLE_JWTS[0]
+        );
+        let tail = format!(" AKIA{}", "Q7ZK3M9W2X4V8B6N");
+        let max = usize::try_from(crate::bounds::anchored_file_max(crate::format::Format::Json)).unwrap() - r#"{"a":""}"#.len();
+        // Whole blocks, then near-miss units up to the size, so no block is cut inside a token.
+        let text = |bytes: usize| {
+            let mut t = block.repeat(bytes / block.len());
+            t.push_str(&unit.repeat((bytes - t.len()) / unit.len() + 1));
+            t.truncate(bytes);
+            t
+        };
+        let small = text(256 * 1024);
+        let large = text(max - tail.len()) + &tail;
+        assert_eq!(large.len(), max);
+        let time = |t: &str, want: &str| {
+            let started = std::time::Instant::now();
+            let shown = Shown::new(t);
+            let took = started.elapsed();
+            assert_eq!(shown.as_str(), want, "{} bytes", t.len());
+            took
+        };
+        let small_cut = small[..Shown::MAX_BYTES].to_owned();
+        // The short runs first (the screen's rules are compiled on first use), then on both sides of the long one.
+        let best = |n: usize| (0..n).map(|_| time(&small, &small_cut)).min().unwrap();
+        let before = best(3);
+        let l = time(&large, secret::WITHHELD_VALUE);
+        let s = before.min(best(3));
+        let growth = large.len() as f64 / small.len() as f64;
+        assert!(
+            l.as_secs_f64() < s.as_secs_f64() * growth * 8.0,
+            "{} bytes in {s:?}, {} bytes in {l:?}: more than 8 times linear growth",
+            small.len(),
+            large.len()
+        );
+    }
 }
