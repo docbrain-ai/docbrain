@@ -1,0 +1,16 @@
+# GitHub Pages builds this repository with Jekyll, which runs Liquid over every Markdown file. A file whose text
+# holds `{{` or `{%` that Liquid cannot parse fails the whole build, so it is listed here and left out of the site
+# (it stays readable on GitHub and crates.io). A check run before each sync into this repository fails when a file
+# the site would render cannot parse and is not listed here.
+#
+# Listing `exclude:` replaces Jekyll's default list, so the defaults are repeated first.
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  # The knowledge-record semantics quote Liquid-like template text (`{{`, `{%`) as data.
+  - crates/docbrain-knowledge/SEMANTICS.md

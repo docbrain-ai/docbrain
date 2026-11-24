@@ -36,19 +36,9 @@ cd "$SCRIPT_DIR/.."
 
 SKIP_SETUP=false
 
-if [ -f .env ]; then
-    echo -e "${YELLOW}An .env file already exists.${NC}"
-    read -rp "Overwrite? (y/N): " overwrite
-    if [[ "$overwrite" != "y" && "$overwrite" != "Y" ]]; then
-        echo ""
-        echo "Starting services with existing configuration..."
-        docker compose up -d
-        # Fall through to the startup wait and instructions below
-        SKIP_SETUP=true
-    fi
-fi
-
-# Ensure config/local.yaml exists (gitignored — safe for secrets and overrides)
+# Ensure config/local.yaml exists (gitignored — safe for secrets and overrides).
+# It comes first: docker-compose.yml mounts it into the server and the ingest, and
+# `docker compose up` stops when it is missing, so it must exist before any start below.
 if [ ! -f config/local.yaml ]; then
     mkdir -p config
     cat > config/local.yaml << 'LOCALYAML'
@@ -83,9 +73,98 @@ if [ ! -f config/local.yaml ]; then
 LOCALYAML
 fi
 
+# The source settings this wizard writes live in one marked block of config/local.yaml. A re-run replaces the
+# block an earlier run wrote, so no key is ever written twice: the server and the ingest read this file at start
+# and stop on a repeated key. Lines written by hand outside the block are kept as they are.
+WIZARD_BEGIN='# >>> written by scripts/setup.sh; running the wizard again replaces this block >>>'
+WIZARD_END='# <<< end of the block scripts/setup.sh writes <<<'
+
+yaml_quote() {  # $1, trimmed, as a YAML single-quoted string: whatever was typed stays one string
+    local v="$1" q="'"
+    v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
+    printf "'%s'" "${v//$q/$q$q}"
+}
+
+yaml_entry() {  # $1 = indented key, $2 = value: a newline then `key: 'value'`; nothing when the value is blank
+    [[ -z "${2//[[:space:]]/}" ]] || printf '\n%s: %s' "$1" "$(yaml_quote "$2")"
+}
+
+local_yaml_without_wizard_block() {  # the file minus the wizard's block; a start line with no end line is kept
+    awk -v b="$WIZARD_BEGIN" -v e="$WIZARD_END" '
+        index($0, b) == 1 { if (inb) printf "%s", buf; inb = 1; buf = $0 ORS; next }
+        inb && index($0, e) == 1 { inb = 0; buf = ""; next }
+        inb { buf = buf $0 ORS; next }
+        { print }
+        END { if (inb) printf "%s", buf }' config/local.yaml
+}
+
+# $1 = the top-level key the block sets ("" for none), $2 = the block ("" removes the earlier one).
+# Returns 1, leaving the file unchanged, when lines outside the block already set that key, or when the backup or the
+# write fails.
+# Before it changes the file it keeps the previous one as config/local.yaml.bak.<UTC time> (it holds the same
+# credentials; .gitignore lists it), so an interrupted write never loses the lines written by hand. Each change keeps
+# its own backup and never replaces one an earlier run kept: a run after the file was damaged (emptied, say) must not
+# put the damaged file over the last good copy.
+write_wizard_block() {
+    local key="$1" block="$2" rest had=false new current backup stamp n=1
+    rest=$(local_yaml_without_wizard_block)
+    grep -qF "$WIZARD_BEGIN" config/local.yaml && had=true
+    if [[ -n "$key" ]] && grep -Eq "^[\"']?${key}[\"']?[[:space:]]*:" <<< "$rest"; then
+        echo -e "  ${YELLOW}config/local.yaml already has a ${key}: section of its own; the wizard left the file unchanged.${NC}"
+        echo "  Add these settings to that section:"
+        printf '%s\n' "$block" | sed 's/^/    /'
+        return 1
+    fi
+    new=""
+    if [[ -n "$rest" ]]; then new+="$rest"$'\n'; fi
+    if [[ -n "$block" ]]; then
+        if [[ -n "$rest" ]]; then new+=$'\n'; fi
+        new+="$WIZARD_BEGIN"$'\n'"$block"$'\n'"$WIZARD_END"$'\n'
+    fi
+    current=$(cat config/local.yaml; printf x)
+    if [[ "$new" == "${current%x}" ]]; then
+        return 0  # already what this run would write: no write, no backup
+    fi
+    # Called as an `if` condition, where `set -e` is off, so every step that can fail is checked: the wizard never
+    # says it kept a backup, or saved, when it did not. A file or a link already at the name is never replaced nor
+    # written through: the name takes a -2, -3... suffix instead.
+    stamp=$(date -u +%Y%m%dT%H%M%SZ)
+    backup="config/local.yaml.bak.$stamp"
+    while [[ -e "$backup" || -L "$backup" ]]; do
+        n=$((n + 1))
+        backup="config/local.yaml.bak.$stamp-$n"
+    done
+    if ! cp -p config/local.yaml "$backup"; then
+        echo -e "  ${YELLOW}Could not keep the previous config/local.yaml as $backup; the wizard left the file unchanged.${NC}"
+        return 1
+    fi
+    echo -e "  Kept the previous config/local.yaml as $backup."
+    # written in place, so a running container's bind mount keeps seeing the same file
+    if ! printf '%s' "$new" > config/local.yaml; then
+        echo -e "  ${YELLOW}Could not write config/local.yaml; the previous one is in $backup.${NC}"
+        return 1
+    fi
+    if [[ "$had" = true ]]; then
+        echo -e "  ${YELLOW}Replaced the source settings an earlier run of this wizard wrote to config/local.yaml.${NC}"
+    fi
+}
+
+if [ -f .env ]; then
+    echo -e "${YELLOW}An .env file already exists.${NC}"
+    read -rp "Overwrite? (y/N): " overwrite
+    if [[ "$overwrite" != "y" && "$overwrite" != "Y" ]]; then
+        echo ""
+        echo "Starting services with existing configuration..."
+        docker compose up -d
+        # Fall through to the startup wait and instructions below
+        SKIP_SETUP=true
+    fi
+fi
+
 if [ "$SKIP_SETUP" = false ]; then
 
 cp .env.example .env
+source_refused=false  # true when the wizard could not write the chosen source to config/local.yaml (it says why)
 
 # ── LLM Provider ─────────────────────────────────────────────────────────
 
@@ -99,6 +178,13 @@ echo "  4) AWS Bedrock               — requires AWS credentials"
 echo ""
 read -rp "Select provider [1]: " llm_choice
 llm_choice=${llm_choice:-1}
+case $llm_choice in
+    1|2|3|4) ;;
+    *)  # .env.example's own provider is another one, so the choice is made, not left to the template
+        echo "Invalid choice. Using Anthropic as default."
+        llm_choice=1
+        ;;
+esac
 
 case $llm_choice in
     1)
@@ -132,6 +218,9 @@ case $llm_choice in
         ;;
     4)
         sed -i.bak 's/^LLM_PROVIDER=.*/LLM_PROVIDER=bedrock/' .env
+        # The Bedrock default (Claude Sonnet 5.5 through its US inference profile); outside the US, set your
+        # geography's profile in .env.
+        sed -i.bak 's/^LLM_MODEL_ID=.*/LLM_MODEL_ID=us.anthropic.claude-sonnet-5-5/' .env
         echo ""
         read -rp "  AWS Region [us-east-1]: " aws_region
         aws_region=${aws_region:-us-east-1}
@@ -142,9 +231,6 @@ case $llm_choice in
         sed -i.bak "s/^# AWS_SECRET_ACCESS_KEY=.*/AWS_SECRET_ACCESS_KEY=${aws_secret}/" .env
         sed -i.bak 's/^EMBED_PROVIDER=.*/EMBED_PROVIDER=bedrock/' .env
         sed -i.bak 's/^EMBED_MODEL_ID=.*/EMBED_MODEL_ID=cohere.embed-v4:0/' .env
-        ;;
-    *)
-        echo "Invalid choice. Using Anthropic as default."
         ;;
 esac
 
@@ -159,6 +245,13 @@ if [[ "$llm_choice" != "3" && "$llm_choice" != "4" ]]; then
     echo ""
     read -rp "Select provider [1]: " embed_choice
     embed_choice=${embed_choice:-1}
+    case $embed_choice in
+        1|2) ;;
+        *)  # .env.example's own embedding provider is another one, so the choice is made, not left to the template
+            echo "Invalid choice. Using OpenAI as default."
+            embed_choice=1
+            ;;
+    esac
 
     case $embed_choice in
         1)
@@ -192,14 +285,23 @@ echo "  4) GitHub repository"
 echo ""
 read -rp "Select source [1]: " source_choice
 source_choice=${source_choice:-1}
+case $source_choice in
+    1|2|3|4) ;;
+    *)  # an unknown answer would otherwise leave an earlier run's source in place without a word
+        echo "Invalid choice. Using the sample docs."
+        source_choice=1
+        ;;
+esac
 
 case $source_choice in
     1)
-        # defaults are fine
+        # defaults are fine; a source an earlier run wrote is replaced by this answer
+        write_wizard_block "" "" || source_refused=true
         ;;
     2)
         read -rp "  Absolute path to docs directory: " docs_path
         sed -i.bak "s|^LOCAL_DOCS_PATH=.*|LOCAL_DOCS_PATH=${docs_path}|" .env
+        write_wizard_block "" "" || source_refused=true
         ;;
     3)
         echo ""
@@ -208,16 +310,14 @@ case $source_choice in
         read -rp "  API token: " conf_token
         read -rp "  Space keys (comma-separated): " conf_spaces
         # Write source credentials to config/local.yaml (gitignored), not .env
-        cat >> config/local.yaml << CONFYAML
-
-confluence:
-  base_url: ${conf_url}
-  user_email: ${conf_email}
-  api_token: ${conf_token}
-  space_keys: ${conf_spaces}
-CONFYAML
+        block="confluence:$(yaml_entry "  base_url" "$conf_url")$(yaml_entry "  user_email" "$conf_email")"
+        block+="$(yaml_entry "  api_token" "$conf_token")$(yaml_entry "  space_keys" "$conf_spaces")"
         echo ""
-        echo -e "  ${GREEN}Confluence settings written to config/local.yaml (gitignored).${NC}"
+        if write_wizard_block confluence "$block"; then
+            echo -e "  ${GREEN}Confluence settings written to config/local.yaml (gitignored).${NC}"
+        else
+            source_refused=true
+        fi
         ;;
     4)
         echo ""
@@ -231,22 +331,28 @@ CONFYAML
         else
             gh_selector="${gh_repo}"
         fi
-        cat >> config/local.yaml << GHYAML
-
-sources:
-  github:
-    token: ${gh_token:-<set-GITHUB_TOKEN-env-var>}
-    code:
-      repos:
-        - ${gh_selector}
-GHYAML
+        # No token answer writes no token line: GITHUB_TOKEN from the environment is used, or none (public repos).
+        block="sources:"$'\n'"  github:$(yaml_entry "    token" "$gh_token")"
+        block+=$'\n'"    code:"$'\n'"      repos:"$'\n'"        - $(yaml_quote "$gh_selector")"
         echo ""
-        echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
+        if write_wizard_block sources "$block"; then
+            echo -e "  ${GREEN}GitHub settings written to config/local.yaml (gitignored).${NC}"
+        else
+            source_refused=true
+        fi
         ;;
 esac
 
 # Clean up sed backup files
 rm -f .env.bak
+
+if [[ "$source_refused" = true ]]; then
+    # Starting now would run without the source just chosen, so nothing starts until it is added.
+    echo ""
+    echo -e "${YELLOW}.env is saved, but the source settings above are not: config/local.yaml was left unchanged.${NC}"
+    echo "Add them to config/local.yaml, then start DocBrain with: docker compose up -d"
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}Configuration saved.${NC}"

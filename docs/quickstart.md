@@ -29,6 +29,7 @@ Or configure manually:
 
 ```bash
 cp .env.example .env
+touch config/local.yaml   # your YAML settings; compose mounts it, so it must exist before the first start
 ```
 
 The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys`
@@ -68,6 +69,7 @@ cd docbrain
 git clone https://github.com/docbrain-ai/docbrain.git
 cd docbrain
 cp .env.example .env
+touch config/local.yaml   # your YAML settings; compose mounts it, so it must exist before the first start
 ```
 
 The fingerprint key that protects stored secret findings is generated on first start into the `docbrain-keys`
@@ -81,7 +83,7 @@ Edit `.env` — add your LLM API key (infrastructure secret). Then:
 docker compose up -d
 ```
 
-For document sources (Confluence, GitHub, Slack, Jira), create `config/local.yaml` (gitignored) with your source credentials. See [Configuration Reference](./configuration.md) for the config-first architecture.
+For document sources (Confluence, GitHub, Slack, Jira), put your source settings in `config/local.yaml` (gitignored), the file you made above: compose mounts it into the server and the ingest. See [Connect your real docs](#connect-your-real-docs) and the [Configuration Reference](./configuration.md).
 
 ## Verify Installation
 
@@ -133,8 +135,10 @@ This takes ~30 seconds. Once done, you can ask questions about the sample docume
 
 ### Connect your real docs
 
-Create `config/local.yaml` (gitignored) and add your source credentials. This
-file is never committed — it's the right place for tokens and resource lists.
+Add your source settings to `config/local.yaml` (gitignored): `setup.sh` writes it, or the `touch` step above
+made it empty. Compose mounts it into the server and the ingest at `/app/config/local.yaml`. This file is never
+committed — it's the right place for tokens and resource lists. `setup.sh` keeps its answers between two marked
+lines, and running it again replaces only those; what you add outside them stays as you wrote it.
 
 All ingestion sources live under the top-level `sources:` block. A sub-source
 is enabled when its block is present in YAML. Resource lists (repos, projects,
@@ -285,15 +289,52 @@ See the **[Generate guide](generate.md)** for source links, templates, and CI pl
 
 ## Upgrade
 
-From the folder you cloned:
+Back up the database first: going back to the older version may need it. The server migrates the database when it
+starts, and an older server does not start on a database a newer one has migrated (it stops with
+`Failed to run migrations: VersionMissing(<N>)`). So going back across a release that added a migration means putting
+this backup back before the older server starts ([Go back](#go-back)); whatever was written to the database after the
+backup is lost.
+
+Run it from the folder you cloned. The backup reads the running database: with the stack stopped, run
+`docker compose up -d --wait postgres` first. The upgrade runs only when the backup worked and is not empty. Each run
+writes a new file named for the time it started, so running the line again after a failed attempt never replaces the
+backup from before the first one. With `POSTGRES_USER` or `POSTGRES_DB` set in `.env`, use those names:
 
 ```bash
-git pull && docker compose pull && docker compose up -d && docker compose restart proxy
+f=docbrain-before-upgrade-$(date +%Y%m%d-%H%M%S).dump &&
+  docker compose exec -T postgres pg_dump -U docbrain -d docbrain -Fc > "$f" &&
+  test -s "$f" &&
+  git pull && touch config/local.yaml && docker compose up -d && docker compose restart proxy
 ```
 
-`git pull` brings the new Compose and proxy files and `docker compose pull` the new images. The last step
-loads a changed proxy file: `up -d` keeps a running proxy whenever its image has not changed. Your
-data stays in the Docker volumes. On Kubernetes, see [Upgrade](kubernetes.md#upgrade).
+`git pull` brings the new Compose and proxy files, and the Compose file names the images of its own release, so
+`docker compose up -d` moves the images with it. A `DOCBRAIN_IMAGE` or `DOCBRAIN_WEB_IMAGE` set in `.env` keeps
+that image instead; delete those lines to follow the release. `touch` makes an empty `config/local.yaml` if your
+install has none (compose mounts it and stops when it is missing) and leaves an existing one unchanged. Read an
+existing one before you upgrade from 1.6.6 or earlier: nothing read it then, and now the server and the ingest do,
+so the sources in it are ingested, and a file that does not parse stops both at start (an earlier `setup.sh` run
+could write a `confluence:` or `sources:` block twice; keep one). The last step loads a changed proxy file: `up -d`
+keeps a running proxy whenever its image has not changed. Your data stays in the Docker volumes. On Kubernetes, see
+[Upgrade](kubernetes.md#upgrade).
+
+### Go back
+
+Restore the backup taken before the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the name
+sorts by time). The line first stops what writes to the database, the server and the ingest (add `trainer` to it if
+you enabled the trainer): while anything is still connected, the restore stops at its first step and changes nothing.
+With `POSTGRES_USER` or `POSTGRES_DB` set in `.env`, use those names. Set `backup` to yours:
+
+```bash
+backup=docbrain-before-upgrade-20261122-101500.dump
+docker compose stop server ingest &&
+  docker compose exec -T postgres pg_restore -U docbrain -d postgres --clean --if-exists --create \
+    --exit-on-error < "$backup"
+```
+
+When it worked, set `DOCBRAIN_IMAGE` and `DOCBRAIN_WEB_IMAGE` in `.env` to the release you go back to (for 1.6.6:
+`DOCBRAIN_IMAGE=ghcr.io/docbrain-ai/docbrain:1.6.6` and `DOCBRAIN_WEB_IMAGE=ghcr.io/docbrain-ai/docbrain-web:1.6.6`;
+with the trainer enabled, its `image:` line too), then run `docker compose up -d`. Checking out an older tree does not
+do it: the Compose file of 1.6.6 and earlier runs `latest`. Delete those two lines from `.env` when you upgrade again.
 
 ## Troubleshooting
 
@@ -310,6 +351,7 @@ docker compose logs opensearch
 
 **Common causes:**
 - **OpenSearch crashes:** Not enough memory. OpenSearch needs ~1GB. Check `docker stats`.
+- **`up` stops with an error naming `config/local.yaml`:** the file does not exist. Compose mounts it into the server and the ingest and will not start them without it: run `touch config/local.yaml` (an empty file is fine) and `docker compose up -d` again.
 - **Server exits immediately:** Usually a missing or malformed `.env`. Re-copy from `.env.example`. If the log names `DOCBRAIN_FINGERPRINT_KEY` or `DOCBRAIN_FINGERPRINT_KEY_FILE`, check `docker compose logs keys` (it generates the key on first start) or the value you set in `.env`.
 
 ### "Connection refused" when asking questions
@@ -333,7 +375,7 @@ docker compose exec server docbrain-ingest
 
 If ingestion completed but answers are still empty, check:
 - Are your documents in a format DocBrain supports? (`.md`, `.txt`, or Confluence/GitHub)
-- Is `sources:` in `config/local.yaml` set correctly for at least one provider?
+- Is `sources:` in `config/local.yaml` set correctly for at least one provider? `docker compose exec server cat /app/config/local.yaml` shows what the server reads; restart `server` and `ingest` after an edit.
 - For Confluence: are the space keys correct? Check the URL of your Confluence space.
 
 ### Ingestion fails with "401 Unauthorized" (Confluence)

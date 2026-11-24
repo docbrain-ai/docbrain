@@ -18,8 +18,8 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: postgres
-      annotations:
-        {{- include "docbrain.configChecksum" . | nindent 8 }}
+      # No config checksum: this pod reads only POSTGRES_PASSWORD, by key, and uses it only when an empty volume is
+      # first initialised, so a settings change must not restart it (docbrain.configChecksum in _helpers.tpl).
     spec:
       containers:
         - name: postgres

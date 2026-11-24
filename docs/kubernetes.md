@@ -50,6 +50,10 @@ fingerprint-key Secret unless `fingerprintKeySecret.existingSecret` is set. See
 ### 2. Choose your LLM provider
 
 DocBrain supports Anthropic, OpenAI, AWS Bedrock, and Ollama. Pass the provider and credentials at install time.
+`llm.modelId`, `embedding.modelId` and every other model setting default to empty, which means the provider's
+default model, so the examples below can drop them. With `llm.provider=anthropic` that is `claude-sonnet-5-5`, and
+with `embedding.provider=openai` it is `text-embedding-3-small`: the models the chart named before. With
+`embedding.provider=bedrock` it is `cohere.embed-v4:0`, and with `ollama`, `nomic-embed-text`.
 
 #### Anthropic (Claude)
 
@@ -80,7 +84,7 @@ helm install docbrain ./helm/docbrain \
 ```bash
 helm install docbrain ./helm/docbrain \
   --set llm.provider=bedrock \
-  --set llm.modelId=us.anthropic.claude-sonnet-4-20250514-v1:0 \
+  --set llm.modelId=us.anthropic.claude-sonnet-5-5 \
   --set embedding.provider=bedrock \
   --set embedding.modelId=cohere.embed-v4:0
 ```
@@ -176,7 +180,7 @@ ingest:
     baseUrl: https://yourcompany.atlassian.net
     email: user@yourcompany.com
     apiToken: ATATT...
-  sources:                    # rendered into a ConfigMap + mounted at /app/config/local.yaml
+  sources:                    # rendered into a ConfigMap, mounted at /app/config/local.yaml in the server and the ingest
     local:
       path: /data/docs
     github:
@@ -221,21 +225,33 @@ kubectl rollout status deployment/docbrain-server
 kubectl logs deployment/docbrain-server -f
 
 # Get the bootstrap admin key from the Helm-managed Secret
-# The secret name is <release-name>-initial-admin-secret (e.g. "docbrain" if you used the default release name)
+# The secret name is <fullname>-initial-admin-secret: docbrain-initial-admin-secret for a release named docbrain
+# ("Upgrade" below says how the chart names objects for another release name)
 kubectl get secret docbrain-initial-admin-secret \
   -o jsonpath='{.data.BOOTSTRAP_ADMIN_KEY}' | base64 -d
 ```
 
-The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is **never printed to logs** — always retrieve it from the Secret directly as shown above.
+The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is **never printed to logs** — always retrieve it from the Secret directly as shown above. The server is given that Secret's key and registers it on its first boot; its log then says `Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var`.
+
+The server registers a bootstrap key only while no admin key exists, so the Secret holds a key that does not work in
+three cases:
+- **An install first made with a chart before 1.6.7.** That chart did not give the server the Secret's key: the
+  server made its own at first boot (written to `/app/admin-bootstrap-key.txt` in its container, gone once the server
+  restarts). An upgrade does not change that. Sign in with that first key or an admin key you created.
+- **The Secret was deleted, then `helm upgrade` ran.** The upgrade renders a new Secret with a new key, which is
+  never registered. Your first key still works.
+- **The chart is rendered offline** (`helm template`, Argo CD): `lookup` returns nothing there, so every render
+  makes a new key and only the one present at the server's first boot is registered. Put `BOOTSTRAP_ADMIN_KEY` in a
+  Secret you manage instead ([Using Existing Secrets](#using-existing-secrets)).
 
 **Bootstrap key lifecycle:**
 
 | Event | Secret | Database |
 |-------|--------|----------|
 | `helm install` | Created with generated key | Key registered on first server boot |
-| `helm upgrade` | Key preserved via `lookup` — never regenerated | No-op |
-| `kubectl delete secret ...-initial-admin-secret` | Gone | Key still active — safe to delete once you have real keys |
-| `bootstrapKey.enabled=false` + `helm upgrade` | Helm deletes the Secret | Server revokes key from DB on next restart |
+| `helm upgrade` | Key preserved via `lookup` — never regenerated (except offline renders, above) | No-op |
+| `kubectl delete secret ...-initial-admin-secret` | Gone (the next `helm upgrade` makes a new one whose key is never registered) | Key still active — safe to delete once you have real keys |
+| `bootstrapKey.enabled=false` + `helm upgrade` | Helm deletes the Secret | Key still active: this value alone does not revoke it (step 3 below does) |
 | `helm uninstall` | Deleted | Key record remains in DB (now inactive after revocation, or still active if not) |
 
 **The initial-admin-secret is intentionally separate from the main Secret** (`docbrain-secret` holds DB passwords and API keys). You can delete, inspect, or manage it without touching operational credentials.
@@ -247,12 +263,18 @@ The bootstrap admin key lives in its own Secret, separate from operational crede
 3. Disable the bootstrap key — one command, no manual DB or API calls:
 
 ```bash
-helm upgrade docbrain ./helm/docbrain --set bootstrapKey.enabled=false
+helm upgrade docbrain ./helm/docbrain --reuse-values --set bootstrapKey.enabled=false \
+  --set-string server.env.BOOTSTRAP_KEY_ENABLED=false
 ```
+
+`--reuse-values` keeps every setting you installed with (provider, keys, sources); without it, this upgrade would
+put them all back to the chart's defaults. Run it with the chart you installed; to move to a newer chart at the same
+time, see [Upgrade](#upgrade).
 
 This simultaneously:
 - Stops rendering `initial-admin-secret` → Helm deletes it on upgrade
-- Sets `BOOTSTRAP_KEY_ENABLED=false` in the ConfigMap → server revokes the key from the database on next restart
+- Puts `BOOTSTRAP_KEY_ENABLED=false` in the ConfigMap → the server restarts (its settings changed) and revokes the key
+  from the database. `bootstrapKey.enabled=false` on its own only removes the Secret; the key stays active.
 
 To verify it's gone:
 
@@ -478,10 +500,12 @@ helm upgrade docbrain ./helm/docbrain \
 | Tag | Use case |
 |-----|----------|
 | `edge` | Latest commit from `main`. Unstable — good for local testing. |
-| `latest` | Latest stable release. |
-| `1.2.0` | Pinned release — recommended for production. |
+| `latest` | Latest stable release. It moves with every release, so the chart never uses it by default. |
+| `1.6.7` | One release, pinned — the kind of tag the chart runs by default (its `appVersion`). |
 
-By default the chart uses `appVersion` (`1.2.0`) for all DocBrain images — no explicit tag override needed. Override only when pinning to a different release:
+Every DocBrain image the chart runs (server, web, trainer and the ingest job) defaults to the chart's own `appVersion`
+(`helm/docbrain/Chart.yaml`): `server.image.tag`, `web.image.tag` and `trainer.image.tag` are empty in `values.yaml`.
+The chart and its images move together. Set a tag only to run another build:
 
 ```bash
 # Pin to a specific older release
@@ -501,11 +525,91 @@ helm install docbrain ./helm/docbrain \
 
 ## Upgrade
 
+Back up the database first: going back to the older version may need it ([Roll back](#roll-back)). With the chart's
+PostgreSQL and a release named `docbrain`:
+
 ```bash
-helm upgrade docbrain ./helm/docbrain -f my-values.yaml
+# The upgrade runs only when the backup worked and is not empty. Each run writes a new file named for the time it
+# started, so running it again after a failed attempt never replaces the backup from before the first one.
+f=docbrain-before-upgrade-$(date +%Y%m%d-%H%M%S).dump &&
+  kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > "$f" &&
+  test -s "$f" &&
+  helm upgrade docbrain ./helm/docbrain -f my-values.yaml
 ```
 
-Rolling restarts happen automatically when ConfigMap or Secret values change (via checksum annotations on the pod template).
+With an external database (`postgresql.internal: false`), back it up with that database's own tools.
+
+These commands, and those in [Roll back](#roll-back), are for a release named `docbrain`. The chart names each object
+`<fullname>-<component>`, where `<fullname>` is the release name when it contains `docbrain` (release `docbrain-prod`:
+pod `docbrain-prod-postgres-0`, deployment `docbrain-prod-server`) and `<release>-docbrain` otherwise (release `kb`:
+pod `kb-docbrain-postgres-0`, deployment `kb-docbrain-server`); `fullnameOverride` or `nameOverride` changes it. `helm`
+commands and the `app.kubernetes.io/instance` label take the release name itself.
+
+A chart deploys the images of its own version: the 1.6.7 chart runs the 1.6.7 server, web and trainer images. Two
+things keep an older image tag across an upgrade: a values file that sets `server.image.tag`, `web.image.tag` or
+`trainer.image.tag` (a copy of an older `values.yaml` says `tag: latest`; delete those lines), and `--reuse-values`,
+which keeps the last release's values, `tag: latest` included (use `--reset-then-reuse-values`, Helm 3.14 or later, to
+take the new chart's defaults and keep your own settings).
+
+The server restarts automatically when a setting it reads changes: the chart's settings ConfigMap, its Secret, or
+its `local.yaml` (`ingest.sources`, `freshness.exclusionRules`, `freshness.eventBasedSpaces`), through checksum
+annotations on its pod template. PostgreSQL, OpenSearch, Redis and the web console read none of these, so a
+settings change does not restart them; the upgrade to the chart version that took those annotations off restarts
+them once. A Secret you supply with `existingSecret` is not the chart's to watch: after changing it, run
+`kubectl rollout restart deployment/<fullname>-server` (`<fullname>` as above).
+
+### Roll back
+
+`helm rollback` restores the older chart and its images, but not the database. The server migrates the database when
+it starts, and an older server does not start on a database a newer one has migrated: it stops, and its log shows
+`Failed to run migrations: VersionMissing(<N>)`, where `<N>` is a migration the newer server applied. So
+`helm rollback` alone is enough only when no migration shipped between the two versions. A row in this list installed
+at the time of the upgrade is a migration the newer server applied:
+
+```bash
+kubectl exec docbrain-postgres-0 -- psql -U docbrain -d docbrain -c \
+  'SELECT version, installed_on FROM _sqlx_migrations ORDER BY version DESC LIMIT 5'
+```
+
+If there is none, `helm rollback docbrain` is all it takes. If there is one, put the backup from before the upgrade
+back before the older server starts. Whatever was written to the database after the backup is lost. The commands are
+for a release named `docbrain`: for another, put your `<fullname>` where an object name starts `docbrain-`, and your
+release name in the `helm` commands and the `instance` label ([Upgrade](#upgrade) says how the chart names objects).
+
+First stop everything that writes to the database: the server, the trainer (without `trainer.enabled` its two lines
+say the deployment is not found, which is fine) and the ingest. Scaling to 0 returns before the pods exit, so the
+`wait` holds until the server and trainer pods are gone:
+
+```bash
+kubectl scale deployment/docbrain-server --replicas=0
+kubectl scale deployment/docbrain-trainer --replicas=0
+kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":true}}'
+kubectl wait --for=delete pod --timeout=5m \
+  -l 'app.kubernetes.io/instance=docbrain,app.kubernetes.io/component in (server,trainer)'
+kubectl get jobs
+```
+
+When `kubectl get jobs` shows no ingest job running, restore and roll back. Set `backup` to the backup taken before
+the first upgrade attempt (`ls docbrain-before-upgrade-*.dump` lists them; the name sorts by time), `revision` to the
+revision from before the upgrade (`helm history docbrain` lists them), and the replica counts to your
+`server.replicas` and `trainer.replicaCount`. Only when the restore worked does the rest run: the chart and its images
+roll back, then what was stopped starts again, the trainer last.
+
+```bash
+backup=docbrain-before-upgrade-20261122-101500.dump
+revision=4
+kubectl exec -i docbrain-postgres-0 -- pg_restore -U docbrain -d postgres --clean --if-exists --create \
+  --exit-on-error < "$backup" && {
+  helm rollback docbrain "$revision" &&
+  kubectl scale deployment/docbrain-server --replicas=1 &&
+  kubectl patch cronjob/docbrain-ingest -p '{"spec":{"suspend":false}}' &&
+  kubectl scale deployment/docbrain-trainer --replicas=1
+}
+```
+
+When the restore stops, nothing after it runs: fix what stopped it (most often something still connected: an ingest
+job, or a pod still exiting) and run the second block again. When `helm rollback` fails, the server and the ingest
+stay stopped: fix it and run the rest of the second block.
 
 ---
 
@@ -561,7 +665,11 @@ kubectl logs <pod-name> --previous
 
 ### Config not loading
 
-The server reads config from `/app/config/` inside the container (set via `DOCBRAIN_CONFIG_DIR`). If you see an error about the config directory, ensure `DOCBRAIN_CONFIG_DIR` is in the ConfigMap (it is by default in chart version ≥ 0.2).
+The server and the ingest read the image's settings from `/app/config/` inside the container, and the chart's
+`local.yaml` (from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces`) is mounted at
+`/app/config/local.yaml` in both whenever one of those values is set. To see what the server reads:
+`kubectl exec deploy/<fullname>-server -- cat /app/config/local.yaml` (`<fullname>` is `docbrain` for a release named
+`docbrain`; [Upgrade](#upgrade) says how the chart names objects).
 
 ### OpenSearch StatefulSet patch fails
 

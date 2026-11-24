@@ -11,14 +11,16 @@
     * `freshness.exclusion_rules:`     — when .Values.freshness.exclusionRules is set
     * `freshness.event_based_spaces:`  — when .Values.freshness.eventBasedSpaces is set
 
-  Only rendered when at least one subtree is configured — keeps the file out
-  of clusters that don't need overrides so container-image defaults apply.
+  Only rendered when at least one subtree is configured (docbrain.hasLocalOverlay,
+  the one condition the server, the ingest and this file share) — keeps the file
+  out of clusters that don't need overrides so container-image defaults apply.
+  Both pods carry its checksum, so a change here restarts the server.
 */}}
 {{- $hasSources := and (kindIs "map" .Values.ingest.sources) (gt (len .Values.ingest.sources) 0) }}
 {{- $hasExclusion := and (kindIs "map" .Values.freshness) (kindIs "map" .Values.freshness.exclusionRules) (gt (len .Values.freshness.exclusionRules) 0) }}
 {{- $hasEventSpaces := and (kindIs "map" .Values.freshness) (kindIs "slice" .Values.freshness.eventBasedSpaces) (gt (len .Values.freshness.eventBasedSpaces) 0) }}
 {{- $hasFreshnessOverlay := or $hasExclusion $hasEventSpaces }}
-{{- if or $hasSources $hasFreshnessOverlay }}
+{{- if include "docbrain.hasLocalOverlay" . }}
 ---
 apiVersion: v1
 kind: ConfigMap

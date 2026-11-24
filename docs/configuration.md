@@ -4,7 +4,8 @@ DocBrain uses a layered configuration system. Settings are resolved in this orde
 
 1. `{DOCBRAIN_CONFIG_DIR}/default.yaml` — committed base defaults
 2. `{DOCBRAIN_CONFIG_DIR}/{APP_ENV}.yaml` — environment overrides (`APP_ENV=development|production`)
-3. `{DOCBRAIN_CONFIG_DIR}/local.yaml` — gitignored developer overrides (optional)
+3. `{DOCBRAIN_CONFIG_DIR}/local.yaml` — your settings: sources and anything else only YAML can hold (gitignored; see
+   [Where local.yaml comes from](#where-localyaml-comes-from))
 4. **Environment variables** — always win; all existing env var names work unchanged
 
 ## Config File Location
@@ -15,6 +16,14 @@ DocBrain uses a layered configuration system. Settings are resolved in this orde
 | `APP_ENV` | `development` | Selects `{APP_ENV}.yaml`. Use `production` in production deployments. |
 
 The server also accepts `--config-dir <path>` as a CLI argument (takes precedence over `DOCBRAIN_CONFIG_DIR`).
+
+### Where local.yaml comes from
+
+| Install | The file | Read by |
+|---|---|---|
+| Docker Compose | `config/local.yaml` in the folder you cloned, bind-mounted read-only at `/app/config/local.yaml`. It must exist before the first `docker compose up` (`scripts/setup.sh` writes it; `touch config/local.yaml` makes an empty one), and `up` stops with an error naming it when it is missing. Restart `server` and `ingest` after an edit. | the server and the ingest |
+| Helm | Rendered by the chart from `ingest.sources`, `freshness.exclusionRules` and `freshness.eventBasedSpaces` into the `<fullname>-sources` ConfigMap (`docbrain-sources` for a release named `docbrain`), mounted at `/app/config/local.yaml` whenever one of them is set. `helm upgrade` restarts the server when it changes. | the server and the ingest job |
+| Binary | `{DOCBRAIN_CONFIG_DIR}/local.yaml`, `config/local.yaml` under the working directory by default. Optional. | the process you start |
 
 **Deployment examples:**
 ```bash
@@ -67,7 +76,7 @@ fingerprint cannot be, without the key. That is also why the key is never stored
 | Deployment | Where the key comes from | Where it lives |
 |---|---|---|
 | Docker Compose | The one-shot `keys` service writes 32 random bytes (base64, mode 600) on first start, unless you supplied a key or one exists. It never replaces a key and never prints one; a key file that exists but is empty or not a key stops the start with a message (restore it from backup, or delete it to generate a new one). | The `docbrain-keys` volume, file `fingerprint.key`, mounted read-only into the server (`DOCBRAIN_FINGERPRINT_KEY_FILE=/keys/fingerprint.key`). |
-| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade and reinstall, so it is never rotated (a rollback reapplies a stored manifest that carries the same value). | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (`<release>-docbrain-fingerprint-key` otherwise), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
+| Helm | Generated on first install (32 random bytes, base64) and looked up on every upgrade and reinstall, so it is never rotated (a rollback reapplies a stored manifest that carries the same value). | Its own Secret, `docbrain-fingerprint-key` for a release named `docbrain` (otherwise `<fullname>-fingerprint-key`, where `<fullname>` is the release name when it contains `docbrain` and `<release>-docbrain` when it does not), key `DOCBRAIN_FINGERPRINT_KEY`, annotated `helm.sh/resource-policy: keep`: `helm uninstall` leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept. |
 | Anything else (bare metal, your own manifests) | You: `openssl rand -base64 32`. | `DOCBRAIN_FINGERPRINT_KEY`, or a file named by `DOCBRAIN_FINGERPRINT_KEY_FILE`. |
 
 `helm template`, and GitOps tools that render charts offline (Argo CD, Flux with offline rendering), cannot look up
@@ -133,7 +142,7 @@ Set `LLM_PROVIDER` to choose your LLM backend. Supported providers: `anthropic`,
 | Variable | Provider | Description |
 |---|---|---|
 | `LLM_PROVIDER` | All | Which LLM to use (see list above) |
-| `LLM_MODEL_ID` | All | Model identifier (e.g. `claude-sonnet-5-5`, `gpt-4o`). Defaults to a provider-appropriate model if not set. |
+| `LLM_MODEL_ID` | All | Model identifier (e.g. `claude-sonnet-5-5`, `gpt-4o`). Defaults to a provider-appropriate model if not set. On `bedrock` the default is `us.anthropic.claude-sonnet-5-5`, Claude Sonnet 5.5 through its US inference profile: outside the US, name your geography's profile. |
 | `LLM_TIMEOUT_SECS` | All except ollama | HTTP timeout in seconds for the LLM client (default: `120`). Applies to anthropic, openai (and its OpenAI-compatible siblings: groq, openrouter, together, deepseek, mistral, xai, gemini), azure_openai and cohere. Ollama has its own `OLLAMA_TIMEOUT_SECS` below, which takes precedence for that provider. Must be a positive integer — `0` fails config load, since a zero-second timeout would fail every call. |
 | `ANTHROPIC_API_KEY` | anthropic | Your Anthropic API key |
 | `OPENAI_API_KEY` | openai | Your OpenAI API key |
@@ -1505,7 +1514,7 @@ provider's signature or shared secret instead.
 | `ADMIN_KEY_FILE` | `/app/admin-bootstrap-key.txt` | Where to write the admin bootstrap key on first boot |
 | `IDLE_TIMEOUT_HOURS` | `0` | Hours without use after which an API key is rejected as if expired, whatever its lifetime. `0` turns it off. |
 | `BOOTSTRAP_KEY_ENABLED` | `true` | `false`, `0`, `no` or `off` revokes the bootstrap admin key at start and keeps it revoked; if the revoke fails the server refuses to start. Set it once you have created your own admin keys. |
-| `BOOTSTRAP_ADMIN_KEY` | — | Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to `ADMIN_KEY_FILE`. |
+| `BOOTSTRAP_ADMIN_KEY` | — | Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to `ADMIN_KEY_FILE`. The key is never logged: when it registers a pre-set key, the server logs `Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var` and where to read it. On the Helm chart that is the Secret `<fullname>-initial-admin-secret`, key `BOOTSTRAP_ADMIN_KEY` (the chart generates it), the `existingSecret` you named, or `server.env.BOOTSTRAP_ADMIN_KEY`; on Docker Compose or the binary, the environment or `.env`. |
 
 ### Access lists at ingest
 

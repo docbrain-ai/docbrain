@@ -3,7 +3,8 @@
 # -- LLM provider: bedrock | anthropic | openai | ollama | groq | openrouter | together | deepseek | mistral | xai | gemini | azure_openai | cohere
 llm:
   provider: anthropic
-  modelId: claude-sonnet-5-5
+  modelId: ""              # empty = the provider's default model (the LLM_MODEL_ID row of docs/configuration.md);
+  #                        # with provider: anthropic that is claude-sonnet-5-5, the id this chart used to set
   # fastModelId: ""        # fast/cheap model for side-calls (intent classify, query rewrite, entity extraction)
   #                        # Bedrock: us.anthropic.claude-haiku-4-5-20251001-v1:0
   #                        # Anthropic: claude-haiku-4-5-20251001
@@ -83,15 +84,17 @@ llm:
 # -- Embedding provider: bedrock | openai | ollama
 embedding:
   provider: openai
-  modelId: text-embedding-3-small
+  modelId: ""              # empty = the provider's default: openai text-embedding-3-small (the id this chart used
+  #                        # to set), bedrock cohere.embed-v4:0, ollama nomic-embed-text. A model with another
+  #                        # vector size needs a re-index (docs/configuration.md, EMBED_MODEL_ID).
   # openaiApiKey: ""     # defaults to llm.openaiApiKey if not set
 
 # -- Ingestion. A source is on when its settings are given: localDocsPath for
 # files on a volume, the confluence block for Confluence pages. Every other
 # source (GitHub and GitLab repositories, pull requests, Slack, Jira, ...) is
 # described under `sources`, a map written as the `sources:` block of
-# config/local.yaml into the ingest job; the shape is in docs/configuration.md
-# under "Document Sources".
+# config/local.yaml, mounted into the server and the ingest job; the shape is in
+# docs/configuration.md under "Document Sources".
 ingest:
   sources: {}
   schedule: "0 */6 * * *"   # every 6 hours
@@ -136,7 +139,10 @@ confluenceWebhook:
 server:
   image:
     repository: ghcr.io/docbrain-ai/docbrain
-    tag: latest
+    tag: ""                  # empty = the chart's appVersion (Chart.yaml): the chart and its images move together.
+    #                        # `helm rollback` restores both, but not a database the newer server migrated: see
+    #                        # docs/kubernetes.md, "Roll back". The ingest job runs this image too. Set a tag only
+    #                        # to run another build (docs/kubernetes.md, "Image tags").
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3000
@@ -679,9 +685,10 @@ server:
 # `nil pointer evaluating interface {}.enabled`.
 #
 # `true` matches the template's documented lifecycle (a key is generated on
-# install and preserved across upgrades) and docs/kubernetes.md, which presents
-# `bootstrapKey.enabled=false` as the opt-OUT used to delete the Secret and
-# have the server revoke the key.
+# install and preserved across upgrades). `false` only stops rendering the
+# Secret, so Helm deletes it; the key stays active in the database. To revoke
+# it, also set server.env.BOOTSTRAP_KEY_ENABLED="false" (docs/kubernetes.md,
+# "Recommended first-boot flow", step 3).
 bootstrapKey:
   enabled: true
 
@@ -707,7 +714,7 @@ web:
   enabled: true
   image:
     repository: ghcr.io/docbrain-ai/docbrain-web
-    tag: latest
+    tag: ""                  # empty = the chart's appVersion, as server.image.tag
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3001
@@ -1392,7 +1399,7 @@ trainer:
   enabled: false
   image:
     repository: ghcr.io/docbrain-ai/docbrain-trainer
-    tag: latest
+    tag: ""                  # empty = the chart's appVersion, as server.image.tag
     pullPolicy: IfNotPresent
   # Base model for fine-tuning — overrides learning.training.baseModelId if set explicitly.
   # Set both to the same value. The chart uses learning.training.baseModelId as the default

@@ -32,13 +32,20 @@ spec:
       labels:
         {{- include "docbrain.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: server
+      annotations:
+        # Restart on a change to any chart object this pod reads whole (docbrain.configChecksum in _helpers.tpl).
+        {{- include "docbrain.configChecksum" . | nindent 8 }}
+        {{- include "docbrain.localOverlayChecksum" . | nindent 8 }}
+        {{- if .Values.mcpTools.enabled }}
+        checksum/mcp-manifests: {{ include (print $.Template.BasePath "/configmap-mcp-manifests.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       # A capture an MCP client started finishes even if the client leaves; shutdown waits up to
       # 130 s for those writes, so the pod is given longer than that.
       terminationGracePeriodSeconds: 180
       containers:
         - name: server
-          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.server.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.server.port }}
@@ -58,6 +65,18 @@ spec:
                 secretKeyRef:
                   name: {{ include "docbrain.fingerprintKeySecretName" . }}
                   key: {{ include "docbrain.fingerprintKeySecretKey" . }}
+            {{- if and (not .Values.existingSecret) .Values.bootstrapKey.enabled }}
+            # The first-login admin key the chart generates (initial-admin-secret.yaml). The server registers it at
+            # first boot; without it the server makes a key of its own and the one in the Secret never works.
+            # Optional: the Secret may be deleted after first login (the key stays active in the database).
+            # With existingSecret, put BOOTSTRAP_ADMIN_KEY in your Secret; envFrom above hands it over.
+            - name: BOOTSTRAP_ADMIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "docbrain.fullname" . }}-initial-admin-secret
+                  key: BOOTSTRAP_ADMIN_KEY
+                  optional: true
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /api/v1/health
@@ -72,9 +91,11 @@ spec:
             periodSeconds: 30
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
-          {{- if or (and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled) .Values.mcpTools.enabled }}
+          {{- $trainerModels := and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled }}
+          {{- $localOverlay := include "docbrain.hasLocalOverlay" . }}
+          {{- if or $trainerModels .Values.mcpTools.enabled $localOverlay }}
           volumeMounts:
-            {{- if and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled }}
+            {{- if $trainerModels }}
             - name: trainer-models
               mountPath: {{ .Values.learning.storage.localModelRoot }}
               readOnly: false
@@ -84,10 +105,18 @@ spec:
               mountPath: /etc/docbrain/mcp-manifests
               readOnly: true
             {{- end }}
+            {{- if $localOverlay }}
+            # The chart's local.yaml (sources-configmap.yaml): the server reads the freshness rules and the
+            # sources from it, the same file the ingest mounts.
+            - name: sources-config
+              mountPath: /app/config/local.yaml
+              subPath: local.yaml
+              readOnly: true
+            {{- end }}
           {{- end }}
-      {{- if or (and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled) .Values.mcpTools.enabled }}
+      {{- if or $trainerModels .Values.mcpTools.enabled $localOverlay }}
       volumes:
-        {{- if and .Values.learning.enabled (eq .Values.learning.storage.backend "local") .Values.trainer.persistence.enabled }}
+        {{- if $trainerModels }}
         - name: trainer-models
           persistentVolumeClaim:
             claimName: {{ include "docbrain.fullname" . }}-trainer-models
@@ -96,6 +125,11 @@ spec:
         - name: mcp-manifests
           configMap:
             name: {{ include "docbrain.fullname" . }}-mcp-manifests
+        {{- end }}
+        {{- if $localOverlay }}
+        - name: sources-config
+          configMap:
+            name: {{ include "docbrain.fullname" . }}-sources
         {{- end }}
       {{- end }}
 ---
