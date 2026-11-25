@@ -82,7 +82,7 @@ declared in its `.docbrain/style.md` file on a schedule. This is the
 that owns the team's standards, change review goes through normal
 PR review, and DocBrain pulls the latest version.
 
-See the [working example](https://github.com/docbrain-ai/docbrain-public/tree/main/examples/style)
+See the [working example](https://github.com/docbrain-ai/docbrain/tree/main/examples/style)
 for a complete `.docbrain/style.md` you can copy.
 
 #### Registering a source

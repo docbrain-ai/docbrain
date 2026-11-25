@@ -92,10 +92,23 @@ CA certificate file named by `sslrootcert`. The machine's own trust store is not
 comes from your provider's own CA, set `sslrootcert` to that CA's PEM file, e.g.
 `postgres://user:pass@db.example.internal:5432/docbrain?sslmode=verify-full&sslrootcert=/etc/docbrain/db-ca.pem`.
 
-**Upgrading to 1.6.7.** The built-in root list follows Mozilla's root store, which has dropped 28 roots: it goes from
-136 roots to 112. Among those dropped are DigiCert Global Root CA, DigiCert Assured ID Root CA, DigiCert High
-Assurance EV Root CA, DigiCert Trusted Root G4, GTS Root R2, COMODO Certification Authority, QuoVadis Root CA 2 and 3
-(and 1 G3 and 3 G3), every Buypass, Trustwave and Certigna root, and three emSign roots. If you use `verify-ca` or `verify-full` without `sslrootcert`, and your
+**Upgrading to 1.6.7.** The built-in root list follows Mozilla's root store, which has dropped 28 roots and added 4:
+it goes from 136 roots to 112. The 28 dropped, by the name on the root:
+
+- DigiCert Global Root CA, DigiCert Assured ID Root CA, DigiCert High Assurance EV Root CA and DigiCert Trusted Root G4;
+- GTS Root R2;
+- COMODO Certification Authority;
+- QuoVadis Root CA 2, QuoVadis Root CA 3, QuoVadis Root CA 1 G3 and QuoVadis Root CA 3 G3;
+- Buypass Class 2 Root CA and Buypass Class 3 Root CA;
+- Trustwave Global Certification Authority, Trustwave Global ECC P256 Certification Authority and Trustwave Global
+  ECC P384 Certification Authority;
+- Certigna and Certigna Root CA;
+- emSign Root CA - C1, emSign ECC Root CA - C3 and emSign ECC Root CA - G3;
+- SecureTrust CA and Secure Global CA;
+- Atos TrustedRoot 2011, certSIGN ROOT CA, FIRMAPROFESIONAL CA ROOT-A WEB, SecureSign Root CA12,
+  SwissSign Gold CA - G2 and TeliaSonera Root CA v1.
+
+If you use `verify-ca` or `verify-full` without `sslrootcert`, and your
 database's certificate chains to one of those roots, the server cannot open its database connections after the
 upgrade and stops at start with a certificate error. Set `sslrootcert` to your provider's CA bundle before you
 upgrade. `prefer` and `require` are not affected.

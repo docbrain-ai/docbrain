@@ -15,8 +15,8 @@ Deploy DocBrain to Kubernetes using the included Helm chart.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/docbrain-ai/docbrain-public.git
-cd docbrain-public
+git clone https://github.com/docbrain-ai/docbrain.git
+cd docbrain
 ```
 
 The chart is in `helm/docbrain/`. You don't need a Helm repository — install directly from the local path.
@@ -526,12 +526,14 @@ helm install docbrain ./helm/docbrain \
 ## Upgrade
 
 Back up the database first: going back to the older version may need it ([Roll back](#roll-back)). With the chart's
-PostgreSQL and a release named `docbrain`:
+PostgreSQL and a release named `docbrain`, run this in the clone you installed from ([Helm Install](#helm-install),
+step 1). `git pull` brings the new release's chart, and the chart in `./helm/docbrain` decides which version runs:
 
 ```bash
 # The upgrade runs only when the backup worked and is not empty. Each run writes a new file named for the time it
 # started, so running it again after a failed attempt never replaces the backup from before the first one.
-f=docbrain-before-upgrade-$(date +%Y%m%d-%H%M%S).dump &&
+git pull &&
+  f=docbrain-before-upgrade-$(date +%Y%m%d-%H%M%S).dump &&
   kubectl exec docbrain-postgres-0 -- pg_dump -U docbrain -d docbrain -Fc > "$f" &&
   test -s "$f" &&
   helm upgrade docbrain ./helm/docbrain -f my-values.yaml
