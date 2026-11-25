@@ -554,8 +554,8 @@ take the new chart's defaults and keep your own settings).
 The server restarts automatically when a setting it reads changes: the chart's settings ConfigMap, its Secret, or
 its `local.yaml` (`ingest.sources`, `freshness.exclusionRules`, `freshness.eventBasedSpaces`), through checksum
 annotations on its pod template. PostgreSQL, OpenSearch, Redis and the web console read none of these, so a
-settings change does not restart them; the upgrade to the chart version that took those annotations off restarts
-them once. A Secret you supply with `existingSecret` is not the chart's to watch: after changing it, run
+settings change does not restart them; the upgrade to 1.6.7, the chart version that took those annotations off,
+restarts PostgreSQL, OpenSearch and the web console once (Redis never carried one). A Secret you supply with `existingSecret` is not the chart's to watch: after changing it, run
 `kubectl rollout restart deployment/<fullname>-server` (`<fullname>` as above).
 
 ### Roll back
