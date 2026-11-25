@@ -439,6 +439,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Config File Location">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-localyaml-comes-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where local.yaml comes from
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -452,6 +469,17 @@
   
     <nav class="md-nav" aria-label="Infrastructure">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database-tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database TLS
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#the-fingerprint-key" class="md-nav__link">
@@ -2606,6 +2634,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Config File Location">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-localyaml-comes-from" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where local.yaml comes from
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2619,6 +2664,17 @@
   
     <nav class="md-nav" aria-label="Infrastructure">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database-tls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database TLS
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#the-fingerprint-key" class="md-nav__link">
@@ -3686,9 +3742,22 @@
 <ol>
 <li><code>{DOCBRAIN_CONFIG_DIR}/default.yaml</code> — committed base defaults</li>
 <li><code>{DOCBRAIN_CONFIG_DIR}/{APP_ENV}.yaml</code> — environment overrides (<code>APP_ENV=development|production</code>)</li>
-<li><code>{DOCBRAIN_CONFIG_DIR}/local.yaml</code> — gitignored developer overrides (optional)</li>
+<li><code>{DOCBRAIN_CONFIG_DIR}/local.yaml</code> — your settings: sources and anything else only YAML can hold (gitignored; see
+   <a href="#where-localyaml-comes-from">Where local.yaml comes from</a>)</li>
 <li><strong>Environment variables</strong> — always win; all existing env var names work unchanged</li>
 </ol>
+<p>Config-file keys are snake_case, as in <code>config/default.yaml</code>. A key no setting reads is not used, and it is not
+silent: each time DocBrain loads its files (at start, at each ingest run, <code>docbrain-ingest --dry-run</code> included, and
+when an admin reloads the configuration) it logs one warning per such key, names the setting it most likely meant,
+and goes on. Keys are read without case, so the warning prints them in lower case:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>config key rbac.defaultrole is not a setting DocBrain reads, and is ignored (keys are read without case; did you mean rbac.default_role?)
+</span></code></pre></div>
+<p>A config file that exists but cannot be read is skipped with a warning too.</p>
+<p>The Helm chart's <code>values.yaml</code> names (<code>rbac.defaultRole</code>) are camelCase: they are chart values, which the chart turns
+into the environment variables on this page, not config-file keys. The exception is <code>ingest.sources</code>,
+<code>freshness.exclusionRules</code> and <code>freshness.eventBasedSpaces</code>: the chart copies what is under them as written into the
+ingest job's config file, so the keys under them are config-file keys, in snake_case (<code>pull_requests</code>, not
+<code>pullRequests</code>).</p>
 <h2 id="config-file-location">Config File Location<a class="headerlink" href="#config-file-location" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -3712,22 +3781,49 @@
 </tbody>
 </table>
 <p>The server also accepts <code>--config-dir &lt;path&gt;</code> as a CLI argument (takes precedence over <code>DOCBRAIN_CONFIG_DIR</code>).</p>
+<h3 id="where-localyaml-comes-from">Where local.yaml comes from<a class="headerlink" href="#where-localyaml-comes-from" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Install</th>
+<th>The file</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker Compose</td>
+<td><code>config/local.yaml</code> in the folder you cloned, bind-mounted read-only at <code>/app/config/local.yaml</code>. It must exist before the first <code>docker compose up</code> (<code>scripts/setup.sh</code> writes it; <code>touch config/local.yaml</code> makes an empty one), and <code>up</code> stops with an error naming it when it is missing. Restart <code>server</code> and <code>ingest</code> after an edit.</td>
+<td>the server and the ingest</td>
+</tr>
+<tr>
+<td>Helm</td>
+<td>Rendered by the chart from <code>ingest.sources</code>, <code>freshness.exclusionRules</code> and <code>freshness.eventBasedSpaces</code> into the <code>&lt;fullname&gt;-sources</code> ConfigMap (<code>docbrain-sources</code> for a release named <code>docbrain</code>), mounted at <code>/app/config/local.yaml</code> whenever one of them is set. <code>helm upgrade</code> restarts the server when it changes.</td>
+<td>the server and the ingest job</td>
+</tr>
+<tr>
+<td>Binary</td>
+<td><code>{DOCBRAIN_CONFIG_DIR}/local.yaml</code>, <code>config/local.yaml</code> under the working directory by default. Optional.</td>
+<td>the process you start</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Deployment examples:</strong>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Every start needs a fingerprint key: DOCBRAIN_FINGERPRINT_KEY, or a file named by</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># DOCBRAIN_FINGERPRINT_KEY_FILE. Compose and Helm generate one; elsewhere generate it once with</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1"># `openssl rand -base64 32`, keep it in .env or your secret store, and never change it casually.</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Bare metal — default (uses ./config/)</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>./docbrain-server
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Docker with mounted config dir</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>docker<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>DOCBRAIN_FINGERPRINT_KEY<span class="w"> </span>-e<span class="w"> </span><span class="nv">DOCBRAIN_CONFIG_DIR</span><span class="o">=</span>/etc/docbrain<span class="w"> </span>-v<span class="w"> </span>/host/config:/etc/docbrain<span class="w"> </span>docbrain-server
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Kubernetes ConfigMap</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Mount ConfigMap at /etc/docbrain and set DOCBRAIN_CONFIG_DIR=/etc/docbrain</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Custom path via CLI arg</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>./docbrain-server<span class="w"> </span>--config-dir<span class="w"> </span>/opt/myapp/docbrain-config
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Every start needs a fingerprint key: DOCBRAIN_FINGERPRINT_KEY, or a file named by</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># DOCBRAIN_FINGERPRINT_KEY_FILE. Compose and Helm generate one; elsewhere generate it once with</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># `openssl rand -base64 32`, keep it in .env or your secret store, and never change it casually.</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Bare metal — default (uses ./config/)</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>./docbrain-server
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1"># Docker with mounted config dir</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>docker<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span>DOCBRAIN_FINGERPRINT_KEY<span class="w"> </span>-e<span class="w"> </span><span class="nv">DOCBRAIN_CONFIG_DIR</span><span class="o">=</span>/etc/docbrain<span class="w"> </span>-v<span class="w"> </span>/host/config:/etc/docbrain<span class="w"> </span>docbrain-server
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Kubernetes ConfigMap</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># Mount ConfigMap at /etc/docbrain and set DOCBRAIN_CONFIG_DIR=/etc/docbrain</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Custom path via CLI arg</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>./docbrain-server<span class="w"> </span>--config-dir<span class="w"> </span>/opt/myapp/docbrain-config
 </span></code></pre></div></p>
 <h2 id="infrastructure">Infrastructure<a class="headerlink" href="#infrastructure" title="Permanent link">&para;</a></h2>
 <table>
@@ -3796,6 +3892,46 @@
 </tr>
 </tbody>
 </table>
+<h3 id="database-tls">Database TLS<a class="headerlink" href="#database-tls" title="Permanent link">&para;</a></h3>
+<p>TLS to PostgreSQL is set in <code>DATABASE_URL</code> with <code>sslmode</code> and <code>sslrootcert</code>
+(<code>PGSSLMODE</code> and <code>PGSSLROOTCERT</code> are read too; the URL wins):</p>
+<table>
+<thead>
+<tr>
+<th><code>sslmode</code></th>
+<th>What the server does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prefer</code> (the default)</td>
+<td>Uses TLS when the database offers it, without checking its certificate.</td>
+</tr>
+<tr>
+<td><code>require</code></td>
+<td>Refuses a database without TLS; does not check the certificate.</td>
+</tr>
+<tr>
+<td><code>verify-ca</code></td>
+<td>Also checks that the certificate chains to a trusted root. In 1.6.7 it also checks the host name, as <code>verify-full</code> does (#946).</td>
+</tr>
+<tr>
+<td><code>verify-full</code></td>
+<td>Also checks that the certificate names the host in the URL.</td>
+</tr>
+</tbody>
+</table>
+<p>For <code>verify-ca</code> and <code>verify-full</code>, the trusted roots are a list built into DocBrain (Mozilla's root store), plus the
+CA certificate file named by <code>sslrootcert</code>. The machine's own trust store is not used. If your database's certificate
+comes from your provider's own CA, set <code>sslrootcert</code> to that CA's PEM file, e.g.
+<code>postgres://user:pass@db.example.internal:5432/docbrain?sslmode=verify-full&amp;sslrootcert=/etc/docbrain/db-ca.pem</code>.</p>
+<p><strong>Upgrading to 1.6.7.</strong> The built-in root list follows Mozilla's root store, which has dropped 28 roots: it goes from
+136 roots to 112. Among those dropped are DigiCert Global Root CA, DigiCert Assured ID Root CA, DigiCert High
+Assurance EV Root CA, DigiCert Trusted Root G4, GTS Root R2, COMODO Certification Authority, QuoVadis Root CA 2 and 3
+(and 1 G3 and 3 G3), every Buypass, Trustwave and Certigna root, and three emSign roots. If you use <code>verify-ca</code> or <code>verify-full</code> without <code>sslrootcert</code>, and your
+database's certificate chains to one of those roots, the server cannot open its database connections after the
+upgrade and stops at start with a certificate error. Set <code>sslrootcert</code> to your provider's CA bundle before you
+upgrade. <code>prefer</code> and <code>require</code> are not affected.</p>
 <h3 id="the-fingerprint-key">The fingerprint key<a class="headerlink" href="#the-fingerprint-key" title="Permanent link">&para;</a></h3>
 <p>DocBrain checks every capture for secrets (see
 <a href="../agents/#what-a-capture-never-holds">What a capture never holds</a>), and it has to remember what it found without
@@ -3825,7 +3961,7 @@ fingerprint cannot be, without the key. That is also why the key is never stored
 <tr>
 <td>Helm</td>
 <td>Generated on first install (32 random bytes, base64) and looked up on every upgrade and reinstall, so it is never rotated (a rollback reapplies a stored manifest that carries the same value).</td>
-<td>Its own Secret, <code>docbrain-fingerprint-key</code> for a release named <code>docbrain</code> (<code>&lt;release&gt;-docbrain-fingerprint-key</code> otherwise), key <code>DOCBRAIN_FINGERPRINT_KEY</code>, annotated <code>helm.sh/resource-policy: keep</code>: <code>helm uninstall</code> leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept.</td>
+<td>Its own Secret, <code>docbrain-fingerprint-key</code> for a release named <code>docbrain</code> (otherwise <code>&lt;fullname&gt;-fingerprint-key</code>, where <code>&lt;fullname&gt;</code> is the release name when it contains <code>docbrain</code> and <code>&lt;release&gt;-docbrain</code> when it does not), key <code>DOCBRAIN_FINGERPRINT_KEY</code>, annotated <code>helm.sh/resource-policy: keep</code>: <code>helm uninstall</code> leaves it in place. Delete it by hand only to start fresh (findings reopen). The other credentials stay in the main Secret, which is not kept.</td>
 </tr>
 <tr>
 <td>Anything else (bare metal, your own manifests)</td>
@@ -3840,7 +3976,7 @@ fingerprintKey=...</code> from your secret store, or <code>fingerprintKeySecret.
 <p><strong>Supplying your own.</strong> Set <code>DOCBRAIN_FINGERPRINT_KEY</code> (in <code>.env</code> for Compose, <code>fingerprintKey</code>, or
 <code>fingerprintKeySecret.existingSecret</code> + <code>fingerprintKeySecret.key</code> for Helm), or point <code>DOCBRAIN_FINGERPRINT_KEY_FILE</code> at a file holding it. At least 32 random bytes, as 64+ hex
 characters (an optional <code>0x</code> prefix) or standard base64:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="w">     </span><span class="c1"># or: openssl rand -hex 32</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-base64<span class="w"> </span><span class="m">32</span><span class="w">     </span><span class="c1"># or: openssl rand -hex 32</span>
 </span></code></pre></div>
 <p>When both are set, <code>DOCBRAIN_FINGERPRINT_KEY</code> wins and the file is not read. A value set but invalid (including one
 that is not valid UTF-8) is refused; it never falls back to the file.</p>
@@ -3852,7 +3988,7 @@ Secrets in the release namespace, readable by whoever can read Secrets there. To
 records, create the Secret yourself and set <code>fingerprintKeySecret.existingSecret</code>.</p>
 <p><strong>Required at boot.</strong> When neither yields a valid key the server prints the refusal (to standard error, and as an
 error line in its log) and exits with status 1, before it opens the database:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>DOCBRAIN_FINGERPRINT_KEY is not set (nor DOCBRAIN_FINGERPRINT_KEY_FILE): the server needs it to fingerprint secret findings; expected at least 64 hex characters (`openssl rand -hex 32`) or standard base64 of at least 32 bytes (`openssl rand -base64 32`), generated at random, never typed
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>DOCBRAIN_FINGERPRINT_KEY is not set (nor DOCBRAIN_FINGERPRINT_KEY_FILE): the server needs it to fingerprint secret findings; expected at least 64 hex characters (`openssl rand -hex 32`) or standard base64 of at least 32 bytes (`openssl rand -base64 32`), generated at random, never typed
 </span></code></pre></div>
 <p>A value or file that is too short, not hex or standard base64 (URL-safe base64 and missing padding are refused),
 or that looks typed rather than generated (too few distinct characters, a repeated pattern, a placeholder) is
@@ -3895,7 +4031,7 @@ of one deployment must use the same key.</p>
 <tr>
 <td><code>LLM_MODEL_ID</code></td>
 <td>All</td>
-<td>Model identifier (e.g. <code>claude-sonnet-5-5</code>, <code>gpt-4o</code>). Defaults to a provider-appropriate model if not set.</td>
+<td>Model identifier (e.g. <code>claude-sonnet-5-5</code>, <code>gpt-4o</code>). Defaults to a provider-appropriate model if not set. On <code>bedrock</code> the default is <code>us.anthropic.claude-sonnet-5-5</code>, Claude Sonnet 5.5 through its US inference profile: outside the US, name your geography's profile.</td>
 </tr>
 <tr>
 <td><code>LLM_TIMEOUT_SECS</code></td>
@@ -3938,7 +4074,7 @@ of one deployment must use the same key.</p>
 | <code>INGEST_LLM_MODEL_ID</code> | All | Model used <strong>during ingest only</strong> for image extraction. Falls back to <code>LLM_MODEL_ID</code> if not set. <strong>Use a cheaper model here</strong> — image extraction fires for every page with images and does not benefit from a powerful model. Example: use <code>LLM_MODEL_ID=claude-opus-5-5</code> for Q&amp;A and <code>INGEST_LLM_MODEL_ID=claude-haiku-5-5</code> for ingest. Not setting this when using an Opus model with thinking will cause throttling errors during ingest. |
 | <code>DRAFT_MODEL_ID</code> | All | Model used for <strong>autopilot draft generation</strong> (two-phase reasoning + writing). Falls back to <code>LLM_MODEL_ID</code> if not set. Use a high-capability model here — drafts benefit from stronger reasoning. Example: <code>claude-opus-5-5</code> or <code>gpt-4o</code>. |
 | <code>DRAFT_LLM_PROVIDER</code> | All | Provider for draft generation. Falls back to <code>LLM_PROVIDER</code> if not set. Allows cross-provider drafting — e.g. use Gemini Flash for Q&amp;A but Anthropic Claude for drafts. When set, DocBrain creates a separate LLM client for draft generation. |
-| <code>LLM_THINKING_BUDGET</code> | anthropic/bedrock | Turns on deep thinking for the primary <code>LLM_MODEL_ID</code> — never for a <code>FAST_MODEL_ID</code> that names another model, or for <code>INGEST_LLM_MODEL_ID</code> — and sets aside this many tokens for it (on top of the reply). <code>0</code> or unset = off. Models that take a thinking budget (Claude 4.6 and earlier, Haiku 4.5) get this budget; on the <code>anthropic</code> provider a value below 1,024, the smallest budget the API accepts, is sent as 1,024. Current models (Claude Opus 4.7 and later, the 5 generation, Fable, Mythos 5) reject a budget, so they are sent adaptive thinking at <code>DOCBRAIN_LLM_EFFORT</code> instead; the <code>anthropic</code> provider gives them this many tokens of room for it, and never fewer than 16,384. On the <code>anthropic</code> provider a request never asks for more output than the model gives, where the API reference states that limit (128,000 tokens on current models and on Opus 4.6 and Sonnet 4.6, 64,000 on Haiku 4.5): room or a budget that does not fit under it beside the reply is cut to what fits. |
+| <code>LLM_THINKING_BUDGET</code> | anthropic/bedrock | Turns on deep thinking for the primary <code>LLM_MODEL_ID</code> — never for a <code>FAST_MODEL_ID</code> that names another model, or for <code>INGEST_LLM_MODEL_ID</code> — and sets aside this many tokens for it (on top of the reply). <code>0</code> or unset = off. Models that take a thinking budget (Claude 4.6 and earlier, Haiku 4.5) get this budget; on the <code>anthropic</code> and <code>bedrock</code> providers a value below 1,024, the smallest budget the API accepts, is sent as 1,024. Current models (Claude Opus 4.7 and later, the 5 generation, Fable, Mythos 5) reject a budget, so they are sent adaptive thinking at <code>DOCBRAIN_LLM_EFFORT</code> instead; the <code>anthropic</code> and <code>bedrock</code> providers give them this many tokens of room for it, and never fewer than 16,384. On the <code>anthropic</code> and <code>bedrock</code> providers a request never asks for more output than the model gives, where the API reference states that limit (128,000 tokens on current models and on Opus 4.6 and Sonnet 4.6, 64,000 on Haiku 4.5), and never more than 64,000 for a model id DocBrain does not recognise: room or a budget that does not fit under it beside the reply is cut to what fits. |
 | <code>OPENAI_BASE_URL</code> | openai | Base URL of an OpenAI-compatible endpoint to use in place of OpenAI's own, for a proxy such as LiteLLM, vLLM or LocalAI. Unset (the default) calls OpenAI. |
 | <code>GROQ_API_KEY</code> | groq | Your Groq API key. Unset (the default) sends an empty key, so every call fails until it is set. |
 | <code>OPENROUTER_API_KEY</code> | openrouter | Your OpenRouter API key. Unset (the default) sends an empty key, so every call fails until it is set. |
@@ -3948,9 +4084,9 @@ of one deployment must use the same key.</p>
 | <code>XAI_API_KEY</code> | xai | Your xAI API key. Unset (the default) sends an empty key, so every call fails until it is set. |
 | <code>GEMINI_API_KEY</code> | gemini | Your Google Gemini API key. Unset (the default) sends an empty key, so every call fails until it is set. |
 | <code>HAIKU_MODEL_ID</code> | All | Deprecated name for <code>FAST_MODEL_ID</code>. The server and ingest read settings through the config loader, where both names write the same setting and <code>HAIKU_MODEL_ID</code> is applied after <code>FAST_MODEL_ID</code>, so when both are set <code>HAIKU_MODEL_ID</code> wins. Only code that builds the client straight from the environment reads <code>FAST_MODEL_ID</code> first and uses this name only when it is unset. |
-| <code>DOCBRAIN_LLM_EFFORT</code> | anthropic/bedrock | How hard current Claude models reason on deep-thinking calls: <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code> or <code>max</code>. Unset, or a value that is not one of those (which logs a warning), uses <code>high</code>. It applies only when <code>LLM_THINKING_BUDGET</code> is set, only to calls for the primary model, and only on models that take an effort (Claude Opus 4.7 and later, the 5 generation, Fable, Mythos 5); models that take a thinking budget ignore it. The higher settings add latency. At <code>xhigh</code> or <code>max</code> a model thinks for much longer, and its thinking counts against the same output limit as the reply: on the <code>anthropic</code> provider, raise <code>LLM_THINKING_BUDGET</code> to give it room (an answer's limit is 16,000 tokens plus the budget, or plus 16,384 when the budget is smaller than that, and never more than the model's output limit of 128,000; the API reference suggests 64,000 as a start for those two levels). |
+| <code>DOCBRAIN_LLM_EFFORT</code> | anthropic/bedrock | How hard current Claude models reason on deep-thinking calls: <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code> or <code>max</code>. Unset, or a value that is not one of those (which logs a warning), uses <code>high</code>. It applies only when <code>LLM_THINKING_BUDGET</code> is set, only to calls for the primary model, and only on models that take an effort (Claude Opus 4.7 and later, the 5 generation, Fable, Mythos 5); models that take a thinking budget ignore it. The higher settings add latency. At <code>xhigh</code> or <code>max</code> a model thinks for much longer, and its thinking counts against the same output limit as the reply: on the <code>anthropic</code> and <code>bedrock</code> providers, raise <code>LLM_THINKING_BUDGET</code> to give it room (an answer's limit is 16,000 tokens plus the budget, or plus 16,384 when the budget is smaller than that, and never more than the model's output limit of 128,000; the API reference suggests 64,000 as a start for those two levels). |
 | <code>OLLAMA_VISION_ENABLED</code> | ollama | Set <code>false</code> or <code>0</code> to stop sending images to Ollama for description. Anything else, or unset, leaves vision on (the default is on). |</p>
-<p><strong>Models that think by default</strong> (Claude Opus 5.5, Sonnet 5.5, Opus 5, Sonnet 5, Haiku 5.5, Fable, Mythos 5): their thinking counts against each call's output limit. On the <code>anthropic</code> provider, DocBrain adds room for it to every call: 4,096 tokens on side calls, which also ask for <code>low</code> effort, and 16,384 on every other call, which runs at the model's own effort unless <code>LLM_THINKING_BUDGET</code> is set. It treats a model id it does not recognise as one of these models. Side calls include the calls for <code>FAST_MODEL_ID</code> (when it names a model other than <code>LLM_MODEL_ID</code>), the retrieval judge, the sufficiency critic, topic labelling, intent classification, query rewriting and decomposition, and image descriptions. The secret check on a capture is not a side call; it is asked at the model's own effort, as before, whether or not <code>LLM_THINKING_BUDGET</code> is set, and gets the same room to think as an ordinary call, whichever model answers it. What makes a call a side call is the work, not the model: a model named for the work itself, such as <code>DRAFT_MODEL_ID</code>, does that work at its own effort unless it is also the <code>FAST_MODEL_ID</code>, and the short utility calls made with it (the drafter turning each section into a search query) are side calls whichever model it is. Set <code>FAST_MODEL_ID</code> to a model other than <code>LLM_MODEL_ID</code>: without it, or set to the same model, the background calls that would use it (gap labelling, freshness checks) are ordinary calls for the primary model, deep thinking included. A reply that runs out of room before any text, or that the model declines, is reported as that (<code>stopped (max_tokens)</code> / <code>declined the request</code>) instead of as an empty reply. With these models, give calls time to think: on the <code>anthropic</code> provider <code>LLM_TIMEOUT_SECS</code> is the limit for a whole call, a streamed answer included, so raise it if answers, drafts or long side calls time out.</p>
+<p><strong>Models that think by default</strong> (Claude Opus 5.5, Sonnet 5.5, Opus 5, Sonnet 5, Haiku 5.5, Fable, Mythos 5): their thinking counts against each call's output limit. On the <code>anthropic</code> and <code>bedrock</code> providers, DocBrain adds room for it to every call: 4,096 tokens on side calls, which also ask for <code>low</code> effort, and 16,384 on every other call, which runs at the model's own effort unless <code>LLM_THINKING_BUDGET</code> is set. It treats a model id it does not recognise (a gateway's alias, an application inference profile's ARN) as one of these models, except that its side calls ask for no effort, since some models behind such an id take none, and it asks for at most 64,000 tokens of output, the least a current model gives. When the model behind such an id refuses a request with a 400, the call is sent once more with the reply's room alone, no thinking and no effort; if that succeeds, the id is sent that way until restart, with one warning that names it and says <code>DOCBRAIN_LLM_EFFORT</code> and <code>LLM_THINKING_BUDGET</code> no longer reach it. Side calls include the calls for <code>FAST_MODEL_ID</code> (when it names a model other than <code>LLM_MODEL_ID</code>), the retrieval judge, the sufficiency critic, topic labelling, intent classification, query rewriting and decomposition, and image descriptions. The secret check on a capture is not a side call; it is asked at the model's own effort, as before, whether or not <code>LLM_THINKING_BUDGET</code> is set, and gets the same room to think as an ordinary call, whichever model answers it. What makes a call a side call is the work, not the model: a model named for the work itself, such as <code>DRAFT_MODEL_ID</code>, does that work at its own effort unless it is also the <code>FAST_MODEL_ID</code>, and the short utility calls made with it (the drafter turning each section into a search query) are side calls whichever model it is. Set <code>FAST_MODEL_ID</code> to a model other than <code>LLM_MODEL_ID</code>: without it, or set to the same model, the background calls that would use it (gap labelling, freshness checks) are ordinary calls for the primary model, deep thinking included. A reply that runs out of room before any text, or that the model declines, is reported as that (<code>stopped (max_tokens)</code> / <code>declined the request</code>) instead of as an empty reply. With these models, give calls time to think: on the <code>anthropic</code> provider <code>LLM_TIMEOUT_SECS</code> is the limit for a whole call, a streamed answer included, so raise it if answers, drafts or long side calls time out.</p>
 </blockquote>
 <h3 id="openai-compatible-providers">OpenAI-compatible providers<a class="headerlink" href="#openai-compatible-providers" title="Permanent link">&para;</a></h3>
 <p>The following providers use the OpenAI Chat Completions API format. Set <code>LLM_PROVIDER</code> to the provider name and the corresponding API key:</p>
@@ -4048,10 +4184,10 @@ of one deployment must use the same key.</p>
 </tbody>
 </table>
 <p>Example:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">LLM_PROVIDER</span><span class="o">=</span>azure_openai
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">AZURE_OPENAI_API_KEY</span><span class="o">=</span>your-key
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">AZURE_OPENAI_ENDPOINT</span><span class="o">=</span>https://my-resource.openai.azure.com
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">LLM_MODEL_ID</span><span class="o">=</span>gpt-4o<span class="w">           </span><span class="c1"># your deployment name</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">LLM_PROVIDER</span><span class="o">=</span>azure_openai
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">AZURE_OPENAI_API_KEY</span><span class="o">=</span>your-key
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">AZURE_OPENAI_ENDPOINT</span><span class="o">=</span>https://my-resource.openai.azure.com
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">LLM_MODEL_ID</span><span class="o">=</span>gpt-4o<span class="w">           </span><span class="c1"># your deployment name</span>
 </span></code></pre></div></p>
 <h3 id="cohere">Cohere<a class="headerlink" href="#cohere" title="Permanent link">&para;</a></h3>
 <table>
@@ -4109,17 +4245,17 @@ of one deployment must use the same key.</p>
 3. GKE Workload Identity (attach a KSA to a GSA with <code>roles/aiplatform.user</code>)
 4. GCE metadata server (Compute Engine / Cloud Run default service account)</p>
 <p>Example:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">LLM_PROVIDER</span><span class="o">=</span>vertex_ai
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">VERTEX_PROJECT</span><span class="o">=</span>my-project-123
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">VERTEX_REGION</span><span class="o">=</span>us-central1
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">LLM_MODEL_ID</span><span class="o">=</span>google/gemini-2.5-flash
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1"># No API key needed — uses GCP credential chain</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">LLM_PROVIDER</span><span class="o">=</span>vertex_ai
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">VERTEX_PROJECT</span><span class="o">=</span>my-project-123
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nv">VERTEX_REGION</span><span class="o">=</span>us-central1
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nv">LLM_MODEL_ID</span><span class="o">=</span>google/gemini-2.5-flash
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1"># No API key needed — uses GCP credential chain</span>
 </span></code></pre></div></p>
 <p>For Kubernetes/GKE with Workload Identity:
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">serviceAccount</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">iam.gke.io/workload-identity-pool</span><span class="p">:</span><span class="w"> </span><span class="s">"my-project-123.svc.id.goog"</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">iam.gke.io/service-account</span><span class="p">:</span><span class="w"> </span><span class="s">"docbrain@my-project-123.iam.gserviceaccount.com"</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">serviceAccount</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">annotations</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">iam.gke.io/workload-identity-pool</span><span class="p">:</span><span class="w"> </span><span class="s">"my-project-123.svc.id.goog"</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nt">iam.gke.io/service-account</span><span class="p">:</span><span class="w"> </span><span class="s">"docbrain@my-project-123.iam.gserviceaccount.com"</span>
 </span></code></pre></div></p>
 <blockquote>
 <p><strong>Note:</strong> Vertex AI support requires the <code>vertex</code> feature flag. The Docker image and Helm chart include this feature by default.</p>
@@ -4149,7 +4285,7 @@ of one deployment must use the same key.</p>
 </table>
 <h3 id="switching-embedding-models">Switching Embedding Models<a class="headerlink" href="#switching-embedding-models" title="Permanent link">&para;</a></h3>
 <p>When you change <code>EMBED_PROVIDER</code> or <code>EMBED_MODEL_ID</code> to a model with different vector dimensions (e.g. Bedrock Cohere/1024 → Ollama nomic-embed-text/768), the server will <strong>refuse to start</strong> with a clear error:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Embedding dimension mismatch on index 'docbrain-chunks': existing=1024, required=768.
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Embedding dimension mismatch on index 'docbrain-chunks': existing=1024, required=768.
 </span></code></pre></div>
 <p>To migrate:</p>
 <ol>
@@ -4323,14 +4459,14 @@ instead — see <a href="../ingestion/">Ingestion</a> and the quickstart.</p>
 </blockquote>
 <p>Resource lists (spaces, repos, projects, channels) are always explicit; an empty
 list is a startup error, never "ingest everything the token can see".</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">sources</span><span class="p">:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">local</span><span class="p">:</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/docs</span><span class="w">        </span><span class="c1"># or set LOCAL_DOCS_PATH</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">confluence</span><span class="p">:</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://your-org.atlassian.net/wiki</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="nt">user_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${CONFLUENCE_USER_EMAIL}</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${CONFLUENCE_API_TOKEN}</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nt">space_keys</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">DOCS</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">ENG</span><span class="p p-Indicator">]</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">sources</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">local</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/path/to/docs</span><span class="w">        </span><span class="c1"># or set LOCAL_DOCS_PATH</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">confluence</span><span class="p">:</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://your-org.atlassian.net/wiki</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nt">user_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${CONFLUENCE_USER_EMAIL}</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${CONFLUENCE_API_TOKEN}</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">space_keys</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">DOCS</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">ENG</span><span class="p p-Indicator">]</span>
 </span></code></pre></div>
 <p>The scalar credentials below are still read from the environment; only the
 source selection and the resource lists moved to YAML.</p>
@@ -4637,16 +4773,16 @@ This captures the architectural "why" that lives in code review threads.</p>
 <ol>
 <li>
 <p>Generate a webhook secret:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p>Set environment variables:
-   <div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>GITLAB_CAPTURE_WEBHOOK_SECRET=your-webhook-secret
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>GITLAB_CAPTURE_TOKEN=glpat-...         # Personal access token with api scope
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>GITLAB_CAPTURE_BASE_URL=https://gitlab.com   # Default; set for self-hosted instances
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>GITLAB_CAPTURE_ALLOWED_USERS=alice,bob       # Optional — empty = all users
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>GITLAB_CAPTURE_ALLOWED_PROJECTS=myorg/myrepo # Optional — empty = all projects
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>GITLAB_CAPTURE_WEBHOOK_SECRET=your-webhook-secret
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>GITLAB_CAPTURE_TOKEN=glpat-...         # Personal access token with api scope
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>GITLAB_CAPTURE_BASE_URL=https://gitlab.com   # Default; set for self-hosted instances
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>GITLAB_CAPTURE_ALLOWED_USERS=alice,bob       # Optional — empty = all users
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>GITLAB_CAPTURE_ALLOWED_PROJECTS=myorg/myrepo # Optional — empty = all projects
 </span></code></pre></div></p>
 </li>
 <li>
@@ -4785,11 +4921,11 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tbody>
 </table>
 <p><strong><code>config/local.yaml</code> example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">pagerduty</span><span class="p">:</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">u+XXXXXXXX</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">min_duration_minutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="c1"># services: SVC001,SVC002   # optional service filter</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">pagerduty</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">u+XXXXXXXX</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">min_duration_minutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="c1"># services: SVC001,SVC002   # optional service filter</span>
 </span></code></pre></div></p>
 <p><strong>Notes:</strong>
 - Machine log entries (webhook deliveries, reach_trigger) are filtered — only human actions are indexed.
@@ -4831,11 +4967,11 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tbody>
 </table>
 <p><strong><code>config/local.yaml</code> example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">opsgenie</span><span class="p">:</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">min_duration_minutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="c1"># teams: platform,payments   # optional team filter</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">opsgenie</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">api_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">min_duration_minutes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="c1"># teams: platform,payments   # optional team filter</span>
 </span></code></pre></div></p>
 <p><strong>Notes:</strong>
 - Priority P1–P5 is normalized to <code>critical/high/medium/low/informational</code> in metadata.
@@ -4881,12 +5017,12 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tbody>
 </table>
 <p><strong><code>config/local.yaml</code> example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">zendesk</span><span class="p">:</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">subdomain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acme</span>
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">support-bot@acme.com</span>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-zendesk-api-token</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
-</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span><span class="c1"># min_rating: good   # optional — only "good" satisfaction tickets</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">zendesk</span><span class="p">:</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">subdomain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">acme</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">support-bot@acme.com</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">api_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-zendesk-api-token</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="c1"># min_rating: good   # optional — only "good" satisfaction tickets</span>
 </span></code></pre></div></p>
 <p><strong>Notes:</strong>
 - Uses Zendesk Search API with <code>type:ticket+status:solved+created&gt;DATE</code> query.
@@ -4930,11 +5066,11 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tbody>
 </table>
 <p><strong><code>config/local.yaml</code> example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">intercom</span><span class="p">:</span>
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">access_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dG9rOjxxxxxxxxxxxxxxxx</span>
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">min_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span><span class="c1"># tags: billing,enterprise   # optional tag filter</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">intercom</span><span class="p">:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">access_token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dG9rOjxxxxxxxxxxxxxxxx</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">365</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nt">min_messages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span><span class="c1"># tags: billing,enterprise   # optional tag filter</span>
 </span></code></pre></div></p>
 <p><strong>Notes:</strong>
 - Uses Intercom Conversations API with cursor pagination (<code>starting_after</code>).
@@ -5007,16 +5143,16 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tbody>
 </table>
 <p><strong><code>config/local.yaml</code> example:</strong>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">ms_teams</span><span class="p">:</span>
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">tenant_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span>
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span>
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">  </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-client-secret</span>
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">  </span><span class="nt">teams</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Engineering,Platform</span>
-</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span><span class="nt">include_chats</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span><span class="nt">include_files</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">  </span><span class="nt">include_transcripts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">  </span><span class="nt">min_replies</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">ms_teams</span><span class="p">:</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">tenant_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">client_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">client_secret</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-client-secret</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nt">teams</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Engineering,Platform</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nt">lookback_days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">  </span><span class="nt">include_chats</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span><span class="nt">include_files</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">  </span><span class="nt">include_transcripts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">  </span><span class="nt">min_replies</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
 </span></code></pre></div></p>
 <p><strong>Prerequisites:</strong></p>
 <ol>
@@ -5627,8 +5763,8 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tr>
 <tr>
 <td><code>DOCBRAIN_GENERATE_HOLLOW_RATIO_PCT</code></td>
-<td><code>50</code></td>
-<td>The density threshold for the hollow-doc guard (DELTA #9). The guard refuses with <strong><code>422</code></strong> ONLY when a draft has <strong>no inline seed, no High-tier authoritative grounding, and no Low-tier live grounding either</strong>, AND at least this percent of its <code>##</code> sections are unanswered <code>NEEDS INPUT:</code> placeholders. A no-seed/no-High draft that <strong>does</strong> have live/Low grounding ships as <strong>unverified</strong> (flagged + barred from auto-publish) rather than refusing. The guard applies to <strong>short docs too</strong> (the old <code>…_MIN_SECTIONS</code> floor was removed; the only floor left is <code>section_count &gt; 0</code>). <code>50</code> = "at least half the document is placeholders". Tunable <code>0</code>–<code>100</code>.</td>
+<td><code>60</code></td>
+<td>The density threshold for the hollow-doc guard (DELTA #9). The guard refuses with <strong><code>422</code></strong> ONLY when a draft has <strong>no inline seed, no High-tier authoritative grounding, and no Low-tier live grounding either</strong>, AND at least this percent of its <code>##</code> sections are unanswered <code>NEEDS INPUT:</code> placeholders. A no-seed/no-High draft that <strong>does</strong> have live/Low grounding ships as <strong>unverified</strong> (flagged + barred from auto-publish) rather than refusing. The guard applies to <strong>short docs too</strong> (the old <code>…_MIN_SECTIONS</code> floor was removed; the only floor left is <code>section_count &gt; 0</code>). <code>60</code> = "at least 60% of the document's sections are placeholders". Tunable <code>0</code>–<code>100</code>.</td>
 </tr>
 <tr>
 <td><code>DOCBRAIN_RECONCILE_ENABLED</code></td>
@@ -6131,11 +6267,11 @@ This captures the architectural "why" that lives in code review threads.</p>
 5. The gap cluster is automatically marked <strong>resolved</strong>
 6. Next ingest cycle picks up the new page → loop closed</p>
 <p><strong>Configuration:</strong></p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">draft_publish</span><span class="p">:</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="s">"confluence"</span><span class="w">              </span><span class="c1"># "confluence" | "none"</span>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span><span class="nt">confluence_space_key</span><span class="p">:</span><span class="w"> </span><span class="s">"ENG"</span><span class="w">       </span><span class="c1"># Confluence space key for new pages</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span><span class="nt">confluence_parent_page_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span><span class="w">      </span><span class="c1"># Optional parent page ID</span>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span><span class="nt">auto_ingest_after_publish</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># Re-ingest after publish so DocBrain learns immediately</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">draft_publish</span><span class="p">:</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="s">"confluence"</span><span class="w">              </span><span class="c1"># "confluence" | "none"</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">confluence_space_key</span><span class="p">:</span><span class="w"> </span><span class="s">"ENG"</span><span class="w">       </span><span class="c1"># Confluence space key for new pages</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">  </span><span class="nt">confluence_parent_page_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~</span><span class="w">      </span><span class="c1"># Optional parent page ID</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">  </span><span class="nt">auto_ingest_after_publish</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">   </span><span class="c1"># Re-ingest after publish so DocBrain learns immediately</span>
 </span></code></pre></div>
 <table>
 <thead>
@@ -6239,18 +6375,18 @@ This captures the architectural "why" that lives in code review threads.</p>
 </tbody>
 </table>
 <p><strong>Confluence credentials</strong> (shared with the ingest connector):</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">CONFLUENCE_BASE_URL</span><span class="o">=</span>https://your-org.atlassian.net/wiki<span class="w">   </span><span class="c1"># Cloud</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="c1"># or</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="nv">CONFLUENCE_BASE_URL</span><span class="o">=</span>https://confluence.internal/wiki<span class="w">       </span><span class="c1"># Data Center (v1)</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="nv">CONFLUENCE_USER_EMAIL</span><span class="o">=</span>bot@your-org.com<span class="w">                     </span><span class="c1"># Cloud: email for Basic Auth</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="nv">CONFLUENCE_API_TOKEN</span><span class="o">=</span>&lt;api-token&gt;<span class="w">                           </span><span class="c1"># Cloud: API token / Data Center: PAT</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="nv">CONFLUENCE_API_VERSION</span><span class="o">=</span>v2<span class="w">                                  </span><span class="c1"># v2 (Cloud) or v1 (Data Center)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nv">CONFLUENCE_BASE_URL</span><span class="o">=</span>https://your-org.atlassian.net/wiki<span class="w">   </span><span class="c1"># Cloud</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># or</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nv">CONFLUENCE_BASE_URL</span><span class="o">=</span>https://confluence.internal/wiki<span class="w">       </span><span class="c1"># Data Center (v1)</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="nv">CONFLUENCE_USER_EMAIL</span><span class="o">=</span>bot@your-org.com<span class="w">                     </span><span class="c1"># Cloud: email for Basic Auth</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="nv">CONFLUENCE_API_TOKEN</span><span class="o">=</span>&lt;api-token&gt;<span class="w">                           </span><span class="c1"># Cloud: API token / Data Center: PAT</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="nv">CONFLUENCE_API_VERSION</span><span class="o">=</span>v2<span class="w">                                  </span><span class="c1"># v2 (Cloud) or v1 (Data Center)</span>
 </span></code></pre></div>
 <p><strong>Publish API:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>POST /api/v1/autopilot/drafts/{id}/publish   — Admin only
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>POST /api/v1/autopilot/drafts/{id}/publish   — Admin only
 </span></code></pre></div>
 Response:
-<div class="language-json highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"published"</span><span class="p">,</span><span class="w"> </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://..."</span><span class="p">,</span><span class="w"> </span><span class="nt">"page_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"123456"</span><span class="w"> </span><span class="p">}</span>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"published"</span><span class="p">,</span><span class="w"> </span><span class="nt">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://..."</span><span class="p">,</span><span class="w"> </span><span class="nt">"page_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"123456"</span><span class="w"> </span><span class="p">}</span>
 </span></code></pre></div></p>
 <h2 id="freshness-scoring">Freshness Scoring<a class="headerlink" href="#freshness-scoring" title="Permanent link">&para;</a></h2>
 <table>
@@ -6339,19 +6475,19 @@ Response:
 <p>The <strong>Freshness page</strong> in the UI shows excluded counts via "View excluded (N)" in the page header. Excluded docs don't appear in the Total / Outdated / Stale / Review / Fresh rollups — they're not noise in the freshness view.</p>
 <h4 id="quick-recipe-exclude-every-doc-tagged-retrospective-in-confluence">Quick recipe — exclude every doc tagged <code>retrospective</code> in Confluence<a class="headerlink" href="#quick-recipe-exclude-every-doc-tagged-retrospective-in-confluence" title="Permanent link">&para;</a></h4>
 <p><strong>Helm-managed deployments</strong> (recommended — no image rebuild):</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># values.yaml</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nt">freshness</span><span class="p">:</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span><span class="nt">exclusionRules</span><span class="p">:</span>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">    </span><span class="nt">archived_labels</span><span class="p">:</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">archived</span><span class="w">          </span><span class="c1"># defaults</span>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">historical</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">obsolete</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deprecated</span>
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frozen</span>
-</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reference</span>
-</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">retrospective</span><span class="w">     </span><span class="c1"># ← your addition</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># values.yaml</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nt">freshness</span><span class="p">:</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">exclusionRules</span><span class="p">:</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nt">archived_labels</span><span class="p">:</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">archived</span><span class="w">          </span><span class="c1"># defaults</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">historical</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">obsolete</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deprecated</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">frozen</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reference</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">retrospective</span><span class="w">     </span><span class="c1"># ← your addition</span>
 </span></code></pre></div>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>&lt;release&gt;<span class="w"> </span>&lt;chart&gt;<span class="w"> </span>-f<span class="w"> </span>values.yaml
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>&lt;release&gt;<span class="w"> </span>&lt;chart&gt;<span class="w"> </span>-f<span class="w"> </span>values.yaml
 </span></code></pre></div>
 <p>Then in the DocBrain UI:
 1. <strong>Freshness → Reclassify lifecycle</strong> (or <code>POST /api/v1/freshness/backfill-lifecycle</code>) — re-derives every auto-managed doc against the new rules. Existing retrospective-tagged docs become archived in seconds.
@@ -6359,10 +6495,10 @@ Response:
 <p>Future docs with the tag get caught automatically at ingest. No further action needed.</p>
 <p><strong>Direct config edits</strong> (when not using helm): edit <code>config/default.yaml</code>, restart the server pod. Same rule.</p>
 <p><strong>Per-doc override</strong> (just one specific document, not the whole tag):</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>PATCH<span class="w"> </span>https://your.docbrain.example/api/v1/documents/<span class="o">{</span>doc_id<span class="o">}</span>/lifecycle<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer </span><span class="nv">$API_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"status": "archived"}'</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>PATCH<span class="w"> </span>https://your.docbrain.example/api/v1/documents/<span class="o">{</span>doc_id<span class="o">}</span>/lifecycle<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Authorization: Bearer </span><span class="nv">$API_KEY</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"status": "archived"}'</span>
 </span></code></pre></div>
 <p>Or use the row action menu in the UI: <strong>⋯ → Mark archived</strong>. Manual overrides are sticky — they survive future syncs even if the source-system label changes back.</p>
 <h4 id="how-detection-works">How detection works<a class="headerlink" href="#how-detection-works" title="Permanent link">&para;</a></h4>
@@ -6462,7 +6598,7 @@ Use a local provider if capture text must not leave your network.</p>
 <tr>
 <td><code>CAPTURE_SECRET_CHECK_MAX_REPLY_TOKENS</code></td>
 <td><code>4096</code></td>
-<td>The reply budget, in tokens, the model check asks the provider for. Many providers refuse a larger output cap. On the <code>anthropic</code> provider, a model that thinks by default, or whose id DocBrain does not recognise, is asked for this plus 16,384 tokens of room to think, as on every ordinary call (see "Models that think by default" above); its thinking and its reply share that room. A reply cut off at the budget fails closed (the text is not accepted on that reply) and does not count toward the capture pause. A reply that the model's own thinking cuts off at less than about half the budget, or before any text, also fails closed, and does count toward it. <code>0</code> is refused at startup.</td>
+<td>The reply budget, in tokens, the model check asks the provider for. Many providers refuse a larger output cap. On the <code>anthropic</code> and <code>bedrock</code> providers, a model that thinks by default, or whose id DocBrain does not recognise, is asked for this plus 16,384 tokens of room to think, as on every ordinary call (see "Models that think by default" above); its thinking and its reply share that room. A reply cut off at the budget fails closed (the text is not accepted on that reply) and does not count toward the capture pause. A reply that the model's own thinking cuts off at less than about half the budget, or before any text, also fails closed, and does count toward it. <code>0</code> is refused at startup.</td>
 </tr>
 </tbody>
 </table>
@@ -6638,9 +6774,9 @@ Use a local provider if capture text must not leave your network.</p>
 </tr>
 </tbody>
 </table>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nt">velocity</span><span class="p">:</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">bulk_update_multiple</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">substantive_update_abs_ceiling</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2000</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nt">velocity</span><span class="p">:</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span><span class="nt">bulk_update_multiple</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10.0</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="w">  </span><span class="nt">substantive_update_abs_ceiling</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2000</span>
 </span></code></pre></div>
 <h3 id="semantic-quality-scoring">Semantic quality scoring<a class="headerlink" href="#semantic-quality-scoring" title="Permanent link">&para;</a></h3>
 <p>A background sweep in which the language model rates documents that already passed the structural score on accuracy, completeness, clarity and actionability. Set in the <code>semantic_quality:</code> block or by these variables.</p>
@@ -6896,7 +7032,7 @@ open issues are in-flight and contain incomplete information.</p>
 </tbody>
 </table>
 <p><strong>Default JQL constructed:</strong>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>project in (PROJ,INFRA) AND issuetype in ("Bug","Story") AND updated &gt;= -365d AND statusCategory = Done ORDER BY updated DESC
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>project in (PROJ,INFRA) AND issuetype in ("Bug","Story") AND updated &gt;= -365d AND statusCategory = Done ORDER BY updated DESC
 </span></code></pre></div></p>
 <p><strong>Notes:</strong>
 - Issue descriptions use Atlassian Document Format (ADF) — DocBrain converts ADF to Markdown automatically, supporting: paragraphs, headings, code blocks, bullet/ordered lists, blockquotes, tables, inline marks (bold, italic, code, links).
@@ -7365,7 +7501,7 @@ provider's signature or shared secret instead.</p>
 <tr>
 <td><code>BOOTSTRAP_ADMIN_KEY</code></td>
 <td>—</td>
-<td>Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to <code>ADMIN_KEY_FILE</code>.</td>
+<td>Pre-set value for the bootstrap admin key on first boot, as the Helm chart's initial-admin secret does. Unset, a key is generated and written to <code>ADMIN_KEY_FILE</code>. The key is never logged: when it registers a pre-set key, the server logs <code>Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var</code> and where to read it. On the Helm chart that is the Secret <code>&lt;fullname&gt;-initial-admin-secret</code>, key <code>BOOTSTRAP_ADMIN_KEY</code> (the chart generates it), the <code>existingSecret</code> you named, or <code>server.env.BOOTSTRAP_ADMIN_KEY</code>; on Docker Compose or the binary, the environment or <code>.env</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -7634,26 +7770,26 @@ enable live tool fan-out at answer time.</p>
 </tbody>
 </table>
 <p>YAML equivalent:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nt">mcp_tools</span><span class="p">:</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">  </span><span class="nt">fanout_max_concurrent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span><span class="nt">fanout_max_admitted_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24000</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span><span class="nt">fanout_cooldown_secs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">mcp_tools</span><span class="p">:</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w">  </span><span class="nt">fanout_max_concurrent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="w">  </span><span class="nt">fanout_max_admitted_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">24000</span>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="w">  </span><span class="nt">fanout_cooldown_secs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
 </span></code></pre></div>
 <h3 id="dynamic-tool-discovery">Dynamic tool discovery<a class="headerlink" href="#dynamic-tool-discovery" title="Permanent link">&para;</a></h3>
 <p>For MCP servers that publish a <code>tools/list</code> endpoint, DocBrain can auto-populate
 the tool catalog instead of requiring every tool to be hand-declared in the
 manifest. Add a <code>tool_discovery</code> block:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_mcp</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">My MCP</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="c1"># ... rest of manifest ...</span>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="nt">tools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">                           </span><span class="c1"># may be empty when discovery is dynamic</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="nt">tool_discovery</span><span class="p">:</span>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="w">  </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dynamic</span><span class="w">                     </span><span class="c1"># default: static — explicit "dynamic" enables auto-discovery</span>
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="w">  </span><span class="nt">refresh_seconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">             </span><span class="c1"># poll interval; must be 0 (boot-only) or &gt;= 60</span>
-</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="w">  </span><span class="nt">per_tool_defaults</span><span class="p">:</span>
-</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="w">    </span><span class="nt">output_size_cap_bytes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16384</span><span class="w">    </span><span class="c1"># &lt;= 16384 ceiling</span>
-</span><span id="__span-25-10"><a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a><span class="w">    </span><span class="nt">latency_budget_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7000</span><span class="w">         </span><span class="c1"># &lt;= 8000 ceiling</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_mcp</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">My MCP</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="c1"># ... rest of manifest ...</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="nt">tools</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">                           </span><span class="c1"># may be empty when discovery is dynamic</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="nt">tool_discovery</span><span class="p">:</span>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">  </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dynamic</span><span class="w">                     </span><span class="c1"># default: static — explicit "dynamic" enables auto-discovery</span>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="w">  </span><span class="nt">refresh_seconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">             </span><span class="c1"># poll interval; must be 0 (boot-only) or &gt;= 60</span>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="w">  </span><span class="nt">per_tool_defaults</span><span class="p">:</span>
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="w">    </span><span class="nt">output_size_cap_bytes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">16384</span><span class="w">    </span><span class="c1"># &lt;= 16384 ceiling</span>
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="w">    </span><span class="nt">latency_budget_ms</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7000</span><span class="w">         </span><span class="c1"># &lt;= 8000 ceiling</span>
 </span></code></pre></div>
 <p><strong>Read-only invariant.</strong> DocBrain only registers tools where the upstream
 declares <code>annotations.readOnlyHint == true</code>. Tools without the hint, or marked
@@ -7861,6 +7997,9 @@ in the Kubernetes Secret via <code>mcpTools.serviceAccount.rootly.*</code> in He
 </table>
 <h3 id="rbac-role-mapping">RBAC Role Mapping<a class="headerlink" href="#rbac-role-mapping" title="Permanent link">&para;</a></h3>
 <p>Controls what role new SSO users receive. Roles are re-evaluated on every login.</p>
+<p>In a config file, the keys under <code>rbac:</code> are <code>default_role</code>, <code>admin_domain</code>, <code>admin_emails</code>, <code>admin_groups</code>,
+<code>editor_groups</code>, <code>analyst_groups</code>, and the two sign-in lists above, <code>allowed_groups</code> and <code>allowed_domains</code>. A variable
+wins over the file. <code>OIDC_SYNC_ROLE_ON_LOGIN</code> and <code>OIDC_ALLOW_EMAIL_LINKING</code> are read only as variables.</p>
 <table>
 <thead>
 <tr>
@@ -7911,7 +8050,7 @@ in the Kubernetes Secret via <code>mcpTools.serviceAccount.rootly.*</code> in He
 <ol>
 <li>
 <p>Copy <code>.env.example</code> to <code>.env</code>:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
 </span></code></pre></div></p>
 </li>
 <li>
@@ -7926,17 +8065,17 @@ in the Kubernetes Secret via <code>mcpTools.serviceAccount.rootly.*</code> in He
 </li>
 <li>
 <p>Run migrations:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>sqlx<span class="w"> </span>migrate<span class="w"> </span>run
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>sqlx<span class="w"> </span>migrate<span class="w"> </span>run
 </span></code></pre></div></p>
 </li>
 <li>
 <p>Run ingest to populate the knowledge base:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>cargo<span class="w"> </span>run<span class="w"> </span>--bin<span class="w"> </span>docbrain-ingest
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>cargo<span class="w"> </span>run<span class="w"> </span>--bin<span class="w"> </span>docbrain-ingest
 </span></code></pre></div></p>
 </li>
 <li>
 <p>Start the server:
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>cargo<span class="w"> </span>run<span class="w"> </span>--bin<span class="w"> </span>docbrain-server
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>cargo<span class="w"> </span>run<span class="w"> </span>--bin<span class="w"> </span>docbrain-server
 </span></code></pre></div></p>
 </li>
 <li>

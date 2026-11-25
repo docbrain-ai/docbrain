@@ -2442,8 +2442,10 @@
 <p>For AWS-native deployments. Uses the <strong>AWS SDK default credential chain</strong> — no hardcoded keys required in production.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>LLM_PROVIDER=bedrock
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>AWS_REGION=us-east-1
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>LLM_MODEL_ID=us.anthropic.claude-opus-4-20250514-v1:0
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>LLM_MODEL_ID=us.anthropic.claude-sonnet-5-5
 </span></code></pre></div>
+<p><code>us.anthropic.claude-sonnet-5-5</code> (Claude Sonnet 5.5 through its US inference profile) is the default when <code>LLM_MODEL_ID</code> is not set.
+Outside the US, name your geography's inference profile.</p>
 <h4 id="aws-credential-resolution-order">AWS Credential Resolution Order<a class="headerlink" href="#aws-credential-resolution-order" title="Permanent link">&para;</a></h4>
 <p>DocBrain uses <code>aws_config::defaults().load()</code>, which resolves credentials in this order:</p>
 <ol>

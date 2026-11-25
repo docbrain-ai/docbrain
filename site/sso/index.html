@@ -1773,6 +1773,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#authentication-failed-ref-and-the-log-reads-no-matching-key-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        "Authentication failed (ref: …)" and the log reads "No matching key found"
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#invalid-or-expired-oidc-state" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2034,6 +2045,7 @@
 <ul>
 <li><strong>PKCE</strong> (S256) is enforced on all OIDC flows (generic and GitLab). State tokens are stored in Redis with a 5-minute TTL and deleted on use.</li>
 <li><strong>Signature verification</strong> is required on all OIDC ID tokens. The insecure fallback (<code>insecure_disable_signature_check</code>) is not available.</li>
+<li><strong>Signing algorithms:</strong> an ID token is accepted only when it is signed with an algorithm the provider lists in its discovery document (<code>id_token_signing_alg_values_supported</code>; a listed HS256 is checked with the client secret), and never with <code>alg: none</code>, even when the provider lists it.</li>
 <li><strong>CSRF protection</strong> on GitHub OAuth uses a random UUID state token stored in Redis (same TTL/delete pattern).</li>
 <li><strong>OTP exchange:</strong> After any SSO callback, the server redirects to <code>OIDC_WEB_UI_URL?code=otp_&lt;uuid&gt;</code> instead of embedding the session key in the URL. The frontend exchanges this OTP via <code>POST /api/v1/auth/exchange</code> to receive the actual token in the response body — keeping raw API keys out of browser history, server access logs, and referrer headers. The OTP is single-use and expires after 60 seconds.</li>
 <li><strong>CLI OAuth</strong> uses the same OTP pattern: the CLI starts a local HTTP server on a random port and the browser redirects to <code>http://127.0.0.1:{port}?code=otp_...</code>. The CLI exchanges the OTP to obtain and save the session key.</li>
@@ -2049,6 +2061,8 @@
 <p>The provider returned a token that failed signature verification. Common causes:
 - Clock skew &gt; 5 minutes between DocBrain host and IdP
 - Misconfigured <code>OIDC_ISSUER_URL</code> (must match the <code>iss</code> claim exactly)</p>
+<h3 id="authentication-failed-ref-and-the-log-reads-no-matching-key-found">"Authentication failed (ref: …)" and the log reads "No matching key found"<a class="headerlink" href="#authentication-failed-ref-and-the-log-reads-no-matching-key-found" title="Permanent link">&para;</a></h3>
+<p>The server log line for that reference ends <code>Signature verification failed: No matching key found</code>. None of the keys the provider publishes at its <code>jwks_uri</code> fits the ID token. Since 1.6.7, DocBrain reads the <code>alg</code> a key is marked with: a key marked with an algorithm other than the one the ID token is signed with (the token's <code>alg</code> header), or with one DocBrain does not know, is not used. Fix it at the provider: mark the signing key with the algorithm its ID tokens use, or remove <code>alg</code> from the key. A key with no <code>alg</code> fits any algorithm of its key type.</p>
 <h3 id="invalid-or-expired-oidc-state">"Invalid or expired OIDC state"<a class="headerlink" href="#invalid-or-expired-oidc-state" title="Permanent link">&para;</a></h3>
 <p>The user took more than 5 minutes to complete the IdP login, or the state was already consumed. Ask them to try again.</p>
 <h3 id="could-not-determine-a-verified-email-from-github">"Could not determine a verified email from GitHub"<a class="headerlink" href="#could-not-determine-a-verified-email-from-github" title="Permanent link">&para;</a></h3>

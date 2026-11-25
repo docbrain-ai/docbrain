@@ -1554,6 +1554,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Upgrade">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#roll-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roll back
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2279,6 +2296,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Upgrade">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#roll-back" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roll back
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2430,7 +2464,11 @@ change (findings reopen).</p>
 fingerprint-key Secret unless <code>fingerprintKeySecret.existingSecret</code> is set. See
 <a href="../configuration/#the-fingerprint-key">configuration.md</a>.</p>
 <h3 id="2-choose-your-llm-provider">2. Choose your LLM provider<a class="headerlink" href="#2-choose-your-llm-provider" title="Permanent link">&para;</a></h3>
-<p>DocBrain supports Anthropic, OpenAI, AWS Bedrock, and Ollama. Pass the provider and credentials at install time.</p>
+<p>DocBrain supports Anthropic, OpenAI, AWS Bedrock, and Ollama. Pass the provider and credentials at install time.
+<code>llm.modelId</code>, <code>embedding.modelId</code> and every other model setting default to empty, which means the provider's
+default model, so the examples below can drop them. With <code>llm.provider=anthropic</code> that is <code>claude-sonnet-5-5</code>, and
+with <code>embedding.provider=openai</code> it is <code>text-embedding-3-small</code>: the models the chart named before. With
+<code>embedding.provider=bedrock</code> it is <code>cohere.embed-v4:0</code>, and with <code>ollama</code>, <code>nomic-embed-text</code>.</p>
 <h4 id="anthropic-claude">Anthropic (Claude)<a class="headerlink" href="#anthropic-claude" title="Permanent link">&para;</a></h4>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>helm<span class="w"> </span>install<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--set<span class="w"> </span>llm.provider<span class="o">=</span>anthropic<span class="w"> </span><span class="se">\</span>
@@ -2452,7 +2490,7 @@ fingerprint-key Secret unless <code>fingerprintKeySecret.existingSecret</code> i
 <h4 id="aws-bedrock">AWS Bedrock<a class="headerlink" href="#aws-bedrock" title="Permanent link">&para;</a></h4>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>helm<span class="w"> </span>install<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--set<span class="w"> </span>llm.provider<span class="o">=</span>bedrock<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--set<span class="w"> </span>llm.modelId<span class="o">=</span>us.anthropic.claude-sonnet-4-20250514-v1:0<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--set<span class="w"> </span>llm.modelId<span class="o">=</span>us.anthropic.claude-sonnet-5-5<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>--set<span class="w"> </span>embedding.provider<span class="o">=</span>bedrock<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>--set<span class="w"> </span>embedding.modelId<span class="o">=</span>cohere.embed-v4:0
 </span></code></pre></div>
@@ -2520,7 +2558,7 @@ subtree in a values override file:</p>
 </span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nt">baseUrl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://yourcompany.atlassian.net</span>
 </span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="nt">email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">user@yourcompany.com</span>
 </span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="nt">apiToken</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ATATT...</span>
-</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">  </span><span class="nt">sources</span><span class="p">:</span><span class="w">                    </span><span class="c1"># rendered into a ConfigMap + mounted at /app/config/local.yaml</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">  </span><span class="nt">sources</span><span class="p">:</span><span class="w">                    </span><span class="c1"># rendered into a ConfigMap, mounted at /app/config/local.yaml in the server and the ingest</span>
 </span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="nt">local</span><span class="p">:</span>
 </span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data/docs</span>
 </span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">    </span><span class="nt">github</span><span class="p">:</span>
@@ -2558,11 +2596,22 @@ documents): <code>local</code>, <code>confluence</code>, <code>github</code>, <c
 </span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>deployment/docbrain-server<span class="w"> </span>-f
 </span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
 </span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="c1"># Get the bootstrap admin key from the Helm-managed Secret</span>
-</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="c1"># The secret name is &lt;release-name&gt;-initial-admin-secret (e.g. "docbrain" if you used the default release name)</span>
-</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-initial-admin-secret<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.BOOTSTRAP_ADMIN_KEY}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="c1"># The secret name is &lt;fullname&gt;-initial-admin-secret: docbrain-initial-admin-secret for a release named docbrain</span>
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="c1"># ("Upgrade" below says how the chart names objects for another release name)</span>
+</span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-initial-admin-secret<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">  </span>-o<span class="w"> </span><span class="nv">jsonpath</span><span class="o">=</span><span class="s1">'{.data.BOOTSTRAP_ADMIN_KEY}'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64<span class="w"> </span>-d
 </span></code></pre></div>
-<p>The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is <strong>never printed to logs</strong> — always retrieve it from the Secret directly as shown above.</p>
+<p>The bootstrap admin key lives in its own Secret, separate from operational credentials. The key is <strong>never printed to logs</strong> — always retrieve it from the Secret directly as shown above. The server is given that Secret's key and registers it on its first boot; its log then says <code>Bootstrap admin key registered from BOOTSTRAP_ADMIN_KEY env var</code>.</p>
+<p>The server registers a bootstrap key only while no admin key exists, so the Secret holds a key that does not work in
+three cases:
+- <strong>An install first made with a chart before 1.6.7.</strong> That chart did not give the server the Secret's key: the
+  server made its own at first boot (written to <code>/app/admin-bootstrap-key.txt</code> in its container, gone once the server
+  restarts). An upgrade does not change that. Sign in with that first key or an admin key you created.
+- <strong>The Secret was deleted, then <code>helm upgrade</code> ran.</strong> The upgrade renders a new Secret with a new key, which is
+  never registered. Your first key still works.
+- <strong>The chart is rendered offline</strong> (<code>helm template</code>, Argo CD): <code>lookup</code> returns nothing there, so every render
+  makes a new key and only the one present at the server's first boot is registered. Put <code>BOOTSTRAP_ADMIN_KEY</code> in a
+  Secret you manage instead (<a href="#using-existing-secrets">Using Existing Secrets</a>).</p>
 <p><strong>Bootstrap key lifecycle:</strong></p>
 <table>
 <thead>
@@ -2580,18 +2629,18 @@ documents): <code>local</code>, <code>confluence</code>, <code>github</code>, <c
 </tr>
 <tr>
 <td><code>helm upgrade</code></td>
-<td>Key preserved via <code>lookup</code> — never regenerated</td>
+<td>Key preserved via <code>lookup</code> — never regenerated (except offline renders, above)</td>
 <td>No-op</td>
 </tr>
 <tr>
 <td><code>kubectl delete secret ...-initial-admin-secret</code></td>
-<td>Gone</td>
+<td>Gone (the next <code>helm upgrade</code> makes a new one whose key is never registered)</td>
 <td>Key still active — safe to delete once you have real keys</td>
 </tr>
 <tr>
 <td><code>bootstrapKey.enabled=false</code> + <code>helm upgrade</code></td>
 <td>Helm deletes the Secret</td>
-<td>Server revokes key from DB on next restart</td>
+<td>Key still active: this value alone does not revoke it (step 3 below does)</td>
 </tr>
 <tr>
 <td><code>helm uninstall</code></td>
@@ -2607,11 +2656,16 @@ documents): <code>local</code>, <code>confluence</code>, <code>github</code>, <c
 <li>Create a named admin API key (or configure SSO).</li>
 <li>Disable the bootstrap key — one command, no manual DB or API calls:</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>--set<span class="w"> </span>bootstrapKey.enabled<span class="o">=</span><span class="nb">false</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>--reuse-values<span class="w"> </span>--set<span class="w"> </span>bootstrapKey.enabled<span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--set-string<span class="w"> </span>server.env.BOOTSTRAP_KEY_ENABLED<span class="o">=</span><span class="nb">false</span>
 </span></code></pre></div>
+<p><code>--reuse-values</code> keeps every setting you installed with (provider, keys, sources); without it, this upgrade would
+put them all back to the chart's defaults. Run it with the chart you installed; to move to a newer chart at the same
+time, see <a href="#upgrade">Upgrade</a>.</p>
 <p>This simultaneously:
 - Stops rendering <code>initial-admin-secret</code> → Helm deletes it on upgrade
-- Sets <code>BOOTSTRAP_KEY_ENABLED=false</code> in the ConfigMap → server revokes the key from the database on next restart</p>
+- Puts <code>BOOTSTRAP_KEY_ENABLED=false</code> in the ConfigMap → the server restarts (its settings changed) and revokes the key
+  from the database. <code>bootstrapKey.enabled=false</code> on its own only removes the Secret; the key stays active.</p>
 <p>To verify it's gone:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>secret<span class="w"> </span>docbrain-initial-admin-secret<span class="w">   </span><span class="c1"># should return NotFound</span>
 </span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>deployment/docbrain-server<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-i<span class="w"> </span>bootstrap
@@ -2783,15 +2837,17 @@ Cloud's HTTP(S) load balancer, which adds the client and its own address:
 </tr>
 <tr>
 <td><code>latest</code></td>
-<td>Latest stable release.</td>
+<td>Latest stable release. It moves with every release, so the chart never uses it by default.</td>
 </tr>
 <tr>
-<td><code>1.2.0</code></td>
-<td>Pinned release — recommended for production.</td>
+<td><code>1.6.7</code></td>
+<td>One release, pinned — the kind of tag the chart runs by default (its <code>appVersion</code>).</td>
 </tr>
 </tbody>
 </table>
-<p>By default the chart uses <code>appVersion</code> (<code>1.2.0</code>) for all DocBrain images — no explicit tag override needed. Override only when pinning to a different release:</p>
+<p>Every DocBrain image the chart runs (server, web, trainer and the ingest job) defaults to the chart's own <code>appVersion</code>
+(<code>helm/docbrain/Chart.yaml</code>): <code>server.image.tag</code>, <code>web.image.tag</code> and <code>trainer.image.tag</code> are empty in <code>values.yaml</code>.
+The chart and its images move together. Set a tag only to run another build:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Pin to a specific older release</span>
 </span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>helm<span class="w"> </span>install<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="w">  </span>--set<span class="w"> </span>server.image.tag<span class="o">=</span><span class="m">1</span>.1.10<span class="w"> </span><span class="se">\</span>
@@ -2806,15 +2862,79 @@ Cloud's HTTP(S) load balancer, which adds the client and its own address:
 </span></code></pre></div>
 <hr />
 <h2 id="upgrade">Upgrade<a class="headerlink" href="#upgrade" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>my-values.yaml
+<p>Back up the database first: going back to the older version may need it (<a href="#roll-back">Roll back</a>). With the chart's
+PostgreSQL and a release named <code>docbrain</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1"># The upgrade runs only when the backup worked and is not empty. Each run writes a new file named for the time it</span>
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="c1"># started, so running it again after a failed attempt never replaces the backup from before the first one.</span>
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a><span class="nv">f</span><span class="o">=</span>docbrain-before-upgrade-<span class="k">$(</span>date<span class="w"> </span>+%Y%m%d-%H%M%S<span class="k">)</span>.dump<span class="w"> </span><span class="o">&amp;&amp;</span>
+</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="w">  </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>docbrain-postgres-0<span class="w"> </span>--<span class="w"> </span>pg_dump<span class="w"> </span>-U<span class="w"> </span>docbrain<span class="w"> </span>-d<span class="w"> </span>docbrain<span class="w"> </span>-Fc<span class="w"> </span>&gt;<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="w">  </span><span class="nb">test</span><span class="w"> </span>-s<span class="w"> </span><span class="s2">"</span><span class="nv">$f</span><span class="s2">"</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a><span class="w">  </span>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>my-values.yaml
 </span></code></pre></div>
-<p>Rolling restarts happen automatically when ConfigMap or Secret values change (via checksum annotations on the pod template).</p>
+<p>With an external database (<code>postgresql.internal: false</code>), back it up with that database's own tools.</p>
+<p>These commands, and those in <a href="#roll-back">Roll back</a>, are for a release named <code>docbrain</code>. The chart names each object
+<code>&lt;fullname&gt;-&lt;component&gt;</code>, where <code>&lt;fullname&gt;</code> is the release name when it contains <code>docbrain</code> (release <code>docbrain-prod</code>:
+pod <code>docbrain-prod-postgres-0</code>, deployment <code>docbrain-prod-server</code>) and <code>&lt;release&gt;-docbrain</code> otherwise (release <code>kb</code>:
+pod <code>kb-docbrain-postgres-0</code>, deployment <code>kb-docbrain-server</code>); <code>fullnameOverride</code> or <code>nameOverride</code> changes it. <code>helm</code>
+commands and the <code>app.kubernetes.io/instance</code> label take the release name itself.</p>
+<p>A chart deploys the images of its own version: the 1.6.7 chart runs the 1.6.7 server, web and trainer images. Two
+things keep an older image tag across an upgrade: a values file that sets <code>server.image.tag</code>, <code>web.image.tag</code> or
+<code>trainer.image.tag</code> (a copy of an older <code>values.yaml</code> says <code>tag: latest</code>; delete those lines), and <code>--reuse-values</code>,
+which keeps the last release's values, <code>tag: latest</code> included (use <code>--reset-then-reuse-values</code>, Helm 3.14 or later, to
+take the new chart's defaults and keep your own settings).</p>
+<p>The server restarts automatically when a setting it reads changes: the chart's settings ConfigMap, its Secret, or
+its <code>local.yaml</code> (<code>ingest.sources</code>, <code>freshness.exclusionRules</code>, <code>freshness.eventBasedSpaces</code>), through checksum
+annotations on its pod template. PostgreSQL, OpenSearch, Redis and the web console read none of these, so a
+settings change does not restart them; the upgrade to 1.6.7, the chart version that took those annotations off,
+restarts PostgreSQL, OpenSearch and the web console once (Redis never carried one). A Secret you supply with <code>existingSecret</code> is not the chart's to watch: after changing it, run
+<code>kubectl rollout restart deployment/&lt;fullname&gt;-server</code> (<code>&lt;fullname&gt;</code> as above).</p>
+<h3 id="roll-back">Roll back<a class="headerlink" href="#roll-back" title="Permanent link">&para;</a></h3>
+<p><code>helm rollback</code> restores the older chart and its images, but not the database. The server migrates the database when
+it starts, and an older server does not start on a database a newer one has migrated: it stops, and its log shows
+<code>Failed to run migrations: VersionMissing(&lt;N&gt;)</code>, where <code>&lt;N&gt;</code> is a migration the newer server applied. So
+<code>helm rollback</code> alone is enough only when no migration shipped between the two versions. A row in this list installed
+at the time of the upgrade is a migration the newer server applied:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>docbrain-postgres-0<span class="w"> </span>--<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>docbrain<span class="w"> </span>-d<span class="w"> </span>docbrain<span class="w"> </span>-c<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="w">  </span><span class="s1">'SELECT version, installed_on FROM _sqlx_migrations ORDER BY version DESC LIMIT 5'</span>
+</span></code></pre></div>
+<p>If there is none, <code>helm rollback docbrain</code> is all it takes. If there is one, put the backup from before the upgrade
+back before the older server starts. Whatever was written to the database after the backup is lost. The commands are
+for a release named <code>docbrain</code>: for another, put your <code>&lt;fullname&gt;</code> where an object name starts <code>docbrain-</code>, and your
+release name in the <code>helm</code> commands and the <code>instance</code> label (<a href="#upgrade">Upgrade</a> says how the chart names objects).</p>
+<p>First stop everything that writes to the database: the server, the trainer (without <code>trainer.enabled</code> its two lines
+say the deployment is not found, which is fine) and the ingest. Scaling to 0 returns before the pods exit, so the
+<code>wait</code> holds until the server and trainer pods are gone:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment/docbrain-server<span class="w"> </span>--replicas<span class="o">=</span><span class="m">0</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment/docbrain-trainer<span class="w"> </span>--replicas<span class="o">=</span><span class="m">0</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>kubectl<span class="w"> </span>patch<span class="w"> </span>cronjob/docbrain-ingest<span class="w"> </span>-p<span class="w"> </span><span class="s1">'{"spec":{"suspend":true}}'</span>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span>delete<span class="w"> </span>pod<span class="w"> </span>--timeout<span class="o">=</span>5m<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a><span class="w">  </span>-l<span class="w"> </span><span class="s1">'app.kubernetes.io/instance=docbrain,app.kubernetes.io/component in (server,trainer)'</span>
+</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>kubectl<span class="w"> </span>get<span class="w"> </span><span class="nb">jobs</span>
+</span></code></pre></div>
+<p>When <code>kubectl get jobs</code> shows no ingest job running, restore and roll back. Set <code>backup</code> to the backup taken before
+the first upgrade attempt (<code>ls docbrain-before-upgrade-*.dump</code> lists them; the name sorts by time), <code>revision</code> to the
+revision from before the upgrade (<code>helm history docbrain</code> lists them), and the replica counts to your
+<code>server.replicas</code> and <code>trainer.replicaCount</code>. Only when the restore worked does the rest run: the chart and its images
+roll back, then what was stopped starts again, the trainer last.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="nv">backup</span><span class="o">=</span>docbrain-before-upgrade-20261122-101500.dump
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="nv">revision</span><span class="o">=</span><span class="m">4</span>
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-i<span class="w"> </span>docbrain-postgres-0<span class="w"> </span>--<span class="w"> </span>pg_restore<span class="w"> </span>-U<span class="w"> </span>docbrain<span class="w"> </span>-d<span class="w"> </span>postgres<span class="w"> </span>--clean<span class="w"> </span>--if-exists<span class="w"> </span>--create<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a><span class="w">  </span>--exit-on-error<span class="w"> </span>&lt;<span class="w"> </span><span class="s2">"</span><span class="nv">$backup</span><span class="s2">"</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">{</span>
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="w">  </span>helm<span class="w"> </span>rollback<span class="w"> </span>docbrain<span class="w"> </span><span class="s2">"</span><span class="nv">$revision</span><span class="s2">"</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a><span class="w">  </span>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment/docbrain-server<span class="w"> </span>--replicas<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a><span class="w">  </span>kubectl<span class="w"> </span>patch<span class="w"> </span>cronjob/docbrain-ingest<span class="w"> </span>-p<span class="w"> </span><span class="s1">'{"spec":{"suspend":false}}'</span><span class="w"> </span><span class="o">&amp;&amp;</span>
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a><span class="w">  </span>kubectl<span class="w"> </span>scale<span class="w"> </span>deployment/docbrain-trainer<span class="w"> </span>--replicas<span class="o">=</span><span class="m">1</span>
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a><span class="o">}</span>
+</span></code></pre></div>
+<p>When the restore stops, nothing after it runs: fix what stopped it (most often something still connected: an ingest
+job, or a pod still exiting) and run the second block again. When <code>helm rollback</code> fails, the server and the ingest
+stay stopped: fix it and run the rest of the second block.</p>
 <hr />
 <h2 id="uninstall">Uninstall<a class="headerlink" href="#uninstall" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>docbrain
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>helm<span class="w"> </span>uninstall<span class="w"> </span>docbrain
 </span></code></pre></div>
 <p>PersistentVolumeClaims are <strong>not</strong> deleted by default (they are annotated with <code>helm.sh/resource-policy: keep</code>). To remove them manually:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>pvc<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/instance<span class="o">=</span>docbrain
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>pvc<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/instance<span class="o">=</span>docbrain
 </span></code></pre></div>
 <hr />
 <h2 id="monitoring">Monitoring<a class="headerlink" href="#monitoring" title="Permanent link">&para;</a></h2>
@@ -2835,23 +2955,27 @@ Cloud's HTTP(S) load balancer, which adds the client and its own address:
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="server-crashes-with-no-log-output">Server crashes with no log output<a class="headerlink" href="#server-crashes-with-no-log-output" title="Permanent link">&para;</a></h3>
 <p>The server logs are available even on crash. If you see <code>CrashLoopBackOff</code> with empty logs, check init containers first:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>docbrain
-</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>&lt;pod-name&gt;<span class="w"> </span>-c<span class="w"> </span>wait-for-postgres
-</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>&lt;pod-name&gt;<span class="w"> </span>-c<span class="w"> </span>wait-for-opensearch
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>pod<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>docbrain
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>&lt;pod-name&gt;<span class="w"> </span>-c<span class="w"> </span>wait-for-postgres
+</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>&lt;pod-name&gt;<span class="w"> </span>-c<span class="w"> </span>wait-for-opensearch
 </span></code></pre></div>
 <p>Then check the main container:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>&lt;pod-name&gt;<span class="w"> </span>--previous
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>kubectl<span class="w"> </span>logs<span class="w"> </span>&lt;pod-name&gt;<span class="w"> </span>--previous
 </span></code></pre></div>
 <h3 id="config-not-loading">Config not loading<a class="headerlink" href="#config-not-loading" title="Permanent link">&para;</a></h3>
-<p>The server reads config from <code>/app/config/</code> inside the container (set via <code>DOCBRAIN_CONFIG_DIR</code>). If you see an error about the config directory, ensure <code>DOCBRAIN_CONFIG_DIR</code> is in the ConfigMap (it is by default in chart version ≥ 0.2).</p>
+<p>The server and the ingest read the image's settings from <code>/app/config/</code> inside the container, and the chart's
+<code>local.yaml</code> (from <code>ingest.sources</code>, <code>freshness.exclusionRules</code> and <code>freshness.eventBasedSpaces</code>) is mounted at
+<code>/app/config/local.yaml</code> in both whenever one of those values is set. To see what the server reads:
+<code>kubectl exec deploy/&lt;fullname&gt;-server -- cat /app/config/local.yaml</code> (<code>&lt;fullname&gt;</code> is <code>docbrain</code> for a release named
+<code>docbrain</code>; <a href="#upgrade">Upgrade</a> says how the chart names objects).</p>
 <h3 id="opensearch-statefulset-patch-fails">OpenSearch StatefulSet patch fails<a class="headerlink" href="#opensearch-statefulset-patch-fails" title="Permanent link">&para;</a></h3>
 <p>If you change OpenSearch probe settings and get a "field is immutable" error, delete the StatefulSet with orphan cascade and re-run helm upgrade:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>statefulset<span class="w"> </span>docbrain-opensearch<span class="w"> </span>--cascade<span class="o">=</span>orphan
-</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>my-values.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>statefulset<span class="w"> </span>docbrain-opensearch<span class="w"> </span>--cascade<span class="o">=</span>orphan
+</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>helm<span class="w"> </span>upgrade<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>my-values.yaml
 </span></code></pre></div>
 <h3 id="helm-stuck-in-pending-install">Helm stuck in <code>pending-install</code><a class="headerlink" href="#helm-stuck-in-pending-install" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>secret<span class="w"> </span>sh.helm.release.v1.docbrain.v1
-</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>helm<span class="w"> </span>install<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>my-values.yaml
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>kubectl<span class="w"> </span>delete<span class="w"> </span>secret<span class="w"> </span>sh.helm.release.v1.docbrain.v1
+</span><span id="__span-41-2"><a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>helm<span class="w"> </span>install<span class="w"> </span>docbrain<span class="w"> </span>./helm/docbrain<span class="w"> </span>-f<span class="w"> </span>my-values.yaml
 </span></code></pre></div>
 
 

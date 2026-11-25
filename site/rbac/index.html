@@ -2003,7 +2003,7 @@
 <tr>
 <th>Priority</th>
 <th>Check</th>
-<th>Config</th>
+<th>Helm value / variable</th>
 <th>Example</th>
 </tr>
 </thead>
@@ -2011,35 +2011,39 @@
 <tr>
 <td>1</td>
 <td>Email in admin list</td>
-<td><code>rbac.adminEmails</code></td>
+<td><code>rbac.adminEmails</code> / <code>OIDC_ADMIN_EMAILS</code></td>
 <td><code>alice@acme.com,bob@acme.com</code></td>
 </tr>
 <tr>
 <td>2</td>
 <td>Email domain → admin</td>
-<td><code>rbac.adminDomain</code></td>
+<td><code>rbac.adminDomain</code> / <code>OIDC_ADMIN_DOMAIN</code></td>
 <td><code>acme.com</code></td>
 </tr>
 <tr>
 <td>3</td>
 <td>Member of admin group</td>
-<td><code>rbac.adminGroups</code></td>
+<td><code>rbac.adminGroups</code> / <code>OIDC_ADMIN_GROUPS</code></td>
 <td><code>platform-team,sre-team</code></td>
 </tr>
 <tr>
 <td>4</td>
 <td>Member of editor group</td>
-<td><code>rbac.editorGroups</code></td>
+<td><code>rbac.editorGroups</code> / <code>OIDC_EDITOR_GROUPS</code></td>
 <td><code>docs-team</code></td>
 </tr>
 <tr>
 <td>5</td>
 <td>Default</td>
-<td><code>rbac.defaultRole</code></td>
+<td><code>rbac.defaultRole</code> / <code>OIDC_DEFAULT_ROLE</code></td>
 <td><code>viewer</code> (default)</td>
 </tr>
 </tbody>
 </table>
+<p>The camelCase names are Helm <code>values.yaml</code> values, which the chart turns into the variables. In a DocBrain config
+file the same keys are snake_case under <code>rbac:</code> (<code>admin_emails</code>, <code>admin_domain</code>, <code>admin_groups</code>, <code>editor_groups</code>,
+<code>default_role</code>); a camelCase key there is not read, and DocBrain logs a warning naming it. See
+<a href="../configuration/">Configuration</a>.</p>
 <p><strong>Helm example — auto-promote platform team to admin:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">rbac</span><span class="p">:</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">defaultRole</span><span class="p">:</span><span class="w"> </span><span class="s">"viewer"</span>
@@ -2048,29 +2052,41 @@
 </span></code></pre></div></p>
 <hr />
 <h2 id="access-gate-allowlist">Access Gate (Allowlist)<a class="headerlink" href="#access-gate-allowlist" title="Permanent link">&para;</a></h2>
-<p>By default, <strong>any user who can authenticate</strong> with the configured provider is allowed in. To restrict access to specific groups or domains only:</p>
+<p>By default, <strong>any user who can authenticate</strong> with the configured provider is allowed in. To restrict access to specific groups or domains only, set the values below.</p>
+<p>The examples below are Helm <code>values.yaml</code>. In a DocBrain config file the keys are snake_case, <code>allowed_groups</code> and <code>allowed_domains</code> under <code>rbac:</code>; as variables they are <code>OIDC_ALLOWED_GROUPS</code> and <code>OIDC_ALLOWED_DOMAINS</code>.</p>
 <h3 id="allow-specific-groups-only">Allow specific groups only<a class="headerlink" href="#allow-specific-groups-only" title="Permanent link">&para;</a></h3>
+<p><strong>Helm values:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">rbac</span><span class="p">:</span>
 </span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">allowedGroups</span><span class="p">:</span><span class="w"> </span><span class="s">"platform-team,sre-team,docs-team"</span>
-</span></code></pre></div>
+</span></code></pre></div></p>
 <p>Anyone not in one of those groups gets <code>403 Forbidden</code> at the OAuth callback — <strong>the user is never created in the database</strong>.</p>
 <h3 id="allow-specific-email-domains-only">Allow specific email domains only<a class="headerlink" href="#allow-specific-email-domains-only" title="Permanent link">&para;</a></h3>
+<p><strong>Helm values:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">rbac</span><span class="p">:</span>
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">allowedDomains</span><span class="p">:</span><span class="w"> </span><span class="s">"acme.com,acme.org"</span>
-</span></code></pre></div>
+</span></code></pre></div></p>
 <p>Users with <code>@acme.com</code> or <code>@acme.org</code> email addresses are allowed; all others are denied.</p>
 <h3 id="both-together-or-logic">Both together (OR logic)<a class="headerlink" href="#both-together-or-logic" title="Permanent link">&para;</a></h3>
+<p><strong>Helm values:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">rbac</span><span class="p">:</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">allowedGroups</span><span class="p">:</span><span class="w"> </span><span class="s">"platform-team"</span>
 </span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">allowedDomains</span><span class="p">:</span><span class="w"> </span><span class="s">"acme.com"</span>
-</span></code></pre></div>
+</span></code></pre></div></p>
 <p>A user passes if they satisfy <strong>either</strong> restriction — member of <code>platform-team</code> <em>or</em> has an <code>@acme.com</code> email. This lets you allow contractors (by domain) while also letting external collaborators in if they're explicitly added to the group.</p>
 <h3 id="combining-access-gate-with-role-assignment">Combining access gate with role assignment<a class="headerlink" href="#combining-access-gate-with-role-assignment" title="Permanent link">&para;</a></h3>
+<p><strong>Helm values:</strong>
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">rbac</span><span class="p">:</span>
 </span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">allowedDomains</span><span class="p">:</span><span class="w"> </span><span class="s">"acme.com"</span><span class="w">        </span><span class="c1"># only @acme.com users may log in</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">adminGroups</span><span class="p">:</span><span class="w"> </span><span class="s">"platform-team"</span><span class="w">       </span><span class="c1"># @acme.com members of platform-team get admin</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">defaultRole</span><span class="p">:</span><span class="w"> </span><span class="s">"viewer"</span><span class="w">              </span><span class="c1"># everyone else gets viewer</span>
-</span></code></pre></div>
+</span></code></pre></div></p>
+<p><strong>The same in a DocBrain config file</strong> (<code>local.yaml</code> or <code>&lt;APP_ENV&gt;.yaml</code> in the config directory):
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">rbac</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">allowed_domains</span><span class="p">:</span><span class="w"> </span><span class="s">"acme.com"</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">admin_groups</span><span class="p">:</span><span class="w"> </span><span class="s">"platform-team"</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">default_role</span><span class="p">:</span><span class="w"> </span><span class="s">"viewer"</span>
+</span></code></pre></div></p>
+<p><strong>Or as variables:</strong> <code>OIDC_ALLOWED_DOMAINS=acme.com</code>, <code>OIDC_ADMIN_GROUPS=platform-team</code>, <code>OIDC_DEFAULT_ROLE=viewer</code>.</p>
 <hr />
 <h2 id="access-control-for-cli-slack-and-webhook-captures">Access Control for CLI, Slack, and Webhook Captures<a class="headerlink" href="#access-control-for-cli-slack-and-webhook-captures" title="Permanent link">&para;</a></h2>
 <p>The access gate applies uniformly:</p>
