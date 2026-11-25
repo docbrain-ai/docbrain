@@ -3925,10 +3925,23 @@ ingest job's config file, so the keys under them are config-file keys, in snake_
 CA certificate file named by <code>sslrootcert</code>. The machine's own trust store is not used. If your database's certificate
 comes from your provider's own CA, set <code>sslrootcert</code> to that CA's PEM file, e.g.
 <code>postgres://user:pass@db.example.internal:5432/docbrain?sslmode=verify-full&amp;sslrootcert=/etc/docbrain/db-ca.pem</code>.</p>
-<p><strong>Upgrading to 1.6.7.</strong> The built-in root list follows Mozilla's root store, which has dropped 28 roots: it goes from
-136 roots to 112. Among those dropped are DigiCert Global Root CA, DigiCert Assured ID Root CA, DigiCert High
-Assurance EV Root CA, DigiCert Trusted Root G4, GTS Root R2, COMODO Certification Authority, QuoVadis Root CA 2 and 3
-(and 1 G3 and 3 G3), every Buypass, Trustwave and Certigna root, and three emSign roots. If you use <code>verify-ca</code> or <code>verify-full</code> without <code>sslrootcert</code>, and your
+<p><strong>Upgrading to 1.6.7.</strong> The built-in root list follows Mozilla's root store, which has dropped 28 roots and added 4:
+it goes from 136 roots to 112. The 28 dropped, by the name on the root:</p>
+<ul>
+<li>DigiCert Global Root CA, DigiCert Assured ID Root CA, DigiCert High Assurance EV Root CA and DigiCert Trusted Root G4;</li>
+<li>GTS Root R2;</li>
+<li>COMODO Certification Authority;</li>
+<li>QuoVadis Root CA 2, QuoVadis Root CA 3, QuoVadis Root CA 1 G3 and QuoVadis Root CA 3 G3;</li>
+<li>Buypass Class 2 Root CA and Buypass Class 3 Root CA;</li>
+<li>Trustwave Global Certification Authority, Trustwave Global ECC P256 Certification Authority and Trustwave Global
+  ECC P384 Certification Authority;</li>
+<li>Certigna and Certigna Root CA;</li>
+<li>emSign Root CA - C1, emSign ECC Root CA - C3 and emSign ECC Root CA - G3;</li>
+<li>SecureTrust CA and Secure Global CA;</li>
+<li>Atos TrustedRoot 2011, certSIGN ROOT CA, FIRMAPROFESIONAL CA ROOT-A WEB, SecureSign Root CA12,
+  SwissSign Gold CA - G2 and TeliaSonera Root CA v1.</li>
+</ul>
+<p>If you use <code>verify-ca</code> or <code>verify-full</code> without <code>sslrootcert</code>, and your
 database's certificate chains to one of those roots, the server cannot open its database connections after the
 upgrade and stops at start with a certificate error. Set <code>sslrootcert</code> to your provider's CA bundle before you
 upgrade. <code>prefer</code> and <code>require</code> are not affected.</p>
